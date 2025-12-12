@@ -103,6 +103,9 @@ import Enroll from "./pages/school/Enroll";
 import EnrollmentSituationPage from "./pages/school/EnrollmentSituation";
 import Interested from "./pages/school/Interested";
 import MediaLibraryDemo from "./pages/media/MediaLibraryDemo";
+import CertificateTemplate from "./pages/school/CertificateTemplate";
+import CertificateGenerate from "./pages/school/CertificateGenerate";
+import CertificateView from "./pages/school/CertificateView";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -398,6 +401,21 @@ const App = () => {
                   </AppLayout>
                 </AdminProtectedRoute>
               } />
+              {/* Admin / Certificados (modelo e vinculação) */}
+              <Route path="/admin/school/certificados/modelo" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <CertificateTemplate />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/school/certificados/gerar" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <CertificateGenerate />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
               {/* Público / Lista de Cursos e Landing */}
               <Route path="/cursos" element={<CoursesPublicList />} />
               <Route path="/cursos/:id" element={<CourseLanding />} />
@@ -411,6 +429,12 @@ const App = () => {
               <Route path="/aluno/cursos/:slug" element={
                 <ProtectedRoute>
                   <StudentCourse />
+                </ProtectedRoute>
+              } />
+              {/* Área do Aluno / Certificado imprimível (protegida) */}
+              <Route path="/aluno/certificado/:enrollmentId" element={
+                <ProtectedRoute>
+                  <CertificateView />
                 </ProtectedRoute>
               } />
               {/* Área do Aluno / Progresso do Curso (protegida) */}
