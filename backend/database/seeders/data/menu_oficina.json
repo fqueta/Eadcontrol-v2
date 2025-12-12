@@ -1,0 +1,85 @@
+[
+  {
+    "title": "Dashboard",
+    "url": "/",
+    "icon": "Home",
+    "order": 1
+  },
+  {
+    "title": "Clientes",
+    "url": "/clients",
+    "icon": "Users",
+    "order": 2
+  },
+  {
+    "title": "Atendimento",
+    "url": "/attendments",
+    "icon": "Headset",
+    "order": 3,
+    "submenu": [
+      { "title": "Workflow", "url": "/attendimento/workflow", "order": 1 },
+      { "title": "Etapas", "url": "/attendimento/etapas", "order": 2 },
+      { "title": "Funis", "url": "/attendimento/funis", "order": 3 }
+    ]
+  },
+  {
+    "title": "Aeronaves",
+    "url": "/aircraft",
+    "icon": "Plane",
+    "order": 4
+  },
+  {
+    "title": "Catálogo",
+    "url": null,
+    "icon": "Package",
+    "order": 5,
+    "submenu": [
+      { "title": "Produtos", "url": "/products", "order": 1 },
+      { "title": "Serviços", "url": "/services", "order": 2 },
+      { "title": "Categorias", "url": "/categories", "order": 3 }
+    ]
+  },
+  {
+    "title": "Propostas",
+    "url": "/service-orders",
+    "icon": "ClipboardList",
+    "order": 6
+  },
+  {
+    "title": "Financeiro",
+    "url": null,
+    "icon": "DollarSign",
+    "order": 7,
+    "submenu": [
+      { "title": "Contas", "url": "/financial", "order": 3 },
+      { "title": "Categorias", "url": "/financial/categories", "order": 4 }
+    ]
+  },
+  {
+    "title": "Relatórios",
+    "url": null,
+    "icon": "BarChart3",
+    "order": 8,
+    "submenu": [
+      { "title": "Faturamento", "url": "/reports/revenue", "order": 1 },
+      { "title": "OS por Período", "url": "/reports/service-orders", "order": 2 },
+      { "title": "Produtos Mais Vendidos", "url": "/reports/top-products", "order": 3 },
+      { "title": "Análise Financeira", "url": "/reports/financial", "order": 4 }
+    ]
+  },
+  {
+    "title": "Configurações",
+    "url": null,
+    "icon": "Settings",
+    "order": 9,
+    "submenu": [
+      { "title": "Usuários", "url": "/settings/users", "order": 1 },
+      { "title": "Perfis de Usuário", "url": "/settings/user-profiles", "order": 2 },
+      { "title": "Permissões", "url": "/settings/permissions", "order": 3 },
+      { "title": "Status de OS", "url": "/settings/os-statuses", "order": 4 },
+      { "title": "Formas de Pagamento", "url": "/settings/payment-methods", "order": 5 },
+      { "title": "Metricas", "url": "/settings/metrics", "order": 6 },
+      { "title": "Sistema", "url": "/settings/system", "order": 7 }
+    ]
+  }
+]

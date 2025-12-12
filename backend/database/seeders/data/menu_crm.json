@@ -1,0 +1,76 @@
+[
+  {
+    "title": "Dashboard",
+    "url": "/",
+    "icon": "Home",
+    "order": 1
+  },
+  {
+    "title": "Vendas e Propostas",
+    "icon": "Shop",
+    "submenu": [
+      { "title": "Atendimento (FloW)", "url": "/sales" }
+    ]
+  },
+  {
+    "title": "Clientes",
+    "icon": "Users",
+    "submenu": [
+        { "title": "Atendimento (FloW)", "url": "/customers/leads" },
+        { "title": "Arquivo Clientes", "url": "/clients" }
+    ]
+  },
+  {
+    "title": "Escola",
+    "submenu": [
+      { "title": "Interessados", "url": "/school/interested" },
+      { "title": "Matrículas", "url": "/school/enroll" },
+      { "title": "Todos cursos", "url": "/school/courses" },
+      { "title": "Todas turmas", "url": "/school/classes" },
+      { "title": "Rescisões", "url": "/school/termination" },
+      { "title": "Ganhos", "url": "/school/ganhos" },
+      { "title": "Situações", "url": "/school/enrollment-situation" }
+    ]
+  },
+  {
+    "title": "Gerenciar Site",
+    "icon": "FileText",
+    "submenu": [
+      { "title": "Paginas do site", "url": "/site/menus-site" },
+      { "title": "Componentes", "url": "/site/coteudo-site" },
+      { "title": "Comentários", "url": "/site/comentarios" },
+      { "title": "Modalidade", "url": "/site/modalidade" }
+    ]
+  },
+  {
+    "title": "Relatórios",
+    "icon": "LineChart",
+    "submenu": [
+      { "title": "Geral", "url": "/reports/relatorio-geral" },
+      { "title": "Vendas", "url": "/reports/relatorio-vendas" },
+      { "title": "Pós Venda", "url": "/reports/relatorio-escola" },
+      { "title": "Balanço", "url": "/reports/relatorio-balanco" },
+      { "title": "Turmas", "url": "/reports/relatorio-turmas" },
+      { "title": "Atendimento", "url": "/reports/relatorio-atendimento" },
+      { "title": "Horas Voadas", "url": "/reports/horas_voadas" },
+      { "title": "Contratos vencidos", "url": "/reports/contratos_vencidos" }
+    ]
+  },
+  {
+    "title": "Configurações",
+    "icon": "Cog",
+    "submenu": [
+        { "title": "Usuários", "url": "/settings/users" },
+        { "title": "Dados da empresa", "url": "/settings/dados_conta" },
+        { "title": "Aeronaves", "url": "/settings/aircrafts" },
+        { "title": "Permissões", "url": "/settings/permissions" },
+        { "title": "Cupom de desconto", "url": "/settings/cupom_desconto" },
+        { "title": "Tabelas de preço", "url": "/settings/table-price" },
+        { "title": "Funil e etapas", "url": "/settings/stages" },
+        { "title": "Categorias", "url": "/categories" },
+        { "title": "Tabelas de parcelamento", "url": "/settings/table-installment" },
+        { "title": "Tabelas de desconto", "url": "/settings/table-discount" },
+        { "title": "Sistema", "url": "/settings/system"}
+    ]
+  }
+]

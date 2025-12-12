@@ -1,0 +1,2099 @@
+import React, { useMemo, useState, useEffect, useRef, useDeferredValue, memo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock } from 'lucide-react';
+import { progressService } from '@/services/progressService';
+import { useToast } from '@/hooks/use-toast';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+
+/**
+ * VideoDescriptionToggle
+ * pt-BR: Componente que mantém a descrição de vídeo oculta por padrão e
+ *        permite ao usuário alternar sua visualização.
+ * en-US: Component that keeps video description hidden by default and lets
+ *        the user toggle its visibility.
+ */
+/**
+ * VideoDescriptionToggle (memoized)
+ * pt-BR: Componente memoizado para evitar re-render quando `html` não muda.
+ * en-US: Memoized component to avoid re-render when `html` does not change.
+ */
+function VideoDescriptionToggleBase({ html }: { html: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-2">
+      <Button variant="outline" size="sm" onClick={() => setOpen((v) => !v)}>
+        {open ? 'Ocultar descrição' : 'Mostrar descrição'}
+      </Button>
+      {open && (
+        <div
+          className="prose prose-sm max-w-none text-muted-foreground mt-2"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      )}
+    </div>
+  );
+}
+const VideoDescriptionToggle = memo(VideoDescriptionToggleBase);
+
+/**
+ * CourseContentViewer
+ * pt-BR: Componente de visualização de conteúdo do curso com barra de busca,
+ *        sidebar de atividades e área principal para player/leitura/link.
+ * en-US: Course content viewer component with search bar, activities sidebar,
+ *        and main area for player/reader/link rendering.
+ */
+/**
+ * CourseContentViewer
+ * pt-BR: Visualiza conteúdos do curso. Agora emite callback ao alterar atividade atual.
+ * en-US: Renders course contents. Now emits a callback when current activity changes.
+ */
+/**
+ * CourseContentViewer
+ * pt-BR: Visualizador de conteúdo do curso; agora aceita `enrollmentId` para envio em progresso.
+ * en-US: Course content viewer; now accepts `enrollmentId` to send with progress payloads.
+ */
+export default function CourseContentViewer({ course, onActivityChange, enrollmentId }: { course: any; onActivityChange?: (activity: any) => void; enrollmentId?: string | number }) {
+  /**
+   * Router hooks
+   * pt-BR: Integra com o roteador para ler e atualizar a URL de cada atividade.
+   * en-US: Integrates with the router to read and update the URL per activity.
+   */
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  /**
+   * Toast hook
+   * pt-BR: Fornece API para mostrar toasts de feedback.
+   * en-US: Provides API to show feedback toasts.
+   */
+  const { toast } = useToast();
+  /**
+   * curriculumModules
+   * pt-BR: Quando há matrícula, guarda os módulos vindos do endpoint consolidado
+   *        de currículo com progresso por atividade.
+   * en-US: When enrollment exists, stores modules from consolidated curriculum
+   *        endpoint with per-activity progress.
+   */
+  const [curriculumModules, setCurriculumModules] = useState<any[]>([]);
+
+  /**
+   * fetchEnrollmentCurriculum
+   * pt-BR: Carrega currículo por matrícula e atualiza `curriculumModules`.
+   * en-US: Loads curriculum by enrollment and updates `curriculumModules`.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (!enrollmentId) return;
+      try {
+        const resp = await progressService.getEnrollmentCurriculum(enrollmentId);
+        const mods = Array.isArray(resp?.curriculum) ? resp.curriculum : [];
+        if (!cancelled) setCurriculumModules(mods);
+      } catch {
+        // fallback silencioso: mantém módulos do curso
+      }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [enrollmentId]);
+
+  /**
+   * modules
+   * pt-BR: Prefere módulos do currículo por matrícula quando disponíveis; senão,
+   *        usa os módulos do curso como antes.
+   * en-US: Prefers enrollment curriculum modules when available; otherwise uses
+   *        course modules as before.
+   */
+  const modules: any[] = useMemo(() => {
+    if (curriculumModules && curriculumModules.length > 0) return curriculumModules;
+    const c = course || {};
+    const arr = c?.modulos || c?.modules || [];
+    return Array.isArray(arr) ? arr : [];
+  }, [course, curriculumModules]);
+  // console.log('modules', modules);
+  
+  /**
+   * flatActivities
+   * pt-BR: Lista achatada de todas atividades dos módulos para progressão/navegação.
+   * en-US: Flattened list of all activities for progression/navigation.
+   */
+  const flatActivities: any[] = useMemo(() => {
+    const all: any[] = [];
+    modules.forEach((m: any, mi: number) => {
+      const acts: any[] = Array.isArray(m?.atividades || m?.activities) ? (m?.atividades || m?.activities) : [];
+      acts.forEach((a: any, ai: number) => {
+        all.push({ ...a, _moduleIndex: mi, _activityIndex: ai });
+      });
+    });
+    return all;
+  }, [modules]);
+
+  /**
+   * searchTerm
+   * pt-BR: Filtro por título/nome de atividade.
+   * en-US: Filter by activity title/name.
+   */
+  const [searchTerm, setSearchTerm] = useState('');
+  /**
+   * deferredSearchTerm
+   * pt-BR: Valor adiado da busca para reduzir renders durante digitação.
+   * en-US: Deferred search value to reduce renders while typing.
+   */
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+
+  /**
+   * filteredActivities
+   * pt-BR: Lista achatada filtrada conforme busca.
+   * en-US: Filtered flattened activities according to search.
+   */
+  const filteredActivities = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return flatActivities;
+    return flatActivities.filter((a: any) => {
+      const title = String(a?.titulo || a?.title || a?.name || '').toLowerCase();
+      const moduleTitle = String(modules[a._moduleIndex]?.titulo || modules[a._moduleIndex]?.title || modules[a._moduleIndex]?.name || '').toLowerCase();
+      return title.includes(term) || moduleTitle.includes(term);
+    });
+  }, [flatActivities, modules, deferredSearchTerm]);
+
+  /**
+   * currentIndex
+   * pt-BR: Índice atual na lista filtrada.
+   * en-US: Current index in the filtered list.
+   */
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  /**
+   * currentActivity
+   * pt-BR: Atividade selecionada para exibição.
+   * en-US: Selected activity to render.
+   */
+  const currentActivity = filteredActivities[currentIndex];
+
+  /**
+   * readingRemaining
+   * pt-BR: Segundos restantes para concluir atividades de leitura/arquivo.
+   * en-US: Remaining seconds to complete reading/file activities.
+   */
+  const [readingRemaining, setReadingRemaining] = useState<number>(0);
+  
+  // (perf) evita logs em produção
+  /**
+   * syncActivityUrl effect
+   * pt-BR: Atualiza `?activity=<id>` na URL quando a atividade atual muda.
+   * en-US: Updates `?activity=<id>` in the URL when the current activity changes.
+   */
+  useEffect(() => {
+    if (!currentActivity) return;
+    try {
+      const params = new URLSearchParams(location.search);
+      const id = getActivityId(currentActivity, currentActivity?._moduleIndex, currentActivity?._activityIndex);
+      const sid = String(id);
+      if (params.get('activity') !== sid) {
+        params.set('activity', sid);
+        navigate({ search: `?${params.toString()}` }, { replace: true });
+      }
+    } catch {}
+  }, [currentActivity, location.search, navigate]);
+  /**
+   * onActivityChange effect
+   * pt-BR: Notifica o pai quando a atividade atual muda.
+   * en-US: Notifies parent when current activity changes.
+   */
+  useEffect(() => {
+    if (onActivityChange && currentActivity) {
+      try {
+        onActivityChange(currentActivity);
+      } catch {}
+    }
+  }, [currentActivity, onActivityChange]);
+
+  /**
+   * progressText
+   * pt-BR: Texto de progresso tipo "X of Y items".
+   * en-US: Progress text like "X of Y items".
+   */
+  const progressText = useMemo(() => {
+    // pt-BR: "X de Y itens" para o indicador de progresso
+    // en-US: "X of Y items" for the progress indicator
+    return `${Math.min(currentIndex + 1, filteredActivities.length)} de ${filteredActivities.length} itens`;
+  }, [currentIndex, filteredActivities.length]);
+
+  /**
+   * courseTotalLabel
+   * pt-BR: Duração total do curso somando atividades/módulos.
+   * en-US: Course total duration summing activities/modules.
+   */
+  const courseTotalLabel = useMemo(() => {
+    const total = modules.reduce((acc, m) => acc + getModuleTotalSeconds(m), 0);
+    return total ? `Total ${formatDuration(total)}` : '';
+  }, [modules]);
+
+  /**
+   * Duration helpers
+   * pt-BR: Converte valores em segundos e formata como "xh ym".
+   * en-US: Converts values to seconds and formats as "xh ym".
+   */
+  function toSeconds(val: any, unit: string) {
+    const v = Number(val || 0);
+    const u = String(unit || '').toLowerCase();
+    if (!v) return 0;
+    if (u.includes('seg')) return v;
+    if (u.includes('min')) return v * 60;
+    if (u.includes('h')) return v * 3600;
+    return v;
+  }
+  /**
+   * formatDuration
+   * pt-BR: Formata segundos para o padrão fixo "hh:mm:ss" (zero à esquerda).
+   * en-US: Formats seconds to fixed "hh:mm:ss" (zero-padded).
+   */
+  function formatDuration(seconds: number) {
+    const s = Math.max(0, Math.floor(seconds));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(h)}:${pad(m)}:${pad(ss)}`;
+  }
+
+  /**
+   * readingUrgencyClass
+   * pt-BR: Retorna classes de cor do badge conforme segundos restantes.
+   *        <=10s: vermelho; <=60s: amarelo; caso contrário: azul.
+   * en-US: Returns badge color classes based on remaining seconds.
+   *        <=10s: red; <=60s: yellow; otherwise: blue.
+   */
+  function readingUrgencyClass(remaining: number) {
+    if (remaining <= 10) return 'bg-red-100 text-red-700';
+    if (remaining <= 60) return 'bg-yellow-100 text-yellow-700';
+    return 'bg-blue-100 text-blue-700';
+  }
+
+  /**
+   * getDurationLabel
+   * pt-BR: Retorna rótulo de duração baseado em `duracao` e `unidade_duracao`.
+   * en-US: Returns duration label using `duracao` and `unidade_duracao`.
+   */
+  const getDurationLabel = (a: any) => {
+    const val = a?.duracao ?? a?.duration ?? '';
+    const unit = String(a?.unidade_duracao ?? a?.type_duration ?? '').toLowerCase();
+    const secs = toSeconds(val, unit);
+    return secs ? formatDuration(secs) : '';
+  };
+
+  /**
+   * isVideo / isDocument / isLink
+   * pt-BR: Helpers para tipo de atividade.
+   * en-US: Helpers for activity type.
+   */
+  /**
+   * getType / isVideo / isDocument / isLink
+   * pt-BR: Mapeia o tipo de atividade considerando o payload da API (video, arquivo, leitura).
+   * en-US: Maps activity type considering API payload (video, arquivo, leitura).
+   */
+  const getType = (a: any) => String(a?.tipo_atividade || a?.type_activities || '').toLowerCase();
+  const isVideo = (a: any) => getType(a).includes('video');
+  const isDocument = (a: any) => {
+    const t = getType(a);
+    if (t.includes('document') || t.includes('pdf') || t.includes('arquivo')) return true;
+    const raw = String(a?.arquivo_url || a?.url || a?.conteudo || a?.content || '').toLowerCase();
+    return raw.endsWith('.pdf') || raw.endsWith('.doc') || raw.endsWith('.docx') || raw.endsWith('.txt');
+  };
+  const isUrlText = (txt?: any) => {
+    const s = String(txt || '').trim().toLowerCase();
+    return !!s && (/^https?:\/\//.test(s) || s.startsWith('www.'));
+  };
+  const isLink = (a: any) => {
+    const t = getType(a);
+    if (t.includes('link')) return true;
+    if (t.includes('leitura')) {
+      const raw = a?.url || a?.video_url || a?.arquivo_url || a?.conteudo || a?.content || '';
+      return isUrlText(raw);
+    }
+    return false;
+  };
+
+  /**
+   * sanitizeUrl
+   * pt-BR: Remove crases/backticks e espaços excedentes dos campos de URL vindos da API.
+   * en-US: Removes backticks and extra spaces from URL-like fields from API.
+   */
+  const sanitizeUrl = (u?: any) => {
+    const s = String(u || '').trim();
+    // remove backticks and surrounding spaces
+    return s.replace(/^`+|`+$/g, '').trim();
+  };
+
+  /**
+   * getVideoProvider
+   * pt-BR: Detecta provedor do vídeo a partir da URL (youtube, vimeo, mp4, unknown).
+   * en-US: Detects video provider from URL (youtube, vimeo, mp4, unknown).
+   */
+  const getVideoProvider = (u?: string) => {
+    const url = String(u || '').toLowerCase();
+    if (!url) return 'unknown';
+    if (url.includes('youtube.com/watch') || url.includes('youtube.com/embed') || url.includes('youtu.be/')) return 'youtube';
+    if (url.includes('vimeo.com/') || url.includes('player.vimeo.com/video/')) return 'vimeo';
+    if (url.endsWith('.mp4')) return 'mp4';
+    return 'unknown';
+  };
+
+  /**
+   * getYouTubeIdFromAnyUrl
+   * pt-BR: Extrai o ID do YouTube de URLs nos formatos watch/embed/youtu.be.
+   * en-US: Extracts YouTube ID from watch/embed/youtu.be URL formats.
+   */
+  const getYouTubeIdFromAnyUrl = (u?: string) => {
+    const url = String(u || '').trim();
+    if (!url) return '';
+    try {
+      if (url.includes('youtube.com/watch')) {
+        const idMatch = url.match(/[?&]v=([^&#]+)/);
+        return idMatch?.[1] || '';
+      }
+      if (url.includes('youtube.com/embed/')) {
+        const after = url.split('youtube.com/embed/')[1] || '';
+        return (after.split('?')[0] || '').trim();
+      }
+      if (url.includes('youtu.be/')) {
+        const after = url.split('youtu.be/')[1] || '';
+        return (after.split('?')[0] || '').trim();
+      }
+    } catch {}
+    return '';
+  };
+
+  /**
+   * toEmbedUrl
+   * pt-BR: Converte uma URL de YouTube/Vimeo para a forma de embed.
+   * en-US: Converts a YouTube/Vimeo URL to an embeddable URL.
+   */
+  const toEmbedUrl = (url: string) => {
+    const u = sanitizeUrl(url);
+    if (!u) return '';
+    // YouTube patterns
+    if (u.includes('youtube.com/watch')) {
+      const idMatch = u.match(/[?&]v=([^&#]+)/);
+      const vid = idMatch?.[1];
+      if (vid) return `https://www.youtube.com/embed/${vid}`;
+    }
+    if (u.includes('youtu.be/')) {
+      const id = u.split('youtu.be/')[1]?.split('?')[0];
+      if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+    // Vimeo pattern
+    if (u.includes('vimeo.com/')) {
+      const id = u.split('vimeo.com/')[1]?.split('?')[0]?.replace(/[^0-9]/g, '');
+      if (id) return `https://player.vimeo.com/video/${id}`;
+    }
+    return u;
+  };
+
+  /**
+   * getActivityUrl
+   * pt-BR: Resolve a URL adequada para a atividade, incluindo embed para vídeos.
+   * en-US: Resolves the proper URL for activity, including embed for videos.
+   */
+  const getActivityUrl = (a: any) => {
+    const t = getType(a);
+    const base = sanitizeUrl(a?.url || a?.video_url || a?.arquivo_url || a?.conteudo || a?.content || '');
+    if (!base) return '';
+    if (t.includes('video')) return toEmbedUrl(base);
+    return base;
+  };
+
+  /**
+   * getActivityProvider
+   * pt-BR: Determina o provedor do vídeo considerando URL original e de embed.
+   * en-US: Determines video provider considering original and embed URL.
+   */
+  const getActivityProvider = (a: any) => {
+    const raw = sanitizeUrl(a?.url || a?.video_url || a?.arquivo_url || a?.conteudo || a?.content || '');
+    const embed = getActivityUrl(a);
+    const pRaw = getVideoProvider(raw);
+    const pEmbed = getVideoProvider(embed);
+    return pEmbed !== 'unknown' ? pEmbed : pRaw;
+  };
+
+  /**
+   * buildVideoEmbedUrlWithApi
+   * pt-BR: Ajusta a URL de embed para habilitar APIs (YouTube/Vimeo) com player_id e origin.
+   * en-US: Adjusts embed URL to enable APIs (YouTube/Vimeo) with player_id and origin.
+   */
+  const buildVideoEmbedUrlWithApi = (embedUrl: string, playerId: string) => {
+    try {
+      const url = new URL(embedUrl, window.location.origin);
+      const isYouTube = /youtube\.com\/embed\//.test(url.pathname + url.href);
+      const isVimeo = /player\.vimeo\.com\/video\//.test(url.pathname + url.href);
+      if (isYouTube) {
+        if (!url.searchParams.has('enablejsapi')) url.searchParams.set('enablejsapi', '1');
+        if (!url.searchParams.has('origin')) url.searchParams.set('origin', window.location.origin);
+      }
+      if (isVimeo) {
+        if (!url.searchParams.has('api')) url.searchParams.set('api', '1');
+        if (!url.searchParams.has('player_id')) url.searchParams.set('player_id', playerId);
+      }
+      return url.toString();
+    } catch {
+      // fallback if URL parsing fails
+      const sep = embedUrl.includes('?') ? '&' : '?';
+      if (embedUrl.includes('youtube.com/embed')) {
+        return `${embedUrl}${sep}enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`;
+      }
+      if (embedUrl.includes('player.vimeo.com/video')) {
+        return `${embedUrl}${sep}api=1&player_id=${encodeURIComponent(playerId)}`;
+      }
+      return embedUrl;
+    }
+  };
+
+  /**
+   * getActivityId
+   * pt-BR: Obtém o identificador único da atividade (fallback no índice).
+   * en-US: Gets the unique activity identifier (falls back to index).
+   */
+/**
+ * getActivityId
+ * pt-BR: Retorna o identificador único da atividade, normalizando `id`/`activity_id` para string.
+ * en-US: Returns the unique activity identifier, normalizing `id`/`activity_id` to string.
+ */
+const getActivityId = (a: any, mi?: number, ai?: number) => a?.id ?? a?.activity_id ?? `${mi}-${ai}`;
+
+/**
+ * htmlEquals / normalizeHtmlForCompare
+ * pt-BR: Compara HTMLs ignorando tags e espaços para detectar duplicação.
+ * en-US: Compares HTML strings ignoring tags and whitespace to detect duplication.
+ */
+function normalizeHtmlForCompare(s: string): string {
+  const text = String(s || '');
+  const stripped = text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+  return stripped.replace(/\s+/g, ' ').toLowerCase();
+}
+function htmlEquals(a: string, b: string): boolean {
+  return normalizeHtmlForCompare(a) === normalizeHtmlForCompare(b);
+}
+
+  /**
+   * loadYouTubeAPI
+   * pt-BR: Carrega a API de IFrame do YouTube e retorna uma Promise quando pronta.
+   * en-US: Loads YouTube IFrame API and returns a Promise when ready.
+   */
+  const loadYouTubeAPI = (() => {
+    let promise: Promise<void> | null = null;
+    return () => {
+      if (promise) return promise;
+      promise = new Promise<void>((resolve) => {
+        if ((window as any).YT && (window as any).YT.Player) return resolve();
+        const tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+        (window as any).onYouTubeIframeAPIReady = () => resolve();
+      });
+      return promise;
+    };
+  })();
+
+  /**
+   * useVideoResume
+   * pt-BR: Integra com APIs de YouTube/Vimeo para registrar posição e retomar reprodução.
+   * en-US: Integrates with YouTube/Vimeo APIs to record position and resume playback.
+   */
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const html5VideoRef = useRef<HTMLVideoElement | null>(null);
+  /**
+   * youtubeContainerRef
+   * pt-BR: Contêiner para inicializar o player do YouTube via API oficial.
+   * en-US: Container to initialize the YouTube player via official API.
+   */
+  const youtubeContainerRef = useRef<HTMLDivElement | null>(null);
+  const playerCleanupRef = useRef<() => void>(() => {});
+  /**
+   * durationRef
+   * pt-BR: Armazena a duração total do vídeo atual para envio em `complete`.
+   * en-US: Stores total duration of the current video to send in `complete`.
+   */
+  const durationRef = useRef<number>(0);
+  /**
+   * endedMarkedRef
+   * pt-BR: Garante que a conclusão da atividade de vídeo seja marcada apenas uma vez por término.
+   * en-US: Ensures video activity completion is marked only once per end event.
+   */
+  const endedMarkedRef = useRef<boolean>(false);
+  /**
+   * activeActivityIdRef
+   * pt-BR: Guarda o ID da atividade atualmente ativa para proteger handlers
+   *        assíncronos de marcar outra atividade indevidamente.
+   * en-US: Stores the currently active activity ID to guard async handlers
+   *        from marking a different activity inadvertently.
+   */
+  const activeActivityIdRef = useRef<any>(null);
+  /**
+   * startedPlaybackRef
+   * pt-BR: Marca se a reprodução já iniciou ao menos uma vez. Usado para evitar
+   *        chamadas de salvamento ao abrir a atividade sem ter reproduzido.
+   * en-US: Flags whether playback has started at least once. Used to prevent
+   *        save requests on activity open before any playback.
+   */
+  const startedPlaybackRef = useRef<boolean>(false);
+  /**
+   * getCurrentTimeRef
+   * pt-BR: Função corrente para obter a posição atual do player, usada em flush.
+   * en-US: Current function to get player's current time, used for flush.
+   */
+  const getCurrentTimeRef = useRef<() => number>(() => 0);
+  /**
+   * lastKnownTimeRef
+   * pt-BR: Última posição conhecida (útil para Vimeo e fallback postMessage).
+   * en-US: Last known position (useful for Vimeo and postMessage fallback).
+   */
+  const lastKnownTimeRef = useRef<number>(0);
+  const positionKey = (cid: any, aid: any) => `course_video_pos_${cid}_${aid}`;
+
+  useEffect(() => {
+    playerCleanupRef.current?.();
+    playerCleanupRef.current = () => {};
+    const a = currentActivity;
+    if (!a) return;
+    const mi = a._moduleIndex;
+    const ai = a._activityIndex;
+    const aid = getActivityId(a, mi, ai);
+    const cid = course?.id ?? course?.course_id ?? course?.token ?? 'course';
+    // pt-BR: Atualiza guarda de atividade ativa e reseta refs que podem vazar estado.
+    // en-US: Update active activity guard and reset refs that may leak state.
+    activeActivityIdRef.current = aid;
+    durationRef.current = 0;
+    lastKnownTimeRef.current = 0;
+    getCurrentTimeRef.current = () => 0;
+    const savedLocal = Number(localStorage.getItem(positionKey(cid, aid)) || 0) || 0;
+    let savedApi = 0;
+    let destroyed = false;
+    // reset end marker guard when activity changes (qualquer tipo)
+    // reset end marker guard when activity changes (any type)
+    endedMarkedRef.current = false;
+    // pt-BR: Ao trocar de atividade, reseta flag de reprodução iniciada.
+    // en-US: When switching activity, reset started playback flag.
+    startedPlaybackRef.current = false;
+    // pt-BR: Ao trocar de atividade, reseta estado visual de “Retomar”.
+    // en-US: When switching activity, reset “Resume” visual state.
+    setPlaybackExists(false);
+
+    /**
+     * persistPosition
+     * pt-BR: Persiste posição localmente e tenta salvar na API.
+     * en-US: Persists position locally and attempts to save via API.
+     */
+    /**
+     * persistPosition
+     * pt-BR: Persiste posição localmente e envia para API com `id_matricula` quando disponível.
+     * en-US: Persists position locally and posts to API with `id_matricula` when available.
+     */
+    /**
+     * persistPosition
+     * pt-BR: Persiste posição localmente e envia para API com `id_matricula` quando disponível.
+     * en-US: Persists position locally and posts to API with `id_matricula` when available.
+     */
+    /**
+     * persistPosition
+     * pt-BR: Persiste posição local (sempre) e envia ao backend de forma controlada
+     *        por throttle (intervalo e delta mínimos). Usa flush em eventos críticos.
+     * en-US: Persists local position (always) and posts to backend with throttling
+     *        (interval and minimal delta). Flushes on critical events.
+     */
+    const intervalMs = 15000; // throttle interval for periodic sends
+    const minDeltaSec = 3;    // minimal movement before sending again
+    let lastSentAt = 0;
+    let lastSentPosSec = 0;
+    let sending = false;
+
+    /**
+     * persistPosition
+     * pt-BR: Prioriza persistência na API; atualiza localStorage apenas após sucesso
+     *        ou como fallback se a API falhar.
+     * en-US: Prioritize API persistence; update localStorage only after success
+     *        or as a fallback if the API fails.
+     */
+    const persistPosition = async (seconds: number, force: boolean = false) => {
+      const now = Date.now();
+      const movedEnough = Math.abs(Math.floor(seconds) - Math.floor(lastSentPosSec)) >= minDeltaSec;
+      const intervalPassed = now - lastSentAt >= intervalMs;
+      const shouldSend = force || (intervalPassed && movedEnough);
+      if (!shouldSend || sending) return;
+
+      try {
+        sending = true;
+        await progressService.savePlaybackPosition({
+          course_id: cid,
+          module_id: modules[mi]?.module_id ?? modules[mi]?.id,
+          activity_id: aid,
+          seconds: Math.floor(seconds),
+          id_matricula: enrollmentId,
+        });
+        lastSentAt = now;
+        lastSentPosSec = Math.floor(seconds);
+        try { localStorage.setItem(positionKey(cid, aid), String(Math.floor(seconds))); } catch {}
+      } catch {
+        // Fallback local se API falhar
+        try { localStorage.setItem(positionKey(cid, aid), String(Math.floor(seconds))); } catch {}
+      } finally {
+        sending = false;
+      }
+    };
+
+    /**
+     * saveVideoProgressOnPause
+     * pt-BR: Salva o progresso do vídeo especificamente em eventos de pausa.
+     *        Executa apenas quando há segundos > 0 e para a atividade ativa.
+     *        Usa persistência forçada para garantir envio imediato.
+     * en-US: Saves video progress specifically on pause events.
+     *        Runs only when seconds > 0 and for the active activity.
+     *        Uses forced persistence to ensure immediate posting.
+     */
+    const saveVideoProgressOnPause = (seconds: number) => {
+      try {
+        const secs = Math.floor(Number(seconds) || 0);
+        if (secs <= 0) return;
+        if (String(activeActivityIdRef.current) !== String(aid)) return;
+        persistPosition(secs, true);
+      } catch {}
+    };
+
+    /**
+     * markCompleteAndAdvance
+     * pt-BR: Marca a atividade atual como concluída e avança para a próxima.
+     * en-US: Marks the current activity as completed and advances to the next.
+     */
+    /**
+     * markCompleteAndAdvance
+     * pt-BR: Marca a atividade como concluída e avança. Envia `seconds` como
+     *        inteiro (Math.round); se a duração do player estiver 0, usa a
+     *        duração declarada na atividade (duracao + unidade_duracao).
+     * en-US: Marks the activity completed and advances. Sends `seconds` as a
+     *        rounded integer; if player duration is 0, falls back to the
+     *        activity-declared duration (duracao + unidade_duracao).
+     */
+    const markCompleteAndAdvance = async () => {
+      // pt-BR: Garante que o handler só execute para a atividade ativa.
+      // en-US: Ensure handler runs only for the active activity.
+      if (String(activeActivityIdRef.current) !== String(aid)) return;
+      if (endedMarkedRef.current) return;
+      endedMarkedRef.current = true;
+      try {
+        const id = aid;
+        const metaSecs = Math.round(Number(toSeconds(a?.duracao ?? a?.duration, String(a?.unidade_duracao ?? a?.type_duration))) || 0);
+        const playerSecs = Math.round(Number(durationRef.current || 0) || 0);
+        const secondsPayload = playerSecs || metaSecs || 0;
+        setCompletedIds((prev) => {
+          const next = new Set(prev as any);
+          const sid = String(id);
+          if (!next.has(sid)) {
+            next.add(sid);
+            try { localStorage.setItem(storageKey, JSON.stringify(Array.from(next))); } catch {}
+          }
+          return next;
+        });
+        await progressService.toggleActivityCompletion({
+          course_id: cid,
+          module_id: modules[mi]?.module_id ?? modules[mi]?.id,
+          activity_id: id,
+          completed: true,
+          seconds: secondsPayload,
+          id_matricula: enrollmentId,
+        });
+      } catch {}
+      // pt-BR: Avança para a próxima atividade não concluída (apenas uma vez)
+      // en-US: Advance to the next not-completed activity (single jump)
+      navigateToNextUncompleted();
+    };
+
+    /**
+     * markCompleteForReading
+     * pt-BR: Marca atividade (leitura/arquivo) como concluída sem avançar, usando
+     *        a duração declarada da atividade (se disponível).
+     * en-US: Marks reading/file activity as completed without advancing, using
+     *        the activity-declared duration (if available).
+     */
+    /**
+     * markCompleteForReading
+     * pt-BR: Marca leitura/arquivo como concluída e, após sucesso, mostra um toast
+     *        e aguarda um pequeno atraso antes de avançar para a próxima atividade.
+     * en-US: Marks reading/file as completed and, upon success, shows a toast
+     *        and waits a short delay before advancing to the next activity.
+     */
+    const markCompleteForReading = async (secondsToSend: number) => {
+      // pt-BR: Garante que o handler só execute para a atividade ativa.
+      // en-US: Ensure handler runs only for the active activity.
+      if (String(activeActivityIdRef.current) !== String(aid)) return;
+      if (endedMarkedRef.current) return;
+      endedMarkedRef.current = true;
+      try {
+        const id = aid;
+        setCompletedIds((prev) => {
+          const next = new Set(prev as any);
+          const sid = String(id);
+          if (!next.has(sid)) {
+            next.add(sid);
+            try { localStorage.setItem(storageKey, JSON.stringify(Array.from(next))); } catch {}
+          }
+          return next;
+        });
+        await progressService.toggleActivityCompletion({
+          course_id: cid,
+          module_id: modules[mi]?.module_id ?? modules[mi]?.id,
+          activity_id: id,
+          completed: true,
+          seconds: Math.round(Number(secondsToSend || 0) || 0),
+          id_matricula: enrollmentId,
+        });
+        // pt-BR: Feedback visual e pequeno atraso antes de avançar (uma vez),
+        //        indo para a próxima NÃO concluída.
+        // en-US: Visual feedback and small delay before advancing (single),
+        //        going to the next NOT completed.
+        toast({ title: 'Concluído', description: 'Avançando para a próxima atividade…' });
+        setTimeout(() => {
+          navigateToNextUncompleted();
+        }, 500);
+      } catch {}
+    };
+
+    /**
+     * initYouTube
+     * pt-BR: Inicializa o YT.Player e salva posição a cada segundo enquanto tocando.
+     * en-US: Initializes YT.Player and saves position every second while playing.
+     */
+    /**
+     * initYouTube
+     * pt-BR: Inicializa o YT.Player em um contêiner <div> usando videoId, com handlers de pausa.
+     * en-US: Initializes YT.Player in a <div> container using videoId, with pause handlers.
+     */
+    const initYouTube = async (container: HTMLDivElement, videoId: string) => {
+      await loadYouTubeAPI();
+      if (destroyed) return;
+      const YT = (window as any).YT;
+      const player = new YT.Player(container, {
+        videoId,
+        playerVars: {
+          enablejsapi: 1,
+          origin: window.location.origin,
+        },
+        events: {
+          onReady: async () => {
+            try {
+              // pt-BR: Inclui id_matricula quando disponível.
+              // en-US: Include id_matricula when available.
+              const apiRes = await progressService.getPlaybackPosition(cid, aid, enrollmentId);
+              savedApi = Number(apiRes?.seconds || 0) || 0;
+              // pt-BR: Atualiza flag de “Retomar” baseada na API.
+              // en-US: Update “Resume” flag based on API.
+              setPlaybackExists(Boolean(apiRes?.exists === true));
+            } catch {}
+            const lastSecs = String(lastProgressRef.current?.activityId) === String(aid)
+              ? Number(lastProgressRef.current?.seconds || 0) || 0
+              : 0;
+            // pt-BR: Prioriza API > localStorage > último progresso (pedido do usuário).
+            // en-US: Prefer API > localStorage > last progress (user request).
+            const startAt = savedApi || savedLocal || lastSecs || 0;
+            if (startAt > 0) player.seekTo(startAt, true);
+            // pt-BR: Tenta obter a duração total quando pronto.
+            // en-US: Try to get total duration when ready.
+            try { durationRef.current = Number(player.getDuration?.() || 0) || durationRef.current; } catch {}
+            // pt-BR: Define função de tempo atual para flush.
+            // en-US: Set current time getter for flush.
+            getCurrentTimeRef.current = () => { try { return Number(player.getCurrentTime?.() || 0) || 0; } catch { return 0; } };
+          },
+          onStateChange: (ev: any) => {
+            // 1 = PLAYING, 2 = PAUSED, 0 = ENDED
+            if (ev?.data === YT.PlayerState.PLAYING) {
+              // pt-BR: Não salva periodicamente; apenas em pausa.
+              // en-US: Do not save periodically; only on pause.
+              // pt-BR: Marca que a reprodução já iniciou para permitir persistência futura.
+              // en-US: Mark playback as started to allow future persistence.
+              startedPlaybackRef.current = true;
+              try { durationRef.current = Number(player.getDuration?.() || 0) || durationRef.current; } catch {}
+            } else if (ev?.data === YT.PlayerState.PAUSED) {
+              // pt-BR: Ao pausar, envia posição atual para API imediatamente.
+              // en-US: On pause, immediately send current position to the API.
+              try {
+                const t = Number(player.getCurrentTime() || 0) || 0;
+                // pt-BR: Usa função dedicada para pausa.
+                // en-US: Use dedicated pause function.
+                saveVideoProgressOnPause(t);
+              } catch {}
+            } else if (ev?.data === YT.PlayerState.ENDED) {
+              // pt-BR: Ao terminar o vídeo, marcar conclusão no servidor e avançar.
+              // en-US: On video end, mark completion on server and advance.
+              // pt-BR: Guarda: execute apenas para a atividade ativa.
+              // en-US: Guard: run only for the active activity.
+              if (String(activeActivityIdRef.current) !== String(aid)) return;
+              markCompleteAndAdvance();
+            }
+          },
+        },
+      });
+      // Limpeza ao trocar atividade
+      const prevCleanup = playerCleanupRef.current;
+      playerCleanupRef.current = () => {
+        try { player.destroy?.(); } catch {}
+        try { prevCleanup?.(); } catch {}
+      };
+    };
+
+    /**
+     * initVimeo
+     * pt-BR: Inicializa o player do Vimeo usando o SDK oficial (@vimeo/player),
+     *        retomando posição, salvando progresso e avançando ao término.
+     * en-US: Initializes Vimeo player using the official SDK (@vimeo/player),
+     *        resuming position, saving progress, and auto-advancing on end.
+     */
+    const initVimeo = async (el: HTMLIFrameElement) => {
+      try {
+        const PlayerMod = await import('@vimeo/player');
+        const Player = PlayerMod.default as any;
+        const player = new Player(el);
+        // pt-BR: Define função de tempo atual baseada na última posição conhecida.
+        // en-US: Set current time getter based on last known position.
+        getCurrentTimeRef.current = () => Number(lastKnownTimeRef.current || 0) || 0;
+
+        // Retoma a posição quando o player estiver carregado
+        player.on('loaded', async () => {
+          try {
+            const lastSecs = String(lastProgressRef.current?.activityId) === String(aid)
+              ? Number(lastProgressRef.current?.seconds || 0) || 0
+              : 0;
+            // pt-BR: Prioriza API > localStorage > último progresso (pedido do usuário).
+            // en-US: Prefer API > localStorage > last progress (user request).
+            const startAt = savedApi || savedLocal || lastSecs || 0;
+            if (startAt > 0) await player.setCurrentTime(startAt);
+          } catch {}
+        });
+
+        // Atualiza duração e última posição conhecida (não salva periodicamente)
+        player.on('timeupdate', (data: any) => {
+          const seconds = Number(data?.seconds || 0) || 0;
+          const duration = Number(data?.duration || 0) || 0;
+          lastKnownTimeRef.current = seconds;
+          // pt-BR: Marca reprodução iniciada após avançar pelo menos 1 segundo.
+          // en-US: Mark playback started after advancing at least 1 second.
+          if (seconds > 0) startedPlaybackRef.current = true;
+          if (duration > 0) durationRef.current = duration;
+          // pt-BR: Não conclui em timeupdate; conclusão apenas em 'ended'.
+          // en-US: Do not complete on timeupdate; completion only on 'ended'.
+        });
+
+        /**
+         * pause handler
+         * pt-BR: Ao pausar, envia imediatamente a posição atual para a API (garante persistência).
+         * en-US: On pause, immediately send current position to the API (ensures persistence).
+         */
+        player.on('pause', (data: any) => {
+          const seconds = Number(data?.seconds || 0) || 0;
+          // pt-BR: Usa função dedicada para pausa.
+          // en-US: Use dedicated pause function.
+          saveVideoProgressOnPause(seconds);
+        });
+
+        // pt-BR: Marca reprodução iniciada ao receber evento de play.
+        // en-US: Mark playback started on play event.
+        try { player.on?.('play', () => { startedPlaybackRef.current = true; }); } catch {}
+
+        // Avança automaticamente ao término
+        player.on('ended', async () => {
+          // pt-BR: Guarda: execute apenas para a atividade ativa.
+          // en-US: Guard: run only for the active activity.
+          if (String(activeActivityIdRef.current) !== String(aid)) return;
+          if (!endedMarkedRef.current) {
+            endedMarkedRef.current = true;
+            try {
+              const id = aid;
+              setCompletedIds((prev) => {
+                const next = new Set(prev as any);
+                const sid = String(id);
+                if (!next.has(sid)) {
+                  next.add(sid);
+                  try { localStorage.setItem(storageKey, JSON.stringify(Array.from(next))); } catch {}
+                }
+                return next;
+              });
+              await progressService.toggleActivityCompletion({
+                course_id: cid,
+                module_id: modules[mi]?.module_id ?? modules[mi]?.id,
+                activity_id: id,
+                completed: true,
+                seconds: Math.round(Number(durationRef.current || 0) || 0),
+                id_matricula: enrollmentId,
+              });
+          } catch {}
+            // pt-BR: Avança para a próxima NÃO concluída
+            // en-US: Advance to next NOT completed
+            navigateToNextUncompleted();
+          }
+        });
+
+        // Limpeza ao trocar atividade
+        const prevCleanup = playerCleanupRef.current;
+        playerCleanupRef.current = () => {
+          try { player.unload?.(); } catch {}
+          try { player.off?.('timeupdate'); player.off?.('ended'); player.off?.('loaded'); player.off?.('pause'); } catch {}
+          try { prevCleanup?.(); } catch {}
+        };
+      } catch {
+        // Fallback: postMessage (mantém compatibilidade). Usa 'ended' no lugar de 'finish'.
+        const target = el.contentWindow;
+        if (!target) return;
+        const onMessage = (e: MessageEvent) => {
+          if (!e || !e.data) return;
+          try {
+            const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+            if (data?.event === 'ready') {
+              const lastSecs = String(lastProgressRef.current?.activityId) === String(aid)
+                ? Number(lastProgressRef.current?.seconds || 0) || 0
+                : 0;
+              // pt-BR: Prioriza API > localStorage > último progresso (pedido do usuário).
+              // en-US: Prefer API > localStorage > last progress (user request).
+              const startAt = savedApi || savedLocal || lastSecs || 0;
+              if (startAt > 0) target.postMessage({ method: 'setCurrentTime', value: startAt }, '*');
+              target.postMessage({ method: 'addEventListener', value: 'timeupdate' }, '*');
+              target.postMessage({ method: 'addEventListener', value: 'ended' }, '*');
+              // pt-BR: Alguns embeds usam 'finish' em vez de 'ended'. Ouça ambos.
+              // en-US: Some embeds use 'finish' instead of 'ended'. Listen to both.
+              target.postMessage({ method: 'addEventListener', value: 'finish' }, '*');
+              // pt-BR: Ouve 'pause' para persistir posição imediatamente.
+              // en-US: Listen to 'pause' to persist position immediately.
+              target.postMessage({ method: 'addEventListener', value: 'pause' }, '*');
+              // pt-BR: Ouve 'play' para marcar reprodução iniciada.
+              // en-US: Listen to 'play' to mark playback started.
+              target.postMessage({ method: 'addEventListener', value: 'play' }, '*');
+              // pt-BR: Define função de tempo atual baseada na última posição conhecida.
+              // en-US: Set current time getter based on last known position.
+              getCurrentTimeRef.current = () => Number(lastKnownTimeRef.current || 0) || 0;
+            } else if (data?.event === 'timeupdate') {
+              const seconds = Number(data?.data?.seconds || 0) || 0;
+              const duration = Number(data?.data?.duration || 0) || 0;
+              lastKnownTimeRef.current = seconds;
+              if (seconds > 0) startedPlaybackRef.current = true;
+              if (duration > 0) durationRef.current = duration;
+              // pt-BR: Não conclui em timeupdate; conclusão apenas em 'ended' ou 'finish'.
+              // en-US: Do not complete on timeupdate; completion only on 'ended' or 'finish'.
+            } else if (data?.event === 'pause') {
+              const seconds = Number(data?.data?.seconds || 0) || 0;
+              // pt-BR: Usa função dedicada para pausa.
+              // en-US: Use dedicated pause function.
+              saveVideoProgressOnPause(seconds);
+            } else if (data?.event === 'play') {
+              startedPlaybackRef.current = true;
+            } else if (data?.event === 'ended' || data?.event === 'finish') {
+              // pt-BR: Guarda: execute apenas para a atividade ativa.
+              // en-US: Guard: run only for the active activity.
+              if (String(activeActivityIdRef.current) !== String(aid)) return;
+              if (!endedMarkedRef.current) {
+                endedMarkedRef.current = true;
+                (async () => {
+                  try {
+                    const id = aid;
+                    setCompletedIds((prev) => {
+                      const next = new Set(prev as any);
+                      const sid = String(id);
+                      if (!next.has(sid)) {
+                        next.add(sid);
+                        try { localStorage.setItem(storageKey, JSON.stringify(Array.from(next))); } catch {}
+                      }
+                      return next;
+                    });
+                    await progressService.toggleActivityCompletion({
+                      course_id: cid,
+                      module_id: modules[mi]?.module_id ?? modules[mi]?.id,
+                      activity_id: id,
+                      completed: true,
+                      seconds: Math.round(Number(durationRef.current || 0) || 0),
+                      id_matricula: enrollmentId,
+                    });
+                  } catch {}
+                  // pt-BR: Avança para a próxima NÃO concluída
+                  // en-US: Advance to next NOT completed
+                  navigateToNextUncompleted();
+                })();
+              }
+            }
+          } catch {}
+        };
+        window.addEventListener('message', onMessage);
+        target.postMessage({ method: 'addEventListener', value: 'ready' }, '*');
+        const prevCleanup = playerCleanupRef.current;
+        playerCleanupRef.current = () => { window.removeEventListener('message', onMessage); try { prevCleanup?.(); } catch {} };
+      }
+    };
+
+    // fetch API position early (non-blocking) to prefer server state
+    (async () => {
+      try {
+        const apiRes = await progressService.getPlaybackPosition(cid, aid, enrollmentId);
+        savedApi = Number(apiRes?.seconds || 0) || 0;
+        // pt-BR: Atualiza flag de “Retomar” baseada na API (carregamento antecipado).
+        // en-US: Update “Resume” flag based on API (early fetch).
+        setPlaybackExists(Boolean(apiRes?.exists === true));
+      } catch {}
+    })();
+
+    // Decide qual player inicializar (YouTube/Vimeo via iframe, ou HTML5 para MP4)
+    const iframeEl = iframeRef.current;
+    const videoEl = html5VideoRef.current;
+    const provider = getActivityProvider(a);
+    const activityUrl = getActivityUrl(a);
+    const ytId = provider === 'youtube' ? getYouTubeIdFromAnyUrl(activityUrl) : '';
+
+    // Inicialização por provedor
+    if (provider === 'youtube') {
+      const container = youtubeContainerRef.current;
+      if (container && ytId) initYouTube(container, ytId);
+    } else if (provider === 'vimeo') {
+      if (iframeEl) initVimeo(iframeEl);
+    }
+
+    // pt-BR: Atividades de leitura/arquivo — marcam conclusão apenas se
+    //        o tempo de abertura atingir a duração declarada; se não houver
+    //        duração, não marcam conclusão.
+    // en-US: Reading/file activities — mark completed only if open time
+    //        reaches the declared duration; if no duration, do not mark.
+    {
+      const typeStr = getType(a);
+      const readingLike = isDocument(a) || typeStr.includes('leitura') || isLink(a);
+      const hasVideo = isVideo(a);
+      const requiredSecs = Math.round(Number(toSeconds(a?.duracao ?? a?.duration, String(a?.unidade_duracao ?? a?.type_duration))) || 0);
+      if (readingLike && !hasVideo && requiredSecs > 0) {
+        const startAtMs = Date.now();
+        const tickMs = 1000;
+        let intervalId: any = null;
+        // pt-BR: Inicializa contador visual de tempo restante
+        // en-US: Initialize visual remaining time counter
+        try { setReadingRemaining(requiredSecs); } catch {}
+        const startInterval = () => {
+          if (intervalId) return;
+          intervalId = setInterval(() => {
+            if (destroyed) { clearInterval(intervalId); return; }
+            const elapsedSec = Math.floor((Date.now() - startAtMs) / 1000);
+            try { setReadingRemaining(Math.max(requiredSecs - elapsedSec, 0)); } catch {}
+            if (elapsedSec >= requiredSecs && !endedMarkedRef.current) {
+              clearInterval(intervalId);
+              markCompleteForReading(requiredSecs);
+            }
+          }, tickMs);
+        };
+        startInterval();
+        const prevCleanup = playerCleanupRef.current;
+        playerCleanupRef.current = () => {
+          if (intervalId) { clearInterval(intervalId); intervalId = null; }
+          try { setReadingRemaining(0); } catch {}
+          try { prevCleanup?.(); } catch {}
+        };
+      }
+    }
+
+    // Inicialização para HTML5 <video> (MP4)
+    if (videoEl) {
+      const onLoaded = () => {
+        const lastSecs = String(lastProgressRef.current?.activityId) === String(aid)
+          ? Number(lastProgressRef.current?.seconds || 0) || 0
+          : 0;
+        // pt-BR: Prioriza API > localStorage > último progresso (pedido do usuário).
+        // en-US: Prefer API > localStorage > last progress (user request).
+        const startAt = savedApi || savedLocal || lastSecs || 0;
+        try { if (startAt > 0) videoEl.currentTime = startAt; } catch {}
+        try { durationRef.current = Number(videoEl.duration || 0) || durationRef.current; } catch {}
+      };
+      // pt-BR: Atualiza referências de tempo e duração sem persistir continuamente.
+      // en-US: Update time and duration refs without continuous persistence.
+      const onTimeUpdate = () => {
+        try {
+          const current = Number(videoEl.currentTime || 0) || 0;
+          lastKnownTimeRef.current = current;
+          const duration = Number(videoEl.duration || 0) || 0;
+          if (duration > 0) durationRef.current = duration;
+          // Salvaguarda de conclusão próxima ao fim
+          // if (duration > 0 && current >= duration - 1 && !endedMarkedRef.current) {
+          //   markCompleteAndAdvance();
+          // }
+        } catch {}
+      };
+      // pt-BR: Define função de tempo atual para flush global.
+      // en-US: Set current time getter for global flush.
+      getCurrentTimeRef.current = () => { try { return Number(videoEl.currentTime || 0) || 0; } catch { return 0; } };
+      // pt-BR: Ao pausar, persiste imediatamente a posição atual na API.
+      // en-US: On pause, immediately persist current position to the API.
+      const onPausePersist = () => {
+        try {
+          const pos = Number(videoEl.currentTime || 0) || 0;
+          // pt-BR: Usa função dedicada para pausa.
+          // en-US: Use dedicated pause function.
+          saveVideoProgressOnPause(pos);
+        } catch {}
+      };
+      const onPlayStarted = () => { startedPlaybackRef.current = true; };
+      const onEnded = () => {
+        // pt-BR: Guarda: execute apenas para a atividade ativa.
+        // en-US: Guard: run only for the active activity.
+        if (String(activeActivityIdRef.current) !== String(aid)) return;
+        if (!endedMarkedRef.current) {
+          endedMarkedRef.current = true;
+          (async () => {
+            try {
+              const id = aid;
+              setCompletedIds((prev) => {
+                const next = new Set(prev as any);
+                const sid = String(id);
+                if (!next.has(sid)) {
+                  next.add(sid);
+                  try { localStorage.setItem(storageKey, JSON.stringify(Array.from(next))); } catch {}
+                }
+                return next;
+              });
+              await progressService.toggleActivityCompletion({
+                course_id: cid,
+                module_id: modules[mi]?.module_id ?? modules[mi]?.id,
+                activity_id: id,
+                completed: true,
+                seconds: Math.round(Number(durationRef.current || 0) || 0),
+                id_matricula: enrollmentId,
+              });
+            } catch {}
+            // pt-BR: Avança para a próxima NÃO concluída
+            // en-US: Advance to next NOT completed
+            navigateToNextUncompleted();
+          })();
+        }
+      };
+      videoEl.addEventListener('loadedmetadata', onLoaded);
+      videoEl.addEventListener('timeupdate', onTimeUpdate);
+      videoEl.addEventListener('pause', onPausePersist);
+      videoEl.addEventListener('play', onPlayStarted);
+      videoEl.addEventListener('ended', onEnded);
+      const prevCleanup = playerCleanupRef.current;
+      playerCleanupRef.current = () => {
+        videoEl.removeEventListener('loadedmetadata', onLoaded);
+        videoEl.removeEventListener('timeupdate', onTimeUpdate);
+        videoEl.removeEventListener('pause', onPausePersist);
+        videoEl.removeEventListener('play', onPlayStarted);
+        videoEl.removeEventListener('ended', onEnded);
+        try { prevCleanup?.(); } catch {}
+      };
+    }
+
+    // pt-BR: Sem flush global — salvamento apenas em eventos de pausa.
+    // en-US: No global flush — save only on pause events.
+
+    return () => { destroyed = true; playerCleanupRef.current?.(); };
+  }, [currentActivity, course, modules]);
+
+  /**
+   * getModuleTotalSeconds
+   * pt-BR: Soma duração das atividades do módulo; se vazio, usa duração do módulo.
+   * en-US: Sums activities durations; if empty, uses module duration.
+   */
+  function getModuleTotalSeconds(m: any) {
+    const activities: any[] = Array.isArray(m?.atividades || m?.activities) ? (m?.atividades || m?.activities) : [];
+    const sumActs = activities.reduce((acc, a) => acc + toSeconds(a?.duracao ?? a?.duration, String(a?.unidade_duracao ?? a?.type_duration)), 0);
+    if (sumActs > 0) return sumActs;
+    return toSeconds(m?.duration ?? 0, String(m?.tipo_duracao ?? '').toLowerCase());
+  }
+
+  /**
+   * completedIds
+   * pt-BR: IDs de atividades concluídas; carrega de localStorage e API.
+   * en-US: Completed activity IDs; loads from localStorage and API.
+   */
+  const courseId = course?.id ?? course?.course_id ?? course?.token ?? 'course';
+  const storageKey = `course_completed_${courseId}`;
+  const [completedIds, setCompletedIds] = useState<Set<string | number>>(new Set());
+  /**
+   * progressLoading
+   * pt-BR: Indica se o progresso está sendo sincronizado com o servidor.
+   * en-US: Indicates whether progress is being synchronized with the server.
+   */
+  const [progressLoading, setProgressLoading] = useState<boolean>(true);
+  /**
+   * progressMap
+   * pt-BR: Mapa de progresso por atividade (seconds/completed) vindo da API.
+   * en-US: Per-activity progress map (seconds/completed) from API.
+   */
+  const [progressMap, setProgressMap] = useState<Record<string, { seconds: number; completed: boolean }>>({});
+  /**
+   * lastCompletedId / nextActivityId
+   * pt-BR: Última concluída e próxima atividade sugerida pela API.
+   * en-US: Last completed and next suggested activity from API.
+   */
+  const [lastCompletedId, setLastCompletedId] = useState<string | number | undefined>(undefined);
+  const [nextActivityId, setNextActivityId] = useState<string | number | undefined>(undefined);
+  /**
+   * lastProgressRef
+   * pt-BR: Mantém último progresso retornado pela API para retomada (atividade/segundos).
+   * en-US: Holds last progress returned by the API for resume (activity/seconds).
+   */
+  const lastProgressRef = useRef<{ activityId?: string | number; moduleId?: string | number; seconds?: number }>({});
+  /**
+   * playbackExists
+   * pt-BR: Indica, via API, se há posição salva para a atividade atual.
+   * en-US: Indicates, via API, whether there is a saved position for the current activity.
+   */
+  const [playbackExists, setPlaybackExists] = useState<boolean>(false);
+  /**
+   * autoSelectOnceRef
+   * pt-BR: Evita redefinir a seleção inicial repetidamente após sincronizações.
+   * en-US: Prevents redefining initial selection repeatedly after syncs.
+   */
+  const autoSelectOnceRef = useRef<boolean>(false);
+  /**
+   * selectionIntentRef
+   * pt-BR: Guarda a intenção da seleção atual: 'user' quando o usuário
+   *        clicou diretamente em uma atividade concluída para revisar;
+   *        'auto' quando a seleção foi definida automaticamente (inicial,
+   *        navegação Próximo/Anterior, busca, etc.). Usado para manter o
+   *        auto-skip ativo apenas em seleções automáticas.
+   * en-US: Holds the intent of the current selection: 'user' when the user
+   *        explicitly clicked a completed activity to review; 'auto' when the
+   *        selection was set automatically (initial, Next/Previous, search,
+   *        etc.). Used to keep auto-skip active only on automatic selections.
+   */
+  const selectionIntentRef = useRef<'user' | 'auto'>('auto');
+
+  /**
+   * readActivityFromUrl effect
+   * pt-BR: Lê `?activity=<id>` apenas se presente na URL inicial (intenção do usuário).
+   * en-US: Reads `?activity=<id>` only if present in the initial URL (user intent).
+   */
+  const initialActivityParamRef = useRef<string | null>(null);
+  const urlSelectionAppliedRef = useRef<boolean>(false);
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(location.search);
+      if (initialActivityParamRef.current === null) {
+        initialActivityParamRef.current = params.get('activity');
+      }
+      const aidParam = params.get('activity');
+      if (!initialActivityParamRef.current || urlSelectionAppliedRef.current) return;
+      if (String(aidParam || '') !== String(initialActivityParamRef.current || '')) return;
+      const idx = filteredActivities.findIndex((a) => String(getActivityId(a, a?._moduleIndex, a?._activityIndex)) === String(aidParam));
+      if (idx >= 0) {
+        selectionIntentRef.current = 'user';
+        setCurrentIndex(idx);
+        autoSelectOnceRef.current = true;
+        urlSelectionAppliedRef.current = true;
+      }
+    } catch {}
+  }, [location.search, filteredActivities]);
+
+  useEffect(() => {
+    // pt-BR: Pré-carrega do localStorage para feedback imediato
+    // en-US: Preload from localStorage for immediate feedback
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const asStrings = Array.isArray(parsed) ? parsed.map((v: any) => String(v)) : [];
+        setCompletedIds(new Set(asStrings));
+      }
+    } catch {}
+    // pt-BR: Sincroniza com backend; controla estado de carregamento
+    // en-US: Sync with backend; controls loading state
+    const schedule = (cb: () => void) => {
+      try {
+        // pt-BR: Usa requestIdleCallback quando disponível para adiar sincronização pesada.
+        // en-US: Use requestIdleCallback when available to defer heavy sync.
+        const ric = (window as any).requestIdleCallback as undefined | ((fn: any, opts?: any) => void);
+        if (typeof ric === 'function') ric(cb, { timeout: 2000 }); else setTimeout(cb, 0);
+      } catch {
+        setTimeout(cb, 0);
+      }
+    };
+    schedule(async () => {
+      setProgressLoading(true);
+      try {
+        const cur = await progressService.getEnrollmentCurriculum(enrollmentId);
+        const curriculum = Array.isArray((cur as any)?.curriculum) ? (cur as any).curriculum : [];
+        const allActivities: any[] = [];
+        curriculum.forEach((m: any) => {
+          const arr = Array.isArray(m?.atividades) ? m.atividades : [];
+          arr.forEach((a: any) => allActivities.push(a));
+        });
+        // completed_ids
+        const apiIds = allActivities
+          .filter((a) => Boolean(a?.completed))
+          .map((a) => String(a?.id ?? a?.activity_id))
+          .filter((sid) => !!sid);
+        setCompletedIds(new Set(apiIds));
+        try { localStorage.setItem(storageKey, JSON.stringify(apiIds)); } catch {}
+        // progressMap
+        const pm: Record<string, { seconds: number; completed: boolean }> = {};
+        allActivities.forEach((a) => {
+          const aid = a?.id ?? a?.activity_id;
+          if (aid !== undefined && aid !== null) {
+            const sid = String(aid);
+            const secs = Number(a?.seconds ?? a?.config?.seconds ?? 0) || 0;
+            const done = Boolean(a?.completed ?? a?.config?.completed);
+            pm[sid] = { seconds: secs, completed: done };
+            try {
+              const posKey = positionKey(courseId, sid);
+              if (done) {
+                localStorage.removeItem(posKey);
+              } else if (secs > 0) {
+                localStorage.setItem(posKey, String(Math.floor(secs)));
+              }
+            } catch {}
+          }
+        });
+        setProgressMap(pm);
+        // lastCompletedId: último concluído pela ordem de updated_at ou ordem natural
+        let lastCompletedId: string | number | undefined = undefined;
+        try {
+          const completedOrdered = allActivities
+            .filter((a) => Boolean(a?.completed))
+            .sort((a, b) => {
+              const ta = a?.updated_at ? Date.parse(a.updated_at) : -Infinity;
+              const tb = b?.updated_at ? Date.parse(b.updated_at) : -Infinity;
+              return tb - ta; // desc
+            });
+          lastCompletedId = completedOrdered[0]?.id ?? completedOrdered[0]?.activity_id;
+        } catch {}
+        if (lastCompletedId !== undefined && lastCompletedId !== null) setLastCompletedId(lastCompletedId);
+        // Seleção inicial (uma vez): 1) needs_resume; 2) primeiro não concluído
+        if (!autoSelectOnceRef.current) {
+          const completedSet = new Set(apiIds);
+          let pickIndex = -1;
+          // 1) primeira atividade com needs_resume e não concluída
+          for (let i = 0; i < filteredActivities.length; i++) {
+            const a = filteredActivities[i];
+            const id = a?.id ?? a?.activity_id ?? `${a?._moduleIndex}-${a?._activityIndex}`;
+            const sid = String(id);
+            const pmItem = progressMap[sid];
+            const needsResume = pmItem ? (pmItem.seconds > 0 && !pmItem.completed) : false;
+            const isDone = completedSet.has(sid);
+            if (needsResume && !isDone) { pickIndex = i; break; }
+          }
+          // 2) primeira não concluída
+          if (pickIndex < 0) {
+            for (let i = 0; i < filteredActivities.length; i++) {
+              const a = filteredActivities[i];
+              const id = a?.id ?? a?.activity_id ?? `${a?._moduleIndex}-${a?._activityIndex}`;
+              if (!completedSet.has(String(id))) { pickIndex = i; break; }
+            }
+          }
+          if (pickIndex >= 0) {
+            selectionIntentRef.current = 'auto';
+            setCurrentIndex(pickIndex);
+          }
+          autoSelectOnceRef.current = true;
+        }
+      } catch {}
+      finally {
+        setProgressLoading(false);
+      }
+    });
+  }, [storageKey, courseId, enrollmentId]);
+
+  /**
+   * autoSkipOnAutoSelection
+   * pt-BR: Mantém o auto-skip ATIVO somente quando a seleção é automática.
+   *        Se a atividade atual estiver concluída e a intenção for 'auto',
+   *        avança para a próxima não concluída. Se a intenção for 'user',
+   *        mantém a atividade selecionada para revisão.
+   * en-US: Keeps auto-skip ACTIVE only for automatic selections. If the
+   *        current activity is completed and intent is 'auto', advances to the
+   *        next not-completed. If intent is 'user', keeps the selection to
+   *        allow review.
+   */
+  useEffect(() => {
+    const a: any = currentActivity;
+    if (!a) return;
+    const mi = a?._moduleIndex; const ai = a?._activityIndex;
+    const aid = getActivityId(a, mi, ai);
+    const isCompleted = completedIds.has(String(aid));
+    if (!isCompleted) return;
+    if (selectionIntentRef.current === 'user') return; // Não auto-pular se usuário escolheu
+    // pt-BR: Avança apenas para a primeira atividade imediatamente após a atual.
+    // en-US: Advance only to the first activity immediately after the current.
+    const nextIdx = currentIndex + 1;
+    if (nextIdx < filteredActivities.length) {
+      selectionIntentRef.current = 'auto';
+      setCurrentIndex(nextIdx);
+    }
+  }, [currentActivity, currentIndex, filteredActivities, completedIds]);
+
+  /**
+   * initialAutoPick effect
+   * pt-BR: Quando a página abre SEM `?activity=`, usa `completedIds` (local/API)
+   *        e posições salvas para selecionar automaticamente: primeiro "Retomar"
+   *        (seconds > 0 e não concluído) ou a primeira não concluída. Não marca
+   *        `autoSelectOnceRef` aqui, permitindo que a resposta da API ajuste
+   *        posteriormente, evitando travar na primeira atividade.
+   * en-US: When the page opens WITHOUT `?activity=`, use `completedIds` (local/API)
+   *        and saved positions to auto-select: first "Resume" (seconds > 0 and
+   *        not completed) or the first not-completed. Does not set
+   *        `autoSelectOnceRef` here, allowing the API response to refine later,
+   *        avoiding locking to the first activity.
+   */
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(location.search);
+      const aidParam = params.get('activity');
+      if (aidParam) return; // explicit URL selection → user intent elsewhere
+      if (autoSelectOnceRef.current) return; // already picked by API/initial URL
+      if (!filteredActivities?.length) return;
+
+      // 1) Pick first activity with saved seconds (Resume) and not completed
+      let pickIndex = -1;
+      for (let i = 0; i < filteredActivities.length; i++) {
+        const a = filteredActivities[i];
+        const id = a?.id ?? a?.activity_id ?? `${a?._moduleIndex}-${a?._activityIndex}`;
+        const sid = String(id);
+        let secs = 0;
+        try {
+          const posRaw = localStorage.getItem(positionKey(courseId, sid));
+          secs = Number(posRaw || 0) || 0;
+        } catch {}
+        const hasResume = secs > 0;
+        const isDone = completedIds.has(sid);
+        if (hasResume && !isDone) { pickIndex = i; break; }
+      }
+
+      // 2) Fallback to first not-completed (using completedIds from local/API)
+      if (pickIndex < 0) {
+        for (let i = 0; i < filteredActivities.length; i++) {
+          const a = filteredActivities[i];
+          const id = a?.id ?? a?.activity_id ?? `${a?._moduleIndex}-${a?._activityIndex}`;
+          if (!completedIds.has(String(id))) { pickIndex = i; break; }
+        }
+      }
+
+      if (pickIndex >= 0) {
+        selectionIntentRef.current = 'auto';
+        setCurrentIndex(pickIndex);
+        // Nota: não definimos autoSelectOnceRef aqui para permitir ajuste pela API
+      }
+    } catch {}
+  }, [filteredActivities, location.search, completedIds, courseId]);
+
+  /**
+   * completedSummaryText
+   * pt-BR: Texto de resumo de concluídas, no formato "X de Y assistidas".
+   * en-US: Completed summary text, formatted as "X of Y watched".
+   */
+  const completedSummaryText = useMemo(() => {
+    try {
+      const total = filteredActivities.length;
+      if (!total) return '';
+      const count = filteredActivities.reduce((acc, a) => {
+        const id = a?.id ?? a?.activity_id ?? `${a?._moduleIndex}-${a?._activityIndex}`;
+        return completedIds.has(String(id)) ? acc + 1 : acc;
+      }, 0);
+      return `${count} de ${total} assistidas`;
+    } catch {
+      return '';
+    }
+  }, [filteredActivities, completedIds]);
+// (perf) evita logs em produção
+
+  /**
+   * courseProgressPercent
+   * pt-BR: Percentual de progresso total do curso (todas as atividades).
+   * en-US: Total course progress percentage (all activities).
+   */
+  const courseProgressPercent = useMemo(() => {
+    try {
+      const total = flatActivities.length;
+      if (!total) return 0;
+      const count = flatActivities.reduce((acc, a: any) => {
+        const id = a?.id ?? a?.activity_id ?? `${a?._moduleIndex}-${a?._activityIndex}`;
+        return completedIds.has(String(id)) ? acc + 1 : acc;
+      }, 0);
+      return Math.round((count / total) * 100);
+    } catch {
+      return 0;
+    }
+  }, [flatActivities, completedIds]);
+
+  /**
+   * toggleCompleted
+   * pt-BR: Alterna conclusão e persiste em localStorage e API. Envia `seconds`
+   *        como inteiro; se a duração do player estiver 0, usa a duração
+   *        declarada da atividade (duracao + unidade_duracao) como fallback.
+   * en-US: Toggles completion and persists to localStorage and API. Sends
+   *        `seconds` as an integer; if player duration is 0, falls back to the
+   *        activity-declared duration (duracao + unidade_duracao).
+   */
+  const toggleCompleted = async (a: any, mi: number, ai: number) => {
+    const id = a?.id ?? a?.activity_id ?? `${mi}-${ai}`;
+    let nowCompleted = false;
+    setCompletedIds((prev) => {
+      const next = new Set(prev);
+      const sid = String(id);
+      nowCompleted = !next.has(sid);
+      if (nowCompleted) next.add(sid); else next.delete(sid);
+      try { localStorage.setItem(storageKey, JSON.stringify(Array.from(next))); } catch {}
+      return next;
+    });
+    try {
+      const metaSecs = Math.round(Number(toSeconds(a?.duracao ?? a?.duration, String(a?.unidade_duracao ?? a?.type_duration))) || 0);
+      const playerSecs = Math.round(Number(durationRef.current || 0) || 0);
+      const secondsPayload = playerSecs || metaSecs || 0;
+      await progressService.toggleActivityCompletion({
+        course_id: courseId,
+        module_id: modules[mi]?.module_id ?? modules[mi]?.id,
+        activity_id: id,
+        completed: nowCompleted,
+        // pt-BR: Duração total (player ou fallback da atividade), arredondada.
+        // en-US: Total duration (player or activity fallback), rounded.
+        seconds: secondsPayload,
+        // pt-BR: Envia id_matricula quando disponível para controle de frequência.
+        // en-US: Sends id_matricula when available for attendance.
+        id_matricula: enrollmentId,
+      });
+    } catch {}
+  };
+
+  /**
+   * navigatePrev / navigateNext
+   * pt-BR: Controles de navegação (Anterior / Próximo).
+   * en-US: Navigation controls (Previous / Next).
+   */
+  /**
+   * navigatePrev / navigateNext
+   * pt-BR: Navega com intenção automática (mantém auto-skip ativo).
+   * en-US: Navigates with automatic intent (keeps auto-skip active).
+   */
+  const navigatePrev = () => {
+    selectionIntentRef.current = 'auto';
+    setCurrentIndex((i) => Math.max(0, i - 1));
+  };
+  const navigateNext = () => {
+    selectionIntentRef.current = 'auto';
+    setCurrentIndex((i) => Math.min(filteredActivities.length - 1, i + 1));
+  };
+
+  /**
+   * navigateToNextUncompleted
+   * pt-BR: Avança para a próxima atividade NÃO concluída, percorrendo o currículo
+   *        a partir da atividade atual. Usa `progressMap` (API) quando disponível
+   *        e cai para `completedIds` (localStorage/API) como fallback. Define a
+   *        intenção como 'user' para evitar auto-pulos em cadeia.
+   * en-US: Advances to the next NOT completed activity, scanning the curriculum
+   *        from the current activity. Uses `progressMap` (API) when available
+   *        and falls back to `completedIds` (localStorage/API). Sets intent to
+   *        'user' to avoid chained auto-skips.
+   */
+  const navigateToNextUncompleted = () => {
+    try {
+      if (!filteredActivities?.length) return;
+      const start = currentIndex + 1;
+      for (let i = start; i < filteredActivities.length; i++) {
+        const a: any = filteredActivities[i];
+        const id = a?.id ?? a?.activity_id ?? `${a?._moduleIndex}-${a?._activityIndex}`;
+        const sid = String(id);
+        const pmItem = progressMap[sid];
+        const isCompleted = pmItem ? Boolean(pmItem.completed) : completedIds.has(sid);
+        if (!isCompleted) {
+          selectionIntentRef.current = 'user';
+          setCurrentIndex(i);
+          console.log('proxima',i);
+          
+          return;
+        }
+      }
+      // Fallback: se não houver próxima não concluída, avança uma posição.
+      if (start < filteredActivities.length) {
+        selectionIntentRef.current = 'user';
+        setCurrentIndex(start);
+      }
+    } catch {}
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Top bar: search + progress */}
+      <div className="sticky top-0 z-10 bg-background text-foreground border-b px-3 py-3 grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+        <Input
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            // Reset to first item on new search
+            selectionIntentRef.current = 'auto';
+            setCurrentIndex(0);
+          }}
+          placeholder="Buscar conteúdo do curso"
+          className="w-full md:max-w-md"
+        />
+        {/* pt-BR: Toggle da lista de atividades no mobile */}
+        {/* en-US: Activities list toggle on mobile */}
+        <Button
+          variant="secondary"
+          size="sm"
+          className="md:hidden"
+          onClick={() => setMobileSidebarOpen(true)}
+        >
+          <Folder className="h-4 w-4 mr-1" /> Atividades
+        </Button>
+        {/* Summary row */}
+        <div className="col-span-1 md:col-span-2 text-xs md:text-sm flex flex-wrap items-center gap-2 md:justify-end">
+          {courseTotalLabel && (
+            <span className="px-2 py-[2px] rounded-full bg-muted text-muted-foreground">
+              {courseTotalLabel}
+            </span>
+          )}
+          <span className="px-2 py-[2px] rounded-full bg-muted text-muted-foreground">
+            {progressText}
+          </span>
+          {completedSummaryText && (
+            <span className="px-2 py-[2px] rounded-full bg-muted text-muted-foreground">
+              {completedSummaryText}
+            </span>
+          )}
+          {/* pt-BR: Barra percentual de progresso total do curso */}
+          {/* en-US: Total course progress percentage bar */}
+          <span className="flex items-center gap-2">
+            <div className="w-24 h-2 bg-muted rounded overflow-hidden">
+              <div className="h-full bg-primary" style={{ width: `${courseProgressPercent}%` }} />
+            </div>
+            <span className="text-[11px] md:text-xs">{courseProgressPercent}%</span>
+          </span>
+          {progressLoading && (
+            <span className="flex items-center gap-1 text-[11px] md:text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" /> sincronizando…
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile Drawer: activities list */}
+      <Drawer open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Atividades</DrawerTitle>
+          </DrawerHeader>
+          <div className="p-2 max-h-[60vh] overflow-y-auto">
+            {modules.map((m: any, mi: number) => {
+              const title = m?.titulo || m?.title || m?.name || `Módulo ${mi + 1}`;
+              const activities: any[] = Array.isArray(m?.atividades || m?.activities) ? (m?.atividades || m?.activities) : [];
+              return (
+                <div key={`mobile-sidebar-mod-${mi}`} className="mb-3">
+                  <div className="font-semibold text-sm mb-2 flex items-center gap-2">
+                    <Folder className="h-4 w-4" />
+                    <span className="line-clamp-1 break-words">{title}</span>
+                    {(() => {
+                      const totalSecs = getModuleTotalSeconds(m);
+                      const label = totalSecs ? formatDuration(totalSecs) : '';
+                      return label ? <span className="text-xs text-muted-foreground">• {label}</span> : null;
+                    })()}
+                  </div>
+                  <ul className="space-y-2">
+                    {activities.map((a: any, ai: number) => {
+                      const atitle = a?.titulo || a?.title || a?.name || `Atividade ${ai + 1}`;
+                      const durationLabel = getDurationLabel(a);
+                      const term = searchTerm.trim().toLowerCase();
+                      const matches = (() => {
+                        if (!term) return true;
+                        const t = String(atitle).toLowerCase();
+                        const d = String(a?.descricao || a?.description || '').toLowerCase();
+                        const ty = String(getType(a)).toLowerCase();
+                        return t.includes(term) || d.includes(term) || ty.includes(term);
+                      })();
+                      if (!matches) return null;
+                      const typeIcon = isVideo(a) ? <Play className="h-4 w-4 text-muted-foreground" /> : isDocument(a) ? <FileText className="h-4 w-4 text-muted-foreground" /> : isLink(a) ? <LinkIcon className="h-4 w-4 text-muted-foreground" /> : <FileText className="h-4 w-4 text-muted-foreground" />;
+                      return (
+                        <li key={`mobile-sidebar-${mi}-${ai}`} className="flex items-center gap-2">
+                          <button
+                            className="flex-1 grid grid-cols-[20px_1fr] items-center gap-2 rounded px-2 py-1 hover:bg-muted"
+                            onClick={() => {
+                              const globalIdx = flatActivities.findIndex((fa: any) => fa?._moduleIndex === mi && fa?._activityIndex === ai);
+                              selectionIntentRef.current = 'user';
+                              setCurrentIndex(globalIdx >= 0 ? globalIdx : 0);
+                              setMobileSidebarOpen(false);
+                            }}
+                          >
+                            {typeIcon}
+                            <div className="text-sm font-medium line-clamp-2 break-words leading-tight">{atitle}</div>
+                            {durationLabel && (
+                              <div className="col-span-2 text-xs text-muted-foreground">{durationLabel}</div>
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Main content: sidebar + viewer */}
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
+        {/* Sidebar */}
+        <aside className="hidden md:block w-[320px] border-r overflow-y-auto p-2">
+          {modules.map((m: any, mi: number) => {
+            const title = m?.titulo || m?.title || m?.name || `Módulo ${mi + 1}`;
+            const activities: any[] = Array.isArray(m?.atividades || m?.activities) ? (m?.atividades || m?.activities) : [];
+            return (
+              <div key={`sidebar-mod-${mi}`} className="mb-3">
+                <div className="font-semibold text-sm mb-2 flex items-center gap-2">
+                  <Folder className="h-4 w-4" />
+                  <span className="line-clamp-1 break-words">{title}</span>
+                  {(() => {
+                    const totalSecs = getModuleTotalSeconds(m);
+                    const label = totalSecs ? formatDuration(totalSecs) : '';
+                    return label ? <span className="text-xs text-muted-foreground">• {label}</span> : null;
+                  })()}
+                </div>
+                <ul className="space-y-2">
+                  {activities.map((a: any, ai: number) => {
+                    const atitle = a?.titulo || a?.title || a?.name || `Atividade ${ai + 1}`;
+                    const durationLabel = getDurationLabel(a);
+                    // pt-BR: Determina se a atividade corresponde ao filtro de busca atual.
+                    // en-US: Determines if the activity matches the current search filter.
+                    const term = searchTerm.trim().toLowerCase();
+                    const matches = (() => {
+                      if (!term) return true;
+                      const t = String(atitle).toLowerCase();
+                      const mt = String(title).toLowerCase();
+                      return t.includes(term) || mt.includes(term);
+                    })();
+                    if (!matches) return null;
+
+                    // pt-BR: Índice no array filtrado para navegação correta.
+                    // en-US: Index within filtered list for correct navigation.
+                    const globalIdx = filteredActivities.findIndex((fa) => fa._moduleIndex === mi && fa._activityIndex === ai);
+                    const isActive = globalIdx === currentIndex;
+                    const typeIcon = (() => {
+                      if (isVideo(a)) return <Play className="h-4 w-4 text-muted-foreground" />;
+                      if (isDocument(a)) return <FileText className="h-4 w-4 text-muted-foreground" />;
+                      if (isLink(a)) return <LinkIcon className="h-4 w-4 text-muted-foreground" />;
+                      return <FileText className="h-4 w-4 text-muted-foreground" />;
+                    })();
+                    return (
+                      <li
+                        key={`sidebar-act-${mi}-${ai}`}
+                        className={`flex items-center justify-between p-2 rounded border ${isActive ? 'bg-muted' : 'bg-background'}`}
+                      >
+                        <button
+                          className="text-left flex-1 flex items-center gap-2"
+                          onClick={() => {
+                            // pt-BR: Clique direto do usuário — manter revisão sem auto-skip.
+                            // en-US: Direct user click — keep review without auto-skip.
+                            selectionIntentRef.current = 'user';
+                            setCurrentIndex(globalIdx >= 0 ? globalIdx : 0);
+                          }}
+                        >
+                          {typeIcon}
+                          <div className="text-sm font-medium line-clamp-2 break-words leading-tight">{atitle}</div>
+                          {durationLabel && (
+                            <div className="text-xs text-muted-foreground">{durationLabel}</div>
+                          )}
+                        </button>
+                        {(() => {
+                          // console.log('a', a);
+                          const idVal = a?.id ?? a?.activity_id ?? `${mi}-${ai}`;
+                          const sid = String(idVal);
+                          const isCompleted = completedIds.has(String(idVal));
+                          const pm = progressMap[sid];
+                          const resumeSecs = !isCompleted && pm && pm.seconds > 0 ? pm.seconds : 0;
+                          return (
+                            <div className="flex items-center gap-2">
+                              {isCompleted && (
+                                <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-700">Concluído</span>
+                              )}
+                              {!isCompleted && resumeSecs > 0 && (
+                                <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700">Retomar {formatDuration(resumeSecs)}</span>
+                              )}
+                              {String(nextActivityId ?? '') === sid && (
+                                <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700">Próxima</span>
+                              )}
+                              <button
+                                className="p-1 rounded hover:bg-muted"
+                                title={isCompleted ? 'Marcar como não concluída' : 'Marcar como concluída'}
+                                onClick={() => toggleCompleted(a, mi, ai)}
+                              >
+                                <Check className={`h-4 w-4 ${isCompleted ? 'text-green-600' : 'text-muted-foreground'}`} />
+                              </button>
+                            </div>
+                          );
+                        })()}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
+        </aside>
+
+        {/* Viewer */}
+        <main className="flex-1 overflow-y-auto p-4">
+          <Card>
+            <CardContent className="space-y-4 pt-4">
+              {currentActivity ? (
+                <>
+                  {/* Player area */}
+                  <div className={`rounded overflow-hidden ${isVideo(currentActivity as any) ? 'aspect-video bg-black' : 'bg-white'}`}>
+                    {(() => {
+                      const a = currentActivity;
+                      const title = String(a?.titulo || a?.title || a?.name || '');
+                      const desc = String(a?.descricao || a?.description || '');
+                      const url = getActivityUrl(a);
+                      const content = a?.conteudo || a?.content || '';
+                      if (isVideo(a)) {
+                        const mi = a._moduleIndex; const ai = a._activityIndex;
+                        const aid = getActivityId(a, mi, ai);
+                        const cid = course?.id ?? course?.course_id ?? course?.token ?? 'course';
+                        const playerId = `player-${cid}-${mi}-${ai}-${aid}`;
+                        const lowerUrl = String(url || '').toLowerCase();
+                        const isYouTubeEmbed = lowerUrl.includes('youtube.com/embed');
+                        const isVimeoEmbed = lowerUrl.includes('player.vimeo.com/video');
+                        const isMp4 = lowerUrl.endsWith('.mp4');
+                        if (isYouTubeEmbed) {
+                          // pt-BR: YouTube via API — usa contêiner <div> para YT.Player.
+                          // en-US: YouTube via API — use <div> container for YT.Player.
+                          return (
+                            <div
+                              ref={youtubeContainerRef}
+                              id={playerId}
+                              className="w-full h-full"
+                            />
+                          );
+                        }
+                        if (isVimeoEmbed) {
+                          const embedWithApi = url ? buildVideoEmbedUrlWithApi(String(url), playerId) : '';
+                          return embedWithApi ? (
+                            <iframe
+                              ref={iframeRef}
+                              id={playerId}
+                              className="w-full h-full"
+                              src={embedWithApi}
+                              title={title}
+                              loading="lazy"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                              allowFullScreen
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-white text-sm">Vídeo indisponível</div>
+                          );
+                        }
+                        if (isMp4) {
+                          return (
+                            <video
+                              ref={html5VideoRef}
+                              className="w-full h-full"
+                              src={String(url)}
+                              controls
+                              preload="metadata"
+                            />
+                          );
+                        }
+                        // Fallback para outros players em iframe
+                        return (
+                          <iframe
+                            ref={iframeRef}
+                            id={playerId}
+                            className="w-full h-full"
+                            src={String(url)}
+                            title={title}
+                            loading="lazy"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                          />
+                        );
+                      }
+                      if (isDocument(a)) {
+                        const docUrl = getActivityUrl(a);
+                        return docUrl ? (
+                          <div className="flex items-center justify-center h-full">
+                            <a href={String(docUrl)} target="_blank" rel="noreferrer" className="text-primary underline bg-white px-3 py-2 rounded">Abrir documento</a>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-white text-sm">Documento indisponível</div>
+                        );
+                      }
+                      if (isLink(a)) {
+                        const linkUrl = getActivityUrl(a);
+                        return linkUrl ? (
+                          <div className="flex items-center justify-center h-full">
+                            <a href={String(linkUrl)} target="_blank" rel="noreferrer" className="text-primary underline bg-white px-3 py-2 rounded">Abrir link</a>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-white text-sm">Link indisponível</div>
+                        );
+                      }
+                      /**
+                       * pt-BR: Conteúdo de leitura (HTML rich). Renderiza como HTML com classes de tipografia.
+                       *        Faz fallback para descrição quando `content` vier vazio.
+                       * en-US: Reading content (rich HTML). Renders as HTML with typography classes.
+                       *        Falls back to description when `content` is empty.
+                       */
+                      const html = String(content || desc || '');
+                      if (!html.trim()) {
+                        return (
+                          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Conteúdo indisponível</div>
+                        );
+                      }
+                      return (
+                        <div className="p-4 overflow-auto">
+                          <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: html }} />
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  {/*
+                   * Title and Description
+                   * pt-BR: Bloco de título da atividade e descrição.
+                   *        Para vídeos, a descrição fica oculta por padrão e pode ser exibida sob demanda.
+                   * en-US: Activity title and description block.
+                   *        For videos, description is hidden by default and can be toggled.
+                   */}
+                  <div>
+                    {/**
+                     * Title + Share Link
+                     * pt-BR: Mostra o título e um botão para copiar a URL da atividade atual.
+                     * en-US: Shows the title and a button to copy the current activity URL.
+                     */}
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-semibold break-words line-clamp-2">
+                        {String(currentActivity?.titulo || currentActivity?.title || currentActivity?.name || '')}
+                      </h2>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { try { navigator.clipboard.writeText(window.location.href); } catch {} }}
+                        title="Copiar link da atividade"
+                      >Copiar link</Button>
+                    </div>
+                    {(() => {
+                      // pt-BR: Selo "Concluído" quando a atividade atual consta em completedIds.
+                      // en-US: "Completed" badge when current activity appears in completedIds.
+                      const a: any = currentActivity;
+                      const mi = a?._moduleIndex; const ai = a?._activityIndex;
+                      const aid = getActivityId(a, mi, ai);
+                      const isCompleted = completedIds.has(String(aid));
+                      if (!isCompleted) return null;
+                      return (
+                        <span className="inline-block mt-1 text-xs px-2 py-1 rounded bg-green-100 text-green-700">Concluído</span>
+                      );
+                    })()}
+                    {(() => {
+                      /**
+                       * pt-BR: Badge de tempo restante para leitura/arquivo com cores por urgência.
+                       * en-US: Remaining time badge for reading/file with urgency colors.
+                       */
+                      const a: any = currentActivity;
+                      const readingLike = isDocument(a) || isLink(a) || String(getType(a)).toLowerCase().includes('leitura');
+                      const hasVideo = isVideo(a);
+                      const requiredSecs = Math.round(Number(toSeconds(a?.duracao ?? a?.duration, String(a?.unidade_duracao ?? a?.type_duration))) || 0);
+                      const mi = a?._moduleIndex; const ai = a?._activityIndex; const aid = getActivityId(a, mi, ai);
+                      const isCompleted = completedIds.has(String(aid));
+                      if (!readingLike || hasVideo || requiredSecs <= 0 || isCompleted) return null;
+                      const label = readingRemaining > 0 ? `Concluir em ${formatDuration(readingRemaining)} / ${formatDuration(requiredSecs)}` : 'Pronto para concluir';
+                      const urgencyCls = readingUrgencyClass(readingRemaining);
+                      return (
+                        <span className={`inline-flex items-center mt-1 ml-2 text-xs px-2 py-0.5 rounded ${urgencyCls}`}>
+                          <Clock className="h-3.5 w-3.5 mr-1" />
+                          {label}
+                        </span>
+                      );
+                    })()}
+                    {(() => {
+                      /**
+                       * pt-BR: Barra de progresso visual para leitura/arquivo (percentual de conclusão).
+                       * en-US: Visual progress bar for reading/file (completion percentage).
+                       */
+                      const a: any = currentActivity;
+                      const readingLike = isDocument(a) || isLink(a) || String(getType(a)).toLowerCase().includes('leitura');
+                      const hasVideo = isVideo(a);
+                      const requiredSecs = Math.round(Number(toSeconds(a?.duracao ?? a?.duration, String(a?.unidade_duracao ?? a?.type_duration))) || 0);
+                      const mi = a?._moduleIndex; const ai = a?._activityIndex; const aid = getActivityId(a, mi, ai);
+                      const isCompleted = completedIds.has(String(aid));
+                      if (!readingLike || hasVideo || requiredSecs <= 0 || isCompleted) return null;
+                      const pct = requiredSecs > 0 ? Math.min(100, Math.max(0, Math.round(((requiredSecs - readingRemaining) / requiredSecs) * 100))) : 0;
+                      return (
+                        <div className="mt-2 w-full max-w-sm">
+                          {/*
+                           * pt-BR: Linha de timer regressivo textual (restante / total), atualizada a cada segundo.
+                           * en-US: Textual countdown line (remaining / total), updated each second.
+                           */}
+                          <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-[11px] sm:text-xs text-muted-foreground">
+                            <span>Tempo restante: {formatDuration(Math.max(readingRemaining, 0))}</span>
+                            <span>Total: {formatDuration(requiredSecs)}</span>
+                          </div>
+                          <div className="h-1 rounded bg-gray-200">
+                            <div className="h-1 rounded bg-blue-500 transition-[width] duration-500" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    {(() => {
+                      // pt-BR: Mostra um selo simples com o provedor do vídeo quando aplicável.
+                      // en-US: Shows a simple badge with video provider when applicable.
+                      const provider = getActivityProvider(currentActivity);
+                      if (!isVideo(currentActivity as any) || provider === 'unknown') return null;
+                      const label = provider === 'youtube' ? 'YouTube' : provider === 'vimeo' ? 'Vimeo' : provider === 'mp4' ? 'MP4' : '';
+                      if (!label) return null;
+                      return (
+                        <span className="inline-block mt-1 text-xs px-2 py-1 rounded bg-muted text-muted-foreground">{label}</span>
+                      );
+                    })()}
+                    {(() => {
+                      /**
+                       * pt-BR: Microbadge “Retomar” quando a API indica posição salva (exists: true).
+                       * en-US: “Resume” microbadge shown when API indicates a saved position (exists: true).
+                       */
+                      if (!isVideo(currentActivity as any) || !playbackExists) return null;
+                      // pt-BR: Não exibe "Retomar" se a atividade já estiver concluída.
+                      // en-US: Do not show "Resume" if the activity is already completed.
+                      const a: any = currentActivity;
+                      const mi = a?._moduleIndex; const ai = a?._activityIndex;
+                      const aid = getActivityId(a, mi, ai);
+                      const isCompleted = completedIds.has(String(aid));
+                      if (isCompleted) return null;
+                      return (
+                        <span className="inline-block mt-1 text-xs px-2 py-1 rounded bg-blue-100 text-blue-700">Retomar</span>
+                      );
+                    })()}
+                    {(() => {
+                      // pt-BR: Usa a descrição rica (HTML), quando disponível.
+                      // en-US: Uses rich description (HTML), when available.
+                      const descHtml = String(currentActivity?.descricao || currentActivity?.description || '');
+                      if (!descHtml) return null;
+
+                      // pt-BR: Para vídeos, mantém a descrição oculta por padrão e exibe via toggle.
+                      // en-US: For videos, keep description hidden by default and show via toggle.
+                      const isVideoActivity = isVideo(currentActivity as any);
+
+                      if (isVideoActivity) {
+                        return (
+                          <VideoDescriptionToggle html={descHtml} />
+                        );
+                      }
+
+                      // pt-BR: Outras atividades: evita duplicação se descrição == conteúdo já renderizado.
+                      // en-US: Other activities: avoid duplication if description == content already rendered.
+                      const contentHtml = String(currentActivity?.conteudo || currentActivity?.content || descHtml);
+                      if (htmlEquals(descHtml, contentHtml)) return null;
+                      return (
+                        <div className="prose prose-sm max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: descHtml }} />
+                      );
+                    })()}
+                  </div>
+
+                  {/* Navigation */}
+                  <div className="flex items-center justify-between">
+                    <Button variant="ghost" onClick={navigatePrev} disabled={currentIndex <= 0}>Anterior</Button>
+                    <Button variant="ghost" onClick={navigateNext} disabled={currentIndex >= filteredActivities.length - 1}>Próximo</Button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-sm text-muted-foreground">Nenhuma atividade encontrada.</div>
+              )}
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    </div>
+  );
+}

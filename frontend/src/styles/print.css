@@ -1,0 +1,178 @@
+/* Estilos específicos para impressão */
+@media print {
+  /* Oculta elementos de navegação e ações */
+  .no-print,
+  .print-hidden {
+    display: none !important;
+  }
+
+  /* Oculta botões de ação */
+  button:not(.print-visible),
+  .btn:not(.print-visible) {
+    display: none !important;
+  }
+
+  /* Oculta elementos específicos */
+  .alert-dialog,
+  .dialog,
+  .tooltip,
+  .popover {
+    display: none !important;
+  }
+
+  /* Remove sombras e bordas desnecessárias */
+  .shadow,
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg,
+  .shadow-xl {
+    box-shadow: none !important;
+  }
+
+  /* Ajusta o layout para impressão */
+  .container {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  /* Zera margens/paddings do container principal para não sobrar espaço no topo */
+  main, .content, .page-content, .content-wrapper, .page-wrapper, .layout-content {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    min-height: auto !important;
+  }
+
+  /* Remove espaçamentos desnecessários */
+  .py-6 {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  /* Ajusta cards para impressão */
+  .card {
+    border: 1px solid #e5e7eb !important;
+    box-shadow: none !important;
+    margin-bottom: 1rem !important;
+    background: #fff !important;
+  }
+
+  /* Quebras de página controladas */
+  .page-break-before { page-break-before: always; }
+  .page-break-inside-avoid { page-break-inside: avoid; }
+
+  /* ===== Preservar cores e estilos originais ===== */
+  html, body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    font-size: 12pt !important;
+    line-height: 1.4 !important;
+    background: #fff !important;
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    orphans: 3;
+    widows: 3;
+  }
+
+  h1 { font-size: 18pt !important; }
+  h2 { font-size: 16pt !important; }
+  h3 { font-size: 14pt !important; }
+  h4 { font-size: 13pt !important; }
+  h5 { font-size: 12pt !important; }
+  h6 { font-size: 11pt !important; }
+
+  /* ===== Tabelas: manter estilo da UI e fluxo correto ===== */
+  table { border-collapse: collapse !important; page-break-inside: auto !important; break-inside: auto !important; width: 100% !important; }
+  thead { display: table-header-group !important; }
+  tfoot { display: table-footer-group !important; }
+  tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+
+  /* Remove animações */
+  * { animation: none !important; transition: none !important; }
+
+  /* Evita problemas de sticky/fixed em impressão */
+  .sticky, .fixed { position: static !important; top: auto !important; }
+
+  /* Oculta elementos específicos da página de service order */
+  .service-order-actions,
+  .quick-actions-card,
+  .history-card { display: none !important; }
+
+  /* ===== Página A4 com margem ligeiramente menor para aproveitar espaço ===== */
+  @page { size: A4 portrait; margin: 10mm; }
+
+  /* ===== Grid: manter múltiplas colunas (lado a lado) ===== */
+  /* Volta o comportamento de grid e permite quebra entre páginas */
+  .grid { display: grid !important; break-inside: auto !important; page-break-inside: auto !important; }
+  .grid > * { width: auto !important; break-inside: auto !important; page-break-inside: auto !important; }
+  /* Tailwind classes comuns para duas colunas */
+  .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .lg\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  /* Força os cards de stats a ficarem em linha na impressão */
+  .print-stats-grid { 
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important; 
+    align-items: stretch !important;
+    column-gap: 0.5rem !important;
+    row-gap: 0 !important;
+  }
+  /* Variante para páginas com 8 cards de estatísticas (Resgates) */
+  .print-stats-grid-8 {
+    grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    column-gap: 0.5rem !important;
+    row-gap: 0 !important;
+  }
+  /* Compactação específica para o grid de 8 stats (Resgates) */
+  .print-stats-grid-8 .p-4 { padding: 0.5rem !important; }
+  .print-stats-grid-8 .text-2xl { font-size: 1.1rem !important; }
+  .print-stats-grid-8 .text-sm { font-size: 0.7rem !important; }
+  /* Ajuste de gaps para caber melhor no A4 */
+  .gap-6 { gap: 1rem !important; }
+  .gap-4 { gap: 0.75rem !important; }
+  /* Reduz espaçamentos verticais padrão entre blocos */
+  .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem !important; }
+
+  /* Compacta paddings comuns para caber ao menos uma linha da tabela na primeira página */
+  .p-6 { padding: 0.75rem !important; }
+  .p-4 { padding: 0.5rem !important; }
+  .px-6 { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+  .py-4 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+
+  /* Compacta especificamente os cards de estatísticas */
+  .print-stats-grid .p-4 { padding: 0.5rem !important; }
+  .print-stats-grid .text-2xl { font-size: 1.15rem !important; }
+  .print-stats-grid .text-sm { font-size: 0.7rem !important; }
+
+  /* Evita quebra no meio de cartões muito longos: permitir que o conteúdo flua */
+  .card, .rounded-md, .rounded-lg { page-break-inside: auto !important; break-inside: auto !important; }
+
+  /* Quebras controladas */
+  .print-break-before { page-break-before: always !important; }
+  .print-break-after { page-break-after: always !important; }
+
+  /* Melhorias gerais de conteúdo */
+  img { max-width: 100% !important; height: auto !important; }
+  code { border: 1px solid #ddd !important; padding: 2px 4px !important; }
+
+  /* Oculta navegação/comuns da UI */
+  header, nav, aside, footer, .sidebar, .app-header, .app-footer, .app-nav { display: none !important; }
+
+  /* Oculta paginação, controles e barras flutuantes */
+  .pagination,
+  .pager,
+  .page-controls,
+  .table-pagination,
+  .dataTable-pagination,
+  .MuiPagination-root,
+  [role="navigation"] { display: none !important; }
+
+  /* Oculta toasts/sonner durante impressão */
+  .toast, .sonner, .shadcn-toast, [role="status"], [data-sonner-toast] { display: none !important; }
+
+  /* Corrige alturas mínimas que geram espaços em branco */
+.min-h-\[400px\], .min-h-screen, .h-screen, .min-h-\[100vh\], .h-\[100vh\] { min-height: auto !important; height: auto !important; }
+
+  /* Evita cortes por overflow dos containers */
+  .overflow-hidden, .overflow-auto, .overflow-scroll, .overflow-x-auto, .overflow-y-auto { overflow: visible !important; }
+}

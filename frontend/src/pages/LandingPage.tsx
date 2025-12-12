@@ -1,0 +1,145 @@
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plane, BookOpen, Wrench, Compass, ArrowRight, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
+import InclusiveSiteLayout from "@/components/layout/InclusiveSiteLayout";
+
+/**
+ * LandingPage
+ * pt-BR: Página inicial alinhada ao tema do Aeroclube de Juiz de Fora (ACJF).
+ *        Atualiza paleta de cores para tons de azul, conteúdo e chamadas.
+ * en-US: Home page aligned to Aeroclube de Juiz de Fora theme.
+ *        Updates palette to blue tones, content and CTAs.
+ */
+/**
+ * LandingPage
+ * pt-BR: Página inicial pública utilizando o layout inspirado no Incluir & Educar.
+ * en-US: Public home page using layout inspired by Incluir & Educar.
+ */
+const LandingPage = () => {
+  return (
+    <InclusiveSiteLayout>
+      {/* Hero Section */}
+      <section className="py-16 px-4">
+        <div className="container mx-auto text-center">
+          <div className="mb-8">
+            <h1 className="text-5xl md:text-5xl font-bold text-violet-800 mb-6">
+              Tecnologia que Inclui
+              <span className="text-emerald-600 block">Educação que Transforma</span>
+            </h1>
+            <p className="text-lg text-violet-700 mb-6 max-w-3xl mx-auto">
+              Soluções educacionais inclusivas com propósito: plataformas pedagógicas, comunicação alternativa e mais.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Button size="lg" asChild className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Link to="/cursos">
+                  Cursos
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer">
+                <Button size="lg" className="bg-violet-700 hover:bg-violet-800 text-white">
+                  Conhecer o site
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </a>
+              <Button size="lg" variant="outline" asChild className="border-violet-300 text-violet-700 hover:bg-violet-50">
+                <Link to="/public-client-form">Fazer cadastro</Link>
+              </Button>
+              
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-20 px-4 bg-white/60">
+        <div className="container mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <Card className="border-violet-200 hover:shadow-lg transition-shadow">
+              <CardHeader className="text-center">
+                <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="h-8 w-8 text-violet-700" />
+                </div>
+                <CardTitle className="text-violet-800">Plataforma Pedagógica</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-center text-muted-foreground">
+                  Planos de aula e avaliações alinhados à BNCC.
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card className="border-violet-200 hover:shadow-lg transition-shadow">
+              <CardHeader className="text-center">
+                <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Plane className="h-8 w-8 text-violet-700" />
+                </div>
+                <CardTitle className="text-violet-800">Comunicação Alternativa</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-center text-muted-foreground">
+                  Autonomia e autoestima através de linguagem acessível.
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card className="border-violet-200 hover:shadow-lg transition-shadow">
+              <CardHeader className="text-center">
+                <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Wrench className="h-8 w-8 text-violet-700" />
+                </div>
+                <CardTitle className="text-violet-800">Suporte de Ponta a Ponta</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-center text-muted-foreground">
+                  Acompanhamento completo de implantação à operação.
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card className="border-violet-200 hover:shadow-lg transition-shadow">
+              <CardHeader className="text-center">
+                <div className="w-16 h-16 bg-violet-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Compass className="h-8 w-8 text-violet-700" />
+                </div>
+                <CardTitle className="text-violet-800">Soluções Personalizadas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-center text-muted-foreground">
+                  Respeito à individualidade de cada aluno.
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 px-4 bg-gradient-to-r from-violet-700 to-violet-800">
+        <div className="container mx-auto text-center">
+          <h2 className="text-4xl font-bold text-white mb-6">Pronto para avançar?</h2>
+          <p className="text-lg text-violet-100 mb-8 max-w-2xl mx-auto">
+            Cadastre-se e conheça nossas soluções inclusivas.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" className="bg-white text-violet-800 hover:bg-violet-100" asChild>
+              <Link to="/public-client-form">
+                Cadastrar-se
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer">
+              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-violet-800">
+                Conhecer o site
+                <ExternalLink className="ml-2 h-5 w-5" />
+              </Button>
+            </a>
+          </div>
+        </div>
+      </section>
+    </InclusiveSiteLayout>
+  );
+};
+
+export default LandingPage;
