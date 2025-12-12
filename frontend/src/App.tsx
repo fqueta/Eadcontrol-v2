@@ -73,7 +73,6 @@ import LandingPage from "./pages/LandingPage";
  * en-US: Removed imports of admin points pages to prevent GET requests for
  *        missing modules at app load time.
  */
-import AeroclubeDashboard from "./pages/AeroclubeDashboard";
 import CustomersLeads from "./pages/CustomersLeads";
 import Sales from "./pages/Sales";
 import ProposalsCreate from "./pages/ProposalsCreate";
@@ -223,8 +222,7 @@ const App = () => {
                 <AdminProtectedRoute>
                   <AppLayout>
                     {/* <Dashboard2 /> */}
-                    {/* <Dashboard /> */}
-                    <AeroclubeDashboard />
+                    <Dashboard />
                   </AppLayout>
                 </AdminProtectedRoute>
               } />

@@ -152,7 +152,7 @@ export function AppSidebar() {
           />
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="text-sm font-semibold">CRM</span>
+              <span className="text-sm font-semibold">Ead Control</span>
               <span className="text-xs text-muted-foreground">Painel & Operações</span>
             </div>
           )}

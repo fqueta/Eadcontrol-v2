@@ -3,6 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { coursesService } from "@/services/coursesService";
+import { useEnrollmentsList } from "@/hooks/enrollments";
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -30,6 +34,31 @@ import {
  * Shows monthly sales/hours, pie proportions, goal trends and an access log.
  */
 export default function AeroclubeDashboard() {
+  /**
+   * EAD Dashboard Hooks
+   * pt-BR: KPIs e lista recente de matrículas.
+   * en-US: KPIs and recent enrollments list.
+   */
+  const navigate = useNavigate();
+
+  // Cursos: obter total via listagem mínima
+  const coursesTotalQuery = useQuery({
+    queryKey: ["courses", "count"],
+    queryFn: async () => coursesService.listCourses({ page: 1, per_page: 1 }),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Matrículas: totais por situação
+  const { data: activeEnrollResp, isLoading: activeEnrollLoading } = useEnrollmentsList({ page: 1, per_page: 1, situacao: "mat" } as any);
+  const { data: interestEnrollResp, isLoading: interestEnrollLoading } = useEnrollmentsList({ page: 1, per_page: 1, situacao: "int" } as any);
+
+  // Matrículas recentes
+  const { data: recentEnrollResp, isLoading: recentEnrollLoading } = useEnrollmentsList({ page: 1, per_page: 5, situacao: "mat" } as any);
+
+  const enrollmentsList = useMemo(() => {
+    const arr = (recentEnrollResp as any)?.data || (recentEnrollResp as any)?.items || [];
+    return Array.isArray(arr) ? arr : [];
+  }, [recentEnrollResp]);
   /**
    * Estado de UI: ano selecionado para gráficos principais
    */
@@ -159,6 +188,107 @@ export default function AeroclubeDashboard() {
             <Badge className="bg-black/20 text-white hover:bg-black/30">Mock Data</Badge>
           </div>
         </div>
+      </Card>
+
+      {/* KPIs EAD */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cursos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{(coursesTotalQuery.data as any)?.total || 0}</div>
+            <p className="text-xs text-muted-foreground">Total cadastrados</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Matrículas Ativas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{(activeEnrollResp as any)?.total || 0}</div>
+            <p className="text-xs text-muted-foreground">Situação: ativa (mat)</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Interessados</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{(interestEnrollResp as any)?.total || 0}</div>
+            <p className="text-xs text-muted-foreground">Em pré-cadastro (int)</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Atalhos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-2">
+              <Button asChild>
+                <Link to="/admin/school/courses">Cursos</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/admin/school/enroll">Matrículas</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Matrículas Recentes */}
+      <Card className="mt-2">
+        <CardHeader>
+          <CardTitle>Matrículas recentes</CardTitle>
+          <CardDescription>Últimas entradas na plataforma</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {recentEnrollLoading ? (
+            <div className="text-sm text-muted-foreground">Carregando...</div>
+          ) : enrollmentsList.length === 0 ? (
+            <div className="text-sm text-muted-foreground">Nenhuma matrícula recente</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Aluno</TableHead>
+                  <TableHead>Curso</TableHead>
+                  <TableHead>Situação</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {enrollmentsList.map((enroll: any) => {
+                  const studentName = String(
+                    enroll?.cliente_nome || enroll?.student_name || enroll?.aluno_nome || enroll?.cliente || enroll?.aluno || "-"
+                  );
+                  const courseName = String(
+                    enroll?.curso_nome || enroll?.course_name || (enroll?.curso ? (enroll?.curso?.nome || enroll?.curso?.titulo) : "") || "-"
+                  );
+                  const status = String(enroll?.situacao || enroll?.status || "mat");
+                  const id = String(enroll?.id || "");
+                  return (
+                    <TableRow key={id}>
+                      <TableCell>{studentName}</TableCell>
+                      <TableCell>{courseName}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="outline" onClick={() => navigate(`/admin/school/enrollments/${id}/progress`)}>
+                          Acompanhar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
       </Card>
 
       {/* Toolbar: seleção de ano e KPIs resumidos */}

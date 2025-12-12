@@ -1,386 +1,209 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { coursesService } from "@/services/coursesService";
+import { useEnrollmentsList } from "@/hooks/enrollments";
 import {
-  FileText,
-  ClipboardList,
-  DollarSign,
-  TrendingUp,
-  Users,
-  Calendar,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  Plus,
-  UserCheck,
-  Package,
-  Handshake,
-} from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Link } from "react-router-dom";
-import { useClientsList } from "@/hooks/clients";
-import { usePartnersList } from "@/hooks/partners";
-import { useProductsList } from "@/hooks/products";
-import { useUsersList } from "@/hooks/users";
-import { useRecentActivities, useRegistrationData, usePendingPreRegistrations } from "@/hooks/useDashboard";
-import { ClientRegistrationChart } from "@/components/ClientRegistrationChart";
-import { VisitorTrendChart } from "@/components/VisitorTrendChart";
-import { useAuth } from "@/contexts/AuthContext";
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+} from "recharts";
 
 /**
  * Dashboard
- * Página principal que exibe cards de resumo e gráficos.
- * Regra de visibilidade: oculta o card "Parceiros" para usuários
- * com `permission_id` maior ou igual a 5.
+ * pt-BR: Página principal simplificada com cards de KPI (Interessados, Alunos e Cursos)
+ *        e atalhos rápidos, seguindo o estilo visual do exemplo compartilhado.
+ * en-US: Simplified main dashboard with KPI cards (Leads, Students, Courses)
+ *        and quick actions, matching the shared visual style.
  */
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const userPermission = Number(user?.permission_id ?? 0);
-  const canShowPartners = userPermission < 5;
-  // Hooks para buscar dados das entidades
-  const { data: clientsData, isLoading: clientsLoading } = useClientsList({ limit: 1 });
-  const { data: partnersData, isLoading: partnersLoading } = usePartnersList({ limit: 1 });
-  const { data: productsData, isLoading: productsLoading } = useProductsList({ limit: 1 });
-  const { data: usersData, isLoading: usersLoading } = useUsersList({ limit: 1 });
 
-  // Hooks para dados dinâmicos do dashboard
-  const { data: recentActivities, isLoading: activitiesLoading, error: activitiesError } = useRecentActivities(4);
-  const { data: registrationData, isLoading: registrationLoading, error: registrationError } = useRegistrationData();
-  const { data: pendingPreRegistrations, isLoading: pendingLoading, error: pendingError } = usePendingPreRegistrations(3);
-  // console.log('pendingPreRegistrations:', pendingPreRegistrations);
-  // Verificar se há erro 403 (Acesso negado)
-  const hasAccessError = [activitiesError, registrationError, pendingError].some(
-    error => error && (error as any)?.status === 403
+  /**
+   * pt-BR: Consulta rápida para obter o total de cursos.
+   * en-US: Quick query to get total number of courses.
+   */
+  const coursesTotalQuery = useQuery({
+    queryKey: ["courses", "count"],
+    queryFn: async () => coursesService.listCourses({ page: 1, per_page: 1 }),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  /**
+   * pt-BR: Totais de matrículas por situação: "mat" (ativas) e "int" (interessados).
+   * en-US: Enrollment totals by situation: "mat" (active) and "int" (leads).
+   */
+  const { data: activeEnrollResp } = useEnrollmentsList({ page: 1, per_page: 1, situacao: "mat" } as any);
+  const { data: interestEnrollResp } = useEnrollmentsList({ page: 1, per_page: 1, situacao: "int" } as any);
+
+  const totalCursos = (coursesTotalQuery.data as any)?.total || 0;
+  const totalAlunos = (activeEnrollResp as any)?.total || 0;
+  const totalInteressados = (interestEnrollResp as any)?.total || 0;
+
+  /**
+   * pt-BR: Dados mockados para gráficos anuais (2024/2025) de interessados e matriculados.
+   * en-US: Mocked yearly data (2024/2025) for leads and enrolled charts.
+   */
+  const months = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+  const interestedMonthlyData = useMemo(
+    () => [
+      { mes: months[0], y2024: 5, y2025: 8 },
+      { mes: months[1], y2024: 3, y2025: 5 },
+      { mes: months[2], y2024: 6, y2025: 7 },
+      { mes: months[3], y2024: 4, y2025: 6 },
+      { mes: months[4], y2024: 7, y2025: 5 },
+      { mes: months[5], y2024: 5, y2025: 6 },
+      { mes: months[6], y2024: 6, y2025: 7 },
+      { mes: months[7], y2024: 8, y2025: 9 },
+      { mes: months[8], y2024: 7, y2025: 6 },
+      { mes: months[9], y2024: 5, y2025: 7 },
+      { mes: months[10], y2024: 6, y2025: 8 },
+      { mes: months[11], y2024: 7, y2025: 9 },
+    ],
+    []
   );
-  // console.log('activitiesError:', activitiesError);
-  
-  // Verificar se ainda está carregando dados iniciais
-  const isInitialLoading = (
-    activitiesLoading || 
-    registrationLoading || 
-    pendingLoading
-  ) && !hasAccessError;
+  const enrolledMonthlyData = useMemo(
+    () => [
+      { mes: months[0], y2024: 4, y2025: 6 },
+      { mes: months[1], y2024: 2, y2025: 3 },
+      { mes: months[2], y2024: 3, y2025: 4 },
+      { mes: months[3], y2024: 4, y2025: 5 },
+      { mes: months[4], y2024: 3, y2025: 4 },
+      { mes: months[5], y2024: 2, y2025: 3 },
+      { mes: months[6], y2024: 3, y2025: 4 },
+      { mes: months[7], y2024: 5, y2025: 8 },
+      { mes: months[8], y2024: 4, y2025: 5 },
+      { mes: months[9], y2024: 3, y2025: 4 },
+      { mes: months[10], y2024: 4, y2025: 5 },
+      { mes: months[11], y2024: 6, y2025: 11 },
+    ],
+    []
+  );
 
-  /**
-   * Abre a visualização rápida do cliente
-   * Navega para `/admin/clients/:id/view` utilizando o ID da atividade.
-   */
-  const location = useLocation();
-  /**
-   * handleQuickViewClient
-   * pt-BR: Navega para a visualização do cliente e inclui `state.from` com a origem.
-   * en-US: Navigates to client view and includes `state.from` with the origin.
-   */
-  const handleQuickViewClient = (id: string | number) => {
-    navigate(`/admin/clients/${String(id)}/view`, { state: { from: location } });
-  };
-
-  // Se há erro de acesso, exibir apenas a mensagem
-  if (hasAccessError) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Acesso não disponível</h2>
-          <p className="text-gray-600">Você não tem permissão para acessar o dashboard.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Se ainda está carregando, não mostrar nada para evitar flash de conteúdo
-  if (isInitialLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-          <p className="text-gray-500">Carregando dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Dados das entidades
-  const stats = {
-    clientsCount: clientsData?.total || 0,
-    partnersCount: partnersData?.total || 0,
-    productsCount: productsData?.total || 0,
-    usersCount: usersData?.total || 0,
-  };
-
-  // Dados dinâmicos ou fallback para dados mock
-  const recentClientActivities = recentActivities || [];
-  const clientRegistrationData = registrationData || [];
-  const pendingPreRegistrationsData = pendingPreRegistrations || [];
-  // console.log('pendingPreRegistrationsData:', pendingPreRegistrationsData);
-  // Verificação simples dos dados de registro
-  // if (clientRegistrationData.length > 0) {
-  //   console.log(`Dashboard: ${clientRegistrationData.length} dias de dados carregados (${clientRegistrationData[0]?.date} a ${clientRegistrationData[clientRegistrationData.length - 1]?.date})`);
-  // }
-  
-  //console.log('clientRegistrationData:', clientRegistrationData);
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Visão geral do sistema de clientes
-          </p>
+          <p className="text-muted-foreground">Visão geral da escola EAD</p>
         </div>
-        <div className="flex gap-2">
-          {/* <Button asChild>
-            <Link to="/admin/budgets/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Cliente
-            </Link>
-          </Button> */}
-          {/* <Button variant="outline" asChild>
-            <Link to="/admin/service-orders/new">
-              <FileText className="mr-2 h-4 w-4" />
-              Todos clientes
-            </Link>
-          </Button> */}
+        <div className="flex items-center gap-2">
+          <Badge className="bg-blue-100 text-blue-700">Resumo</Badge>
+          <Badge className="bg-gray-100 text-gray-700">KPI</Badge>
         </div>
       </div>
 
+      {/* Cards KPI no topo */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total de Interessados</CardTitle>
+            <CardDescription>Pré-cadastros (int)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{totalInteressados}</div>
+          </CardContent>
+        </Card>
 
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total de Alunos</CardTitle>
+            <CardDescription>Matrículas ativas (mat)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{totalAlunos}</div>
+          </CardContent>
+        </Card>
 
-      
-      {/* Seção de Gráficos e Tendências */}
-      <div className="space-y-6">
-        {/* <div>
-          <h2 className="text-xl font-semibold mb-4">Gráficos e Tendências</h2>
-        </div> */}
-        
-        {/* Gráfico de Tendência de Visitantes */}
-        {/* <VisitorTrendChart /> */}
-        
-        {/* Gráfico de Cadastros de Clientes */}
-        {registrationLoading ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Evolução dos Cadastros de Clientes</CardTitle>
-              <CardDescription>Acompanhamento diário dos cadastros por status nos últimos 14 dias</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <p className="text-sm text-muted-foreground">Carregando dados do gráfico...</p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <ClientRegistrationChart 
-            data={clientRegistrationData}
-            title="Evolução dos Cadastros de Clientes"
-            description="Acompanhamento diário dos cadastros por status nos últimos 14 dias"
-          />
-        )}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Agendados</CardTitle>
+            <CardDescription>Resumo operacional</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">0</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Cursos</CardTitle>
+            <CardDescription>Total cadastrados</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{totalCursos}</div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Atalhos rápidos como na imagem */}
+      <div className="flex flex-wrap gap-2">
+        <Button asChild>
+          <Link to="/admin/clients">Cliente</Link>
+        </Button>
+        <Button asChild variant="secondary">
+          <Link to="/admin/school/courses">Todos Cursos</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/admin/school/enroll">Curso</Link>
+        </Button>
+      </div>
+
+      {/* Gráficos de retas: Interessados e Matriculados */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent Client Activities */}
         <Card>
           <CardHeader>
-            <CardTitle>Atividades Recentes - Clientes</CardTitle>
-            <CardDescription>
-              Últimos cadastros e alterações de clientes
-            </CardDescription>
+            <CardTitle>Interessados do ano de 2025</CardTitle>
+            <CardDescription>Comparativo 2024 x 2025</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {activitiesLoading ? (
-                <div className="text-center py-4">
-                  <p className="text-sm text-muted-foreground">Carregando atividades...</p>
-                </div>
-              ) : recentClientActivities.length === 0 ? (
-                <div className="text-center py-4">
-                  <p className="text-sm text-muted-foreground">Nenhuma atividade recente</p>
-                </div>
-              ) : (
-                recentClientActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-                        activity.status === "actived" ? "bg-green-100" :
-                        activity.status === "inactived" ? "bg-red-100" : "bg-yellow-100"
-                      }`}>
-                        <Users className={`h-4 w-4 ${
-                          activity.status === "actived" ? "text-green-600" :
-                          activity.status === "inactived" ? "text-red-600" : "text-yellow-600"
-                        }`} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{activity.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {activity.client} • {activity.time}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {activity.cpf || activity.cnpj}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant={
-                        activity.status === "actived" ? "default" :
-                        activity.status === "inactived" ? "destructive" : "secondary"
-                      }>
-                        {activity.status === "actived" && "Ativo"}
-                        {activity.status === "inactived" && "Inativo"}
-                        {activity.status === "pre_registred" && "Pré-cadastro"}
-                      </Badge>
-                      <div className="flex gap-1 justify-end mt-2">
-                        <Button onClick={() => handleQuickViewClient(activity.id)} size="sm" variant="outline" className="text-xs px-2">
-                          Visualizar
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={interestedMonthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="y2025" stroke="#111827" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} name="Interessados 2025" />
+                  <Line type="monotone" dataKey="y2024" stroke="#3b82f6" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} name="Interessados 2024" />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
-        {/* Pending Pre-Registrations */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserCheck className="h-4 w-4" />
-              Pré-cadastros Pendentes
-            </CardTitle>
-            <CardDescription>
-              Cadastros aguardando aprovação
-            </CardDescription>
+            <CardTitle>Matriculados do ano de 2025</CardTitle>
+            <CardDescription>Comparativo 2024 x 2025</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {pendingLoading ? (
-                <div className="text-center py-4">
-                  <p className="text-sm text-muted-foreground">Carregando pré-registros...</p>
-                </div>
-              ) : pendingPreRegistrationsData.length === 0 ? (
-                <div className="text-center py-4">
-                  <p className="text-sm text-muted-foreground">Nenhum pré-registro pendente</p>
-                </div>
-              ) : (
-                pendingPreRegistrationsData.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-100">
-                        <Users className="h-4 w-4 text-yellow-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {item.email} • {item.date}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {item.phone} • {item.type}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant="secondary" className="mb-2">
-                        Pré-cadastro
-                      </Badge>
-                      <div className="flex gap-1 text-right">
-                        {/* <Button size="sm" variant="ghost" className="text-xs px-2">
-                          Rejeitar
-                        </Button> */}
-                        <Button onClick={() => navigate(`/admin/clients/${item.id}/view`, { state: { from: location } })} size="sm" variant="outline" className="text-xs px-2">
-                          Visualizar
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={enrolledMonthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="y2025" stroke="#111827" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} name="Matriculados 2025" />
+                  <Line type="monotone" dataKey="y2024" stroke="#3b82f6" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} name="Matriculados 2024" />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
-      </div>  
-      {/* Resumo das Entidades do Projeto */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {canShowPartners && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Handshake className="h-5 w-5" />
-                Parceiros
-              </CardTitle>
-              <CardDescription>Gestão de parceiros comerciais</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold">
-                    {partnersLoading ? "..." : stats.partnersCount}
-                  </div>
-                  <p className="text-xs text-muted-foreground">Total cadastrados</p>
-                </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link to="/admin/partners">
-                    Ver todos
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Clientes
-            </CardTitle>
-            <CardDescription>Total de clientes cadastrados</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold">
-                  {clientsLoading ? "..." : stats.clientsCount}
-                </div>
-                <p className="text-xs text-muted-foreground">Total cadastrados</p>
-              </div>
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/admin/clients">
-                  Ver todos
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-          {canShowPartners && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserCheck className="h-5 w-5" />
-              Usuários
-            </CardTitle>
-            <CardDescription>Usuários do sistema</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold">
-                  {usersLoading ? "..." : stats.usersCount}
-                </div>
-                <p className="text-xs text-muted-foreground">Usuários ativos</p>
-              </div>
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/admin/settings/users">
-                  Gerenciar
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-          )}
-      </div>    
+      </div>
     </div>
   );
 }

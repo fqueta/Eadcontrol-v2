@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ export default function AdminEnrollmentProgress() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const enrollmentId = id ? Number(id) : undefined;
 
   /**
@@ -119,6 +120,18 @@ export default function AdminEnrollmentProgress() {
    *        Uses navigation state (returnTo) or derives from curriculum (course_id).
    */
   const handleBack = () => {
+    // Prefer query params if present (shared link preserves filters)
+    const cidQ = searchParams.get('id_curso');
+    const tidQ = searchParams.get('id_turma');
+    const searchQ = searchParams.get('search');
+    if (cidQ || tidQ || searchQ) {
+      const params = new URLSearchParams();
+      if (cidQ) params.set('id_curso', cidQ);
+      if (tidQ) params.set('id_turma', tidQ);
+      if (searchQ && searchQ.trim()) params.set('search', searchQ.trim());
+      navigate(`/admin/school/courses/${cidQ || 'curso'}/progress?${params.toString()}`);
+      return;
+    }
     const state = (location.state || {}) as any;
     const returnTo: string | undefined = state?.returnTo;
     if (returnTo) {
@@ -139,6 +152,36 @@ export default function AdminEnrollmentProgress() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
+      {/*
+       * Breadcrumbs
+       * pt-BR: Trilhas de navegação para clareza, preservando filtros via URL.
+       * en-US: Navigation breadcrumbs for clarity, preserving filters via URL.
+       */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/admin/school/courses">Escola</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            {(() => {
+              const cidQ = searchParams.get('id_curso');
+              const tidQ = searchParams.get('id_turma');
+              const searchQ = searchParams.get('search');
+              const params = new URLSearchParams();
+              if (cidQ) params.set('id_curso', cidQ);
+              if (tidQ) params.set('id_turma', tidQ);
+              if (searchQ && searchQ.trim()) params.set('search', searchQ.trim());
+              const href = `/admin/school/courses/${cidQ || 'curso'}/progress?${params.toString()}`;
+              return <BreadcrumbLink href={href}>Progresso</BreadcrumbLink>;
+            })()}
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Matrícula {String(enrollmentId ?? '')}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Progresso da matrícula #{String(enrollmentId ?? '')}</h1>

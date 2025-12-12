@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { coursesService } from '@/services/coursesService';
 import { useTurmasList } from '@/hooks/turmas';
 import { Combobox, useComboboxOptions } from '@/components/ui/combobox';
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
 
 /**
  * AdminCourseProgress
@@ -208,7 +209,9 @@ export default function AdminCourseProgress() {
               if (tid) params.set('id_turma', tid);
               if (q.trim()) params.set('search', q.trim());
               const returnTo = `/admin/school/courses/${cid || 'curso'}/progress?${params.toString()}`;
-              navigate(`/admin/school/enrollments/${String(enrollmentId)}/progress`, { state: { returnTo } });
+              // Include filters in detail page URL for shareability
+              const detailUrl = `/admin/school/enrollments/${String(enrollmentId)}/progress?${params.toString()}`;
+              navigate(detailUrl, { state: { returnTo } });
             }}
           >
             Abrir matrícula
@@ -220,6 +223,22 @@ export default function AdminCourseProgress() {
 
   return (
       <div className="container mx-auto p-4 space-y-6">
+        {/*
+         * Breadcrumbs
+         * pt-BR: Trilhas de navegação para clareza, com curso atual.
+         * en-US: Breadcrumbs for clarity, with current course.
+         */}
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/admin/school/courses">Escola</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Progresso do curso</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Acompanhamento de Progresso (Admin)</h1>
           <p className="text-muted-foreground">Curso: {idCurso || '-'} {idTurma ? `• Turma: ${idTurma}` : ''}</p>
