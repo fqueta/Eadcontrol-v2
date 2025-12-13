@@ -5,12 +5,18 @@
 
     RewriteEngine On
 
-    # Handle CORS - Configuração específica para produção
+    # Handle CORS - Responder com a Origin exata do cliente quando for domínio eadcontrol.com.br
     <IfModule mod_headers.c>
-        Header always set Access-Control-Allow-Origin "https://educar.eadcontrol.com.br"
-        Header always set Access-Control-Allow-Origin "https://n8n-educar.eadcontrol.com.br"
-        Header always set Access-Control-Allow-Origin "https://www.educar.eadcontrol.com.br"
-        Header always set Access-Control-Allow-Origin "https://eadcontrol.com.br"
+        # Marca a Origin como permitida se for subdomínio ou apex de eadcontrol.com.br
+        SetEnvIfNoCase Origin "^https?://(.+\.)?eadcontrol\.com\.br$" ORIGIN_ALLOWED=$0
+
+        # Garante que caches considerem a Origin
+        Header always set Vary "Origin"
+
+        # Define Access-Control-Allow-Origin dinamicamente para a Origin solicitante
+        Header always set Access-Control-Allow-Origin "%{ORIGIN_ALLOWED}e" env=ORIGIN_ALLOWED
+
+        # Demais cabeçalhos CORS
         Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
         Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-CSRF-TOKEN, x-form-token"
         Header always set Access-Control-Allow-Credentials "true"
