@@ -9,6 +9,8 @@
     <IfModule mod_headers.c>
         Header always set Access-Control-Allow-Origin "https://educar.eadcontrol.com.br"
         Header always set Access-Control-Allow-Origin "https://n8n-educar.eadcontrol.com.br"
+        Header always set Access-Control-Allow-Origin "https://www.educar.eadcontrol.com.br"
+        Header always set Access-Control-Allow-Origin "https://eadcontrol.com.br"
         Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
         Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-CSRF-TOKEN, x-form-token"
         Header always set Access-Control-Allow-Credentials "true"
