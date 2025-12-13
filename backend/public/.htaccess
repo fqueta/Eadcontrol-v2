@@ -5,17 +5,22 @@
 
     RewriteEngine On
 
-    # CORS é gerenciado pelo middleware global do Laravel (HandleCors).
-    # Removemos cabeçalhos e tratamento manual de OPTIONS do Apache
-    # para evitar conflito com supports_credentials=true (origem explícita).
+    # Handle CORS - Configuração específica para produção
+    <IfModule mod_headers.c>
+        Header always set Access-Control-Allow-Origin "https://educar.eadcontrol.com.br"
+        Header always set Access-Control-Allow-Origin "https://n8n-educar.eadcontrol.com.br"
+        Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+        Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-CSRF-TOKEN, x-form-token"
+        Header always set Access-Control-Allow-Credentials "true"
+        Header always set Access-Control-Max-Age "3600"
+    </IfModule>
+    # Handle preflight OPTIONS requests
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=200,L]
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-
-    # Handle X-XSRF-Token Header
-    RewriteCond %{HTTP:x-xsrf-token} .
-    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
 
     # Redirect Trailing Slashes If Not A Folder...
     RewriteCond %{REQUEST_FILENAME} !-d
@@ -26,4 +31,13 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+
+    # Permissões da API
+    <LimitExcept GET POST PUT DELETE PATCH OPTIONS>
+        Deny from all
+    </LimitExcept>
+
+    <Limit GET POST PUT DELETE PATCH OPTIONS>
+        Require all granted
+    </Limit>
 </IfModule>
