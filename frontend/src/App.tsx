@@ -106,6 +106,7 @@ import MediaLibraryDemo from "./pages/media/MediaLibraryDemo";
 import CertificateTemplate from "./pages/school/CertificateTemplate";
 import CertificateGenerate from "./pages/school/CertificateGenerate";
 import CertificateView from "./pages/school/CertificateView";
+import CertificateValidate from "./pages/school/CertificateValidate";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -437,6 +438,8 @@ const App = () => {
                   <CertificateView />
                 </ProtectedRoute>
               } />
+              {/* Público / Validação de certificado por matrícula */}
+              <Route path="/certificado/validar/:enrollmentId" element={<CertificateValidate />} />
               {/* Área do Aluno / Progresso do Curso (protegida) */}
               <Route path="/aluno/cursos/:slug/progresso" element={
                 <ProtectedRoute>

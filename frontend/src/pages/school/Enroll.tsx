@@ -484,6 +484,15 @@ export default function Enroll() {
               onEdit={(enroll: any) => {
                 navigate(`/admin/sales/proposals/edit/${String(enroll.id)}`, { state: { returnTo } });
               }}
+              /**
+               * onGenerateCertificate
+               * pt-BR: Navega para geração de certificado com ID pré-preenchido.
+               * en-US: Navigates to certificate generation with prefilled ID.
+               */
+              onGenerateCertificate={(enroll: any) => {
+                const id = String(enroll?.id ?? '').trim();
+                navigate(`/admin/school/certificados/gerar?id=${encodeURIComponent(id)}`);
+              }}
               onDelete={(enroll: any) => { setSelected(enroll); setDeleteOpen(true); }}
             />
           </div>

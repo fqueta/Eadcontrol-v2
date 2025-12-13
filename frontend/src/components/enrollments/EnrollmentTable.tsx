@@ -3,7 +3,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Loader2, MoreHorizontal, Eye, Edit, Trash2, BarChart3 } from 'lucide-react';
+import { Loader2, MoreHorizontal, Eye, Edit, Trash2, BarChart3, Award } from 'lucide-react';
 
 export interface EnrollmentTableProps {
   items: any[];
@@ -20,6 +20,12 @@ export interface EnrollmentTableProps {
    * en-US: Opens student progress view when situation is 'mat'.
    */
   onProgress?: (item: any) => void;
+  /**
+   * onGenerateCertificate
+   * pt-BR: Ação para gerar/vincular certificado da matrícula selecionada.
+   * en-US: Action to generate/link certificate for the selected enrollment.
+   */
+  onGenerateCertificate?: (item: any) => void;
 }
 
 /**
@@ -29,7 +35,7 @@ export interface EnrollmentTableProps {
  * en-US: Reusable table component to list enrollments, with per-row actions.
  *        Shows standard columns (ID, Client, Course, Class, Status, Amount) and actions menu.
  */
-export default function EnrollmentTable({ items, isLoading, onView, onEdit, onDelete, resolveAmountBRL, onProgress }: EnrollmentTableProps) {
+export default function EnrollmentTable({ items, isLoading, onView, onEdit, onDelete, resolveAmountBRL, onProgress, onGenerateCertificate }: EnrollmentTableProps) {
   const amountFormatter = resolveAmountBRL || (() => '-');
 
   /**
@@ -106,6 +112,9 @@ export default function EnrollmentTable({ items, isLoading, onView, onEdit, onDe
                       <BarChart3 className="mr-2 h-4 w-4" /> Progresso
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem onClick={() => onGenerateCertificate?.(enroll)}>
+                    <Award className="mr-2 h-4 w-4" /> Gerar certificado
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onEdit?.(enroll)}>
                     <Edit className="mr-2 h-4 w-4" /> Editar
                   </DropdownMenuItem>

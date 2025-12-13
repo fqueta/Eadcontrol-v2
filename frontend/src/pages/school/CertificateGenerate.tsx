@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useUpdateEnrollment } from '@/hooks/enrollments';
@@ -12,9 +13,20 @@ import { useToast } from '@/hooks/use-toast';
  *        Uses student route `/aluno/certificado/:id` and saves into `preferencias.certificate_url`.
  */
 export default function CertificateGenerate() {
+  const [searchParams] = useSearchParams();
   const [enrollmentId, setEnrollmentId] = useState('');
   const { toast } = useToast();
   const updateEnrollment = useUpdateEnrollment();
+
+  /**
+   * initFromQuery
+   * pt-BR: Preenche o ID da matrícula a partir da query string `id`.
+   * en-US: Prefills enrollment ID from `id` query string.
+   */
+  useEffect(() => {
+    const qid = String(searchParams.get('id') || '').trim();
+    if (qid) setEnrollmentId(qid);
+  }, [searchParams]);
 
   // pt-BR: Gera URL e salva na matrícula.
   // en-US: Generates URL and saves into enrollment.

@@ -22,7 +22,9 @@ export function getTenantApiUrl(): string {
     'http://{tenant_id}.localhost:8000/api';
 
   const tenant_id = getTenantIdFromSubdomain() || 'default';
-  const replaced = raw.includes('{tenant_id}') ? raw.replace('{tenant_id}', tenant_id) : raw;
+  // console.log('tenant_id', tenant_id);
+  const replaced = raw.replace('{tenant_id}', tenant_id); 
+  //raw.includes('{tenant_id}') ? raw.replace('{tenant_id}', tenant_id) : raw;
 
   // Normalize: remove trailing slashes to avoid double slashes when concatenating version
   return replaced.replace(/\/+$/, '');

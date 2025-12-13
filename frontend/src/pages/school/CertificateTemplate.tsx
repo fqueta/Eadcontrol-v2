@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { useCertificateTemplate, useSaveCertificateTemplate } from '@/hooks/certificates';
 
 /**
  * CertificateTemplate
@@ -13,6 +14,8 @@ import { useToast } from '@/hooks/use-toast';
  */
 export default function CertificateTemplate() {
   const { toast } = useToast();
+  const { data: backendTemplate } = useCertificateTemplate();
+  const saveTemplate = useSaveCertificateTemplate();
   const [title, setTitle] = useState('Certificado de Conclusão');
   const [body, setBody] = useState(
     'Certificamos que {studentName} concluiu o curso {courseName} em {completionDate}, com carga horária de {hours} horas.'
@@ -22,25 +25,27 @@ export default function CertificateTemplate() {
   const [bgUrl, setBgUrl] = useState('');
   const [accentColor, setAccentColor] = useState('#111827');
 
-  // pt-BR: Carrega modelo existente do localStorage ao montar.
-  // en-US: Loads existing template from localStorage on mount.
+  // pt-BR: Carrega modelo do backend (fallback ao localStorage se indisponível).
+  // en-US: Loads template from backend (fallback to localStorage when unavailable).
   useEffect(() => {
+    const hydrate = (tpl: any) => {
+      setTitle(String(tpl?.title ?? title));
+      setBody(String(tpl?.body ?? body));
+      setFooterLeft(String(tpl?.footerLeft ?? footerLeft));
+      setFooterRight(String(tpl?.footerRight ?? footerRight));
+      setBgUrl(String(tpl?.bgUrl ?? ''));
+      setAccentColor(String(tpl?.accentColor ?? accentColor));
+    };
+    if (backendTemplate) {
+      hydrate(backendTemplate);
+      return;
+    }
     try {
       const raw = localStorage.getItem('certificateTemplate');
-      if (raw) {
-        const tpl = JSON.parse(raw);
-        setTitle(String(tpl.title || title));
-        setBody(String(tpl.body || body));
-        setFooterLeft(String(tpl.footerLeft || footerLeft));
-        setFooterRight(String(tpl.footerRight || footerRight));
-        setBgUrl(String(tpl.bgUrl || ''));
-        setAccentColor(String(tpl.accentColor || accentColor));
-      }
-    } catch (e) {
-      console.warn('Failed to parse certificate template from localStorage');
-    }
+      if (raw) hydrate(JSON.parse(raw));
+    } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [backendTemplate]);
 
   // pt-BR: Pré-visualização com placeholders de exemplo.
   // en-US: Preview using example placeholders.
@@ -54,15 +59,20 @@ export default function CertificateTemplate() {
     return body.replace(/\{(.*?)\}/g, (_, key) => sample[key] ?? `{${key}}`);
   }, [body]);
 
-  // pt-BR: Salva o modelo no localStorage.
-  // en-US: Saves the template to localStorage.
-  function handleSave() {
+  // pt-BR: Salva o modelo no backend (fallback localStorage em erro).
+  // en-US: Saves template to backend (fallback to localStorage on error).
+  async function handleSave() {
     const payload = { title, body, footerLeft, footerRight, bgUrl, accentColor };
     try {
-      localStorage.setItem('certificateTemplate', JSON.stringify(payload));
-      toast({ title: 'Modelo salvo', description: 'O modelo de certificado foi salvo com sucesso.' });
+      await saveTemplate.mutateAsync(payload);
+      toast({ title: 'Modelo salvo', description: 'Modelo de certificado salvo no backend.' });
     } catch (e) {
-      toast({ title: 'Falha ao salvar', description: 'Não foi possível salvar o modelo (localStorage).', variant: 'destructive' });
+      try {
+        localStorage.setItem('certificateTemplate', JSON.stringify(payload));
+        toast({ title: 'Modelo salvo localmente', description: 'Backend indisponível, modelo salvo no navegador.' });
+      } catch {
+        toast({ title: 'Falha ao salvar', description: 'Não foi possível salvar o modelo.', variant: 'destructive' });
+      }
     }
   }
 

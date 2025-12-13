@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useEnrollment } from '@/hooks/enrollments';
+import { useCertificateTemplate } from '@/hooks/certificates';
 
 /**
  * CertificateView
@@ -18,8 +19,8 @@ export default function CertificateView() {
   // en-US: Loads enrollment by ID.
   const { data: enrollment } = useEnrollment(id, { enabled: !!id });
 
-  // pt-BR: Carrega modelo de certificado do localStorage e aplica placeholders.
-  // en-US: Loads certificate template and applies placeholders.
+  // pt-BR: Carrega modelo do backend (fallback localStorage) e aplica placeholders.
+  // en-US: Loads template from backend (fallback localStorage) and applies placeholders.
   const [template, setTemplate] = useState({
     title: 'Certificado de Conclusão',
     body: 'Certificamos que {studentName} concluiu o curso {courseName} em {completionDate}, com carga horária de {hours} horas.',
@@ -28,15 +29,18 @@ export default function CertificateView() {
     bgUrl: '',
     accentColor: '#111827',
   } as any);
+  const { data: backendTemplate } = useCertificateTemplate();
 
   useEffect(() => {
+    if (backendTemplate) {
+      setTemplate(backendTemplate);
+      return;
+    }
     try {
       const raw = localStorage.getItem('certificateTemplate');
       if (raw) setTemplate(JSON.parse(raw));
-    } catch (e) {
-      // fallback permanece com default
-    }
-  }, []);
+    } catch {}
+  }, [backendTemplate]);
 
   // pt-BR: Resolve dados da matrícula para placeholders.
   // en-US: Resolves enrollment data for placeholders.
@@ -76,6 +80,15 @@ export default function CertificateView() {
         >
           <h1 className="text-3xl font-bold text-center" style={{ color: template?.accentColor || '#111827' }}>{template?.title}</h1>
           <p className="mt-8 text-lg leading-8 text-center" style={{ color: '#374151' }}>{bodyResolved}</p>
+          {/* pt-BR: QR Code com link de validação */}
+          {/* en-US: QR Code linking to validation page */}
+          <div className="mt-10 flex justify-center">
+            <img
+              alt="QR Code"
+              className="w-28 h-28"
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(`${window.location.origin}/certificado/validar/${encodeURIComponent(id)}`)}`}
+            />
+          </div>
           <div className="mt-32 grid grid-cols-2 gap-24">
             <div className="text-center">
               <div className="border-t" style={{ borderColor: '#9CA3AF' }}></div>

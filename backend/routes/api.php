@@ -25,6 +25,7 @@ use App\Http\Controllers\api\ServiceOrderController;
 use App\Http\Controllers\api\RegisterController;
 use App\Http\Controllers\api\ModuleController;
 use App\Http\Controllers\api\ActivityController;
+use App\Http\Controllers\api\CertificatesController;
 use App\Http\Controllers\api\FileStorageController;
 use App\Http\Controllers\api\CursoController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
@@ -248,6 +249,10 @@ Route::name('api.')->prefix('v1')->middleware([
         Route::apiResource('situacoes-matricula', SituacaoMatriculaController::class, ['parameters' => [
             'situacoes-matricula' => 'id'
         ]]);
+        // Certificados - template (protegido)
+        // EN: Certificate template endpoints (protected)
+        Route::get('certificates/template', [CertificatesController::class, 'getTemplate'])->name('certificates.template.get');
+        Route::put('certificates/template', [CertificatesController::class, 'saveTemplate'])->name('certificates.template.put');
         Route::get('tracking-events', [TrackingEventController::class, 'index'])->name('tracking-events.index');
         // Rota aninhada para cadastro de etapas de um funil específico
         Route::post('funnels/{id}/stages', [StageController::class, 'storeForFunnel'])->name('funnels.stages.store');
@@ -266,6 +271,9 @@ Route::name('api.')->prefix('v1')->middleware([
     });
     // Rotas para tracking events
     Route::post('tracking/whatsapp-contact', [TrackingEventController::class, 'whatsappContact'])->name('tracking.whatsapp-contact');
+    // Certificados - validação (pública)
+    // EN: Certificate validation public endpoint
+    Route::get('certificates/validate/{enrollmentId}', [CertificatesController::class, 'validateCertificate'])->name('certificates.validate');
     // Rotas para webhooks
     Route::any('webhook/{endp1}', [WebhookController::class, 'handleSingleEndpoint'])->name('webhook.single');
     Route::any('webhook/{endp1}/{endp2}', [WebhookController::class, 'handleDoubleEndpoint'])->name('webhook.double');

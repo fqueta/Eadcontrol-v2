@@ -42,6 +42,27 @@ export default function StudentArea() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   /**
+   * openCertificateInternal
+   * pt-BR: Navega para a visualização interna do certificado por ID de matrícula.
+   * en-US: Navigates to internal certificate view by enrollment ID.
+   */
+  function openCertificateInternal(enroll: any) {
+    const id = String(enroll?.id || '').trim();
+    if (!id) return;
+    navigate(`/aluno/certificado/${encodeURIComponent(id)}`);
+  }
+
+  /**
+   * openCertificateExternal
+   * pt-BR: Abre a URL salva do certificado (se existir) em nova aba.
+   * en-US: Opens the saved certificate URL (if exists) in a new tab.
+   */
+  function openCertificateExternal(enroll: any) {
+    const url = (enroll?.preferencias || {})?.certificate_url;
+    if (url) window.open(url, '_blank');
+  }
+
+  /**
    * getClientIdFromUser
    * pt-BR: Retorna o id do cliente a partir do usuário logado (aceita id_cliente, client_id, cliente_id).
    * en-US: Returns client id from logged user (accepts id_cliente, client_id, cliente_id).
@@ -507,7 +528,12 @@ export default function StudentArea() {
                         <span className="font-medium">{title}</span>
                         <span className="text-xs text-muted-foreground">Certificado</span>
                       </div>
-                      <Button size="sm" variant={disabled ? 'outline' : 'default'} disabled={disabled} onClick={() => url && window.open(url, '_blank')}> {disabled ? 'Indisponível' : 'Abrir'} </Button>
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="default" onClick={() => openCertificateInternal(e)}>Ver certificado</Button>
+                        <Button size="sm" variant={disabled ? 'outline' : 'secondary'} disabled={disabled} onClick={() => openCertificateExternal(e)}>
+                          {disabled ? 'Indisponível' : 'Abrir URL' }
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
