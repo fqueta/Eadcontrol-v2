@@ -35,8 +35,18 @@ return [
     |
     */
     'allowed_origins' => [
+        // API subdomains
         'https://api-educar.eadcontrol.com.br',
         'https://api-aeroclube.eadcontrol.com.br',
+
+        // Frontend production domains (explicit for credentials)
+        'https://educar.eadcontrol.com.br',
+        'https://www.educar.eadcontrol.com.br',
+
+        //incluir N8N dominio
+        'https://n8n-educar.eadcontrol.com.br',
+
+        // Root domain (if hosting frontend at apex)
         'https://eadcontrol.com.br',
         // Dev/local origins
         'http://educar.localhost:3000',
