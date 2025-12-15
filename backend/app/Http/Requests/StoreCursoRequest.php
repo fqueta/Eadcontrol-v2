@@ -22,6 +22,7 @@ class StoreCursoRequest extends FormRequest
      */
     public function rules(): array
     {
+        // dd($this->all());
         return [
             // Identificador opcional para update-or-create
             'id' => ['nullable','numeric'],
@@ -64,7 +65,7 @@ class StoreCursoRequest extends FormRequest
 
             // Módulos aninhados
             'modulos' => ['nullable','array'],
-            'modulos.*.module_id' => ['nullable','integer', Rule::exists('posts','ID')->where(function($q){ $q->where('post_type','modules'); })],
+            // 'modulos.*.module_id' => ['nullable','integer', Rule::exists('posts','ID')->where(function($q){ $q->where('post_type','modules'); })],
             'modulos.*.title' => ['required','string','max:300'],
             'modulos.*.name' => ['nullable','string','max:200'],
             'modulos.*.description' => ['nullable','string'],

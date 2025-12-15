@@ -345,7 +345,7 @@ class CursoController extends Controller
         if (!$this->permissionService->isHasPermission('create')) {
             return response()->json(['error' => 'Acesso negado'], 403);
         }
-
+        // dd($request->all());
         $data = $request->validated();
 
         // Definir defaults similares ao AeronaveController
