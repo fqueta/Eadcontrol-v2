@@ -388,7 +388,7 @@ class CursoController extends Controller
         // Upsert de módulos e atividades, quando presentes
         $modulesPayload = $request->validated()['modulos'] ?? null;
         if (is_array($modulesPayload) && !empty($modulesPayload)) {
-$upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (string) $user->id);
+            $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (string) $user->id);
             // Atualiza representação dos módulos dentro do curso com IDs recém-criados/atualizados
             $curso->modulos = $upsertResult;
             $curso->save();
@@ -667,8 +667,9 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
                 $moduleId = (int) $moduleModel->ID;
             }
 
-            // Processar atividades
-            $activitiesPayload = is_array($mod['atividades'] ?? null) ? $mod['atividades'] : [];
+            // Processar atividades ou activities
+            // dump($mod);
+            $activitiesPayload = is_array($mod['atividades'] ?? null) ? $mod['atividades'] : (is_array($mod['activities'] ?? null) ? $mod['activities'] : []);
             $activitiesResult = [];
             // dd($activitiesPayload);
             foreach ($activitiesPayload as $act) {
