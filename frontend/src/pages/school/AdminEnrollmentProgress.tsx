@@ -6,6 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, PauseCircle, PlayCircle, Printer, ArrowLeft } from 'lucide-react';
 import { progressService } from '@/services/progressService';
+// Breadcrumbs UI
+// pt-BR: Importa componentes de trilha de navegação para exibir breadcrumbs no topo da página.
+// en-US: Imports breadcrumb UI components to render navigation trail at the top of the page.
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
 
 /**
  * AdminEnrollmentProgress

@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\Matricula;
 use App\Notifications\WelcomeNotification;
+use App\Services\Qlib;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -19,11 +22,90 @@ use Illuminate\Validation\Rule;
 class PublicEnrollmentController extends Controller
 {
     /**
+     * verifyCaptcha
+     * pt-BR: Verifica o token do reCAPTCHA v3 junto ao Google, validando ação e score.
+     * en-US: Verifies reCAPTCHA v3 token with Google, checking action and score.
+     */
+    private function verifyCaptcha(Request $request, string $expectedAction = 'invite_enroll'): bool
+    {
+        $token = (string) $request->input('captcha_token', '');
+        $action = (string) $request->input('captcha_action', $expectedAction);
+        $secret = config('services.recaptcha.secret');
+        $verifyUrl = config('services.recaptcha.verify_url');
+        $minScore = (float) config('services.recaptcha.min_score', 0.5);
+
+        if (!$secret || !$token) {
+            return false;
+        }
+
+        $resp = Http::asForm()->post($verifyUrl, [
+            'secret' => $secret,
+            'response' => $token,
+            'remoteip' => $request->ip(),
+        ]);
+        if (!$resp->ok()) {
+            return false;
+        }
+        $data = $resp->json();
+        $success = (bool) ($data['success'] ?? false);
+        $score = (float) ($data['score'] ?? 0.0);
+        $actionResp = (string) ($data['action'] ?? '');
+        if (!$success) return false;
+        if ($actionResp && $actionResp !== $expectedAction) return false;
+        return $score >= $minScore;
+    }
+
+    /**
+     * isBotLike
+     * pt-BR: Verifica honeypot e time-trap; rejeita se campo oculto estiver preenchido
+     *        ou se o envio ocorrer rápido demais após render (ex.: < 3s).
+     * en-US: Checks honeypot and time-trap; rejects if hidden field is filled
+     *        or submission happens too fast after render (e.g., < 3s).
+     */
+    private function isBotLike(Request $request, int $minMillis = 3000): bool
+    {
+        $honeypot = (string) $request->input('hp_field', '');
+        if ($honeypot !== '') return true;
+        $renderedAt = (int) $request->input('form_rendered_at', 0);
+        if ($renderedAt > 0) {
+            $elapsed = (int) (microtime(true) * 1000) - $renderedAt;
+            if ($elapsed < $minMillis) return true;
+        }
+        return false;
+    }
+
+    /**
      * Registra um cliente e cria uma matrícula no curso informado (padrão: id 2).
      * EN: Register a client and create an enrollment in the given course (default: id 2).
      */
     public function registerAndEnroll(Request $request)
     {
+        // Per-email limiter (soft) to reduce abuse beyond IP throttle
+        $emailForKey = (string) $request->input('email', '');
+        if ($emailForKey) {
+            $key = 'public-enroll:email:' . strtolower($emailForKey);
+            if (RateLimiter::tooManyAttempts($key, 3)) {
+                return response()->json([
+                    'message' => 'Muitas tentativas para este e-mail. Tente novamente mais tarde.',
+                ], 429);
+            }
+            RateLimiter::hit($key, 15 * 60);
+        }
+
+        // Basic anti-bot checks: honeypot + time-trap + reCAPTCHA
+        if ($this->isBotLike($request)) {
+            return response()->json([
+                'message' => 'Envio suspeito detectado.',
+                'errors' => ['bot' => ['Submission flagged by anti-bot checks']],
+            ], 422);
+        }
+        if (!$this->verifyCaptcha($request, 'invite_enroll')) {
+            return response()->json([
+                'message' => 'Falha na verificação de segurança (CAPTCHA).',
+                'errors' => ['captcha_token' => ['Invalid or low-score CAPTCHA token']],
+            ], 422);
+        }
+
         // Mapear possíveis nomes de campos do payload
         $email = $request->input('email');
         $name = $request->input('name');
@@ -31,8 +113,10 @@ class PublicEnrollmentController extends Controller
         $phone = $request->input('phone', $request->input('celular'));
         $privacyAccepted = $request->boolean('privacyAccepted');
         $termsAccepted = $request->boolean('termsAccepted');
-
+        $institution = $request->input('institution');
+        $situacao_id = Qlib::buscaValorDb('posts', 'post_name', 'mat','ID');
         // Validação básica do payload público
+        //personalizar mensagens de erro de email
         $validator = Validator::make([
             'email' => $email,
             'name' => $name,
@@ -48,6 +132,8 @@ class PublicEnrollmentController extends Controller
             'privacyAccepted' => ['required','boolean', Rule::in([true])],
             'termsAccepted' => ['required','boolean', Rule::in([true])],
         ], [
+            'email.unique' => 'Este e-mail já está em uso. Por favor, use outro. ou faça login.',
+            'phone.unique' => 'Este número de celular já está em uso.',
             'privacyAccepted.in' => 'É necessário aceitar a política de privacidade.',
             'termsAccepted.in' => 'É necessário aceitar os termos de uso.',
         ]);
@@ -82,15 +168,34 @@ class PublicEnrollmentController extends Controller
             $client->setAttribute('celular', $phone);
         }
         $client->save();
-
+        // Adiciona a instituição do cliente em um meta campo como o metodo Qlib::update_usermeta
+        Qlib::update_usermeta($client->id, 'institution', $institution);
         // Criar matrícula com curso padrão id=2 (pode ser sobrescrito via query/body)
         // Add id_turma com padrão 0 para atender ao schema que exige valor (sem default)
         $courseId = (int) ($request->input('id_curso', 2));
         $turmaId = (int) ($request->input('id_turma', 0));
+        //valor do curso pelo id
+        $course = DB::table('cursos')->where('id', $courseId)->first();
+        if (!$course) {
+            return response()->json([
+                'message' => 'Curso não encontrado',
+            ], 404);
+        }
+        $valor = $course->valor;
         $matricula = new Matricula();
         $matricula->id_cliente = $client->id;
         $matricula->id_curso = $courseId;
-        $matricula->id_turma = $turmaId; // 0 indica sem turma associada
+        $matricula->id_turma = $turmaId;
+        $matricula->subtotal = $valor;
+        $matricula->total = $valor;
+        /**
+         * Define a origem da matrícula na coluna JSON `tag`.
+         * pt-BR: Usamos um array para garantir JSON válido e evitar falha de constraint.
+         * en-US: Use an array to ensure valid JSON and avoid constraint failure.
+         */
+        $matricula->tag = ['formulario-inscricao'];
+        $matricula->situacao_id = $situacao_id;
+        // 0 indica sem turma associada
         // Não definir 'status' explicitamente para usar o default da tabela ('a')
         $matricula->save();
 
@@ -122,6 +227,32 @@ class PublicEnrollmentController extends Controller
      */
     public function registerInterest(Request $request)
     {
+        // Per-email limiter for interest registrations
+        $emailForKey = (string) $request->input('email', '');
+        if ($emailForKey) {
+            $key = 'public-interest:email:' . strtolower($emailForKey);
+            if (RateLimiter::tooManyAttempts($key, 5)) {
+                return response()->json([
+                    'message' => 'Muitas tentativas para este e-mail. Tente novamente mais tarde.',
+                ], 429);
+            }
+            RateLimiter::hit($key, 15 * 60);
+        }
+
+        // Anti-bot checks for interest route as well
+        if ($this->isBotLike($request)) {
+            return response()->json([
+                'message' => 'Envio suspeito detectado.',
+                'errors' => ['bot' => ['Submission flagged by anti-bot checks']],
+            ], 422);
+        }
+        if (!$this->verifyCaptcha($request, 'register_interest')) {
+            return response()->json([
+                'message' => 'Falha na verificação de segurança (CAPTCHA).',
+                'errors' => ['captcha_token' => ['Invalid or low-score CAPTCHA token']],
+            ], 422);
+        }
+
         // Map fields from payload
         $email = trim((string) $request->input('email'));
         $name = trim((string) $request->input('name', $request->input('fullName')));

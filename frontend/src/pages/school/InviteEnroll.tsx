@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -10,6 +10,43 @@ import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
 import { publicCoursesService } from '@/services/publicCoursesService';
 import { publicEnrollmentService } from '@/services/publicEnrollmentService';
 import { useToast } from '@/hooks/use-toast';
+import { phoneApplyMask, phoneRemoveMask } from '@/lib/masks/phone-apply-mask';
+
+/**
+ * loadRecaptchaScript
+ * pt-BR: Carrega script do reCAPTCHA v3 dinamicamente, caso ainda não esteja presente.
+ * en-US: Dynamically loads reCAPTCHA v3 script if not already present.
+ */
+function loadRecaptchaScript(siteKey: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if ((window as any).grecaptcha) return resolve();
+    const s = document.createElement('script');
+    s.src = `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(siteKey)}`;
+    s.async = true;
+    s.defer = true;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('Failed to load reCAPTCHA script'));
+    document.head.appendChild(s);
+  });
+}
+
+/**
+ * getRecaptchaToken
+ * pt-BR: Obtém token do reCAPTCHA v3 para a ação informada.
+ * en-US: Retrieves reCAPTCHA v3 token for the given action.
+ */
+async function getRecaptchaToken(siteKey: string, action: string): Promise<string> {
+  await loadRecaptchaScript(siteKey);
+  const grecaptcha = (window as any).grecaptcha;
+  if (!grecaptcha || !grecaptcha.execute) return '';
+  await new Promise((r) => grecaptcha.ready(r));
+  try {
+    const token = await grecaptcha.execute(siteKey, { action });
+    return token || '';
+  } catch {
+    return '';
+  }
+}
 
 /**
  * InviteEnroll
@@ -41,6 +78,7 @@ export default function InviteEnroll() {
   const courseTitle = useMemo(() => String(((course as any)?.titulo || (course as any)?.nome || 'Curso')), [course]);
 
   // Form state
+  const [institution, setInstitution] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -48,6 +86,113 @@ export default function InviteEnroll() {
   const [privacyAccepted, setPrivacyAccepted] = useState<boolean>(true);
   const [termsAccepted, setTermsAccepted] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState(false);
+  // Field-level errors from API validation
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Security helpers: honeypot & time-trap
+  const [formRenderedAt, setFormRenderedAt] = useState<number>(() => Date.now());
+  const [hpField, setHpField] = useState<string>('');
+
+  useEffect(() => {
+    setFormRenderedAt(Date.now());
+    // Lazily load reCAPTCHA script with site key if present
+    const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string;
+    if (siteKey) {
+      loadRecaptchaScript(siteKey).catch(() => {/* ignore */});
+    }
+  }, []);
+
+  /**
+   * handlePhoneChange
+   * pt-BR: Aplica máscara de telefone enquanto o usuário digita e limpa erro do campo.
+   * en-US: Applies phone mask as the user types and clears field error.
+   */
+  const handlePhoneChange = (value: string) => {
+    const masked = phoneApplyMask(value);
+    setPhone(masked);
+    setFieldErrors((prev) => ({ ...prev, phone: '' }));
+  };
+
+  /**
+   * isPhoneInvalid
+   * pt-BR: Valida telefone com DDI; se informado, exige entre 10 e 15 dígitos.
+   * en-US: Validates phone with country code; if provided, requires 10–15 digits.
+   */
+  const isPhoneInvalid = useMemo(() => {
+    const digits = phoneRemoveMask(phone || '');
+    if (!phone) return false; // phone é opcional
+    return digits.length < 10 || digits.length > 15;
+  }, [phone]);
+
+  /**
+   * parseApiError
+   * pt-BR: Extrai `message` e `errors` de uma resposta de erro da API (BaseApiService),
+   *        normalizando para um objeto simples com mapa de erros por campo.
+   * en-US: Extracts `message` and `errors` from an API error response (BaseApiService),
+   *        normalizing into a simple object with a field error map.
+   */
+  const parseApiError = (err: any): { message: string; fieldErrors: Record<string, string>; details: string[] } => {
+    let body = (err && (err.body || err.response?.data)) || {};
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch { /* noop */ }
+    }
+    const msg = String(body?.message || err?.message || 'Erro de validação');
+    const errorsObj: Record<string, string[] | string> = body?.errors || {};
+    const fErrors: Record<string, string> = {};
+    const details: string[] = [];
+    if (errorsObj && typeof errorsObj === 'object') {
+      Object.entries(errorsObj).forEach(([field, messages]) => {
+        const firstMsg = Array.isArray(messages) ? String(messages[0] || '') : String(messages || '');
+        if (firstMsg) {
+          fErrors[field] = firstMsg;
+          details.push(firstMsg);
+        }
+      });
+    }
+    return { message: msg, fieldErrors: fErrors, details };
+  };
+
+  /**
+   * passwordStrength
+   * pt-BR: Calcula força da senha com base em comprimento e diversidade de caracteres.
+   * en-US: Calculates password strength based on length and character diversity.
+   */
+  const passwordStrength = useMemo(() => {
+    const v = password || '';
+    let score = 0;
+    if (v.length >= 6) score += 1;
+    if (/[A-Z]/.test(v)) score += 1;
+    if (/[a-z]/.test(v)) score += 1;
+    if (/[0-9]/.test(v)) score += 1;
+    if (/[^A-Za-z0-9]/.test(v)) score += 1;
+    return Math.min(score, 5);
+  }, [password]);
+
+  /**
+   * isPasswordTooWeak
+   * pt-BR: Segue regra mínima do backend (>=6). Exibe alerta visual se fraca.
+   * en-US: Follows backend minimum rule (>=6). Shows visual alert if weak.
+   */
+  const isPasswordTooWeak = useMemo(() => password.length < 6, [password]);
+
+  /**
+   * focusFirstError
+   * pt-BR: Rola suavemente até o primeiro campo com erro e aplica foco.
+   * en-US: Smoothly scrolls to the first field with error and focuses it.
+   */
+  const focusFirstError = (errors: Record<string, string>) => {
+    const order = ['institution', 'name', 'phone', 'email', 'password', 'privacyAccepted', 'termsAccepted'];
+    for (const key of order) {
+      if (errors[key]) {
+        const targetId = key === 'privacyAccepted' ? 'privacy' : key === 'termsAccepted' ? 'terms' : key;
+        const el = document.getElementById(targetId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if ('focus' in el) (el as HTMLElement).focus();
+        }
+        break;
+      }
+    }
+  };
 
   /**
    * canSubmit
@@ -55,8 +200,12 @@ export default function InviteEnroll() {
    * en-US: Enables submit when required fields are filled.
    */
   const canSubmit = useMemo(() => {
-    return !!name && !!email && !!password && courseId > 0 && privacyAccepted && termsAccepted;
-  }, [name, email, password, courseId, privacyAccepted, termsAccepted]);
+    const base = !!name && !!email && !!password && courseId > 0 && privacyAccepted && termsAccepted;
+    if (!base) return false;
+    if (isPasswordTooWeak) return false;
+    if (phone && isPhoneInvalid) return false;
+    return true;
+  }, [name, email, password, courseId, privacyAccepted, termsAccepted, phone, isPhoneInvalid, isPasswordTooWeak]);
 
   /**
    * handleSubmit
@@ -69,8 +218,15 @@ export default function InviteEnroll() {
     e.preventDefault();
     if (!canSubmit) return;
     setSubmitting(true);
+    setFieldErrors({});
     try {
+      // Acquire reCAPTCHA v3 token (backend requires it)
+      const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string;
+      const captcha_action = 'invite_enroll';
+      const captcha_token = siteKey ? await getRecaptchaToken(siteKey, captcha_action) : '';
+
       const resp = await publicEnrollmentService.registerAndEnroll({
+        institution,
         name,
         email,
         password,
@@ -78,7 +234,15 @@ export default function InviteEnroll() {
         id_curso: courseId,
         privacyAccepted,
         termsAccepted,
+        // Security payload
+        captcha_token,
+        captcha_action,
+        form_rendered_at: formRenderedAt,
+        hp_field: hpField,
       });
+      if(resp?.id) {
+        navigate(`/aluno/cursos/${courseSlug}`);
+      }
       toast({
         title: 'Cadastro realizado',
         description: 'Enviamos um e-mail de boas-vindas com o link do curso.',
@@ -86,8 +250,10 @@ export default function InviteEnroll() {
       // Opcional: navegar para a página do aluno (exige login)
       // navigate(`/aluno/cursos/${courseSlug}`);
     } catch (err: any) {
-      const message = err?.message || 'Falha ao realizar cadastro';
-      toast({ title: 'Erro', description: message, variant: 'destructive' });
+      const { message, fieldErrors: fErrors, details } = parseApiError(err);
+      setFieldErrors(fErrors);
+      setTimeout(() => focusFirstError(fErrors), 0);
+      toast({ title: 'Erro de validação', description: details.length ? details.join('; ') : message, variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -105,29 +271,60 @@ export default function InviteEnroll() {
           </CardHeader>
           <CardContent>
             <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
+              {/* Adicionar campo tipo testo para instituição */}
+              <div className="space-y-2 md:col-span-2">
+                <Label>Instituição</Label>
+                <Input id="institution" value={institution} onChange={(e) => setInstitution(e.target.value)} placeholder="Instituição" required aria-invalid={!!fieldErrors.institution} className={fieldErrors.institution ? 'border-red-500 focus-visible:ring-red-500' : ''} />
+                {fieldErrors.institution && (
+                  <p className="text-sm text-destructive">{fieldErrors.institution}</p>
+                )}
+              </div>
               <div className="space-y-2 md:col-span-2">
                 <Label>Nome completo</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" required />
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" required aria-invalid={!!fieldErrors.name} className={fieldErrors.name ? 'border-red-500 focus-visible:ring-red-500' : ''} />
+                {fieldErrors.name && (
+                  <p className="text-sm text-destructive">{fieldErrors.name}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Telefone</Label>
-                <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(DDD) 99999-9999" />
+                <Input id="phone" value={phone} onChange={(e) => handlePhoneChange(e.target.value)} placeholder="(DDD) 99999-9999" aria-invalid={!!fieldErrors.phone || isPhoneInvalid} className={(fieldErrors.phone || isPhoneInvalid) ? 'border-red-500 focus-visible:ring-red-500' : ''} />
+                {(fieldErrors.phone || isPhoneInvalid) && (
+                  <p className="text-sm text-destructive">{fieldErrors.phone || 'Telefone inválido. Use DDI + número (10–15 dígitos).'}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>E-mail</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" required />
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" required aria-invalid={!!fieldErrors.email} className={fieldErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''} />
+                {fieldErrors.email && (
+                  <p className="text-sm text-destructive">{fieldErrors.email}</p>
+                )}
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label>Senha</Label>
-                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Crie uma senha" required />
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Crie uma senha" required aria-invalid={!!fieldErrors.password || isPasswordTooWeak} className={(fieldErrors.password || isPasswordTooWeak) ? 'border-red-500 focus-visible:ring-red-500' : ''} />
+                {fieldErrors.password && (
+                  <p className="text-sm text-destructive">{fieldErrors.password}</p>
+                )}
+                {!fieldErrors.password && (
+                  <p className={`text-sm ${isPasswordTooWeak ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    {isPasswordTooWeak ? 'Senha muito curta (mínimo 6 caracteres).' : `Força da senha: ${(['Muito fraca','Fraca','Média','Forte','Muito forte'])[passwordStrength - 1] || 'Muito fraca'}`}
+                  </p>
+                )}
               </div>
               <div className="flex items-center space-x-2 md:col-span-2">
                 <Checkbox id="privacy" checked={privacyAccepted} onCheckedChange={(v) => setPrivacyAccepted(!!v)} />
                 <Label htmlFor="privacy">Aceito a política de privacidade</Label>
+                {fieldErrors.privacyAccepted && (
+                  <p className="text-sm text-destructive">{fieldErrors.privacyAccepted}</p>
+                )}
               </div>
               <div className="flex items-center space-x-2 md:col-span-2">
                 <Checkbox id="terms" checked={termsAccepted} onCheckedChange={(v) => setTermsAccepted(!!v)} />
                 <Label htmlFor="terms">Aceito os termos de uso</Label>
+                {fieldErrors.termsAccepted && (
+                  <p className="text-sm text-destructive">{fieldErrors.termsAccepted}</p>
+                )}
               </div>
 
               <div className="md:col-span-2 flex items-center gap-2">
@@ -137,6 +334,15 @@ export default function InviteEnroll() {
                 <Button type="button" variant="outline" onClick={() => navigate(`/aluno/cursos/${courseSlug}`)}>
                   Ir para o curso
                 </Button>
+                {/* Honeypot (should stay empty) */}
+                <input
+                  type="text"
+                  value={hpField}
+                  onChange={(e) => setHpField(e.target.value)}
+                  style={{ position: 'absolute', left: '-9999px', opacity: 0 }}
+                  aria-hidden="true"
+                  tabIndex={-1}
+                />
               </div>
             </form>
           </CardContent>

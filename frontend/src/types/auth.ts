@@ -37,6 +37,18 @@ export interface LoginCredentials {
   email: string;
   password: string;
   remember?: boolean;
+  /**
+   * captcha_token
+   * pt-BR: Token do reCAPTCHA v3 gerado no cliente.
+   * en-US: reCAPTCHA v3 token generated on the client.
+   */
+  captcha_token?: string;
+  /**
+   * captcha_action
+   * pt-BR: Ação associada ao token (ex.: 'login').
+   * en-US: Action associated with the token (e.g., 'login').
+   */
+  captcha_action?: string;
 }
 
 export interface RegisterData {
@@ -44,10 +56,34 @@ export interface RegisterData {
   email: string;
   password: string;
   password_confirmation: string;
+  /**
+   * captcha_token
+   * pt-BR: Token do reCAPTCHA v3 gerado no cliente.
+   * en-US: reCAPTCHA v3 token generated on the client.
+   */
+  captcha_token?: string;
+  /**
+   * captcha_action
+   * pt-BR: Ação associada ao token (ex.: 'register').
+   * en-US: Action associated with the token (e.g., 'register').
+   */
+  captcha_action?: string;
 }
 
 export interface ForgotPasswordData {
   email: string;
+  /**
+   * captcha_token
+   * pt-BR: Token do reCAPTCHA v3 gerado no cliente.
+   * en-US: reCAPTCHA v3 token generated on the client.
+   */
+  captcha_token?: string;
+  /**
+   * captcha_action
+   * pt-BR: Ação associada ao token (ex.: 'forgot_password').
+   * en-US: Action associated with the token (e.g., 'forgot_password').
+   */
+  captcha_action?: string;
 }
 
 export interface ResetPasswordData {

@@ -49,4 +49,15 @@ return [
         'from_name' => env('MAIL_FROM_NAME'),
     ],
 
+    // Google reCAPTCHA v3 settings
+    // pt-BR: Configurações do reCAPTCHA (site_key para frontend, secret para backend)
+    // en-US: reCAPTCHA settings (site_key for frontend, secret for backend)
+    'recaptcha' => [
+        'site_key' => env('RECAPTCHA_SITE_KEY', ''),
+        'secret' => env('RECAPTCHA_SECRET', ''),
+        'verify_url' => env('RECAPTCHA_VERIFY_URL', 'https://www.google.com/recaptcha/api/siteverify'),
+        // Minimum acceptable score for v3; lower allows more passes but more spam
+        'min_score' => (float) env('RECAPTCHA_MIN_SCORE', 0.5),
+    ],
+
 ];

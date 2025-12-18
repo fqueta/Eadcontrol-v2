@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/form';
 import { authService } from '@/services/authService';
 import { toast } from '@/hooks/use-toast';
+import { getSiteKey, getRecaptchaToken } from '@/lib/recaptcha';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -42,10 +43,25 @@ export default function ForgotPassword() {
     },
   });
 
+  /**
+   * onSubmit
+   * pt-BR: Gera um token reCAPTCHA v3 para a ação "forgot_password" e envia
+   *        junto com o email para validação no backend.
+   * en-US: Generates a reCAPTCHA v3 token for "forgot_password" action and
+   *        sends it with the email for backend validation.
+   */
   const onSubmit = async (data: ForgotPasswordFormData) => {
     try {
       setIsLoading(true);
-      await authService.forgotPassword({ email: data.email });
+      const siteKey = getSiteKey();
+      const captcha_action = 'forgot_password';
+      const captcha_token = siteKey ? await getRecaptchaToken(siteKey, captcha_action) : '';
+
+      await authService.forgotPassword({ 
+        email: data.email,
+        captcha_action,
+        captcha_token,
+      });
       setEmailSent(true);
       toast({
         title: "Email enviado!",

@@ -7,6 +7,7 @@ use App\Http\Controllers\MenuController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class AuthController extends Controller
 {
@@ -37,6 +38,13 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
+        // Validate CAPTCHA first
+        if (!$this->verifyCaptcha($request, 'login')) {
+            return response()->json([
+                'message' => 'Falha na verificação de segurança (CAPTCHA).',
+                'errors' => ['captcha_token' => ['Invalid or low-score CAPTCHA token']],
+            ], 422);
+        }
         $credentials = $request->only('email', 'password');
 
         if (!Auth::attempt($credentials)) {
@@ -255,5 +263,39 @@ class AuthController extends Controller
         }
 
         return $filtered;
+    }
+
+    /**
+     * verifyCaptcha
+     * pt-BR: Verifica o token do reCAPTCHA v3 junto ao Google, validando ação e score.
+     * en-US: Verifies reCAPTCHA v3 token with Google, checking action and score.
+     */
+    private function verifyCaptcha(Request $request, string $expectedAction = 'login'): bool
+    {
+        $token = (string) $request->input('captcha_token', '');
+        $action = (string) $request->input('captcha_action', $expectedAction);
+        $secret = config('services.recaptcha.secret');
+        $verifyUrl = config('services.recaptcha.verify_url');
+        $minScore = (float) config('services.recaptcha.min_score', 0.5);
+
+        if (!$secret || !$token) {
+            return false;
+        }
+
+        $resp = Http::asForm()->post($verifyUrl, [
+            'secret' => $secret,
+            'response' => $token,
+            'remoteip' => $request->ip(),
+        ]);
+        if (!$resp->ok()) {
+            return false;
+        }
+        $data = $resp->json();
+        $success = (bool) ($data['success'] ?? false);
+        $score = (float) ($data['score'] ?? 0.0);
+        $actionResp = (string) ($data['action'] ?? '');
+        if (!$success) return false;
+        if ($actionResp && $actionResp !== $expectedAction) return false;
+        return $score >= $minScore;
     }
 }

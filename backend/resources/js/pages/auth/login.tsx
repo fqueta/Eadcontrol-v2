@@ -1,6 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
-import { FormEventHandler } from 'react';
+import { FormEventHandler, useEffect } from 'react';
 
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
@@ -9,11 +9,20 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
+import { getSiteKey, loadRecaptchaScript, getRecaptchaToken } from '@/lib/recaptcha';
 
+/**
+ * LoginForm
+ * pt-BR: Estrutura do formulário de login, incluindo campos de reCAPTCHA v3.
+ * en-US: Login form structure, including reCAPTCHA v3 fields.
+ */
 type LoginForm = {
     email: string;
     password: string;
     remember: boolean;
+    // reCAPTCHA v3 fields
+    captcha_token?: string;
+    captcha_action?: string;
 };
 
 interface LoginProps {
@@ -22,16 +31,46 @@ interface LoginProps {
 }
 
 export default function Login({ status, canResetPassword }: LoginProps) {
-    const { data, setData, post, processing, errors, reset } = useForm<Required<LoginForm>>({
+    const { data, setData, post, transform, processing, errors, reset } = useForm<Required<LoginForm>>({
         email: '',
         password: '',
         remember: false,
     });
 
-    const submit: FormEventHandler = (e) => {
+    /**
+     * useEffect: Preload reCAPTCHA script on first render
+     * pt-BR: Carrega o script do reCAPTCHA v3 assim que a página é montada.
+     * en-US: Loads the reCAPTCHA v3 script as soon as the page mounts.
+     */
+    useEffect(() => {
+        const siteKey = getSiteKey();
+        if (siteKey) {
+            loadRecaptchaScript(siteKey).catch(() => {/* ignore */});
+        }
+    }, []);
+
+    /**
+     * submit
+     * pt-BR: Antes de enviar, obtém um token reCAPTCHA v3 para a ação "login" e
+     *        adiciona ao payload para validação no backend.
+     * en-US: Before submit, acquires a reCAPTCHA v3 token for "login" action and
+     *        adds it to the payload for backend validation.
+     */
+    const submit: FormEventHandler = async (e) => {
         e.preventDefault();
+        const siteKey = getSiteKey();
+        const captcha_action = 'login';
+        const captcha_token = siteKey ? await getRecaptchaToken(siteKey, captcha_action) : '';
+
+        // Inject CAPTCHA fields at send time to avoid async state race
+        transform((d) => ({ ...d, captcha_action, captcha_token }));
+
         post(route('login'), {
-            onFinish: () => reset('password'),
+            onFinish: () => {
+                reset('password');
+                // Reset transform after submission
+                transform((d) => d);
+            },
         });
     };
 

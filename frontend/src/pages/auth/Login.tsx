@@ -19,6 +19,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { getSiteKey, getRecaptchaToken, loadRecaptchaScript } from '@/lib/recaptcha';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -58,11 +59,41 @@ export default function Login() {
     },
   });
   // console.log('redirectAfterAuth', redirectAfterAuth);
+  /**
+   * useEffect: Preload reCAPTCHA script on mount
+   * pt-BR: Carrega o script do reCAPTCHA v3 assim que a página é montada.
+   * en-US: Loads the reCAPTCHA v3 script as soon as the page mounts.
+   */
+  useEffect(() => {
+    const siteKey = getSiteKey();
+    if (siteKey) {
+      loadRecaptchaScript(siteKey).catch(() => {/* ignore errors */});
+    }
+  }, []);
+
+  /**
+   * onSubmit
+   * pt-BR: Antes de enviar, obtém um token reCAPTCHA v3 para a ação "login".
+   *        Faz uma segunda tentativa rápida se o primeiro token vier vazio.
+   * en-US: Before submit, acquires a reCAPTCHA v3 token for "login" action.
+   *        Performs a quick second attempt if the first token is empty.
+   */
   const onSubmit = async (data: LoginFormData) => {
+    const siteKey = getSiteKey();
+    const captcha_action = 'login';
+    let captcha_token = siteKey ? await getRecaptchaToken(siteKey, captcha_action) : '';
+    // Quick retry if token came empty on first attempt
+    if (siteKey && !captcha_token) {
+      await new Promise((r) => setTimeout(r, 300));
+      captcha_token = await getRecaptchaToken(siteKey, captcha_action);
+    }
+
     const success = await login({
       email: data.email,
       password: data.password,
       remember: data.remember,
+      captcha_action,
+      captcha_token,
     });
     if (success) {
       setLoginSuccess(true);

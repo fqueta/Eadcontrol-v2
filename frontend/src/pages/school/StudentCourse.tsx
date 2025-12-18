@@ -583,7 +583,6 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
                  * en-US: Passes `enrollmentId` so progress saving sends `id_matricula`.
                  */}
                 <CourseContentViewer course={course} onActivityChange={handleActivityChange} enrollmentId={enrollmentId} />
-                <ActivityComments course={course} modules={modules} user={user} currentActivityKey={currentActivityKey} />
               </>
             )}
           </CardContent>

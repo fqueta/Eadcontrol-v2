@@ -3,10 +3,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock } from 'lucide-react';
+import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock, Star, ChevronDown, ChevronUp } from 'lucide-react';
 import { progressService } from '@/services/progressService';
 import { useToast } from '@/hooks/use-toast';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import commentsService from '@/services/commentsService';
 
 /**
  * VideoDescriptionToggle
@@ -39,6 +43,24 @@ function VideoDescriptionToggleBase({ html }: { html: string }) {
 const VideoDescriptionToggle = memo(VideoDescriptionToggleBase);
 
 /**
+ * StarRating
+ * pt-BR: Componente simples de avaliação por estrelas (1 a 5).
+ * en-US: Simple star rating component (1 to 5).
+ */
+function StarRating({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const set = (n: number) => onChange(n);
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button key={n} type="button" className="p-0" onClick={() => set(n)} aria-label={`Rate ${n}`}>
+          <Star className={`h-4 w-4 ${n <= value ? 'text-amber-500 fill-amber-500' : 'text-muted-foreground'}`} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
  * CourseContentViewer
  * pt-BR: Componente de visualização de conteúdo do curso com barra de busca,
  *        sidebar de atividades e área principal para player/leitura/link.
@@ -64,6 +86,18 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  /**
+   * collapseInactiveModules
+   * pt-BR: Quando ativo, colapsa módulos que não contêm a atividade atual.
+   * en-US: When active, collapses modules that do not include the current activity.
+   */
+  const [collapseInactiveModules, setCollapseInactiveModules] = useState(false);
+  /**
+   * collapsedModules
+   * pt-BR: Controla o recolhimento/expansão por módulo ao clicar no título.
+   * en-US: Controls per-module collapse/expand when clicking the module title.
+   */
+  const [collapsedModules, setCollapsedModules] = useState<Record<number, boolean>>({});
   /**
    * Toast hook
    * pt-BR: Fornece API para mostrar toasts de feedback.
@@ -172,6 +206,71 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
    * en-US: Selected activity to render.
    */
   const currentActivity = filteredActivities[currentIndex];
+
+  /**
+   * currentActivityKeyForComments
+   * pt-BR: ID estável da atividade atual para listar e publicar comentários.
+   * en-US: Stable ID for current activity to list and post comments.
+   */
+  const currentActivityKeyForComments = useMemo(() => {
+    const a: any = currentActivity;
+    if (!a) return '';
+    return String((a?.id ?? a?.activity_id ?? `${a?._moduleIndex}-${a?._activityIndex}`));
+  }, [currentActivity]);
+
+  /**
+   * Comentários: estado local e integração com API
+   * pt-BR: Min/máx de caracteres, rascunho e avaliação por estrelas.
+   * en-US: Min/max characters, draft text and star rating.
+   */
+  const COMMENT_MIN = 3;
+  const COMMENT_MAX = 500;
+  const [draft, setDraft] = useState('');
+  const [rating, setRating] = useState<number>(0);
+  const queryClient = useQueryClient();
+
+  /**
+   * commentsQuery
+   * pt-BR: Busca comentários aprovados para a atividade atual.
+   * en-US: Fetch approved comments for the current activity.
+   */
+  const commentsQuery = useQuery({
+    queryKey: ['activity-comments', currentActivityKeyForComments],
+    enabled: Boolean(currentActivityKeyForComments),
+    queryFn: async () => {
+      if (!currentActivityKeyForComments) return [] as any[];
+      const res = await commentsService.listForActivity(currentActivityKeyForComments);
+      return Array.isArray(res) ? res : (res as any)?.data ?? [];
+    },
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  /**
+   * createMutation
+   * pt-BR: Envia novo comentário para moderação.
+   * en-US: Submit a new comment for moderation.
+   */
+  const createMutation = useMutation({
+    mutationFn: async (text: string) => {
+      return commentsService.createComment({
+        target_type: 'activity',
+        target_id: currentActivityKeyForComments,
+        body: text,
+        rating: rating,
+      });
+    },
+    onSuccess: () => {
+      toast({ title: 'Comentário enviado', description: 'Seu comentário foi enviado para moderação.' });
+      setDraft('');
+      setRating(0);
+      queryClient.invalidateQueries({ queryKey: ['activity-comments', currentActivityKeyForComments] });
+    },
+    onError: () => {
+      toast({ title: 'Falha ao enviar', description: 'Não foi possível enviar seu comentário.', variant: 'destructive' } as any);
+    },
+  });
 
   /**
    * readingRemaining
@@ -1655,6 +1754,15 @@ function htmlEquals(a: string, b: string): boolean {
             </div>
             <span className="text-[11px] md:text-xs">{courseProgressPercent}%</span>
           </span>
+          {/* pt-BR: Alterna colapso de módulos inativos */}
+          {/* en-US: Toggle collapse for inactive modules */}
+          <Button title="Mostrar ou recolher atividades" variant="outline" size="sm" onClick={() => setCollapseInactiveModules((v) => !v)}>
+            {collapseInactiveModules ? (
+              <><ChevronUp className="h-3.5 w-3.5 mr-1" /> Mostrar todos</>
+            ) : (
+              <><ChevronDown className="h-3.5 w-3.5 mr-1" /> Recolher inativos</>
+            )}
+          </Button>
           {progressLoading && (
             <span className="flex items-center gap-1 text-[11px] md:text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" /> sincronizando…
@@ -1673,17 +1781,30 @@ function htmlEquals(a: string, b: string): boolean {
             {modules.map((m: any, mi: number) => {
               const title = m?.titulo || m?.title || m?.name || `Módulo ${mi + 1}`;
               const activities: any[] = Array.isArray(m?.atividades || m?.activities) ? (m?.atividades || m?.activities) : [];
+              const isCollapsed = Boolean(collapsedModules[mi]);
+              const isCurrent = Boolean(currentActivity && mi === (currentActivity as any)._moduleIndex);
+              const showActivities = !isCollapsed && (!collapseInactiveModules || isCurrent);
               return (
                 <div key={`mobile-sidebar-mod-${mi}`} className="mb-3">
-                  <div className="font-semibold text-sm mb-2 flex items-center gap-2">
+                  <button
+                    className="w-full font-semibold text-sm mb-2 flex items-center gap-2 px-2 py-1 rounded hover:bg-muted"
+                    title={isCollapsed ? 'Mostrar atividades do módulo' : 'Recolher atividades do módulo'}
+                    onClick={() => setCollapsedModules(prev => ({ ...prev, [mi]: !Boolean(prev[mi]) }))}
+                  >
+                    {isCollapsed ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronUp className="h-4 w-4" />
+                    )}
                     <Folder className="h-4 w-4" />
-                    <span className="line-clamp-1 break-words">{title}</span>
+                    <span className="line-clamp-1 break-words flex-1 text-left">{title}</span>
                     {(() => {
                       const totalSecs = getModuleTotalSeconds(m);
                       const label = totalSecs ? formatDuration(totalSecs) : '';
                       return label ? <span className="text-xs text-muted-foreground">• {label}</span> : null;
                     })()}
-                  </div>
+                  </button>
+                  {showActivities && (
                   <ul className="space-y-2">
                     {activities.map((a: any, ai: number) => {
                       const atitle = a?.titulo || a?.title || a?.name || `Atividade ${ai + 1}`;
@@ -1710,7 +1831,7 @@ function htmlEquals(a: string, b: string): boolean {
                             }}
                           >
                             {typeIcon}
-                            <div className="text-sm font-medium line-clamp-2 break-words leading-tight">{atitle}</div>
+                            <div className="text-sm font-normal line-clamp-2 break-words leading-tight">{atitle}</div>
                             {durationLabel && (
                               <div className="col-span-2 text-xs text-muted-foreground">{durationLabel}</div>
                             )}
@@ -1719,6 +1840,7 @@ function htmlEquals(a: string, b: string): boolean {
                       );
                     })}
                   </ul>
+                  )}
                 </div>
               );
             })}
@@ -1733,17 +1855,30 @@ function htmlEquals(a: string, b: string): boolean {
           {modules.map((m: any, mi: number) => {
             const title = m?.titulo || m?.title || m?.name || `Módulo ${mi + 1}`;
             const activities: any[] = Array.isArray(m?.atividades || m?.activities) ? (m?.atividades || m?.activities) : [];
+            const isCollapsed = Boolean(collapsedModules[mi]);
+            const isCurrent = Boolean(currentActivity && mi === (currentActivity as any)._moduleIndex);
+            const showActivities = !isCollapsed && (!collapseInactiveModules || isCurrent);
             return (
               <div key={`sidebar-mod-${mi}`} className="mb-3">
-                <div className="font-semibold text-sm mb-2 flex items-center gap-2">
+                <button
+                  className="w-full font-semibold text-sm mb-2 flex items-center gap-2 px-2 py-1 rounded hover:bg-muted text-left"
+                  title={isCollapsed ? 'Mostrar atividades do módulo' : 'Recolher atividades do módulo'}
+                  onClick={() => setCollapsedModules(prev => ({ ...prev, [mi]: !Boolean(prev[mi]) }))}
+                >
+                  {isCollapsed ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronUp className="h-4 w-4" />
+                  )}
                   <Folder className="h-4 w-4" />
-                  <span className="line-clamp-1 break-words">{title}</span>
+                  <span className="line-clamp-1 break-words flex-1">{title}</span>
                   {(() => {
                     const totalSecs = getModuleTotalSeconds(m);
                     const label = totalSecs ? formatDuration(totalSecs) : '';
                     return label ? <span className="text-xs text-muted-foreground">• {label}</span> : null;
                   })()}
-                </div>
+                </button>
+                {showActivities && (
                 <ul className="space-y-2">
                   {activities.map((a: any, ai: number) => {
                     const atitle = a?.titulo || a?.title || a?.name || `Atividade ${ai + 1}`;
@@ -1784,7 +1919,7 @@ function htmlEquals(a: string, b: string): boolean {
                           }}
                         >
                           {typeIcon}
-                          <div className="text-sm font-medium line-clamp-2 break-words leading-tight">{atitle}</div>
+                          <div className="text-sm font-normal line-clamp-2 break-words leading-tight">{atitle}</div>
                           {durationLabel && (
                             <div className="text-xs text-muted-foreground">{durationLabel}</div>
                           )}
@@ -1821,6 +1956,7 @@ function htmlEquals(a: string, b: string): boolean {
                     );
                   })}
                 </ul>
+                )}
               </div>
             );
           })}
@@ -2090,6 +2226,74 @@ function htmlEquals(a: string, b: string): boolean {
               ) : (
                 <div className="text-sm text-muted-foreground">Nenhuma atividade encontrada.</div>
               )}
+            </CardContent>
+          </Card>
+          {/* pt-BR: Card de comentários da atividade atual */}
+          {/* en-US: Comments card for current activity */}
+          <Card className="mt-4">
+            <CardContent className="pt-4">
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold">Comentários da atividade</h3>
+                  <p className="text-sm text-muted-foreground">Somente comentários aprovados são exibidos. Comentários publicados entram em moderação.</p>
+                </div>
+                <div>
+                  <Button variant="outline" size="sm" onClick={() => { try { navigator.clipboard.writeText(window.location.href); } catch {} }}>Copiar link</Button>
+                </div>
+              </div>
+
+              <div>
+                <Label>Novo comentário</Label>
+                <Textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value.slice(0, COMMENT_MAX))}
+                  placeholder="Escreva seu comentário... / Write your comment..."
+                  rows={3}
+                />
+                <div className="mt-2">
+                  <Label className="text-xs">Avaliação (obrigatória)</Label>
+                  <div className="mt-1">
+                    <StarRating value={rating} onChange={setRating} />
+                  </div>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{Math.max(0, draft.trim().length)} / {COMMENT_MAX}</span>
+                  <span>mín {COMMENT_MIN}</span>
+                </div>
+                <div className="mt-2 flex justify-end">
+                  <Button
+                    size="sm"
+                    onClick={() => createMutation.mutate(draft.trim())}
+                    disabled={createMutation.isPending || !draft.trim() || !currentActivityKeyForComments || draft.trim().length < COMMENT_MIN || rating < 1}
+                  >
+                    {createMutation.isPending ? 'Publicando...' : 'Publicar'}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                {commentsQuery.isLoading ? (
+                  <div className="text-sm text-muted-foreground">Carregando comentários...</div>
+                ) : (Array.isArray(commentsQuery.data) && commentsQuery.data.length > 0 ? (
+                  (commentsQuery.data as any[]).map((c: any) => (
+                    <div key={String(c?.id ?? Math.random())} className="rounded border p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-medium">{String(c?.user_name ?? c?.author ?? 'Aluno')}</div>
+                        {typeof c?.rating === 'number' && c.rating > 0 && (
+                          <div className="flex items-center gap-1">
+                            {[1,2,3,4,5].map((n) => (
+                              <Star key={n} className={`h-3.5 w-3.5 ${n <= c.rating ? 'text-amber-500 fill-amber-500' : 'text-muted-foreground'}`} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">{String(c?.body ?? '')}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-muted-foreground">Nenhum comentário para esta atividade.</div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </main>

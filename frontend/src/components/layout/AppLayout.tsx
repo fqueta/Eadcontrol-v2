@@ -1,6 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
-import { Bell, Search, LogOut, Sun, Moon } from "lucide-react";
+import { Bell, Search, LogOut, Sun, Moon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -26,6 +26,9 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import React from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useQuery } from "@tanstack/react-query";
+import commentsService from "@/services/commentsService";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -42,6 +45,28 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { applyThemeSettings } = useTheme();
   const navigate = useNavigate();
   const [cmdOpen, setCmdOpen] = React.useState(false);
+
+  /**
+   * pendingCommentsQuery
+   * pt-BR: Busca comentários com status "pending" para exibir um alerta no sino.
+   *        Faz polling leve a cada 60s e atualiza ao focar a janela.
+   * en-US: Fetches comments with "pending" status to show an alert on the bell.
+   *        Performs light polling every 60s and updates on window focus.
+   */
+  const pendingCommentsQuery = useQuery({
+    queryKey: ["admin-pending-comments"],
+    queryFn: async () => {
+      const res: any = await commentsService.adminList("pending", 1, 5);
+      if (Array.isArray(res)) {
+        return { items: res, total: res.length };
+      }
+      const items = Array.isArray(res?.data) ? res.data : [];
+      const total = Number(res?.total ?? items.length);
+      return { items, total };
+    },
+    refetchInterval: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
 
   const handleLogout = async () => {
     await logout();
@@ -91,7 +116,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                   alt="Logo"
                   className="h-6 w-auto"
                 />
-                <span className="hidden lg:block text-sm text-muted-foreground">CRM • Aeroclube</span>
+                <span className="hidden lg:block text-sm text-muted-foreground">Ead Control</span>
               </div>
             </div>
 
@@ -104,9 +129,52 @@ export function AppLayout({ children }: AppLayoutProps) {
                 <Sun className="h-4 w-4 dark:hidden" />
                 <Moon className="h-4 w-4 hidden dark:block" />
               </Button>
-              <Button variant="ghost" size="icon">
-                <Bell className="h-4 w-4" />
-              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" title="Notificações de comentários">
+                    <div className="relative">
+                      <Bell className="h-4 w-4" />
+                      {Number(pendingCommentsQuery.data?.total || 0) > 0 && (
+                        <span className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg-red-600 text-white text-[10px] leading-4 text-center">
+                          {Math.min(99, Number(pendingCommentsQuery.data?.total || 0))}
+                        </span>
+                      )}
+                    </div>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80">
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Moderação de comentários</div>
+                    {pendingCommentsQuery.isLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Carregando…
+                      </div>
+                    ) : Number(pendingCommentsQuery.data?.total || 0) === 0 ? (
+                      <div className="text-sm text-muted-foreground">Sem comentários pendentes.</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {(pendingCommentsQuery.data?.items || []).map((c: any) => (
+                          <div key={String(c?.id)} className="rounded-md border p-2 hover:bg-muted">
+                            <div className="text-xs text-muted-foreground">
+                              {String(c?.user_name || "Autor")}{c?.created_at ? ` • ${new Date(String(c.created_at)).toLocaleString()}` : ""}
+                            </div>
+                            <div className="text-sm line-clamp-2">{String(c?.body || "")}</div>
+                            <div className="text-[11px] text-muted-foreground mt-1">
+                              Alvo: {String(c?.commentable_type || "?")} #{String(c?.commentable_id || "?")}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="pt-1 flex justify-end">
+                      <Button size="sm" variant="outline" onClick={() => navigate('/admin/school/comments')}>
+                        Ir para moderação
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -146,8 +214,8 @@ export function AppLayout({ children }: AppLayoutProps) {
             <CommandList>
               <CommandEmpty>Nenhum resultado.</CommandEmpty>
               <CommandGroup heading="Ir para">
-                <CommandItem onSelect={() => { setCmdOpen(false); navigate('/admin/aero-dashboard'); }}>
-                  Dashboard Aeroclube
+                <CommandItem onSelect={() => { setCmdOpen(false); navigate('/admin/school-dashboard'); }}>
+                  Dashboard Ead Control
                 </CommandItem>
                 <CommandItem onSelect={() => { setCmdOpen(false); navigate('/admin/clients'); }}>
                   Clientes

@@ -31,6 +31,9 @@ class Matricula extends Model
         'config' => 'array',
         'reg_excluido' => 'array',
         'reg_deletado' => 'array',
+        // 'tag' é coluna JSON; converter automaticamente para array
+        // 'tag' is a JSON column; automatically cast to array
+        'tag' => 'array',
     ];
 
     /**

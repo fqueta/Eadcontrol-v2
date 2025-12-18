@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use App\Helpers\StringHelper;
 use Inertia\Inertia;
 
@@ -34,5 +37,20 @@ class AppServiceProvider extends ServiceProvider
             ['label' => 'Usuários', 'href' => '/users'],
             ['label' => 'Configurações', 'href' => '/settings'],
         ]);
+
+        // Define custom rate limiters for public endpoints
+        // pt-BR: Limitadores por IP para endpoints públicos de matrícula e interesse
+        // en-US: IP-based rate limiters for public enrollment and interest endpoints
+        RateLimiter::for('public-enroll-ip', function (Request $request) {
+            return Limit::perMinute(20)->by($request->ip());
+        });
+
+        RateLimiter::for('public-interest-ip', function (Request $request) {
+            return Limit::perMinute(40)->by($request->ip());
+        });
+
+        RateLimiter::for('public-form-token-ip', function (Request $request) {
+            return Limit::perMinute(30)->by($request->ip());
+        });
     }
 }
