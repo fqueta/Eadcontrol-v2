@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Http\Controllers\Api\ClientController;
+use App\Http\Controllers\api\ClientController;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\User;
 use App\Models\Permission;
