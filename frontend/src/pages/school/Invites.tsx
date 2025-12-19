@@ -9,9 +9,9 @@ import { coursesService } from '@/services/coursesService';
 import { Combobox, useComboboxOptions } from '@/components/ui/combobox';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogContent, AlertDialogOverlay } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogContent } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Pencil, Trash2, MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { phoneApplyMask, phoneRemoveMask } from '@/lib/masks/phone-apply-mask';
 // Nota de layout:
@@ -303,38 +303,7 @@ export default function InvitesAdminPage() {
                         <td className="p-2">{r.criado_em}</td>
                         <td className="p-2">
                           <div className="flex items-center gap-1">
-                            {/* Botões rápidos continuam disponíveis */}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setEditingInvite({
-                                  id: r.id,
-                                  nome: r.nome,
-                                  id_curso: r.id_curso,
-                                  total_convites: r.total,
-                                  validade: r.validade || '',
-                                });
-                                setIsEditOpen(true);
-                              }}
-                              aria-label="Editar convite"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setDeletingInvite({ id: r.id, nome: r.nome });
-                                setIsDeleteOpen(true);
-                              }}
-                              aria-label="Excluir convite"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                            {/* Dropdown com opção Compartilhar link */}
+                            {/* Dropdown com ações */}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-7 px-2" aria-label="Mais ações">
@@ -438,7 +407,6 @@ export default function InvitesAdminPage() {
         {/* Delete Confirmation */}
         <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
           <AlertDialogContent>
-            <AlertDialogOverlay />
             <div className="space-y-3">
               <h3 className="text-lg font-semibold">Excluir convite</h3>
               <p>Tem certeza que deseja excluir "{deletingInvite?.nome}"?</p>
