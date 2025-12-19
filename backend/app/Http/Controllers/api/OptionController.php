@@ -25,6 +25,70 @@ class OptionController extends Controller
     }
 
     /**
+     * Public: Expose branding and institutional identity options
+     * pt-BR: Endpoint público que retorna apenas dados dos cards
+     *        "Identidade Institucional" e "Branding & Imagens".
+     * en-US: Public endpoint that returns only the data from
+     *        "Institutional Identity" and "Branding & Images" cards.
+     *
+     * Returns JSON in the shape:
+     * {
+     *   "data": {
+     *     "app_logo_url": "...",
+     *     "app_favicon_url": "...",
+     *     "app_social_image_url": "...",
+     *     "app_institution_name": "...",
+     *     "app_institution_slogan": "...",
+     *     "app_institution_description": "...",
+     *     "app_institution_url": "..."
+     *   }
+     * }
+     */
+    public function publicBranding(Request $request)
+    {
+        // Whitelisted keys to expose publicly
+        $allowedKeys = [
+            'app_logo_url',
+            'app_favicon_url',
+            'app_social_image_url',
+            'app_institution_name',
+            'app_institution_slogan',
+            'app_institution_description',
+            'app_institution_url',
+        ];
+
+        // Fetch options for allowed keys only
+        $options = Option::query()
+            ->whereIn('url', $allowedKeys)
+            ->where(function($q) {
+                $q->whereNull('deletado')->orWhere('deletado', '!=', 's');
+            })
+            ->where(function($q) {
+                $q->whereNull('excluido')->orWhere('excluido', '!=', 's');
+            })
+            ->get(['url', 'value']);
+
+        $data = [];
+        foreach ($options as $opt) {
+            // Ensure string values, decode arrays if stored as JSON
+            $val = $opt->value;
+            if (is_string($val)) {
+                // try decode, else keep original
+                $decoded = json_decode($val, true);
+                $val = (json_last_error() === JSON_ERROR_NONE) ? $decoded : $val;
+            }
+            $data[$opt->url] = $val;
+        }
+
+        // Minimal fallbacks: app name for institution if missing
+        if (!array_key_exists('app_institution_name', $data) || empty($data['app_institution_name'])) {
+            $data['app_institution_name'] = config('app.name');
+        }
+
+        return response()->json(['data' => $data]);
+    }
+
+    /**
      * Listar todas as opções
      */
     public function index(Request $request)

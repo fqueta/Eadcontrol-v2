@@ -146,6 +146,11 @@ Route::name('api.')->prefix('api/v1')->middleware([
         Route::post('form-token/validate', [PublicFormTokenController::class, 'validate'])
             ->name('public.form-token.validate')
             ->middleware('throttle:60,1');
+        // Endpoint público: expõe somente branding e identidade institucional
+        Route::get('options/branding', [OptionController::class, 'publicBranding'])
+            ->name('options.public.branding')
+            ->middleware('throttle:60,1');
+
     });
 
     // Cadastro de cliente com matrícula automática (sem prefixo "public")

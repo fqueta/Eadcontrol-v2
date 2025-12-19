@@ -26,6 +26,8 @@ import {
 } from '@/services/activeClientsService';
 import { useFormToken } from '@/hooks/useFormToken';
 import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
+import BrandLogo from '@/components/branding/BrandLogo';
+import { getInstitutionName, getInstitutionNameAsync, hydrateBrandingFromPublicApi } from '@/lib/branding';
 
 
 
@@ -70,6 +72,10 @@ export default function PublicClientForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // pt-BR: Nome da instituição obtido via endpoint público de branding.
+  // en-US: Institution name resolved via public branding endpoint.
+  const [institutionName, setInstitutionName] = useState<string>(() => getInstitutionName());
+
   // console.log('ActiveClientsService',activeClientsService);
   
   // Hook para gerenciar token de segurança
@@ -81,6 +87,32 @@ export default function PublicClientForm() {
   useEffect(() => {
     generateToken();
   }, [generateToken]);
+
+  /**
+   * pt-BR: Hidrata branding a partir do endpoint público apenas uma vez e
+   *         atualiza o nome institucional para o cabeçalho.
+   * en-US: Hydrates branding from public endpoint once and updates
+   *         institution name for the header.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { name } = await hydrateBrandingFromPublicApi({ persist: true });
+        const finalName = name || (await getInstitutionNameAsync());
+        if (!cancelled) {
+          setInstitutionName(finalName);
+        }
+      } catch {
+        if (!cancelled) {
+          setInstitutionName(getInstitutionName());
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Estado de loading das operações
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -259,8 +291,8 @@ export default function PublicClientForm() {
                   </Link>
                 </Button>
                 <div className="flex-1 text-center">
-                  <img src="/logo.png" alt="Aeroclube JF" className="h-10 mx-auto mb-2" />
-                  <h1 className="text-xl font-bold text-blue-700">Aeroclube de Juiz de Fora</h1>
+                  <BrandLogo className="h-10 mx-auto mb-2" alt={institutionName || 'Logo'} />
+                  <h1 className="text-xl font-bold text-blue-700">{institutionName}</h1>
                 </div>
               </div>
 

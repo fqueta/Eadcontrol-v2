@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
 import BrandLogo from '@/components/branding/BrandLogo';
+import { getInstitutionName, getInstitutionNameAsync, hydrateBrandingFromPublicApi } from '@/lib/branding';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useRedirect } from '@/hooks/useRedirect';
@@ -42,6 +43,8 @@ export default function Login() {
   const [loginSuccess, setLoginSuccess] = useState(false);
   const { login, isLoading, user, isAuthenticated } = useAuth();
   const { redirectAfterAuth } = useRedirect();
+  // Nome da instituição (dinâmico via API/options)
+  const [institutionName, setInstitutionName] = useState<string>(() => getInstitutionName());
 
   // Efeito para redirecionar após login bem-sucedido
   useEffect(() => {
@@ -70,6 +73,25 @@ export default function Login() {
     if (siteKey) {
       loadRecaptchaScript(siteKey).catch(() => {/* ignore errors */});
     }
+  }, []);
+
+  /**
+   * hydrateBrandingFromPublicApi
+   * pt-BR: Carrega branding apenas do endpoint público e atualiza estado.
+   * en-US: Loads branding only from the public endpoint and updates state.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { name } = await hydrateBrandingFromPublicApi({ persist: true });
+        const finalName = name || (await getInstitutionNameAsync());
+        if (!cancelled) setInstitutionName(finalName);
+      } catch {
+        if (!cancelled) setInstitutionName(getInstitutionName());
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   /**
@@ -148,9 +170,9 @@ export default function Login() {
                   </Link>
                 </Button>
                 <div className="flex-1 text-center">
-                  {/* Brand logo */}
-                  <BrandLogo alt="Aeroclube JF" className="h-10 mx-auto mb-2" />
-                  <h1 className="text-xl font-bold text-blue-700">Aeroclube de Juiz de Fora</h1>
+                  {/* Brand logo (dinâmico via API/options) */}
+                  <BrandLogo alt={institutionName || 'Logo'} className="h-10 mx-auto mb-2" />
+                  <h1 className="text-xl font-bold text-blue-700">{institutionName}</h1>
                 </div>
               </div>
 
