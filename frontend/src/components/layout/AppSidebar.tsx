@@ -150,7 +150,7 @@ export function AppSidebar() {
 
       {/* Header com branding */}
       <SidebarHeader className="border-b border-border print:hidden">
-        <Link to="/admin/aero-dashboard" className="flex items-center gap-2 px-4 py-3">
+        <Link to="/" title="Ir para o site" className="flex items-center gap-2 px-4 py-3">
           <BrandLogo alt="Logo" fallbackSrc="/aeroclube-logo.svg" className="h-6 w-auto" />
           {!collapsed && (
             <div className="flex flex-col">
