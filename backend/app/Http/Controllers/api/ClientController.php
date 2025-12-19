@@ -57,15 +57,24 @@ class ClientController extends Controller
         $order_by = $request->input('order_by', 'created_at');
         $order = $request->input('order', 'desc');
 
-        $query = Client::query()->orderBy($order_by, $order);
+        $query = Client::query()->where('permission_id','=', $this->cliente_permission_id)->orderBy($order_by, $order);
 
         // Não exibir registros marcados como deletados ou excluídos
-        $query->where(function($q) {
-            $q->whereNull('deletado')->orWhere('deletado', '!=', 's');
-        });
-        $query->where(function($q) {
-            $q->whereNull('excluido')->orWhere('excluido', '!=', 's');
-        });
+        //adicionar filtro para a lixeira onde excluido=s
+        // $query->where(function($q) {
+        //     $q->whereNull('deletado')->orWhere('deletado', '!=', 's');
+        // });
+        if($request->filled('excluido') && $request->input('excluido') == 's'){
+            $query->where('excluido', 's');
+        }else{
+            // Não exibir registros marcados como deletados ou excluídos
+            $query->where(function($q) {
+                $q->whereNull('deletado')->orWhere('deletado', '!=', 's');
+            });
+            $query->where(function($q) {
+                $q->whereNull('excluido')->orWhere('excluido', '!=', 's');
+            });
+        }
         //adiciona filtro search por email, cpf ou cnpj ou nome
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -535,7 +544,9 @@ class ClientController extends Controller
 
         // Mover para lixeira em vez de excluir permanentemente
         $client->update([
-            'deletado' => 's',
+            'ativo' => 'n',
+            'status' => 'inactived',
+            'excluido' => 's',
             'reg_deletado' => json_encode([
                 'usuario' => $user->id,
                 'nome' => $user->name,
