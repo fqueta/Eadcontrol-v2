@@ -90,7 +90,7 @@ export default function InviteEnroll() {
     queryFn: async () => (idOrSlug ? publicCoursesService.getBySlug(String(idOrSlug)) : null),
     enabled: !!idOrSlug,
   });
-  console.log('course', course);
+  // console.log('course', course);
 
   const courseId = useMemo(() => Number((course as any)?.id || 0), [course]);
   const courseSlug = useMemo(() => String((course as any)?.slug || (course as any)?.token || idOrSlug || ''), [course, idOrSlug]);
@@ -296,33 +296,7 @@ export default function InviteEnroll() {
       const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string;
       const captcha_action = 'invite_enroll';
       const captcha_token = siteKey ? await getRecaptchaToken(siteKey, captcha_action) : '';
-
-      // const resp = courseId > 0
-      //   ? await publicEnrollmentService.registerAndEnroll({
-      //       institution,
-      //       name,
-      //       email,
-      //       password,
-      //       phone,
-      //       id_curso: courseId,
-      //       privacyAccepted,
-      //       termsAccepted,
-      //       invite_token: inviteToken || undefined,
-      //       // Security payload
-      //       captcha_token,
-      //       captcha_action,
-      //       form_rendered_at: formRenderedAt,
-      //       hp_field: hpField,
-      //     })
-      //   : await publicEnrollmentService.registerInterest({
-      //       institution,
-      //       name,
-      //       email,
-      //       phone,
-      //       // Nota: sem id_curso, registra apenas interesse;
-      //       // o time poderá completar a matrícula posteriormente.
-      //     });
-      console.log('courseId', courseId);
+   
       const resp = await publicEnrollmentService.registerAndEnroll({
         institution,
         name,

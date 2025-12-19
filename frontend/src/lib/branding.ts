@@ -216,3 +216,39 @@ export async function getInstitutionNameAsync(defaultName: string = 'Ead Control
   return name || existing || defaultName;
 }
 import { getTenantApiUrl, getVersionApi } from '@/lib/qlib';
+
+/**
+ * applyBrandingFavicon
+ * pt-BR: Aplica o favicon da marca resolvendo a URL de `app_favicon_url` e,
+ *         se ausente, faz fallback para a logo/`/favicon.ico`. Atualiza os
+ *         links `<link rel="icon">` e `<link rel="shortcut icon">` no `<head>`.
+ * en-US: Applies brand favicon by resolving `app_favicon_url` and, if absent,
+ *         falls back to logo/`/favicon.ico`. Updates `<link rel="icon">` and
+ *         `<link rel="shortcut icon">` links in `<head>`.
+ */
+export function applyBrandingFavicon(defaultFavicon: string = '/favicon.ico'): void {
+  try {
+    const fav = getBrandFaviconUrl() || getBrandLogoUrl(defaultFavicon);
+    if (!fav || typeof document === 'undefined') return;
+    const head = document.head || document.getElementsByTagName('head')[0];
+    // rel="icon"
+    let iconLink = head.querySelector('link[rel="icon"]') as HTMLLinkElement | null;
+    if (!iconLink) {
+      iconLink = document.createElement('link');
+      iconLink.setAttribute('rel', 'icon');
+      head.appendChild(iconLink);
+    }
+    iconLink.setAttribute('href', fav);
+
+    // rel="shortcut icon" (compat)
+    let shortcutLink = head.querySelector('link[rel="shortcut icon"]') as HTMLLinkElement | null;
+    if (!shortcutLink) {
+      shortcutLink = document.createElement('link');
+      shortcutLink.setAttribute('rel', 'shortcut icon');
+      head.appendChild(shortcutLink);
+    }
+    shortcutLink.setAttribute('href', fav);
+  } catch {
+    // ignore
+  }
+}

@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { User, LogOut, ChevronDown, Monitor, ExternalLink, Moon, Sun, Menu, Home, BookOpen, Receipt, ShoppingCart, GraduationCap, UserCircle } from "lucide-react";
 import { BrandLogo } from "@/components/branding/BrandLogo";
+import { useEffect as useEffectReact } from "react";
+import { applyBrandingFavicon, hydrateBrandingFromPublicApi } from "@/lib/branding";
 
 type InclusiveSiteLayoutProps = {
   children: ReactNode;
@@ -40,8 +42,27 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
    *        automaticamente a partir de localStorage/window/env com fallback.
    * en-US: Replaces manual logic with BrandLogo component that resolves URL
    *        automatically from localStorage/window/env with fallback.
-   */
+  */
 
+  /**
+   * applyBrandingFaviconOnMount
+   * pt-BR: Na montagem do layout público, hidrata branding via endpoint
+   *         público e aplica o favicon da marca.
+   * en-US: On public layout mount, hydrate branding via public endpoint
+   *         and apply brand favicon.
+   */
+  useEffectReact(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        await hydrateBrandingFromPublicApi({ persist: true });
+        if (!cancelled) applyBrandingFavicon('/favicon.ico');
+      } catch {
+        if (!cancelled) applyBrandingFavicon('/favicon.ico');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   /**
    * handleLogout
    * pt-BR: Efetua logout com feedback visual.

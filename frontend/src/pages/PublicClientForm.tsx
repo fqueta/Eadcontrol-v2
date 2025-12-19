@@ -93,7 +93,7 @@ export default function PublicClientForm() {
    *         atualiza o nome institucional para o cabeçalho.
    * en-US: Hydrates branding from public endpoint once and updates
    *         institution name for the header.
-   */
+  */
   useEffect(() => {
     let cancelled = false;
     (async () => {

@@ -468,7 +468,7 @@ const App = () => {
                * pt-BR: Página pública de convite de matrícula via link do curso.
                * en-US: Public invitation enrollment page via course link.
                */}
-              <Route path="/cursos/:id/inscricao" element={<InviteEnroll />} />
+              {/* <Route path="/cursos/:id/inscricao" element={<InviteEnroll />} /> */}
               {/* Suporte a token de convite como segmento de caminho */}
               <Route path="/cursos/:id/inscricao/:token" element={<InviteEnroll />} />
               {/* Área do Aluno / Consumo de Conteúdo (protegida, sem layout de admin) */}
