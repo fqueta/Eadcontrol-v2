@@ -91,6 +91,12 @@ class OptionsTableSeeder extends Seeder
                     'value' => '16',
                     'url'   => 'default_proposal_situacao_id',
                 ],
+                //url padrado do frontend
+                [
+                    'name'  => 'Url padrão do frontend',
+                    'value' => 'https://eadcontrol.com.br',
+                    'url'   => 'default_frontend_url',
+                ],
             ];
 
         }

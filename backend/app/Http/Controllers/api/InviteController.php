@@ -5,6 +5,7 @@ namespace App\Http\Controllers\api;
 use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\Curso;
+use App\Services\Qlib;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -124,7 +125,8 @@ class InviteController extends Controller
         $invite->config = $cfg;
         $invite->save();
 
-        $frontendBase = rtrim((string) config('app.frontend_url'), '/');
+        $frontendBase = rtrim((string) Qlib::qoption('default_frontend_url'), '/');
+        // dd($frontendBase);
         $courseId = (int) ($invite->post_parent ?? 0);
         // Slug do curso selecionado para compor o link
         $courseSlug = null;
