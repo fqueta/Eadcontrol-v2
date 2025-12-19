@@ -18,6 +18,11 @@ use Illuminate\Support\Str;
  */
 class InviteController extends Controller
 {
+    public $frontendBase;
+    public function __construct()
+    {
+        $this->frontendBase = rtrim((string) Qlib::qoption('default_frontend_url'), '/');
+    }
     /**
      * index
      * pt-BR: Lista convites com campos normalizados.
@@ -30,7 +35,7 @@ class InviteController extends Controller
             ->orderByDesc('ID')
             ->paginate((int) $request->input('per_page', 15));
 
-        $frontendBase = rtrim((string) config('app.frontend_url'), '/');
+        $frontendBase = $this->frontendBase;
 
         $data = $invites->getCollection()->map(function (Post $p) use ($frontendBase) {
             $cfg = (array) ($p->config ?? []);
@@ -125,7 +130,7 @@ class InviteController extends Controller
         $invite->config = $cfg;
         $invite->save();
 
-        $frontendBase = rtrim((string) Qlib::qoption('default_frontend_url'), '/');
+        $frontendBase = $this->frontendBase;
         // dd($frontendBase);
         $courseId = (int) ($invite->post_parent ?? 0);
         // Slug do curso selecionado para compor o link
@@ -165,7 +170,7 @@ class InviteController extends Controller
         if (!$p) {
             return response()->json(['message' => 'Convite não encontrado'], 404);
         }
-        $frontendBase = rtrim((string) config('app.frontend_url'), '/');
+        $frontendBase = $this->frontendBase;
         $cfg = (array) ($p->config ?? []);
         $courseId = (int) ($p->post_parent ?? 0);
         $token = (string) ($p->token ?? '');
@@ -252,7 +257,7 @@ class InviteController extends Controller
         $invite->save();
 
         // Monta link com slug do curso
-        $frontendBase = rtrim((string) config('app.frontend_url'), '/');
+        $frontendBase = $this->frontendBase;
         $courseId = (int) ($invite->post_parent ?? 0);
         $courseSlug = null;
         if ($courseId > 0) {
