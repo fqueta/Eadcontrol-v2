@@ -14,6 +14,22 @@ import { phoneApplyMask, phoneRemoveMask } from '@/lib/masks/phone-apply-mask';
 import { Eye, EyeOff } from 'lucide-react';
 
 /**
+ * extractCourseErrorMessage
+ * pt-BR: Extrai mensagem amigável quando a busca do curso falha.
+ * en-US: Extracts a friendly message when course fetch fails.
+ */
+function extractCourseErrorMessage(err: any): string {
+  try {
+    let body: any = (err && (err.body || err.response?.data)) || err;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch { /* noop */ }
+    }
+    const msg = body?.error || body?.message;
+    if (typeof msg === 'string' && msg.trim()) return msg;
+  } catch { /* noop */ }
+  return 'Curso não encontrado';
+}
+/**
  * loadRecaptchaScript
  * pt-BR: Carrega script do reCAPTCHA v3 dinamicamente, caso ainda não esteja presente.
  * en-US: Dynamically loads reCAPTCHA v3 script if not already present.
@@ -74,10 +90,30 @@ export default function InviteEnroll() {
     queryFn: async () => (idOrSlug ? publicCoursesService.getBySlug(String(idOrSlug)) : null),
     enabled: !!idOrSlug,
   });
+  console.log('course', course);
 
   const courseId = useMemo(() => Number((course as any)?.id || 0), [course]);
   const courseSlug = useMemo(() => String((course as any)?.slug || (course as any)?.token || idOrSlug || ''), [course, idOrSlug]);
   const courseTitle = useMemo(() => String(((course as any)?.titulo || (course as any)?.nome || 'Curso')), [course]);
+
+  /**
+   * courseLoadGuard
+   * pt-BR: Redireciona quando o curso não for encontrado ou falhar ao carregar.
+   * en-US: Redirects when the course is not found or fails to load.
+   */
+  useEffect(() => {
+    if (isLoading) return;
+    if (error) {
+      const msg = extractCourseErrorMessage(error);
+      toast({ title: 'Curso não encontrado', description: msg, variant: 'destructive' });
+      navigate('/cursos');
+      return;
+    }
+    if (courseId === 0) {
+      toast({ title: 'Curso não encontrado', description: 'Não é possível abrir a página de inscrição sem um curso válido.', variant: 'destructive' });
+      navigate('/cursos');
+    }
+  }, [isLoading, error, courseId, navigate, toast]);
 
   /**
    * inviteToken
@@ -223,13 +259,18 @@ export default function InviteEnroll() {
    * en-US: Enables submit when required fields are filled.
    */
   const canSubmit = useMemo(() => {
-    const base = !!name && !!email && !!password && !!confirmPassword && courseId > 0 && privacyAccepted && termsAccepted;
+    // pt-BR: Permite enviar mesmo se o curso não carregar; cai em fallback de "registrar interesse".
+    // en-US: Allows submit even if course fails to load; falls back to "register interest".
+    const base = !!name && !!email && !!password && !!confirmPassword && privacyAccepted && termsAccepted;
     if (!base) return false;
     if (isPasswordTooWeak) return false;
     if (passwordsMismatch) return false;
     if (phone && isPhoneInvalid) return false;
+    // pt-BR: Exige curso válido para liberar envio.
+    // en-US: Requires valid course to enable submission.
+    if (courseId <= 0) return false;
     return true;
-  }, [name, email, password, confirmPassword, courseId, privacyAccepted, termsAccepted, phone, isPhoneInvalid, isPasswordTooWeak, passwordsMismatch]);
+  }, [name, email, password, confirmPassword, privacyAccepted, termsAccepted, phone, isPhoneInvalid, isPasswordTooWeak, passwordsMismatch, courseId]);
 
   /**
    * handleSubmit
@@ -241,6 +282,12 @@ export default function InviteEnroll() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
+    // pt-BR: Segurança adicional — bloqueia envio se `courseId` inválido.
+    // en-US: Additional safety — block submission if `courseId` is invalid.
+    if (courseId <= 0) {
+      toast({ title: 'Curso não encontrado', description: 'Não é possível prosseguir com a matrícula sem um curso válido.', variant: 'destructive' });
+      return;
+    }
     setSubmitting(true);
     setFieldErrors({});
     setRegistrationSuccess(false);
@@ -250,6 +297,32 @@ export default function InviteEnroll() {
       const captcha_action = 'invite_enroll';
       const captcha_token = siteKey ? await getRecaptchaToken(siteKey, captcha_action) : '';
 
+      // const resp = courseId > 0
+      //   ? await publicEnrollmentService.registerAndEnroll({
+      //       institution,
+      //       name,
+      //       email,
+      //       password,
+      //       phone,
+      //       id_curso: courseId,
+      //       privacyAccepted,
+      //       termsAccepted,
+      //       invite_token: inviteToken || undefined,
+      //       // Security payload
+      //       captcha_token,
+      //       captcha_action,
+      //       form_rendered_at: formRenderedAt,
+      //       hp_field: hpField,
+      //     })
+      //   : await publicEnrollmentService.registerInterest({
+      //       institution,
+      //       name,
+      //       email,
+      //       phone,
+      //       // Nota: sem id_curso, registra apenas interesse;
+      //       // o time poderá completar a matrícula posteriormente.
+      //     });
+      console.log('courseId', courseId);
       const resp = await publicEnrollmentService.registerAndEnroll({
         institution,
         name,
@@ -266,9 +339,17 @@ export default function InviteEnroll() {
         form_rendered_at: formRenderedAt,
         hp_field: hpField,
       });
-      if(resp?.id) {
-        setRegistrationSuccess(true);
-      }
+      /**
+       * resolveSuccess
+       * pt-BR: Determina sucesso usando o formato de resposta do backend
+       *        (`{ client: {id}, matricula: {id} }`).
+       * en-US: Determines success using backend response shape
+       *        (`{ client: {id}, matricula: {id} }`).
+       */
+      const success = Boolean(
+        (resp && (resp.matricula?.id || resp.client?.id)) || resp?.success
+      );
+      setRegistrationSuccess(success);
       toast({
         title: 'Cadastro realizado',
         description: 'Enviamos um e-mail de boas-vindas. Agora você pode ir para o curso pelo botão abaixo.',
@@ -292,10 +373,11 @@ export default function InviteEnroll() {
           <CardHeader>
             <CardTitle>Convite de matrícula</CardTitle>
             <CardDescription>
-              {isLoading ? 'Carregando curso…' : error ? 'Erro ao carregar o curso' : `Inscreva-se em: ${courseTitle}`}
+              {isLoading ? 'Carregando curso…' : error ? extractCourseErrorMessage(error) : `Inscreva-se em: ${courseTitle}`}
             </CardDescription>
           </CardHeader>
           <CardContent>
+            
             <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
               {/* Adicionar campo tipo testo para instituição */}
               <div className="space-y-2 md:col-span-2">

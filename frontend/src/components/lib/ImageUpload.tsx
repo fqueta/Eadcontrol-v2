@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+// Evite dependência de wrappers de formulário para permitir uso standalone fora de FormProvider.
 import { Upload, X, User, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -156,13 +156,12 @@ export function ImageUpload({
   };
 
   return (
-    <FormItem className={className}>
+    <div className={className}>
       {label && (
-        <FormLabel className="text-sm font-medium text-gray-700">
+        <label className="text-sm font-medium text-gray-700">
           {label}
-        </FormLabel>
+        </label>
       )}
-      <FormControl>
         <div className="space-y-4">
           {/* Preview da imagem */}
           {value && (
@@ -240,7 +239,6 @@ export function ImageUpload({
             value=""
           />
         </div>
-      </FormControl>
       
       {/* Mensagem de erro */}
       {error && (
@@ -249,7 +247,6 @@ export function ImageUpload({
         </div>
       )}
       
-      <FormMessage />
-    </FormItem>
+    </div>
   );
 }

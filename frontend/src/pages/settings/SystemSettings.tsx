@@ -7,10 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Settings, Save, Palette, Link } from "lucide-react";
+import { Settings, Save, Palette, Link, Image as ImageIcon, Building2 } from "lucide-react";
+import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription, getInstitutionUrl } from "@/lib/branding";
 import { systemSettingsService, AdvancedSystemSettings } from "@/services/systemSettingsService";
 import { useApiOptions } from "@/hooks/useApiOptions";
 import { useFunnelsList, useStagesList } from "@/hooks/funnels";
+import { fileStorageService, type FileStorageItem, extractFileStorageUrl } from "@/services/fileStorageService";
+import { ImageUpload } from "@/components/lib/ImageUpload";
 
 /**
  * Página de configurações do sistema
@@ -165,6 +168,269 @@ export default function SystemSettings() {
     // Aplicar configurações de aparência em tempo real
     applyAppearanceSettings(newSettings);
   };
+
+  // -----------------------------
+  // Branding & Imagens (Logo, Favicon, Social)
+  // -----------------------------
+  /**
+   * Branding URLs state
+   * pt-BR: Inicializa com valores persistidos em localStorage, se existirem.
+   * en-US: Initializes with values persisted in localStorage, if present.
+   */
+  const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(() => {
+    try { return (localStorage.getItem('app_logo_url') || '').trim() || null; } catch { return null; }
+  });
+  const [brandingFaviconUrl, setBrandingFaviconUrl] = useState<string | null>(() => {
+    try { return (localStorage.getItem('app_favicon_url') || '').trim() || null; } catch { return null; }
+  });
+  const [brandingSocialUrl, setBrandingSocialUrl] = useState<string | null>(() => {
+    try { return (localStorage.getItem('app_social_image_url') || '').trim() || null; } catch { return null; }
+  });
+
+  /**
+   * Institution name state
+   * pt-BR: Nome da instituição, com valor inicial via util de branding.
+   * en-US: Institution name, initial value via branding util.
+   */
+  const [institutionName, setInstitutionName] = useState<string>(() => getInstitutionName());
+  /**
+   * Institution extra fields
+   * pt-BR: Slogan, descrição curta e URL institucional.
+   * en-US: Slogan, short description and institutional URL.
+   */
+  const [institutionSlogan, setInstitutionSlogan] = useState<string>(() => getInstitutionSlogan());
+  const [institutionDescription, setInstitutionDescription] = useState<string>(() => getInstitutionDescription());
+  const [institutionUrl, setInstitutionUrl] = useState<string>(() => getInstitutionUrl());
+
+  /**
+   * hydrateBrandingFromApiOptions
+   * pt-BR: Se localStorage está vazio, carrega das opções da API e persiste
+   *        localmente (localStorage) e globalmente (window.__APP_*__),
+   *        garantindo que cabeçalhos/rodapés usem imediatamente os valores.
+   * en-US: If localStorage is empty, loads from API options and persists to
+   *        localStorage and window globals (window.__APP_*__), ensuring
+   *        headers/footers immediately reflect the values.
+   */
+  useEffect(() => {
+    try {
+      const logo = (localStorage.getItem('app_logo_url') || '').trim();
+      const fav = (localStorage.getItem('app_favicon_url') || '').trim();
+      const soc = (localStorage.getItem('app_social_image_url') || '').trim();
+      const inst = (localStorage.getItem('app_institution_name') || '').trim();
+      // Already initialized above; only hydrate from API if missing
+      const needLogo = !logo && !brandingLogoUrl;
+      const needFav = !fav && !brandingFaviconUrl;
+      const needSoc = !soc && !brandingSocialUrl;
+      const needInst = !inst; // nome não tem state local dedicado
+      if (!(needLogo || needFav || needSoc || needInst)) return;
+      const getOpt = (key: string) => (apiOptions || []).find((o: any) => String(o?.url || '') === key);
+      const getOptByKeys = (keys: string[]) => {
+        for (const k of keys) {
+          const found = getOpt(k);
+          if (found) return found;
+        }
+        return null;
+      };
+      if (needLogo) {
+        const o = getOpt('app_logo_url');
+        const val = (o && (o.value ?? o.current_value ?? '')) || '';
+        const v = String(val).trim();
+        if (v) {
+          setBrandingLogoUrl(v);
+          try { localStorage.setItem('app_logo_url', v); } catch {}
+          (window as any).__APP_LOGO_URL__ = v;
+        }
+      }
+      if (needFav) {
+        const o = getOpt('app_favicon_url');
+        const val = (o && (o.value ?? o.current_value ?? '')) || '';
+        const v = String(val).trim();
+        if (v) {
+          setBrandingFaviconUrl(v);
+          try { localStorage.setItem('app_favicon_url', v); } catch {}
+          (window as any).__APP_FAVICON_URL__ = v;
+        }
+      }
+      if (needSoc) {
+        const o = getOpt('app_social_image_url');
+        const val = (o && (o.value ?? o.current_value ?? '')) || '';
+        const v = String(val).trim();
+        if (v) {
+          setBrandingSocialUrl(v);
+          try { localStorage.setItem('app_social_image_url', v); } catch {}
+          (window as any).__APP_SOCIAL_IMAGE_URL__ = v;
+        }
+      }
+      if (needInst) {
+        const o = getOptByKeys(['app_institution_name', 'site_name', 'app_name']);
+        const val = (o && (o.value ?? o.current_value ?? '')) || '';
+        const v = String(val).trim();
+        if (v) {
+          try { localStorage.setItem('app_institution_name', v); } catch {}
+          const anyWin = window as any;
+          anyWin.__APP_INSTITUTION_NAME__ = v;
+          anyWin.__APP_SITE_NAME__ = anyWin.__APP_SITE_NAME__ || v;
+          anyWin.__APP_APP_NAME__ = anyWin.__APP_APP_NAME__ || v;
+          setInstitutionName(v);
+        }
+      }
+      // Optional hydration for slogan/description/url if present in API
+      const optSlogan = getOptByKeys(['app_institution_slogan']);
+      const valSlogan = (optSlogan && (optSlogan.value ?? optSlogan.current_value ?? '')) || '';
+      if (String(valSlogan).trim()) {
+        const s = String(valSlogan).trim();
+        try { localStorage.setItem('app_institution_slogan', s); } catch {}
+        (window as any).__APP_INSTITUTION_SLOGAN__ = s;
+        setInstitutionSlogan(s);
+      }
+      const optDesc = getOptByKeys(['app_institution_description']);
+      const valDesc = (optDesc && (optDesc.value ?? optDesc.current_value ?? '')) || '';
+      if (String(valDesc).trim()) {
+        const d = String(valDesc).trim();
+        try { localStorage.setItem('app_institution_description', d); } catch {}
+        (window as any).__APP_INSTITUTION_DESCRIPTION__ = d;
+        setInstitutionDescription(d);
+      }
+      const optUrl = getOptByKeys(['app_institution_url']);
+      const valUrl = (optUrl && (optUrl.value ?? optUrl.current_value ?? '')) || '';
+      if (String(valUrl).trim()) {
+        const u = String(valUrl).trim();
+        try { localStorage.setItem('app_institution_url', u); } catch {}
+        (window as any).__APP_INSTITUTION_URL__ = u;
+        setInstitutionUrl(u);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiOptions]);
+
+  /**
+   * handleSaveInstitution
+   * pt-BR: Persiste o nome da instituição em localStorage, globais e opções da API.
+   * en-US: Persists institution name to localStorage, globals and API options.
+   */
+  async function handleSaveInstitution() {
+    try {
+      const v = (institutionName || '').trim();
+      if (!v) {
+        toast.warning('Informe um nome de instituição válido.');
+        return;
+      }
+      // Persist local and globals
+      try { localStorage.setItem('app_institution_name', v); } catch {}
+      const anyWin = window as any;
+      anyWin.__APP_INSTITUTION_NAME__ = v;
+      anyWin.__APP_SITE_NAME__ = anyWin.__APP_SITE_NAME__ || v;
+      anyWin.__APP_APP_NAME__ = anyWin.__APP_APP_NAME__ || v;
+
+      // Persist optional fields locally/globally
+      const s = (institutionSlogan || '').trim();
+      const d = (institutionDescription || '').trim();
+      const u = (institutionUrl || '').trim();
+      if (s) { try { localStorage.setItem('app_institution_slogan', s); } catch {} anyWin.__APP_INSTITUTION_SLOGAN__ = s; }
+      if (d) { try { localStorage.setItem('app_institution_description', d); } catch {} anyWin.__APP_INSTITUTION_DESCRIPTION__ = d; }
+      if (u) { try { localStorage.setItem('app_institution_url', u); } catch {} anyWin.__APP_INSTITUTION_URL__ = u; }
+
+      // Persist to API options
+      const ok = await saveMultipleOptions({ 
+        app_institution_name: v,
+        ...(s ? { app_institution_slogan: s } : {}),
+        ...(d ? { app_institution_description: d } : {}),
+        ...(u ? { app_institution_url: u } : {}),
+      });
+      if (!ok) {
+        toast.warning('Nome salvo localmente; falha ao persistir em opções da API.');
+      } else {
+        toast.success('Nome da instituição salvo com sucesso.');
+      }
+    } catch (error: any) {
+      toast.error(`Falha ao salvar nome: ${error?.message || 'erro desconhecido'}`);
+    }
+  }
+
+  /**
+   * handleUploadGeneric
+   * pt-BR: Faz upload genérico via /file-storage e retorna a URL pública.
+   * en-US: Uploads a file via /file-storage and returns the public URL.
+   */
+  async function handleUploadGeneric(file: File, meta?: Record<string, any>): Promise<string> {
+    try {
+      const resp: any = await fileStorageService.upload<any>(file, {
+        active: true,
+        ...meta,
+      });
+      // Extrai URL usando util compartilhado do serviço
+      const url = extractFileStorageUrl(resp);
+      if (!url) throw new Error('URL não retornada pelo servidor.');
+      return url;
+    } catch (error: any) {
+      toast.error(`Falha ao enviar arquivo: ${error?.message || 'erro desconhecido'}`);
+      throw error;
+    }
+  }
+
+  /**
+   * handleUploadLogo
+   * pt-BR: Envia a logo e atualiza estado.
+   * en-US: Uploads the logo and updates state.
+   */
+  async function handleUploadLogo(file: File): Promise<string> {
+    const url = await handleUploadGeneric(file, { title: 'logo', name: 'app-logo' });
+    setBrandingLogoUrl(url);
+    return url;
+  }
+
+  /**
+   * handleUploadFavicon
+   * pt-BR: Envia o favicon e atualiza estado.
+   * en-US: Uploads the favicon and updates state.
+   */
+  async function handleUploadFavicon(file: File): Promise<string> {
+    const url = await handleUploadGeneric(file, { title: 'favicon', name: 'app-favicon' });
+    setBrandingFaviconUrl(url);
+    return url;
+  }
+
+  /**
+   * handleUploadSocial
+   * pt-BR: Envia a imagem social (OpenGraph/Twitter) e atualiza estado.
+   * en-US: Uploads the social image (OpenGraph/Twitter) and updates state.
+   */
+  async function handleUploadSocial(file: File): Promise<string> {
+    const url = await handleUploadGeneric(file, { title: 'social-image', name: 'app-social-image' });
+    setBrandingSocialUrl(url);
+    return url;
+  }
+
+  /**
+   * handleSaveBranding
+   * pt-BR: Persiste URLs em localStorage e também em /options/all (se disponível).
+   *        O index.html lerá de localStorage e aplicará dinamicamente.
+   * en-US: Persists URLs to localStorage and also to /options/all (if available).
+   *        index.html will read from localStorage and apply dynamically.
+   */
+  async function handleSaveBranding() {
+    const payload: Record<string, string> = {};
+    if (brandingLogoUrl) payload['app_logo_url'] = brandingLogoUrl;
+    if (brandingFaviconUrl) payload['app_favicon_url'] = brandingFaviconUrl;
+    if (brandingSocialUrl) payload['app_social_image_url'] = brandingSocialUrl;
+
+    try {
+      // Persistir em localStorage
+      Object.entries(payload).forEach(([k, v]) => localStorage.setItem(k, v));
+
+      // Opcional: persistir em /options/all para retenção no backend
+      if (Object.keys(payload).length > 0) {
+        const ok = await saveMultipleOptions(payload);
+        if (!ok) {
+          toast.warning('URLs salvas localmente; falha ao persistir em opções da API.');
+        }
+      }
+
+      toast.success('Branding salvo. Recarregue a página para aplicar.');
+    } catch (error: any) {
+      toast.error(`Falha ao salvar branding: ${error?.message || 'erro desconhecido'}`);
+    }
+  }
 
   /**
    * Aplica configurações do sistema em tempo real
@@ -634,6 +900,133 @@ export default function SystemSettings() {
                 <Button onClick={handleSaveAppearanceSettings} className="flex items-center space-x-2">
                   <Save className="h-4 w-4" />
                   <span>Salvar Aparência</span>
+                </Button>
+              </div>
+          </CardContent>
+        </Card>
+        {/* Card - Identidade Institucional */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Building2 className="h-5 w-5" />
+              <span>Identidade Institucional</span>
+            </CardTitle>
+            <CardDescription>
+              Cadastre o nome da instituição para personalizar textos e metadados da aplicação.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="institution_name">Nome da instituição</Label>
+              <Input
+                id="institution_name"
+                type="text"
+                value={institutionName}
+                onChange={(e) => setInstitutionName(e.target.value)}
+                placeholder="Ex.: Aeroclube de Juiz de Fora"
+              />
+              <p className="text-sm text-muted-foreground">
+                Este nome aparecerá na página inicial e em áreas públicas.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="institution_slogan">Slogan</Label>
+                <Input
+                  id="institution_slogan"
+                  type="text"
+                  value={institutionSlogan}
+                  onChange={(e) => setInstitutionSlogan(e.target.value)}
+                  placeholder="Ex.: Educação que transforma"
+                />
+                <p className="text-sm text-muted-foreground">Usado em títulos e metatags sociais.</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="institution_url">URL institucional</Label>
+                <Input
+                  id="institution_url"
+                  type="url"
+                  value={institutionUrl}
+                  onChange={(e) => setInstitutionUrl(e.target.value)}
+                  placeholder="https://www.seu-dominio.com"
+                />
+                <p className="text-sm text-muted-foreground">Link oficial do site ou página institucional.</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="institution_description">Descrição curta</Label>
+              <Input
+                id="institution_description"
+                type="text"
+                value={institutionDescription}
+                onChange={(e) => setInstitutionDescription(e.target.value)}
+                placeholder="Resumo curto para metatags e SEO"
+              />
+              <p className="text-sm text-muted-foreground">Aparece em descrição e OpenGraph/Twitter.</p>
+            </div>
+            <div className="flex justify-end pt-2">
+              <Button onClick={handleSaveInstitution} className="flex items-center space-x-2">
+                <Save className="h-4 w-4" />
+                <span>Salvar Instituição</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        {/* Card - Branding & Imagens */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <ImageIcon className="h-5 w-5" />
+                <span>Branding & Imagens</span>
+              </CardTitle>
+              <CardDescription>
+                Envie a logo, favicon e imagem de redes sociais. Os arquivos são gravados em <code>/file-storage</code> e as URLs ficam salvas para personalizar seu sistema.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label>Logo</Label>
+                  <ImageUpload
+                    name="app_logo"
+                    label="Logo"
+                    value={brandingLogoUrl || ''}
+                    onChange={(val) => setBrandingLogoUrl(val || null)}
+                    onUpload={handleUploadLogo}
+                    acceptedTypes={["image/png", "image/jpeg", "image/webp", "image/svg+xml"]}
+                    className="max-w-xs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Favicon</Label>
+                  <ImageUpload
+                    name="app_favicon"
+                    label="Favicon"
+                    value={brandingFaviconUrl || ''}
+                    onChange={(val) => setBrandingFaviconUrl(val || null)}
+                    onUpload={handleUploadFavicon}
+                    acceptedTypes={["image/png", "image/x-icon", "image/svg+xml"]}
+                    className="max-w-xs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Imagem Social (OpenGraph/Twitter)</Label>
+                  <ImageUpload
+                    name="app_social_image"
+                    label="Imagem Social"
+                    value={brandingSocialUrl || ''}
+                    onChange={(val) => setBrandingSocialUrl(val || null)}
+                    onUpload={handleUploadSocial}
+                    acceptedTypes={["image/png", "image/jpeg", "image/webp"]}
+                    className="max-w-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4 border-t">
+                <Button onClick={handleSaveBranding} className="flex items-center space-x-2">
+                  <Save className="h-4 w-4" />
+                  <span>Salvar Branding</span>
                 </Button>
               </div>
             </CardContent>

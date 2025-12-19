@@ -31,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { buildMenuFromDTO, filterMenuByViewAccess, defaultMenu } from "@/lib/menu";
+import { BrandLogo } from "@/components/branding/BrandLogo";
 
 /**
  * AppSidebar
@@ -43,6 +44,12 @@ export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
+
+  /**
+   * BrandLogo usage
+   * pt-BR: Substitui lógica local de resolução por componente BrandLogo com fallback.
+   * en-US: Replaces local resolution logic with BrandLogo component using fallback.
+   */
 
   /**
    * resolveUrl
@@ -144,12 +151,7 @@ export function AppSidebar() {
       {/* Header com branding */}
       <SidebarHeader className="border-b border-border print:hidden">
         <Link to="/admin/aero-dashboard" className="flex items-center gap-2 px-4 py-3">
-          <img
-            src="/aeroclube-logo.svg"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/placeholder.svg"; }}
-            alt="Logo"
-            className="h-6 w-auto"
-          />
+          <BrandLogo alt="Logo" fallbackSrc="/aeroclube-logo.svg" className="h-6 w-auto" />
           {!collapsed && (
             <div className="flex flex-col">
               <span className="text-sm font-semibold">Ead Control</span>

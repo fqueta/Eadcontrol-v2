@@ -10,6 +10,7 @@ import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AdminProtectedRoute } from "./components/auth/AdminProtectedRoute";
 import { AuthRedirect } from "./components/auth/AuthRedirect";
 import { AppLayout } from "./components/layout/AppLayout";
+import FaviconUpdater from "@/components/branding/FaviconUpdater";
 // import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import ClientView from "./pages/ClientView";
@@ -158,6 +159,12 @@ const App = () => {
         <AuthProvider>
           <UserPrefsProvider>
             <TooltipProvider>
+            {/*
+             * FaviconUpdater
+             * pt-BR: Mantém o favicon sincronizado com valores persistidos/global.
+             * en-US: Keeps favicon in sync with persisted/global values.
+             */}
+            <FaviconUpdater />
             <Toaster />
             <Sonner />
           <BrowserRouter>

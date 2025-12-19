@@ -18,6 +18,7 @@ import {
 import { authService } from '@/services/authService';
 import { toast } from '@/hooks/use-toast';
 import { getSiteKey, getRecaptchaToken } from '@/lib/recaptcha';
+import BrandLogo from '@/components/branding/BrandLogo';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -86,7 +87,8 @@ export default function ForgotPassword() {
       >
         {/* Brand header — ACJF */}
         <div className="flex items-center justify-center gap-3 mb-2">
-          <img src="/logo.png" alt="Aeroclube JF" className="h-10" />
+          {/* Brand logo */}
+          <BrandLogo alt="Aeroclube JF" className="h-10" />
           <div>
             <p className="text-sm font-semibold text-blue-800">Aeroclube de Juiz de Fora</p>
             <p className="text-xs text-blue-600">Escola de aviação</p>
@@ -121,7 +123,8 @@ export default function ForgotPassword() {
     >
       {/* Brand header — ACJF */}
       <div className="flex items-center justify-center gap-3 mb-2">
-        <img src="/logo.png" alt="Aeroclube JF" className="h-10" />
+        {/* Brand logo */}
+        <BrandLogo alt="Aeroclube JF" className="h-10" />
         <div>
           <p className="text-sm font-semibold text-blue-800">Aeroclube de Juiz de Fora</p>
           <p className="text-xs text-blue-600">Escola de aviação</p>

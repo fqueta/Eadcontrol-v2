@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
+import BrandLogo from '@/components/branding/BrandLogo';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useRedirect } from '@/hooks/useRedirect';
@@ -147,7 +148,8 @@ export default function Login() {
                   </Link>
                 </Button>
                 <div className="flex-1 text-center">
-                  <img src="/logo.png" alt="Aeroclube JF" className="h-10 mx-auto mb-2" />
+                  {/* Brand logo */}
+                  <BrandLogo alt="Aeroclube JF" className="h-10 mx-auto mb-2" />
                   <h1 className="text-xl font-bold text-blue-700">Aeroclube de Juiz de Fora</h1>
                 </div>
               </div>

@@ -31,10 +31,37 @@
         </style>
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
-
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        <!-- Favicon (default) + dynamic override via localStorage -->
+        <link id="app-favicon" rel="icon" type="image/x-icon" href="/favicon.ico" sizes="any">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        <script>
+            /**
+             * applyBrandingFromLocalStorage
+             * pt-BR: Lê localStorage e aplica favicon personalizado. Também expõe a logo em window.
+             * en-US: Reads localStorage and applies custom favicon. Also exposes logo to window.
+             */
+            (function() {
+                try {
+                    var favicon = localStorage.getItem('app_favicon_url');
+                    var logo = localStorage.getItem('app_logo_url');
+                    if (favicon) {
+                        var linkEl = document.getElementById('app-favicon');
+                        if (linkEl) {
+                            var type = 'image/png';
+                            if (/\.svg$/i.test(favicon)) type = 'image/svg+xml';
+                            if (/\.ico$/i.test(favicon)) type = 'image/x-icon';
+                            linkEl.setAttribute('type', type);
+                            linkEl.setAttribute('href', favicon);
+                        }
+                    }
+                    if (logo) {
+                        window.__APP_LOGO_URL__ = logo;
+                    }
+                } catch (e) {
+                    console.warn('Branding load failed:', e);
+                }
+            })();
+        </script>
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />

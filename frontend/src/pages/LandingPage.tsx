@@ -3,26 +3,36 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Plane, BookOpen, Wrench, Compass, ArrowRight, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import InclusiveSiteLayout from "@/components/layout/InclusiveSiteLayout";
+import BrandLogo from "@/components/branding/BrandLogo";
+import { getInstitutionName } from "@/lib/branding";
 
 /**
  * LandingPage
- * pt-BR: Página inicial alinhada ao tema do Aeroclube de Juiz de Fora (ACJF).
- *        Atualiza paleta de cores para tons de azul, conteúdo e chamadas.
- * en-US: Home page aligned to Aeroclube de Juiz de Fora theme.
- *        Updates palette to blue tones, content and CTAs.
+ * pt-BR: Página inicial pública usando `InclusiveSiteLayout` e `BrandLogo`.
+ *        `BrandLogo` resolve a logo com fallback (localStorage → window → env → padrão).
+ * en-US: Public home page using `InclusiveSiteLayout` and `BrandLogo`.
+ *        `BrandLogo` resolves logo with fallback (localStorage → window → env → default).
  */
 /**
  * LandingPage
- * pt-BR: Página inicial pública utilizando o layout inspirado no Incluir & Educar.
- * en-US: Public home page using layout inspired by Incluir & Educar.
+ * pt-BR: Página inicial pública. Lê dinamicamente o nome da instituição das opções
+ *        (via util `getInstitutionName`) e o usa nos textos do hero.
+ * en-US: Public home page. Dynamically reads institution name from options
+ *        (via `getInstitutionName` util) and uses it in hero texts.
  */
 const LandingPage = () => {
+  // Institution display name
+  const institutionName = getInstitutionName();
   return (
     <InclusiveSiteLayout>
       {/* Hero Section */}
       <section className="py-16 px-4">
         <div className="container mx-auto text-center">
           <div className="mb-8">
+            {/* Brand logo — shown atop hero */}
+            <BrandLogo alt="Brand Logo" className="h-10 mx-auto mb-4" />
+            {/* Institution name from API/options */}
+            <p className="text-base text-violet-700 font-semibold mb-2">{institutionName}</p>
             <h1 className="text-5xl md:text-5xl font-bold text-violet-800 mb-6">
               Tecnologia que Inclui
               <span className="text-emerald-600 block">Educação que Transforma</span>

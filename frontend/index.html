@@ -10,19 +10,106 @@
     <link rel="preconnect" href="https://www.youtube.com" />
     <link rel="preconnect" href="https://i.ytimg.com" />
     <link rel="preconnect" href="https://player.vimeo.com" />
-    <link rel="icon" type="image/svg+xml" href="/logo.png" />
-    <title>Ead control - v2</title>
-    <meta name="description" content="Projeto de controle de ead" />
+    <!-- Favicon default (substituído dinamicamente se houver em localStorage) -->
+    <link id="app-favicon" rel="icon" type="image/svg+xml" href="/logo.png" />
+    <title id="app-title">Ead control - v2</title>
+    <meta id="app-description" name="description" content="Projeto de controle de ead" />
     <meta name="author" content="Lovable" />
 
     <meta property="og:title" content="Ead control - v2" />
     <meta property="og:description" content="Projeto de controle de ead" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://aeroclubejf.com.br/wp-content/uploads/2024/06/cropped-AEROCLUBE-DE-JUIZ-DE-FORA-270x270.png" />
+    <meta id="app-og-image" property="og:image" content="https://aeroclubejf.com.br/wp-content/uploads/2024/06/cropped-AEROCLUBE-DE-JUIZ-DE-FORA-270x270.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@lovable_dev" />
-    <meta name="twitter:image" content="https://aeroclubejf.com.br/wp-content/uploads/2024/06/cropped-AEROCLUBE-DE-JUIZ-DE-FORA-270x270.png" />
+    <meta id="app-twitter-image" name="twitter:image" content="https://aeroclubejf.com.br/wp-content/uploads/2024/06/cropped-AEROCLUBE-DE-JUIZ-DE-FORA-270x270.png" />
+    
+    <!--
+      pt-BR: Script para aplicar logo, favicon e imagem social com base em valores persistidos
+            (localStorage) e variáveis globais (window.__APP_*__).
+      en-US: Script to apply logo, favicon and social image based on persisted
+            localStorage and global variables (window.__APP_*__).
+    -->
+    <script>
+      /**
+       * applyBrandingFromPersistedSources
+       * pt-BR: Lê localStorage e, em fallback, variáveis globais; aplica favicon e imagens sociais.
+       *        Também expõe valores em window.__APP_*__ para uso por componentes React.
+       * en-US: Reads localStorage and, as fallback, global variables; applies favicon and social images.
+       *        Also exposes values to window.__APP_*__ for React components to consume.
+       */
+      (function applyBrandingFromPersistedSources() {
+        try {
+          var win = window;
+          var logo = localStorage.getItem('app_logo_url') || '';
+          var favicon = localStorage.getItem('app_favicon_url') || '';
+          var social = localStorage.getItem('app_social_image_url') || '';
+          var instName = (localStorage.getItem('app_institution_name') || localStorage.getItem('site_name') || localStorage.getItem('app_name') || '');
+          var slogan = localStorage.getItem('app_institution_slogan') || '';
+          var descr = localStorage.getItem('app_institution_description') || '';
+
+          // Fallback para variáveis globais se localStorage estiver vazio
+          if (!logo && typeof win.__APP_LOGO_URL__ === 'string') logo = win.__APP_LOGO_URL__;
+          if (!favicon && typeof win.__APP_FAVICON_URL__ === 'string') favicon = win.__APP_FAVICON_URL__;
+          if (!social && typeof win.__APP_SOCIAL_IMAGE_URL__ === 'string') social = win.__APP_SOCIAL_IMAGE_URL__;
+          if (!instName) {
+            if (typeof win.__APP_INSTITUTION_NAME__ === 'string') instName = win.__APP_INSTITUTION_NAME__;
+            else if (typeof win.__APP_SITE_NAME__ === 'string') instName = win.__APP_SITE_NAME__;
+            else if (typeof win.__APP_APP_NAME__ === 'string') instName = win.__APP_APP_NAME__;
+          }
+          if (!slogan && typeof win.__APP_INSTITUTION_SLOGAN__ === 'string') slogan = win.__APP_INSTITUTION_SLOGAN__;
+          if (!descr && typeof win.__APP_INSTITUTION_DESCRIPTION__ === 'string') descr = win.__APP_INSTITUTION_DESCRIPTION__;
+
+          // Favicon
+          if (favicon) {
+            var linkEl = document.getElementById('app-favicon');
+            if (linkEl) {
+              // Detecta MIME básico pelo sufixo
+              var type = 'image/png';
+              if (/\.svg$/i.test(favicon)) type = 'image/svg+xml';
+              if (/\.ico$/i.test(favicon)) type = 'image/x-icon';
+              linkEl.setAttribute('type', type);
+              linkEl.setAttribute('href', favicon);
+            }
+            // Disponibiliza para consumidores globais
+            win.__APP_FAVICON_URL__ = favicon;
+          }
+
+          // OpenGraph / Twitter
+          if (social) {
+            var ogEl = document.getElementById('app-og-image');
+            var twEl = document.getElementById('app-twitter-image');
+            if (ogEl) ogEl.setAttribute('content', social);
+            if (twEl) twEl.setAttribute('content', social);
+            win.__APP_SOCIAL_IMAGE_URL__ = social;
+          }
+
+          // Logo: expõe globalmente para componentes que não usam localStorage diretamente
+          if (logo) {
+            win.__APP_LOGO_URL__ = logo;
+          }
+
+          // Title & Description (SEO / Metatags)
+          var resolvedTitle = instName ? (slogan ? (instName + ' — ' + slogan) : instName) : null;
+          if (resolvedTitle) {
+            document.title = resolvedTitle;
+            var titleEl = document.getElementById('app-title');
+            if (titleEl) titleEl.textContent = resolvedTitle;
+            var ogTitle = document.querySelector('meta[property="og:title"]');
+            if (ogTitle) ogTitle.setAttribute('content', resolvedTitle);
+          }
+          if (descr) {
+            var descEl = document.getElementById('app-description') || document.querySelector('meta[name="description"]');
+            if (descEl) descEl.setAttribute('content', descr);
+            var ogDesc = document.querySelector('meta[property="og:description"]');
+            if (ogDesc) ogDesc.setAttribute('content', descr);
+          }
+        } catch (e) {
+          console.warn('Branding load failed:', e);
+        }
+      })();
+    </script>
   </head>
 
   <body>

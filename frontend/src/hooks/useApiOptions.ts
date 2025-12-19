@@ -78,6 +78,10 @@ export const useApiOptions = () => {
 
   /**
    * Salva múltiplas opções de API
+   * pt-BR: Envia um payload em lote para `/options/all` e atualiza o estado local
+   *        usando a chave correta (preferindo `option.url`, com fallback para `option.name`).
+   * en-US: Sends a batched payload to `/options/all` and updates local state
+   *        using the correct key (preferring `option.url`, falling back to `option.name`).
    */
   const saveMultipleOptions = async (dataToSave: {[key: string]: string}): Promise<boolean> => {
     try {
@@ -87,7 +91,10 @@ export const useApiOptions = () => {
       // Atualiza o estado local com as novas opções
       setOptions(prevOptions => 
         prevOptions.map(option => {
-          const newValue = dataToSave[option.name];
+          // Preferir chave `url` presente no payload, com fallback para `name`
+          const newValue = (
+            dataToSave.hasOwnProperty(option.url) ? dataToSave[option.url] : dataToSave[option.name]
+          );
           return newValue !== undefined ? { ...option, value: newValue } : option;
         })
       );

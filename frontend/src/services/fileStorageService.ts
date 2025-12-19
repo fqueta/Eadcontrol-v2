@@ -215,3 +215,35 @@ class FileStorageService extends BaseApiService {
  * en-US: Default instance of file storage service.
  */
 export const fileStorageService = new FileStorageService();
+
+/**
+ * extractFileStorageUrl
+ * pt-BR: Extrai a URL do upload de diferentes formatos de resposta do backend.
+ *        Trata envelopes em `data`, campos em `file.url` e strings com crases/aspas.
+ * en-US: Extracts the uploaded file URL from various backend response shapes.
+ *        Handles `data` envelopes, `file.url` fields, and strings with backticks/quotes.
+ */
+export function extractFileStorageUrl(resp: any): string {
+  const sanitize = (u: any): string => {
+    const s = String(u || '').trim();
+    return s
+      .replace(/^`+|`+$/g, '')
+      .replace(/^"+|"+$/g, '')
+      .replace(/^'+|'+$/g, '');
+  };
+
+  const candidates = [
+    resp?.file?.url,
+    resp?.url,
+    resp?.config?.file?.url,
+    resp?.data?.file?.url,
+    resp?.data?.url,
+    resp?.data?.data?.file?.url,
+    resp?.data?.data?.url,
+  ]
+    .map(sanitize)
+    .filter(Boolean);
+
+  const url = candidates.find((u) => /^https?:\/\//i.test(u)) || candidates[0] || '';
+  return url;
+}

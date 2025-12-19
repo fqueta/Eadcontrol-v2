@@ -30,6 +30,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import commentsService from "@/services/commentsService";
 import { useToast } from "@/components/ui/use-toast";
+import { BrandLogo } from "@/components/branding/BrandLogo";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -48,6 +49,16 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [cmdOpen, setCmdOpen] = React.useState(false);
   const qc = useQueryClient();
   const { toast } = useToast();
+
+  // Branding
+  // pt-BR: Usa helper compartilhado para obter a logo com fallback.
+  // en-US: Uses shared helper to get brand logo with fallback.
+
+  /**
+   * BrandLogo usage
+   * pt-BR: Usa componente BrandLogo para resolver e exibir a logo com fallback.
+   * en-US: Uses BrandLogo component to resolve and display the logo with fallback.
+   */
 
   /**
    * pendingCommentsQuery
@@ -143,12 +154,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             <div className="flex items-center gap-4">
               <SidebarTrigger data-lov-name="SidebarTrigger" />
               <div className="hidden md:flex items-center gap-2">
-                <img
-                  src="/aeroclube-logo.svg"
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/placeholder.svg"; }}
-                  alt="Logo"
-                  className="h-6 w-auto"
-                />
+                <BrandLogo alt="Logo" fallbackSrc="/aeroclube-logo.svg" className="h-6 w-auto" />
                 <span className="hidden lg:block text-sm text-muted-foreground">Ead Control</span>
               </div>
             </div>

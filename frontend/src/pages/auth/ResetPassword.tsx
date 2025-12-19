@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/form';
 import { authService } from '@/services/authService';
 import { toast } from '@/hooks/use-toast';
+import BrandLogo from '@/components/branding/BrandLogo';
 
 const resetPasswordSchema = z.object({
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
@@ -97,7 +98,8 @@ export default function ResetPassword() {
       <AuthLayout title="Link Inválido">
         {/* Brand header — ACJF */}
         <div className="flex items-center justify-center gap-3 mb-2">
-          <img src="/logo.png" alt="Aeroclube JF" className="h-10" />
+          {/* Brand logo */}
+          <BrandLogo alt="Aeroclube JF" className="h-10" />
           <div>
             <p className="text-sm font-semibold text-blue-800">Aeroclube de Juiz de Fora</p>
             <p className="text-xs text-blue-600">Escola de aviação</p>
@@ -127,7 +129,8 @@ export default function ResetPassword() {
     >
       {/* Brand header — ACJF */}
       <div className="flex items-center justify-center gap-3 mb-2">
-        <img src="/logo.png" alt="Aeroclube JF" className="h-10" />
+        {/* Brand logo */}
+        <BrandLogo alt="Aeroclube JF" className="h-10" />
         <div>
           <p className="text-sm font-semibold text-blue-800">Aeroclube de Juiz de Fora</p>
           <p className="text-xs text-blue-600">Escola de aviação</p>
@@ -220,3 +223,10 @@ export default function ResetPassword() {
     </AuthLayout>
   );
 }
+  /**
+   * Branding
+   * pt-BR: Usa BrandLogo para obter e renderizar a logo com fallback automático
+   *        (localStorage > window globals > env > padrão), mantendo a consistência.
+   * en-US: Uses BrandLogo to fetch and render the logo with automatic fallback
+   *        (localStorage > window globals > env > default), ensuring consistency.
+   */

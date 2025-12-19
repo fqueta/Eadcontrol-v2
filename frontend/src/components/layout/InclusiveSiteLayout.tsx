@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { User, LogOut, ChevronDown, Monitor, ExternalLink, Moon, Sun, Menu, Home, BookOpen, Receipt, ShoppingCart, GraduationCap, UserCircle } from "lucide-react";
+import { BrandLogo } from "@/components/branding/BrandLogo";
 
 type InclusiveSiteLayoutProps = {
   children: ReactNode;
@@ -33,10 +34,13 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
   const { toast } = useToast();
   const [isDark, setIsDark] = useState<boolean>(false);
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
-  // Logo source
-  // pt-BR: Usa variável de ambiente `VITE_SITE_LOGO_URL` com fallback para a logo fornecida.
-  // en-US: Uses env var `VITE_SITE_LOGO_URL` with fallback to the provided logo.
-  const logoSrc = (import.meta as any).env?.VITE_SITE_LOGO_URL || "https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=375,fit=crop,q=95/AQExkVPy2aUDzpqL/sem-nome-250-x-125-px-4-AzGMXn77KQTvDXrP.png";
+  /**
+   * BrandLogo usage
+   * pt-BR: Substitui lógica manual por componente BrandLogo para resolver a URL
+   *        automaticamente a partir de localStorage/window/env com fallback.
+   * en-US: Replaces manual logic with BrandLogo component that resolves URL
+   *        automatically from localStorage/window/env with fallback.
+   */
 
   /**
    * handleLogout
@@ -106,7 +110,11 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
       <header className="bg-white/80 dark:bg-violet-950/60 backdrop-blur-md border-b border-violet-200 dark:border-violet-800 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <img src={logoSrc} alt="Marca" className="h-10 rounded-md ring-1 ring-violet-200/40 dark:ring-violet-700/40 p-1 drop-shadow-sm" />
+            <BrandLogo
+              alt="Marca"
+              fallbackSrc="https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=375,fit=crop,q=95/AQExkVPy2aUDzpqL/sem-nome-250-x-125-px-4-AzGMXn77KQTvDXrP.png"
+              className="h-10 rounded-md ring-1 ring-violet-200/40 dark:ring-violet-700/40 p-1 drop-shadow-sm"
+            />
             <div className="hidden md:block">
               <h1 className="text-xl font-bold text-violet-800 dark:text-violet-100">Incluir & Educar</h1>
               <p className="text-xs text-violet-600 dark:text-violet-300">Tecnologia que Inclui. Educação que Transforma.</p>
@@ -274,7 +282,11 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
           <div className="grid md:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center space-x-3 mb-4">
-                <img src={logoSrc} alt="Marca" className="h-8" />
+                <BrandLogo
+                  alt="Marca"
+                  fallbackSrc="https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=375,fit=crop,q=95/AQExkVPy2aUDzpqL/sem-nome-250-x-125-px-4-AzGMXn77KQTvDXrP.png"
+                  className="h-8"
+                />
                 <div>
                   <h3 className="font-bold">Incluir & Educar</h3>
                   <p className="text-sm text-violet-200">Tecnologia com propósito</p>
