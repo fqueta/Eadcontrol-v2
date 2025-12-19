@@ -1,10 +1,11 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { coursesService } from "@/services/coursesService";
+import { dashboardChartsService } from "@/services/dashboardChartsService";
 import { useEnrollmentsList } from "@/hooks/enrollments";
 import {
   ResponsiveContainer,
@@ -26,6 +27,31 @@ import {
  */
 export default function Dashboard() {
   const navigate = useNavigate();
+
+  /**
+   * KpiCardLink
+   * pt-BR: Componente auxiliar para tornar um Card inteiro clicável, navegando
+   *        para a rota especificada via `Link`.
+   * en-US: Helper component to make a whole Card clickable, navigating to the
+   *        specified route using `Link`.
+   */
+  function KpiCardLink({ to, children }: { to: string; children: React.ReactNode }) {
+    return (
+      <Link
+        to={to}
+        className="block focus:outline-none focus:ring-2 focus:ring-ring rounded-md"
+        aria-label="Abrir seção relacionada ao indicador"
+      >
+        {/*
+         * pt-BR: Usamos classes utilitárias para indicar interatividade do Card.
+         * en-US: Utility classes hint the Card is interactive.
+         */}
+        <div className="hover:shadow-md transition-shadow cursor-pointer">
+          {children}
+        </div>
+      </Link>
+    );
+  }
 
   /**
    * pt-BR: Consulta rápida para obter o total de cursos.
@@ -53,40 +79,42 @@ export default function Dashboard() {
    * en-US: Mocked yearly data (2024/2025) for leads and enrolled charts.
    */
   const months = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
-  const interestedMonthlyData = useMemo(
-    () => [
-      { mes: months[0], y2024: 5, y2025: 8 },
-      { mes: months[1], y2024: 3, y2025: 5 },
-      { mes: months[2], y2024: 6, y2025: 7 },
-      { mes: months[3], y2024: 4, y2025: 6 },
-      { mes: months[4], y2024: 7, y2025: 5 },
-      { mes: months[5], y2024: 5, y2025: 6 },
-      { mes: months[6], y2024: 6, y2025: 7 },
-      { mes: months[7], y2024: 8, y2025: 9 },
-      { mes: months[8], y2024: 7, y2025: 6 },
-      { mes: months[9], y2024: 5, y2025: 7 },
-      { mes: months[10], y2024: 6, y2025: 8 },
-      { mes: months[11], y2024: 7, y2025: 9 },
-    ],
-    []
-  );
-  const enrolledMonthlyData = useMemo(
-    () => [
-      { mes: months[0], y2024: 4, y2025: 6 },
-      { mes: months[1], y2024: 2, y2025: 3 },
-      { mes: months[2], y2024: 3, y2025: 4 },
-      { mes: months[3], y2024: 4, y2025: 5 },
-      { mes: months[4], y2024: 3, y2025: 4 },
-      { mes: months[5], y2024: 2, y2025: 3 },
-      { mes: months[6], y2024: 3, y2025: 4 },
-      { mes: months[7], y2024: 5, y2025: 8 },
-      { mes: months[8], y2024: 4, y2025: 5 },
-      { mes: months[9], y2024: 3, y2025: 4 },
-      { mes: months[10], y2024: 4, y2025: 5 },
-      { mes: months[11], y2024: 6, y2025: 11 },
-    ],
-    []
-  );
+  /**
+   * Filtro de ano
+   * pt-BR: Ano selecionado pelo painel; comparativo é o ano anterior.
+   * en-US: Selected year from filter; comparison is previous year.
+   */
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const comparisonYear = selectedYear - 1;
+  const keyCurr = `y${selectedYear}`;
+  const keyPrev = `y${comparisonYear}`;
+
+  // Estados iniciais baseados no ano selecionado
+  const initialSeries = months.map((m) => ({ mes: m, [keyPrev]: 0, [keyCurr]: 0 } as any));
+  const [interestedMonthlyData, setInterestedMonthlyData] = useState<Array<{ mes: string; [key: string]: number }>>(initialSeries);
+  const [enrolledMonthlyData, setEnrolledMonthlyData] = useState<Array<{ mes: string; [key: string]: number }>>(initialSeries);
+  /**
+   * dashboardSummaryQuery
+   * pt-BR: Consulta React Query para obter o resumo consolidado do Dashboard.
+   *        Atualiza os estados dos gráficos ao receber os dados.
+   * en-US: React Query to fetch consolidated Dashboard summary.
+   *        Updates chart states when data arrives.
+   */
+  const dashboardSummaryQuery = useQuery({
+    queryKey: ["dashboard", "summary", selectedYear],
+    queryFn: () => dashboardChartsService.getSummary({ year: selectedYear }),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    const charts = dashboardSummaryQuery.data?.data?.charts as any;
+    if (charts?.interested && Array.isArray(charts.interested)) {
+      setInterestedMonthlyData(charts.interested);
+    }
+    if (charts?.enrolled && Array.isArray(charts.enrolled)) {
+      setEnrolledMonthlyData(charts.enrolled);
+    }
+  }, [dashboardSummaryQuery.data]);
 
   return (
     <div className="space-y-6">
@@ -102,9 +130,40 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Painel de Filtros */}
+      <Card>
+        <CardHeader className="pb-0">
+          <CardTitle className="text-sm">Filtros</CardTitle>
+          <CardDescription>Selecione o período para os gráficos</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="text-sm text-muted-foreground" htmlFor="year-select">Ano</label>
+            <select
+              id="year-select"
+              className="border rounded-md px-2 py-1 text-sm"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
+              aria-label="Selecionar ano"
+            >
+              {Array.from({ length: 6 }).map((_, idx) => {
+                const y = new Date().getFullYear() - idx;
+                return (
+                  <option key={y} value={y}>{y}</option>
+                );
+              })}
+            </select>
+            {dashboardSummaryQuery.isFetching && (
+              <span className="text-xs text-muted-foreground">Atualizando dados…</span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Cards KPI no topo */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <KpiCardLink to="/admin/school/interested">
+          <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total de Interessados</CardTitle>
             <CardDescription>Pré-cadastros (int)</CardDescription>
@@ -112,9 +171,11 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-3xl font-bold">{totalInteressados}</div>
           </CardContent>
-        </Card>
+          </Card>
+        </KpiCardLink>
 
-        <Card>
+        <KpiCardLink to="/admin/school/enroll">
+          <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total de Alunos</CardTitle>
             <CardDescription>Matrículas ativas (mat)</CardDescription>
@@ -122,9 +183,11 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-3xl font-bold">{totalAlunos}</div>
           </CardContent>
-        </Card>
+          </Card>
+        </KpiCardLink>
 
-        <Card>
+        <KpiCardLink to="/admin/school/classes">
+          <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Agendados</CardTitle>
             <CardDescription>Resumo operacional</CardDescription>
@@ -132,9 +195,11 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-3xl font-bold">0</div>
           </CardContent>
-        </Card>
+          </Card>
+        </KpiCardLink>
 
-        <Card>
+        <KpiCardLink to="/admin/school/courses">
+          <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Cursos</CardTitle>
             <CardDescription>Total cadastrados</CardDescription>
@@ -142,7 +207,8 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-3xl font-bold">{totalCursos}</div>
           </CardContent>
-        </Card>
+          </Card>
+        </KpiCardLink>
       </div>
 
       {/* Atalhos rápidos como na imagem */}
@@ -162,8 +228,13 @@ export default function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Interessados do ano de 2025</CardTitle>
-            <CardDescription>Comparativo 2024 x 2025</CardDescription>
+            <CardTitle>Interessados do ano de {selectedYear}</CardTitle>
+            <CardDescription>
+              Comparativo {comparisonYear} x {selectedYear}
+              {dashboardSummaryQuery.isFetching && (
+                <span className="ml-2 text-xs">(Atualizando)</span>
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[280px]">
@@ -174,8 +245,8 @@ export default function Dashboard() {
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Legend />
-                  <Line type="monotone" dataKey="y2025" stroke="#111827" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} name="Interessados 2025" />
-                  <Line type="monotone" dataKey="y2024" stroke="#3b82f6" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} name="Interessados 2024" />
+                  <Line type="monotone" dataKey={keyCurr} stroke="#111827" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} name={`Interessados ${selectedYear}`} />
+                  <Line type="monotone" dataKey={keyPrev} stroke="#3b82f6" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} name={`Interessados ${comparisonYear}`} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -184,8 +255,13 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Matriculados do ano de 2025</CardTitle>
-            <CardDescription>Comparativo 2024 x 2025</CardDescription>
+            <CardTitle>Matriculados do ano de {selectedYear}</CardTitle>
+            <CardDescription>
+              Comparativo {comparisonYear} x {selectedYear}
+              {dashboardSummaryQuery.isFetching && (
+                <span className="ml-2 text-xs">(Atualizando)</span>
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[280px]">
@@ -196,8 +272,8 @@ export default function Dashboard() {
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Legend />
-                  <Line type="monotone" dataKey="y2025" stroke="#111827" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} name="Matriculados 2025" />
-                  <Line type="monotone" dataKey="y2024" stroke="#3b82f6" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} name="Matriculados 2024" />
+                  <Line type="monotone" dataKey={keyCurr} stroke="#111827" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} name={`Matriculados ${selectedYear}`} />
+                  <Line type="monotone" dataKey={keyPrev} stroke="#3b82f6" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} name={`Matriculados ${comparisonYear}`} />
                 </LineChart>
               </ResponsiveContainer>
             </div>

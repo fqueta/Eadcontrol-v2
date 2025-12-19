@@ -15,6 +15,7 @@ use App\Http\Controllers\api\WebhookController;
 use App\Http\Controllers\api\MetricasController;
 use App\Http\Controllers\api\TrackingEventController;
 use App\Http\Controllers\api\DashboardMetricController;
+use App\Http\Controllers\api\DashboardChartController;
 use App\Http\Controllers\api\StageController;
 use App\Http\Controllers\api\ProductUnitController;
 use App\Http\Controllers\api\ProductController;
@@ -258,6 +259,19 @@ Route::name('api.')->prefix('v1')->middleware([
         Route::post('funnels/{id}/stages', [StageController::class, 'storeForFunnel'])->name('funnels.stages.store');
         // Listar etapas de um funil específico, ordenadas por order
         Route::get('funnels/{id}/stages', [StageController::class, 'indexForFunnel'])->name('funnels.stages.index');
+        
+        /**
+         * Dashboard charts (mocked data)
+         * pt-BR: Endpoints para gráficos do Dashboard com dados mocados.
+         * en-US: Endpoints for Dashboard charts with mocked data.
+         */
+        // Resumo único do dashboard (payload consolidado)
+        Route::get('dashboard/summary', [DashboardChartController::class, 'summary'])
+            ->name('dashboard.summary');
+        Route::get('dashboard/charts/interested-monthly', [DashboardChartController::class, 'interestedMonthly'])
+            ->name('dashboard.charts.interested-monthly');
+        Route::get('dashboard/charts/enrolled-monthly', [DashboardChartController::class, 'enrolledMonthly'])
+            ->name('dashboard.charts.enrolled-monthly');
         // rota flexível de filtros
         Route::get('menus', [MenuController::class, 'getMenus']);
         Route::apiResource('permissions', PermissionController::class,['parameters' => [

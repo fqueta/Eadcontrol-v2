@@ -24,6 +24,7 @@ use App\Http\Controllers\api\WebhookController;
 use App\Http\Controllers\api\MetricasController;
 use App\Http\Controllers\api\TrackingEventController;
 use App\Http\Controllers\api\DashboardMetricController;
+use App\Http\Controllers\api\DashboardChartController;
 use App\Http\Controllers\api\ProductUnitController;
 use App\Http\Controllers\api\ProductController;
 use App\Http\Controllers\api\ServiceController;
@@ -551,6 +552,17 @@ Route::name('api.')->prefix('api/v1')->middleware([
             Route::get('{id}/menu-permissions', [MenuPermissionController::class, 'show'])->name('menu-permissions.show');
             Route::put('{id}/menu-permissions', [MenuPermissionController::class, 'updatePermissions'])->name('menu-permissions.update');
             // Route::post('{id}/menus', [PermissionMenuController::class, 'update']);
+        });
+
+        // Rotas para gráficos do dashboard (dados mocados)
+        // Resumo único do dashboard (payload consolidado)
+        Route::get('dashboard/summary', [DashboardChartController::class, 'summary'])
+            ->name('dashboard.summary');
+        Route::prefix('dashboard/charts')->group(function () {
+            Route::get('interested-monthly', [DashboardChartController::class, 'interestedMonthly'])
+                ->name('dashboard.charts.interested-monthly');
+            Route::get('enrolled-monthly', [DashboardChartController::class, 'enrolledMonthly'])
+                ->name('dashboard.charts.enrolled-monthly');
         });
     });
     // Rotas para tracking events
