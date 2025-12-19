@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Comment extends Model
@@ -54,5 +55,25 @@ class Comment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * replies
+     * PT: Relação de respostas do comentário (auto-relacionamento). Retorna comentários com `parent_id = this.id`.
+     * EN: Comment replies (self-relation). Returns comments with `parent_id = this.id`.
+     */
+    public function replies(): HasMany
+    {
+        return $this->hasMany(Comment::class, 'parent_id');
+    }
+
+    /**
+     * parent
+     * PT: Comentário pai (se este for uma resposta). Usa `parent_id` para referência.
+     * EN: Parent comment (if this is a reply). Uses `parent_id` as reference.
+     */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Comment::class, 'parent_id');
     }
 }

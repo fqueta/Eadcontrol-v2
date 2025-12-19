@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { publicCoursesService } from '@/services/publicCoursesService';
 import { publicEnrollmentService } from '@/services/publicEnrollmentService';
 import { useToast } from '@/hooks/use-toast';
 import { phoneApplyMask, phoneRemoveMask } from '@/lib/masks/phone-apply-mask';
+import { Eye, EyeOff } from 'lucide-react';
 
 /**
  * loadRecaptchaScript
@@ -58,8 +59,9 @@ async function getRecaptchaToken(siteKey: string, action: string): Promise<strin
  *        client and creates the enrollment for the given course, sending a welcome email.
  */
 export default function InviteEnroll() {
-  const { id: idOrSlug } = useParams();
+  const { id: idOrSlug, token: tokenFromPath } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
 
   /**
@@ -77,15 +79,29 @@ export default function InviteEnroll() {
   const courseSlug = useMemo(() => String((course as any)?.slug || (course as any)?.token || idOrSlug || ''), [course, idOrSlug]);
   const courseTitle = useMemo(() => String(((course as any)?.titulo || (course as any)?.nome || 'Curso')), [course]);
 
+  /**
+   * inviteToken
+   * pt-BR: Obtém token do convite da URL (segmento de caminho ou query string).
+   * en-US: Gets invite token from URL (path segment or query string).
+   */
+  const inviteToken = useMemo(() => {
+    const search = new URLSearchParams(location.search);
+    return String(tokenFromPath || search.get('token') || '');
+  }, [tokenFromPath, location.search]);
+
   // Form state
   const [institution, setInstitution] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState<boolean>(true);
   const [termsAccepted, setTermsAccepted] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   // Field-level errors from API validation
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   // Security helpers: honeypot & time-trap
@@ -175,6 +191,13 @@ export default function InviteEnroll() {
   const isPasswordTooWeak = useMemo(() => password.length < 6, [password]);
 
   /**
+   * passwordsMismatch
+   * pt-BR: Verifica se senha e confirmação não são iguais.
+   * en-US: Checks if password and confirmation do not match.
+   */
+  const passwordsMismatch = useMemo(() => !!confirmPassword && password !== confirmPassword, [password, confirmPassword]);
+
+  /**
    * focusFirstError
    * pt-BR: Rola suavemente até o primeiro campo com erro e aplica foco.
    * en-US: Smoothly scrolls to the first field with error and focuses it.
@@ -200,12 +223,13 @@ export default function InviteEnroll() {
    * en-US: Enables submit when required fields are filled.
    */
   const canSubmit = useMemo(() => {
-    const base = !!name && !!email && !!password && courseId > 0 && privacyAccepted && termsAccepted;
+    const base = !!name && !!email && !!password && !!confirmPassword && courseId > 0 && privacyAccepted && termsAccepted;
     if (!base) return false;
     if (isPasswordTooWeak) return false;
+    if (passwordsMismatch) return false;
     if (phone && isPhoneInvalid) return false;
     return true;
-  }, [name, email, password, courseId, privacyAccepted, termsAccepted, phone, isPhoneInvalid, isPasswordTooWeak]);
+  }, [name, email, password, confirmPassword, courseId, privacyAccepted, termsAccepted, phone, isPhoneInvalid, isPasswordTooWeak, passwordsMismatch]);
 
   /**
    * handleSubmit
@@ -219,6 +243,7 @@ export default function InviteEnroll() {
     if (!canSubmit) return;
     setSubmitting(true);
     setFieldErrors({});
+    setRegistrationSuccess(false);
     try {
       // Acquire reCAPTCHA v3 token (backend requires it)
       const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string;
@@ -234,6 +259,7 @@ export default function InviteEnroll() {
         id_curso: courseId,
         privacyAccepted,
         termsAccepted,
+        invite_token: inviteToken || undefined,
         // Security payload
         captcha_token,
         captcha_action,
@@ -241,11 +267,11 @@ export default function InviteEnroll() {
         hp_field: hpField,
       });
       if(resp?.id) {
-        navigate(`/aluno/cursos/${courseSlug}`);
+        setRegistrationSuccess(true);
       }
       toast({
         title: 'Cadastro realizado',
-        description: 'Enviamos um e-mail de boas-vindas com o link do curso.',
+        description: 'Enviamos um e-mail de boas-vindas. Agora você pode ir para o curso pelo botão abaixo.',
       });
       // Opcional: navegar para a página do aluno (exige login)
       // navigate(`/aluno/cursos/${courseSlug}`);
@@ -302,7 +328,32 @@ export default function InviteEnroll() {
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label>Senha</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Crie uma senha" required aria-invalid={!!fieldErrors.password || isPasswordTooWeak} className={(fieldErrors.password || isPasswordTooWeak) ? 'border-red-500 focus-visible:ring-red-500' : ''} />
+                {/* pt-BR: Campo de senha com alternância de visibilidade (olho). */}
+                {/* en-US: Password field with visibility toggle (eye). */}
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Crie uma senha"
+                    required
+                    aria-invalid={!!fieldErrors.password || isPasswordTooWeak}
+                    className={(fieldErrors.password || isPasswordTooWeak) ? 'border-red-500 focus-visible:ring-red-500 pr-10' : 'pr-10'}
+                  />
+                  <button
+                    type="button"
+                    aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPassword((v) => !v)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
                 {fieldErrors.password && (
                   <p className="text-sm text-destructive">{fieldErrors.password}</p>
                 )}
@@ -310,6 +361,39 @@ export default function InviteEnroll() {
                   <p className={`text-sm ${isPasswordTooWeak ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {isPasswordTooWeak ? 'Senha muito curta (mínimo 6 caracteres).' : `Força da senha: ${(['Muito fraca','Fraca','Média','Forte','Muito forte'])[passwordStrength - 1] || 'Muito fraca'}`}
                   </p>
+                )}
+              </div>
+
+              {/* pt-BR: Campo de confirmação de senha com alternância de visibilidade (olho). */}
+              {/* en-US: Confirm password field with visibility toggle (eye). */}
+              <div className="space-y-2 md:col-span-2">
+                <Label>Confirmar senha</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repita a senha"
+                    required
+                    aria-invalid={passwordsMismatch}
+                    className={passwordsMismatch ? 'border-red-500 focus-visible:ring-red-500 pr-10' : 'pr-10'}
+                  />
+                  <button
+                    type="button"
+                    aria-label={showConfirmPassword ? 'Ocultar confirmação' : 'Mostrar confirmação'}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                {passwordsMismatch && (
+                  <p className="text-sm text-destructive">As senhas não coincidem.</p>
                 )}
               </div>
               <div className="flex items-center space-x-2 md:col-span-2">
@@ -331,9 +415,17 @@ export default function InviteEnroll() {
                 <Button type="submit" disabled={!canSubmit || submitting}>
                   {submitting ? 'Enviando…' : 'Confirmar matrícula'}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => navigate(`/aluno/cursos/${courseSlug}`)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!registrationSuccess}
+                  onClick={() => navigate(`/aluno/cursos/${courseSlug}`)}
+                >
                   Ir para o curso
                 </Button>
+                {registrationSuccess && (
+                  <span className="text-sm text-green-600">Cadastro confirmado! Você já pode ir para o curso.</span>
+                )}
                 {/* Honeypot (should stay empty) */}
                 <input
                   type="text"

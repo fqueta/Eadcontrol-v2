@@ -27,8 +27,9 @@ import {
 } from "@/components/ui/command";
 import React from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import commentsService from "@/services/commentsService";
+import { useToast } from "@/components/ui/use-toast";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -45,6 +46,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { applyThemeSettings } = useTheme();
   const navigate = useNavigate();
   const [cmdOpen, setCmdOpen] = React.useState(false);
+  const qc = useQueryClient();
+  const { toast } = useToast();
 
   /**
    * pendingCommentsQuery
@@ -66,6 +69,36 @@ export function AppLayout({ children }: AppLayoutProps) {
     },
     refetchInterval: 60 * 1000,
     refetchOnWindowFocus: true,
+  });
+
+  /**
+   * bellApproveMutation
+   * pt-BR: Aprova comentário diretamente a partir do sininho e atualiza contagem.
+   * en-US: Approves comment from the bell and refreshes pending count.
+   */
+  const bellApproveMutation = useMutation({
+    mutationFn: async (id: number | string) => commentsService.adminApprove(id),
+    onSuccess: () => {
+      try { qc.invalidateQueries({ queryKey: ["admin-pending-comments"] }); } catch {}
+      pendingCommentsQuery.refetch();
+      toast({ title: "Comentário aprovado" });
+    },
+    onError: () => toast({ title: "Falha ao aprovar", variant: "destructive" } as any),
+  });
+
+  /**
+   * bellRejectMutation
+   * pt-BR: Rejeita comentário diretamente a partir do sininho e atualiza contagem.
+   * en-US: Rejects comment from the bell and refreshes pending count.
+   */
+  const bellRejectMutation = useMutation({
+    mutationFn: async (id: number | string) => commentsService.adminReject(id),
+    onSuccess: () => {
+      try { qc.invalidateQueries({ queryKey: ["admin-pending-comments"] }); } catch {}
+      pendingCommentsQuery.refetch();
+      toast({ title: "Comentário rejeitado" });
+    },
+    onError: () => toast({ title: "Falha ao rejeitar", variant: "destructive" } as any),
   });
 
   const handleLogout = async () => {
@@ -154,17 +187,42 @@ export function AppLayout({ children }: AppLayoutProps) {
                       <div className="text-sm text-muted-foreground">Sem comentários pendentes.</div>
                     ) : (
                       <div className="space-y-2">
-                        {(pendingCommentsQuery.data?.items || []).map((c: any) => (
-                          <div key={String(c?.id)} className="rounded-md border p-2 hover:bg-muted">
-                            <div className="text-xs text-muted-foreground">
-                              {String(c?.user_name || "Autor")}{c?.created_at ? ` • ${new Date(String(c.created_at)).toLocaleString()}` : ""}
+                        {(pendingCommentsQuery.data?.items || []).map((c: any) => {
+                          const targetType = String(c?.commentable_type || c?.target_type || "").toLowerCase();
+                          const targetId = String(c?.commentable_id || c?.target_id || "");
+                          const isActivity = targetType.includes("activity") || /activity/i.test(String(c?.commentable_type || ""));
+                          const viewPath = isActivity && targetId ? `/admin/school/activities/${targetId}/view` : undefined;
+                          const modPath = isActivity && targetId ? `/admin/school/activities/${targetId}/comments` : "/admin/school/comments";
+                          return (
+                            <div key={String(c?.id)} className="rounded-md border p-2 hover:bg-muted">
+                              <div className="text-xs text-muted-foreground">
+                                {String(c?.user_name || "Autor")}{c?.created_at ? ` • ${new Date(String(c.created_at)).toLocaleString()}` : ""}
+                              </div>
+                              <div className="text-sm line-clamp-2">{String(c?.body || "")}</div>
+                              <div className="text-[11px] text-muted-foreground mt-1">
+                                Alvo: {String(c?.commentable_type || "?")} #{String(c?.commentable_id || "?")}
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-2 justify-end">
+                                {isActivity && viewPath && (
+                                  <Button size="sm" variant="outline" onClick={() => navigate(viewPath)}>Ver atividade</Button>
+                                )}
+                                <Button size="sm" variant="outline" onClick={() => navigate(modPath)}>Ir para moderação</Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => bellApproveMutation.mutate(c?.id ?? "")}
+                                  disabled={bellApproveMutation.isLoading}
+                                >Aprovar</Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => bellRejectMutation.mutate(c?.id ?? "")}
+                                  disabled={bellRejectMutation.isLoading}
+                                >Rejeitar</Button>
+                              </div>
                             </div>
-                            <div className="text-sm line-clamp-2">{String(c?.body || "")}</div>
-                            <div className="text-[11px] text-muted-foreground mt-1">
-                              Alvo: {String(c?.commentable_type || "?")} #{String(c?.commentable_id || "?")}
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                     <div className="pt-1 flex justify-end">

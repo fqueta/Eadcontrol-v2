@@ -4,6 +4,9 @@
 import { GenericApiService } from './GenericApiService';
 
 export type CommentStatus = 'pending' | 'approved' | 'rejected';
+// pt-BR: Status com suporte a "all" para retornar todos os estados.
+// en-US: Status supporting "all" to return all states.
+export type CommentStatusWithAll = CommentStatus | 'all';
 
 export interface CreateCommentPayload {
   // pt-BR: Tipo do alvo do comentário ('course' ou 'activity')
@@ -69,6 +72,22 @@ class CommentsService extends GenericApiService {
   }
 
   /**
+   * replies
+   * pt-BR: Lista respostas de um comentário pai com paginação e filtro de status.
+   *        Endpoint: GET `/comments/{id}/replies`.
+   * en-US: Lists replies for a parent comment with pagination and status filter.
+   *        Endpoint: GET `/comments/{id}/replies`.
+   */
+  replies(parentId: number | string, status?: CommentStatusWithAll, page?: number, perPage?: number) {
+    const params = new URLSearchParams();
+    if (status) params.set('status', String(status));
+    if (page && page > 0) params.set('page', String(page));
+    if (perPage && perPage > 0) params.set('per_page', String(perPage));
+    const qs = params.toString();
+    return this.customGet(`/comments/${parentId}/replies${qs ? `?${qs}` : ''}`);
+  }
+
+  /**
    * adminApprove
    * pt-BR: Aprova comentário.
    * en-US: Approves comment.
@@ -93,6 +112,15 @@ class CommentsService extends GenericApiService {
    */
   adminDelete(id: number | string) {
     return this.customDelete(`/admin/comments/${id}`);
+  }
+
+  /**
+   * adminReply
+   * pt-BR: Publica uma resposta do moderador para um comentário.
+   * en-US: Posts a moderator reply to a comment.
+   */
+  adminReply(id: number | string, body: string) {
+    return this.customPost(`/admin/comments/${id}/reply`, { body });
   }
 }
 

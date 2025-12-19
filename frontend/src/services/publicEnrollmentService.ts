@@ -40,6 +40,7 @@ class PublicEnrollmentService extends BaseApiService {
     id_turma?: number;
     privacyAccepted?: boolean;
     termsAccepted?: boolean;
+    invite_token?: string;
     // Security fields
     captcha_token?: string;
     captcha_action?: string;

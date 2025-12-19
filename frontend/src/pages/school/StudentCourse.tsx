@@ -380,35 +380,159 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
     };
 
     /**
-     * renderCommentItem
-     * pt-BR: Renderiza um card de comentário com autor, data e estrelas.
-     * en-US: Renders a comment card with author, date and stars.
+     * replyDrafts
+     * pt-BR: Estado local dos rascunhos de resposta por comentário (id -> texto).
+     * en-US: Local state for per-comment reply drafts (id -> text).
      */
-    const renderCommentItem = (c: any) => {
-      const author = String(c?.user?.name ?? c?.user?.nome ?? c?.author_name ?? '').trim();
+    const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+    /**
+     * replyVisible
+     * pt-BR: Controle de visibilidade do formulário de resposta por comentário.
+     * en-US: Visibility control for per-comment reply form.
+     */
+    const [replyVisible, setReplyVisible] = useState<Record<string, boolean>>({});
+    /**
+     * MAX_REPLY_DEPTH
+     * pt-BR: Profundidade máxima de encadeamento de respostas (estilo WordPress).
+     * en-US: Maximum nested reply depth (WordPress-like).
+     */
+    const MAX_REPLY_DEPTH = 3;
+
+    /**
+     * submitReply
+     * pt-BR: Valida e envia uma resposta do aluno para um comentário raiz.
+     * en-US: Validates and submits a student reply to a root comment.
+     */
+    const replyMutation = useMutation({
+      mutationFn: async (vars: { parentId: number | string; body: string }) => {
+        return commentsService.createComment({
+          target_type: 'activity',
+          target_id: selectedActivityKey!,
+          body: vars.body,
+          parent_id: Number(vars.parentId),
+          rating: null,
+        });
+      },
+      onSuccess: (_data, vars) => {
+        toast({ title: 'Resposta enviada', description: 'Sua resposta foi enviada para moderação.' });
+        setReplyDrafts((prev) => ({ ...prev, [String(vars.parentId)]: '' }));
+        queryClient.invalidateQueries({ queryKey: ['activity-comments', selectedActivityKey] });
+      },
+      onError: () => {
+        toast({ title: 'Falha ao responder', description: 'Não foi possível enviar sua resposta.', variant: 'destructive' } as any);
+      },
+    });
+
+    /**
+     * renderCommentItem
+     * pt-BR: Renderiza um card de comentário com autor, data e estrelas e, abaixo,
+     *        exibe respostas aprovadas em forma de thread. Para comentários raiz,
+     *        disponibiliza um formulário de resposta.
+     * en-US: Renders a comment card with author, date and stars and, below,
+     *        shows approved replies in a threaded view. For root comments,
+     *        provides a reply form.
+     */
+    const renderCommentItem = (c: any, depth: number = 0) => {
+      /**
+       * author
+       * pt-BR: Aceita diferentes formatos retornados pelo backend: `user_name`,
+       *        objeto `user.name`, ou `author_name`.
+       * en-US: Accepts different backend formats: `user_name`, `user.name`,
+       *        or `author_name`.
+       */
+      const author = String(c?.user_name ?? c?.user?.name ?? c?.user?.nome ?? c?.author_name ?? '').trim();
       const created = c?.created_at ? new Date(String(c.created_at)).toLocaleString() : '';
       const ratingVal = Number(c?.rating ?? 0);
+      const idStr = String(c?.id ?? '');
+      const replies: any[] = Array.isArray(c?.replies) ? c.replies : [];
+      const isRoot = depth === 0;
+      const canReplyHere = depth < MAX_REPLY_DEPTH;
+      const replyText = (replyDrafts[idStr] ?? '').slice(0, COMMENT_MAX);
+
       return (
-        <Card className="shadow-sm">
-          <CardContent className="p-3">
-            <div className="text-xs text-muted-foreground flex items-center justify-between">
-              <span>{author}{created ? ` • ${created}` : ''}</span>
-              <div className="flex items-center gap-1">
-                {ratingVal > 0 ? (
-                  <>
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} size={14} className={(ratingVal >= i + 1) ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'} />
-                    ))}
-                    <span className="ml-1 text-[10px] text-muted-foreground">{ratingVal} / 5</span>
-                  </>
-                ) : (
-                  <span className="text-xs text-muted-foreground">Sem avaliação</span>
-                )}
+        <div>
+          <Card className="shadow-sm">
+            <CardContent className="p-3">
+              <div className="text-xs text-muted-foreground flex items-center justify-between">
+                <span>{author}{created ? ` • ${created}` : ''}</span>
+                <div className="flex items-center gap-1">
+                  {ratingVal > 0 ? (
+                    <>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} size={14} className={(ratingVal >= i + 1) ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'} />
+                      ))}
+                      <span className="ml-1 text-[10px] text-muted-foreground">{ratingVal} / 5</span>
+                    </>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Sem avaliação</span>
+                  )}
+                </div>
               </div>
+              <div className="mt-1 whitespace-pre-wrap break-words">{String(c?.body ?? c?.text ?? '')}</div>
+
+              {canReplyHere && (
+                <div className="mt-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Responder</Label>
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      onClick={() => setReplyVisible((prev) => ({ ...prev, [idStr]: !prev[idStr] }))}
+                    >
+                      {replyVisible[idStr] ? 'Ocultar' : 'Responder'}
+                    </Button>
+                  </div>
+                  {replyVisible[idStr] && (
+                    <div className="mt-2">
+                      <Textarea
+                        value={replyText}
+                        onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [idStr]: e.target.value.slice(0, COMMENT_MAX) }))}
+                        placeholder="Escreva sua resposta... / Write your reply..."
+                        rows={2}
+                      />
+                      <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{Math.max(0, replyText.trim().length)} / {COMMENT_MAX}</span>
+                        <span>mín {COMMENT_MIN}</span>
+                      </div>
+                      <div className="mt-2 flex justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const text = replyText.trim();
+                            if (!text) return;
+                            if (containsProfanity(text)) {
+                              toast({ title: 'Conteúdo inadequado', description: 'Por favor, remova palavrões antes de publicar.', variant: 'destructive' } as any);
+                              return;
+                            }
+                            if (text.length < COMMENT_MIN || text.length > COMMENT_MAX) {
+                              toast({ title: 'Resposta inválida', description: `A resposta deve ter entre ${COMMENT_MIN} e ${COMMENT_MAX} caracteres.`, variant: 'destructive' } as any);
+                              return;
+                            }
+                            replyMutation.mutate({ parentId: idStr, body: text });
+                          }}
+                          disabled={replyMutation.isPending || replyText.trim().length < COMMENT_MIN}
+                        >
+                          {replyMutation.isPending ? 'Respondendo...' : 'Enviar resposta'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {Array.isArray(replies) && replies.length > 0 && (
+            <div className="mt-2 ml-4 pl-3 border-l">
+              {replies.map((r) => (
+                <div key={String(r?.id ?? Math.random())} className="mt-2">
+                  {renderCommentItem(r, depth + 1)}
+                </div>
+              ))}
             </div>
-            <div className="mt-1 whitespace-pre-wrap break-words">{String(c?.body ?? c?.text ?? '')}</div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
       );
     };
 

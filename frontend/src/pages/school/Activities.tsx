@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, Eye, Pencil, Trash2 } from 'lucide-react';
 import { activitiesService } from '@/services/activitiesService';
 import type { ActivityRecord } from '@/types/activities';
 
@@ -69,11 +71,29 @@ const Activities = () => {
                   <td className="p-2">{a.type_activities}</td>
                   <td className="p-2">{a.duration} {a.type_duration}</td>
                   <td className="p-2">{(a.active === true || a.active === 's' || a.active === 1) ? 'Sim' : 'Não'}</td>
-                  <td className="p-2 flex gap-2">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link to={`/admin/school/activities/${a.id}/edit`}>Editar</Link>
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(a.id)}>Excluir</Button>
+                  <td className="p-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 px-2">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Ações</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem onClick={() => navigate(`/admin/school/activities/${a.id}/view`)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Visualizar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(`/admin/school/activities/${a.id}/edit`)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => deleteMutation.mutate(a.id)} className="text-destructive focus:text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
               ))}

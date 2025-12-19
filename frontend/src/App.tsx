@@ -25,7 +25,9 @@ import ProductView from "./pages/ProductView";
 import ProductCreate from "./pages/ProductCreate";
 import ProductEdit from "./pages/ProductEdit";
 import Services from "./pages/Services";
+import EmailSend from "./pages/EmailSend";
 import CommentsModeration from "./pages/school/CommentsModeration";
+import ActivityCommentsModeration from "./pages/school/ActivityCommentsModeration";
 // Escola / Módulos e Atividades
 import Modules from "./pages/school/Modules";
 import ModuleCreate from "./pages/school/ModuleCreate";
@@ -33,6 +35,7 @@ import ModuleEdit from "./pages/school/ModuleEdit";
 import Activities from "./pages/school/Activities";
 import ActivityCreate from "./pages/school/ActivityCreate";
 import ActivityEdit from "./pages/school/ActivityEdit";
+import ActivityView from "./pages/school/ActivityView";
 import ServiceView from "./pages/ServiceView";
 import Categories from "./pages/Categories";
 import Permissions from "./pages/settings/Permissions";
@@ -84,6 +87,7 @@ import CourseEdit from "./pages/school/CourseEdit";
  import CourseLanding from "./pages/school/CourseLanding";
  import CourseDetails from "./pages/school/CourseDetails";
 import InviteEnroll from "./pages/school/InviteEnroll";
+import InvitesAdminPage from "./pages/school/Invites";
 import StudentCourse from "./pages/school/StudentCourse";
 import StudentCourseProgress from "./pages/school/StudentCourseProgress";
 import AdminCourseProgress from "./pages/school/AdminCourseProgress";
@@ -253,11 +257,27 @@ const App = () => {
                   </AppLayout>
                 </AdminProtectedRoute>
               } />
+              {/* Tools / Email Send */}
+              <Route path="/admin/tools/email-send" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <EmailSend />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
               {/* Escola / Comentários (Moderação) */}
               <Route path="/admin/school/comments" element={
                 <AdminProtectedRoute>
                   <AppLayout>
                     <CommentsModeration />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              {/* Escola / Convites de matrícula */}
+              <Route path="/admin/school/invites" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <InvitesAdminPage />
                   </AppLayout>
                 </AdminProtectedRoute>
               } />
@@ -297,6 +317,22 @@ const App = () => {
                 <AdminProtectedRoute>
                   <AppLayout>
                     <Activities />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              {/* Escola / Atividade — Visualização de conteúdo (admin) */}
+              <Route path="/admin/school/activities/:id/view" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <ActivityView />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              {/* Escola / Atividade • Conteúdo + Comentários (Moderação) */}
+              <Route path="/admin/school/activities/:id/comments" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <ActivityCommentsModeration />
                   </AppLayout>
                 </AdminProtectedRoute>
               } />
@@ -426,6 +462,8 @@ const App = () => {
                * en-US: Public invitation enrollment page via course link.
                */}
               <Route path="/cursos/:id/inscricao" element={<InviteEnroll />} />
+              {/* Suporte a token de convite como segmento de caminho */}
+              <Route path="/cursos/:id/inscricao/:token" element={<InviteEnroll />} />
               {/* Área do Aluno / Consumo de Conteúdo (protegida, sem layout de admin) */}
               <Route path="/aluno/cursos/:slug" element={
                 <ProtectedRoute>

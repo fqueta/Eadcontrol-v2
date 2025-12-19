@@ -5,6 +5,8 @@ namespace App\Http\Controllers\api;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\Matricula;
+use App\Models\Post;
+use App\Models\InviteUsage;
 use App\Notifications\WelcomeNotification;
 use App\Services\Qlib;
 use Illuminate\Http\Request;
@@ -150,56 +152,201 @@ class PublicEnrollmentController extends Controller
         $name = trim($name);
         $phone = is_string($phone) ? preg_replace('/\D/', '', $phone) : null;
 
-        // Criar cliente com permission_id=7 (forçado pelo modelo Client::creating)
-        $client = new Client();
-        $client->tipo_pessoa = 'pf';
-        $client->name = $name;
-        $client->email = $email;
-        $client->password = Hash::make($password);
-        $client->status = 'actived';
-        $client->genero = 'ni';
-        $client->ativo = 's';
-        $client->config = [
-            'privacyAccepted' => true,
-            'termsAccepted' => true,
-        ];
-        if ($phone) {
-            // Campo é 'celular' na tabela users; não está em fillable, atribuir direto
-            $client->setAttribute('celular', $phone);
-        }
-        $client->save();
-        // Adiciona a instituição do cliente em um meta campo como o metodo Qlib::update_usermeta
-        Qlib::update_usermeta($client->id, 'institution', $institution);
-        // Criar matrícula com curso padrão id=2 (pode ser sobrescrito via query/body)
-        // Add id_turma com padrão 0 para atender ao schema que exige valor (sem default)
-        $courseId = (int) ($request->input('id_curso', 2));
-        $turmaId = (int) ($request->input('id_turma', 0));
-        //valor do curso pelo id
-        $course = DB::table('cursos')->where('id', $courseId)->first();
-        if (!$course) {
-            return response()->json([
-                'message' => 'Curso não encontrado',
-            ], 404);
-        }
-        $valor = $course->valor;
-        $matricula = new Matricula();
-        $matricula->id_cliente = $client->id;
-        $matricula->id_curso = $courseId;
-        $matricula->id_turma = $turmaId;
-        $matricula->subtotal = $valor;
-        $matricula->total = $valor;
         /**
-         * Define a origem da matrícula na coluna JSON `tag`.
-         * pt-BR: Usamos um array para garantir JSON válido e evitar falha de constraint.
-         * en-US: Use an array to ensure valid JSON and avoid constraint failure.
+         * Transação robusta para validar e consumir convites.
+         * pt-BR: Usa transação e lock de linha para evitar ultrapassar limite em concorrência.
+         * en-US: Uses transaction and row-level lock to prevent exceeding invite limits under concurrency.
          */
-        $matricula->tag = ['formulario-inscricao'];
-        $matricula->situacao_id = $situacao_id;
-        // 0 indica sem turma associada
-        // Não definir 'status' explicitamente para usar o default da tabela ('a')
-        $matricula->save();
+        $client = null;
+        $matricula = null;
+        $invite = null;
+        $valor = 0;
+        $inviteToken = (string) $request->input('invite_token', $request->input('token_valido', ''));
+        $courseId = (int) ($request->input('id_curso', 2));
+        $ip = (string) $request->ip();
+        $ua = (string) $request->header('User-Agent');
 
-        // Disparar e-mail de boas vindas
+        DB::beginTransaction();
+        try {
+            // Valida e bloqueia o convite antes de criar o cliente
+            if ($inviteToken !== '') {
+                $invite = Post::query()
+                    ->ofType('convites')
+                    ->where('token', $inviteToken)
+                    ->lockForUpdate()
+                    ->first();
+                if (!$invite) {
+                    DB::rollBack();
+                    // Audit: convite não encontrado
+                    InviteUsage::create([
+                        'invite_post_id' => null,
+                        'client_id' => null,
+                        'invite_token' => $inviteToken,
+                        'status' => 'failed',
+                        'reason' => 'not_found',
+                        'ip' => $ip,
+                        'user_agent' => $ua,
+                        'meta' => ['phase' => 'validate_invite'],
+                    ]);
+                    return response()->json([
+                        'message' => 'Convite inválido ou não encontrado',
+                        'errors' => ['invite_token' => ['Invite token not found']],
+                    ], 422);
+                }
+                $cfg = (array) ($invite->config ?? []);
+                $total = (int) ($cfg['total_convites'] ?? 0);
+                $usados = (int) ($cfg['convites_usados'] ?? 0);
+                $validade = isset($cfg['validade']) && $cfg['validade'] ? strtotime((string) $cfg['validade']) : null;
+                if ($total > 0 && $usados >= $total) {
+                    DB::rollBack();
+                    // Audit: limite atingido
+                    InviteUsage::create([
+                        'invite_post_id' => $invite->ID,
+                        'client_id' => null,
+                        'invite_token' => $inviteToken,
+                        'status' => 'failed',
+                        'reason' => 'limit_reached',
+                        'ip' => $ip,
+                        'user_agent' => $ua,
+                        'meta' => ['total' => $total, 'used' => $usados],
+                    ]);
+                    return response()->json([
+                        'message' => 'Limite de convites atingido para este link',
+                'errors' => ['invite_token' => ['Limite de uso do convite atingido']],
+                    ], 422);
+                }
+                if ($validade && time() > $validade) {
+                    DB::rollBack();
+                    // Audit: convite expirado
+                    InviteUsage::create([
+                        'invite_post_id' => $invite->ID,
+                        'client_id' => null,
+                        'invite_token' => $inviteToken,
+                        'status' => 'failed',
+                        'reason' => 'expired',
+                        'ip' => $ip,
+                        'user_agent' => $ua,
+                        'meta' => ['validade' => $cfg['validade'] ?? null],
+                    ]);
+                    return response()->json([
+                        'message' => 'Este link de convite expirou',
+                        'errors' => ['invite_token' => ['Invite token expired']],
+                    ], 422);
+                }
+                // Se o convite possui curso associado, usar como fonte da matrícula
+                $courseId = (int) ($invite->post_parent ?? $courseId);
+            }
+
+            // Criar cliente somente após validação do convite
+            $client = new Client();
+            $client->tipo_pessoa = 'pf';
+            $client->name = $name;
+            $client->email = $email;
+            $client->password = Hash::make($password);
+            $client->status = 'actived';
+            $client->genero = 'ni';
+            $client->ativo = 's';
+            $client->config = [
+                'privacyAccepted' => true,
+                'termsAccepted' => true,
+            ];
+            if ($phone) {
+                // Campo é 'celular' na tabela users; não está em fillable, atribuir direto
+                $client->setAttribute('celular', $phone);
+            }
+            $client->save();
+            Qlib::update_usermeta($client->id, 'institution', $institution);
+
+            // Add id_turma com padrão 0 para atender ao schema que exige valor (sem default)
+            $turmaId = (int) ($request->input('id_turma', 0));
+            //valor do curso pelo id (com lock)
+            $course = DB::table('cursos')->where('id', $courseId)->lockForUpdate()->first();
+            if (!$course) {
+                DB::rollBack();
+                // Audit: curso não encontrado
+                if ($inviteToken !== '' && isset($invite)) {
+                    InviteUsage::create([
+                        'invite_post_id' => $invite->ID,
+                        'client_id' => null,
+                        'invite_token' => $inviteToken,
+                        'status' => 'failed',
+                        'reason' => 'course_not_found',
+                        'ip' => $ip,
+                        'user_agent' => $ua,
+                        'meta' => ['course_id' => $courseId],
+                    ]);
+                }
+                return response()->json([
+                    'message' => 'Curso não encontrado',
+                ], 404);
+            }
+            $valor = (float) $course->valor;
+            $matricula = new Matricula();
+            $matricula->id_cliente = $client->id;
+            $matricula->id_curso = $courseId;
+            $matricula->id_turma = $turmaId;
+            $matricula->subtotal = $valor;
+            $matricula->total = $valor;
+            /**
+             * Define a origem da matrícula na coluna JSON `tag`.
+             * pt-BR: Usamos um array para garantir JSON válido e evitar falha de constraint.
+             * en-US: Use an array to ensure valid JSON and avoid constraint failure.
+             */
+            $tags = ['formulario-inscricao'];
+            if ($inviteToken !== '') {
+                $tags[] = 'invite-token:' . $inviteToken;
+            }
+            $matricula->tag = $tags;
+            $matricula->situacao_id = $situacao_id;
+            // 0 indica sem turma associada
+            // Não definir 'status' explicitamente para usar o default da tabela ('a')
+            $matricula->save();
+
+            // Atualiza uso do convite, se aplicável (com lock ativo)
+            if (isset($invite) && $inviteToken !== '') {
+                $inviteCfg = (array) ($invite->config ?? []);
+                $inviteCfg['convites_usados'] = (int) ($inviteCfg['convites_usados'] ?? 0) + 1;
+                $invite->config = $inviteCfg;
+                $invite->save();
+
+                // Audit: sucesso de utilização do convite
+                InviteUsage::create([
+                    'invite_post_id' => $invite->ID,
+                    'client_id' => $client->id,
+                    'invite_token' => $inviteToken,
+                    'status' => 'success',
+                    'reason' => null,
+                    'ip' => $ip,
+                    'user_agent' => $ua,
+                    'meta' => [
+                        'course_id' => $courseId,
+                        'matricula_id' => $matricula->id,
+                    ],
+                ]);
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            // Audit: erro interno ao processar
+            if ($inviteToken !== '') {
+                InviteUsage::create([
+                    'invite_post_id' => isset($invite) ? $invite->ID : null,
+                    'client_id' => isset($client) ? $client->id : null,
+                    'invite_token' => $inviteToken,
+                    'status' => 'failed',
+                    'reason' => 'server_error',
+                    'ip' => $ip,
+                    'user_agent' => $ua,
+                    'meta' => ['message' => $e->getMessage()],
+                ]);
+            }
+            return response()->json([
+                'message' => 'Erro ao processar cadastro',
+            ], 500);
+        }
+
+        // Disparar e-mail de boas vindas (após commit da transação)
         $client->notify(new WelcomeNotification($courseId));
 
         return response()->json([

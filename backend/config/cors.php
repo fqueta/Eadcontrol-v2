@@ -53,6 +53,9 @@ return [
         'http://educar.localhost:5173',
         'http://eaddemo.localhost:3000',
         'http://eaddemo.localhost:4000',
+        // Explicit dev ports used in this workspace
+        'http://eaddemo.localhost:4001',
+        'http://localhost:4001',
         'http://localhost:8000',
         'http://eadcontrol1.localhost:8080',
         'http://api-eaddemo.localhost:8000',

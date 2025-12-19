@@ -161,16 +161,30 @@ Route::name('api.')->prefix('api/v1')->middleware([
 
 
     Route::middleware(['auth:sanctum','auth.active'])->group(function () {
+        // Gestão de convites (admin)
+        // EN: Invite management (admin)
+        Route::get('invites', [\App\Http\Controllers\api\InviteController::class, 'index'])->name('invites.index');
+        Route::post('invites', [\App\Http\Controllers\api\InviteController::class, 'store'])->name('invites.store');
+        Route::get('invites/{id}', [\App\Http\Controllers\api\InviteController::class, 'show'])->name('invites.show');
+        Route::put('invites/{id}', [\App\Http\Controllers\api\InviteController::class, 'update'])->name('invites.update');
+        Route::delete('invites/{id}', [\App\Http\Controllers\api\InviteController::class, 'destroy'])->name('invites.destroy');
         // Criar novo comentário (entra como pending para moderação)
         Route::post('comments', [CommentController::class, 'store'])
             ->name('comments.store')
             ->middleware('throttle:60,1');
+
+        // Listar respostas de um comentário pai
+        // EN: List replies for a parent comment
+        Route::get('comments/{id}/replies', [CommentController::class, 'repliesByParent'])
+            ->name('comments.replies')
+            ->middleware('throttle:120,1');
 
         // Moderação de comentários (admin)
         Route::prefix('admin/comments')->group(function () {
             Route::get('/', [CommentController::class, 'adminIndex'])->name('admin.comments.index');
             Route::post('{id}/approve', [CommentController::class, 'approve'])->name('admin.comments.approve');
             Route::post('{id}/reject', [CommentController::class, 'reject'])->name('admin.comments.reject');
+            Route::post('{id}/reply', [CommentController::class, 'reply'])->name('admin.comments.reply');
             Route::delete('{id}', [CommentController::class, 'destroy'])->name('admin.comments.destroy');
         });
         Route::get('user',[UserController::class,'perfil'])->name('perfil.user');

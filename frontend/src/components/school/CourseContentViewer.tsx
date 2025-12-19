@@ -360,6 +360,132 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
   }
 
   /**
+   * Reply state (WordPress-like)
+   * pt-BR: Rascunhos e visibilidade de respostas por comentário + profundidade máxima.
+   * en-US: Per-comment reply drafts and visibility + maximum nested depth.
+   */
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [replyVisible, setReplyVisible] = useState<Record<string, boolean>>({});
+  const MAX_REPLY_DEPTH = 3;
+
+  /**
+   * replyMutation
+   * pt-BR: Envia resposta do aluno vinculada ao `parent_id` sem avaliação.
+   * en-US: Submits a student reply linked to `parent_id` without rating.
+   */
+  const replyMutation = useMutation({
+    mutationFn: async (vars: { parentId: number | string; body: string }) => {
+      return commentsService.createComment({
+        target_type: 'activity',
+        target_id: currentActivityKeyForComments,
+        body: vars.body,
+        parent_id: Number(vars.parentId),
+        rating: null,
+      });
+    },
+    onSuccess: (_data, vars) => {
+      try {
+        toast({ title: 'Resposta enviada', description: 'Sua resposta foi enviada para moderação.' });
+      } catch {}
+      setReplyDrafts((prev) => ({ ...prev, [String(vars.parentId)]: '' }));
+      queryClient.invalidateQueries({ queryKey: ['activity-comments', currentActivityKeyForComments] });
+    },
+    onError: () => {
+      try {
+        toast({ title: 'Falha ao responder', description: 'Não foi possível enviar sua resposta.', variant: 'destructive' } as any);
+      } catch {}
+    },
+  });
+
+  /**
+   * renderCommentItem
+   * pt-BR: Renderiza um comentário aprovado com autor, data e avaliação, e exibe suas
+   *        respostas aprovadas indentadas em forma de thread.
+   * en-US: Renders an approved comment with author, date and rating, and shows its
+   *        approved replies indented as a threaded conversation.
+   */
+  const renderCommentItem = (c: any, depth: number = 0) => {
+    const author = String(c?.user_name ?? c?.user?.name ?? c?.user?.nome ?? c?.author ?? 'Aluno').trim();
+    const created = c?.created_at ? new Date(String(c.created_at)).toLocaleString() : '';
+    const ratingVal = Number(c?.rating ?? 0);
+    const replies: any[] = Array.isArray(c?.replies) ? c.replies : [];
+    const idStr = String(c?.id ?? '');
+    const canReplyHere = depth < MAX_REPLY_DEPTH;
+    const replyText = (replyDrafts[idStr] ?? '').slice(0, COMMENT_MAX);
+
+    return (
+      <div>
+        <div className="rounded border p-3">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium">{author}{created ? ` • ${created}` : ''}</div>
+            {ratingVal > 0 && (
+              <div className="flex items-center gap-1">
+                {[1,2,3,4,5].map((n) => (
+                  <Star key={n} className={`h-3.5 w-3.5 ${n <= ratingVal ? 'text-amber-500 fill-amber-500' : 'text-muted-foreground'}`} />
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">{String(c?.body ?? '')}</div>
+          {canReplyHere && (
+            <div className="mt-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Responder</Label>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onClick={() => setReplyVisible((prev) => ({ ...prev, [idStr]: !prev[idStr] }))}
+                >
+                  {replyVisible[idStr] ? 'Ocultar' : 'Responder'}
+                </Button>
+              </div>
+              {replyVisible[idStr] && (
+                <div className="mt-2">
+                  <Textarea
+                    value={replyText}
+                    onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [idStr]: e.target.value.slice(0, COMMENT_MAX) }))}
+                    placeholder="Escreva sua resposta... / Write your reply..."
+                    rows={2}
+                  />
+                  <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{Math.max(0, replyText.trim().length)} / {COMMENT_MAX}</span>
+                    <span>mín {COMMENT_MIN}</span>
+                  </div>
+                  <div className="mt-2 flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const text = replyText.trim();
+                        if (!text) return;
+                        if (text.length < COMMENT_MIN || text.length > COMMENT_MAX) return;
+                        replyMutation.mutate({ parentId: idStr, body: text });
+                      }}
+                      disabled={replyMutation.isPending || replyText.trim().length < COMMENT_MIN}
+                    >
+                      {replyMutation.isPending ? 'Respondendo...' : 'Enviar resposta'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {Array.isArray(replies) && replies.length > 0 && (
+          <div className="mt-2 ml-4 pl-3 border-l">
+            {replies.map((r) => (
+              <div key={String(r?.id ?? Math.random())} className="mt-2">
+                {renderCommentItem(r, depth + 1)}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  /**
    * readingUrgencyClass
    * pt-BR: Retorna classes de cor do badge conforme segundos restantes.
    *        <=10s: vermelho; <=60s: amarelo; caso contrário: azul.
@@ -2228,6 +2354,7 @@ function htmlEquals(a: string, b: string): boolean {
               )}
             </CardContent>
           </Card>
+          
           {/* pt-BR: Card de comentários da atividade atual */}
           {/* en-US: Comments card for current activity */}
           <Card className="mt-4">
@@ -2276,18 +2403,8 @@ function htmlEquals(a: string, b: string): boolean {
                   <div className="text-sm text-muted-foreground">Carregando comentários...</div>
                 ) : (Array.isArray(commentsQuery.data) && commentsQuery.data.length > 0 ? (
                   (commentsQuery.data as any[]).map((c: any) => (
-                    <div key={String(c?.id ?? Math.random())} className="rounded border p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm font-medium">{String(c?.user_name ?? c?.author ?? 'Aluno')}</div>
-                        {typeof c?.rating === 'number' && c.rating > 0 && (
-                          <div className="flex items-center gap-1">
-                            {[1,2,3,4,5].map((n) => (
-                              <Star key={n} className={`h-3.5 w-3.5 ${n <= c.rating ? 'text-amber-500 fill-amber-500' : 'text-muted-foreground'}`} />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">{String(c?.body ?? '')}</div>
+                    <div key={String(c?.id ?? Math.random())}>
+                      {renderCommentItem(c)}
                     </div>
                   ))
                 ) : (
