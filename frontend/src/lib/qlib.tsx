@@ -18,7 +18,7 @@ export function getTenantApiUrl(): string {
   // Prefer VITE_TENANT_API_URL; fallback to VITE_API_URL; otherwise use sensible default
   const raw =
     (import.meta.env as any).VITE_TENANT_API_URL ||
-    (import.meta.env as any).VITE_API_URL ||
+    'https://api-'+location.host ||
     'http://{tenant_id}.localhost:8000/api';
 
   const tenant_id = getTenantIdFromSubdomain() || 'default';
