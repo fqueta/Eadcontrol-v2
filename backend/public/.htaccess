@@ -9,8 +9,8 @@
     <IfModule mod_headers.c>
         # Marca a Origin como permitida se for subdomínio ou apex de eadcontrol.com.br
         SetEnvIfNoCase Origin "^https?://(.+\.)?eadcontrol\.com\.br$" ORIGIN_ALLOWED=$0
-        # Marcar a Origin como permitida se for subdomínio de incluirecuidar.com.br
-        SetEnvIfNoCase Origin "^https?://(.+\.)?incluirecuidar\.com\.br$" ORIGIN_ALLOWED=$0
+        # Marcar a Origin como permitida se for subdomínio de incluireeducar.com.br
+        SetEnvIfNoCase Origin "^https?://(.+\.)?incluireeducar\.com\.br$" ORIGIN_ALLOWED=$0
         # Garante que caches considerem a Origin
         Header always set Vary "Origin"
 
