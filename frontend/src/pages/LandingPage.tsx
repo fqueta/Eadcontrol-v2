@@ -4,7 +4,7 @@ import { Plane, BookOpen, Wrench, Compass, ArrowRight, ExternalLink } from "luci
 import { Link } from "react-router-dom";
 import InclusiveSiteLayout from "@/components/layout/InclusiveSiteLayout";
 import BrandLogo from "@/components/branding/BrandLogo";
-import { getInstitutionName } from "@/lib/branding";
+import { getInstitutionName, getInstitutionSlogan } from "@/lib/branding";
 
 /**
  * LandingPage
@@ -21,8 +21,9 @@ import { getInstitutionName } from "@/lib/branding";
  *        (via `getInstitutionName` util) and uses it in hero texts.
  */
 const LandingPage = () => {
-  // Institution display name
+  // Institution display name and slogan (from saved branding)
   const institutionName = getInstitutionName();
+  const institutionSlogan = getInstitutionSlogan();
   return (
     <InclusiveSiteLayout>
       {/* Hero Section */}
@@ -31,8 +32,9 @@ const LandingPage = () => {
           <div className="mb-8">
             {/* Brand logo — shown atop hero */}
             <BrandLogo alt="Brand Logo" className="h-10 mx-auto mb-4" />
-            {/* Institution name from API/options */}
-            <p className="text-base text-violet-700 font-semibold mb-2">{institutionName}</p>
+            {/* Institution name and slogan from API/options */}
+            <p className="text-base text-violet-700 font-semibold mb-0">{institutionName}</p>
+            <p className="text-sm text-violet-600 mb-2">{institutionSlogan}</p>
             <h1 className="text-5xl md:text-5xl font-bold text-violet-800 mb-6">
               Tecnologia que Inclui
               <span className="text-emerald-600 block">Educação que Transforma</span>

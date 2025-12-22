@@ -19,6 +19,7 @@ import { authService } from '@/services/authService';
 import { toast } from '@/hooks/use-toast';
 import { getSiteKey, getRecaptchaToken } from '@/lib/recaptcha';
 import BrandLogo from '@/components/branding/BrandLogo';
+import { getInstitutionName, getInstitutionNameAsync, getInstitutionSlogan, hydrateBrandingFromPublicApi } from '@/lib/branding';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -36,6 +37,34 @@ export default function ForgotPassword() {
    */
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [institutionName, setInstitutionName] = useState<string>(() => getInstitutionName());
+  const [institutionSlogan, setInstitutionSlogan] = useState<string>(() => getInstitutionSlogan());
+
+  /**
+   * hydrateBranding
+   * pt-BR: Carrega nome e slogan pela API pública e aplica com fallback.
+   * en-US: Loads name and slogan from public API and applies with fallback.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { name, slogan } = await hydrateBrandingFromPublicApi({ persist: true });
+        const finalName = name || (await getInstitutionNameAsync());
+        const finalSlogan = slogan || getInstitutionSlogan();
+        if (!cancelled) {
+          setInstitutionName(finalName);
+          setInstitutionSlogan(finalSlogan);
+        }
+      } catch {
+        if (!cancelled) {
+          setInstitutionName(getInstitutionName());
+          setInstitutionSlogan(getInstitutionSlogan());
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const form = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -90,8 +119,8 @@ export default function ForgotPassword() {
           {/* Brand logo */}
           <BrandLogo alt="Aeroclube JF" className="h-10" />
           <div>
-            <p className="text-sm font-semibold text-blue-800">Aeroclube de Juiz de Fora</p>
-            <p className="text-xs text-blue-600">Escola de aviação</p>
+            <p className="text-sm font-semibold text-blue-800">{institutionName}</p>
+            <p className="text-xs text-blue-600">{institutionSlogan}</p>
           </div>
         </div>
 
@@ -126,8 +155,8 @@ export default function ForgotPassword() {
         {/* Brand logo */}
         <BrandLogo alt="Aeroclube JF" className="h-10" />
         <div>
-          <p className="text-sm font-semibold text-blue-800">Aeroclube de Juiz de Fora</p>
-          <p className="text-xs text-blue-600">Escola de aviação</p>
+          <p className="text-sm font-semibold text-blue-800">{institutionName}</p>
+          <p className="text-xs text-blue-600">{institutionSlogan}</p>
         </div>
       </div>
 

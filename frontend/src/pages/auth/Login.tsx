@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
 import BrandLogo from '@/components/branding/BrandLogo';
-import { getInstitutionName, getInstitutionNameAsync, hydrateBrandingFromPublicApi } from '@/lib/branding';
+import { getInstitutionName, getInstitutionNameAsync, getInstitutionSlogan, hydrateBrandingFromPublicApi } from '@/lib/branding';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useRedirect } from '@/hooks/useRedirect';
@@ -45,6 +45,8 @@ export default function Login() {
   const { redirectAfterAuth } = useRedirect();
   // Nome da instituição (dinâmico via API/options)
   const [institutionName, setInstitutionName] = useState<string>(() => getInstitutionName());
+  // Slogan da instituição (dinâmico via API/options)
+  const [institutionSlogan, setInstitutionSlogan] = useState<string>(() => getInstitutionSlogan());
 
   // Efeito para redirecionar após login bem-sucedido
   useEffect(() => {
@@ -77,18 +79,25 @@ export default function Login() {
 
   /**
    * hydrateBrandingFromPublicApi
-   * pt-BR: Carrega branding apenas do endpoint público e atualiza estado.
-   * en-US: Loads branding only from the public endpoint and updates state.
+   * pt-BR: Carrega nome e slogan do endpoint público e atualiza estado.
+   * en-US: Loads name and slogan from the public endpoint and updates state.
    */
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const { name } = await hydrateBrandingFromPublicApi({ persist: true });
+        const { name, slogan } = await hydrateBrandingFromPublicApi({ persist: true });
         const finalName = name || (await getInstitutionNameAsync());
-        if (!cancelled) setInstitutionName(finalName);
+        const finalSlogan = slogan || getInstitutionSlogan();
+        if (!cancelled) {
+          setInstitutionName(finalName);
+          setInstitutionSlogan(finalSlogan);
+        }
       } catch {
-        if (!cancelled) setInstitutionName(getInstitutionName());
+        if (!cancelled) {
+          setInstitutionName(getInstitutionName());
+          setInstitutionSlogan(getInstitutionSlogan());
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -173,6 +182,7 @@ export default function Login() {
                   {/* Brand logo (dinâmico via API/options) */}
                   <BrandLogo alt={institutionName || 'Logo'} className="h-10 mx-auto mb-2" />
                   <h1 className="text-xl font-bold text-blue-700">{institutionName}</h1>
+                  <p className="text-xs text-blue-600">{institutionSlogan}</p>
                 </div>
               </div>
 
