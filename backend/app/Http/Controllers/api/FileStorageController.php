@@ -163,6 +163,15 @@ class FileStorageController extends Controller
     private function map_file(FileStorage $item): array
     {
         $config = $item->config ?? [];
+        // Resolve a URL pública de forma independente de host.
+        // Preferimos gerar a URL a partir do `config.file.path` via `buildRelativeUrl()`
+        // para evitar persistir/retornar domínios absolutos.
+        $resolvedUrl = null;
+        if (!empty($config['file']['path'])) {
+            $resolvedUrl = $this->buildRelativeUrl($config['file']['path']);
+        } else {
+            $resolvedUrl = $item->guid ?: ($config['file']['url'] ?? null);
+        }
         return [
             'id' => $item->ID,
             'title' => $item->post_title,
@@ -170,7 +179,7 @@ class FileStorageController extends Controller
             'description' => $item->post_excerpt,
             'active' => $this->decode_status($item->post_status),
             'mime' => $item->post_mime_type,
-            'url' => $item->guid ?: ($config['file']['url'] ?? null),
+            'url' => $resolvedUrl,
             'file' => $config['file'] ?? null,
             'created_at' => $item->created_at,
             'updated_at' => $item->updated_at,
@@ -251,9 +260,16 @@ class FileStorageController extends Controller
         // Upload de arquivo obrigatório
         $file = $request->file('file');
         $path = $file->store('file-storage', 'public');
-        // Construir URL relativa para evitar domínio absoluto
-        // EN: Build a relative URL to avoid storing absolute host.
-        $url = $this->buildRelativeUrl($path);
+        /**
+         * Persistência sem host
+         * pt-BR: Armazena apenas a URL relativa (sem domínio) para evitar
+         *        problemas ao mudar o host. A leitura usa buildRelativeUrl($path)
+         *        para gerar a URL pública correta, incluindo tenant quando ativo.
+         * en-US: Persist only host-agnostic relative URL; reading uses
+         *        buildRelativeUrl($path) to produce the correct public URL,
+         *        tenant-aware when active.
+         */
+        $relativeUrl = '/' . ltrim('storage/' . ltrim($path, '/'), '/');
 
         // Definir título automaticamente quando omitido
         $derivedTitle = $v['title'] ?? pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
@@ -269,9 +285,9 @@ class FileStorageController extends Controller
                 'notes' => $v['description'] ?? null,
             ]),
             'post_mime_type' => $file->getClientMimeType(),
-            // Grava apenas o path relativo; o browser resolverá o host
-            // EN: Store only relative path; browser will resolve host.
-            'guid' => $url,
+            // Grava somente URL relativa (sem host)
+            // EN: Store relative URL only (host-agnostic)
+            'guid' => $relativeUrl,
         ];
         // slug
         $mapped['post_name'] = (new FileStorage())->generateSlug($slugBase);
@@ -280,9 +296,9 @@ class FileStorageController extends Controller
         $config = [
             'file' => [
                 'path' => $path,
-                // Armazena somente o path relativo.
-                // EN: Store only the relative path.
-                'url' => $url,
+                // Armazena a URL relativa (sem host)
+                // EN: Store relative URL (no host)
+                'url' => $relativeUrl,
                 'original' => $file->getClientOriginalName(),
                 'mime' => $file->getClientMimeType(),
                 'size' => $file->getSize(),
@@ -355,18 +371,23 @@ class FileStorageController extends Controller
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $path = $file->store('file-storage', 'public');
-            // Construir URL relativa; não gravar host absoluto
-            // EN: Build relative URL; avoid storing absolute host.
-            $url = $this->buildRelativeUrl($path);
+            /**
+             * Persistência sem host
+             * pt-BR: Armazena somente URL relativa; leitura gera URL pública
+             *        via buildRelativeUrl($path) (tenant-aware quando ativo).
+             * en-US: Store only relative URL; reading builds public URL via
+             *        buildRelativeUrl($path) (tenant-aware when active).
+             */
+            $relativeUrl = '/' . ltrim('storage/' . ltrim($path, '/'), '/');
             $config['file'] = [
                 'path' => $path,
-                'url' => $url,
+                'url' => $relativeUrl,
                 'original' => $file->getClientOriginalName(),
                 'mime' => $file->getClientMimeType(),
                 'size' => $file->getSize(),
                 'ext' => $file->getClientOriginalExtension(),
             ];
-            $mapped['guid'] = $url;
+            $mapped['guid'] = $relativeUrl;
             $mapped['post_mime_type'] = $file->getClientMimeType();
         }
 
