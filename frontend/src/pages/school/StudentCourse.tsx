@@ -671,7 +671,14 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
 
   return (
     <InclusiveSiteLayout>
-      <div className="container mx-auto p-4 space-y-6">
+      {/**
+       * compactPagePadding
+       * pt-BR: Reduz paddings e espaçamentos em mobile para abrir mais área
+       *        visível ao viewer de atividades.
+       * en-US: Reduce paddings and spacing on mobile to open up more visible
+       *        area for the activity viewer.
+       */}
+      <div className="container mx-auto p-2 md:p-4 space-y-4 md:space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>{isLoading ? 'Carregando...' : title}</CardTitle>
@@ -706,7 +713,16 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
                  * pt-BR: Passa `enrollmentId` para que o salvamento de progresso envie `id_matricula`.
                  * en-US: Passes `enrollmentId` so progress saving sends `id_matricula`.
                  */}
-                <CourseContentViewer course={course} onActivityChange={handleActivityChange} enrollmentId={enrollmentId} />
+                {/**
+                 * viewerContainer
+                 * pt-BR: Contêiner de altura fixa para permitir rolagem independente
+                 *        da barra lateral e da área principal do viewer.
+                 * en-US: Fixed-height container to enable independent scrolling for
+                 *        the sidebar and the main viewer area.
+                 */}
+                <div className="h-[82vh] min-h-[60vh] overflow-hidden">
+                  <CourseContentViewer course={course} onActivityChange={handleActivityChange} enrollmentId={enrollmentId} />
+                </div>
               </>
             )}
           </CardContent>

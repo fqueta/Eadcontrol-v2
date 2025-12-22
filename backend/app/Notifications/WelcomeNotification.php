@@ -5,6 +5,7 @@ namespace App\Notifications;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
 use App\Notifications\Channels\BrevoChannel;
+use App\Services\Qlib;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\File;
 
@@ -40,7 +41,7 @@ class WelcomeNotification extends Notification
      */
     public function toMail($notifiable)
     {
-        $frontendUrl = rtrim((string) config('app.frontend_url'), '/');
+        $frontendUrl = Qlib::get_frontend_url();
         $loginUrl = $frontendUrl ? $frontendUrl . '/login' : null;
 
         return (new MailMessage)
@@ -49,7 +50,7 @@ class WelcomeNotification extends Notification
                 'loginUrl' => $loginUrl,
                 'courseId' => $this->courseId,
                 'logoDataUri' => $this->getLogoDataUri(),
-                'logoSrc' => $this->getLogoSrc(),
+                'logoSrc' => Qlib::get_logo_url(),
             ]);
     }
 
@@ -59,14 +60,14 @@ class WelcomeNotification extends Notification
      */
     public function toBrevo($notifiable)
     {
-        $frontendUrl = rtrim((string) config('app.frontend_url'), '/');
+        $frontendUrl = Qlib::get_frontend_url();
         $loginUrl = $frontendUrl ? $frontendUrl . '/login' : null;
 
         $html = View::make('emails.welcome', [
             'loginUrl' => $loginUrl,
             'courseId' => $this->courseId,
             'logoDataUri' => $this->getLogoDataUri(),
-            'logoSrc' => $this->getLogoSrc(),
+            'logoSrc' => Qlib::get_logo_url(),
         ])->render();
 
         return [

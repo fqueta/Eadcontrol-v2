@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef, useDeferredValue, memo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock, Star, ChevronDown, ChevronUp } from 'lucide-react';
@@ -1835,7 +1836,14 @@ function htmlEquals(a: string, b: string): boolean {
   return (
     <div className="flex flex-col h-full">
       {/* Top bar: search + progress */}
-      <div className="sticky top-0 z-10 bg-background text-foreground border-b px-3 py-3 grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+      {/**
+       * compactTopBar
+       * pt-BR: Reduz paddings e gaps no mobile para evitar espaços excessivos
+       *        e aproveitar melhor a área de conteúdo.
+       * en-US: Reduce paddings and gaps on mobile to avoid excessive spacing
+       *        and make better use of the content area.
+       */}
+      <div className="sticky top-0 z-10 bg-background text-foreground border-b px-2 py-2 md:px-3 md:py-3 grid grid-cols-1 gap-1 md:gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
         <Input
           value={searchTerm}
           onChange={(e) => {
@@ -1845,20 +1853,20 @@ function htmlEquals(a: string, b: string): boolean {
             setCurrentIndex(0);
           }}
           placeholder="Buscar conteúdo do curso"
-          className="w-full md:max-w-md"
+          className="w-full md:max-w-md h-9 md:h-10"
         />
         {/* pt-BR: Toggle da lista de atividades no mobile */}
         {/* en-US: Activities list toggle on mobile */}
         <Button
           variant="secondary"
           size="sm"
-          className="md:hidden"
+          className="md:hidden h-8 px-2"
           onClick={() => setMobileSidebarOpen(true)}
         >
           <Folder className="h-4 w-4 mr-1" /> Atividades
         </Button>
         {/* Summary row */}
-        <div className="col-span-1 md:col-span-2 text-xs md:text-sm flex flex-wrap items-center gap-2 md:justify-end">
+        <div className="col-span-1 md:col-span-2 text-[11px] md:text-sm flex flex-wrap items-center gap-1 md:gap-2 md:justify-end">
           {courseTotalLabel && (
             <span className="px-2 py-[2px] rounded-full bg-muted text-muted-foreground">
               {courseTotalLabel}
@@ -1875,10 +1883,10 @@ function htmlEquals(a: string, b: string): boolean {
           {/* pt-BR: Barra percentual de progresso total do curso */}
           {/* en-US: Total course progress percentage bar */}
           <span className="flex items-center gap-2">
-            <div className="w-24 h-2 bg-muted rounded overflow-hidden">
+            <div className="w-20 md:w-24 h-2 bg-muted rounded overflow-hidden">
               <div className="h-full bg-primary" style={{ width: `${courseProgressPercent}%` }} />
             </div>
-            <span className="text-[11px] md:text-xs">{courseProgressPercent}%</span>
+            <span className="text-[10px] md:text-xs">{courseProgressPercent}%</span>
           </span>
           {/* pt-BR: Alterna colapso de módulos inativos */}
           {/* en-US: Toggle collapse for inactive modules */}
@@ -1925,9 +1933,18 @@ function htmlEquals(a: string, b: string): boolean {
                     <Folder className="h-4 w-4" />
                     <span className="line-clamp-1 break-words flex-1 text-left">{title}</span>
                     {(() => {
+                      /**
+                       * pt-BR: Badge com total de atividades do módulo. O tempo total
+                       *        aparece como tooltip (title) ao passar o mouse no badge.
+                       * en-US: Badge with module activity count. Total time appears as
+                       *        tooltip (title) when hovering over the badge.
+                       */
                       const totalSecs = getModuleTotalSeconds(m);
                       const label = totalSecs ? formatDuration(totalSecs) : '';
-                      return label ? <span className="text-xs text-muted-foreground">• {label}</span> : null;
+                      const totalCount = activities.length;
+                      return (
+                        <Badge variant="outline" className="shrink-0" title={label || undefined}>{totalCount}</Badge>
+                      );
                     })()}
                   </button>
                   {showActivities && (
@@ -1999,9 +2016,16 @@ function htmlEquals(a: string, b: string): boolean {
                   <Folder className="h-4 w-4" />
                   <span className="line-clamp-1 break-words flex-1">{title}</span>
                   {(() => {
+                    /**
+                     * pt-BR: Badge com total de atividades; tempo total via tooltip.
+                     * en-US: Activity-count badge; total time via tooltip.
+                     */
                     const totalSecs = getModuleTotalSeconds(m);
                     const label = totalSecs ? formatDuration(totalSecs) : '';
-                    return label ? <span className="text-xs text-muted-foreground">• {label}</span> : null;
+                    const totalCount = activities.length;
+                    return (
+                      <Badge variant="outline" className="shrink-0" title={label || undefined}>{totalCount}</Badge>
+                    );
                   })()}
                 </button>
                 {showActivities && (
@@ -2089,13 +2113,20 @@ function htmlEquals(a: string, b: string): boolean {
         </aside>
 
         {/* Viewer */}
-        <main className="flex-1 overflow-y-auto p-4">
-          <Card>
-            <CardContent className="space-y-4 pt-4">
+        {/**
+         * compactViewerWrapper
+         * pt-BR: Em mobile remove bordas/sombras para economizar espaço,
+         *        reduz padding interno e amplia a área do player.
+         * en-US: On mobile remove borders/shadows to save space, reduce inner
+         *        padding and expand the player area.
+         */}
+        <main className="flex-1 overflow-y-auto p-1 md:p-4">
+          <Card className="border-0 shadow-none md:border md:shadow-sm md:rounded-lg">
+            <CardContent className="p-2 md:p-4 space-y-3 md:space-y-4 pt-2 md:pt-4">
               {currentActivity ? (
                 <>
                   {/* Player area */}
-                  <div className={`rounded overflow-hidden ${isVideo(currentActivity as any) ? 'aspect-video bg-black' : 'bg-white'}`}>
+                  <div className={`rounded-md md:rounded-lg overflow-hidden ${isVideo(currentActivity as any) ? 'aspect-video bg-black' : 'bg-white'}`}>
                     {(() => {
                       const a = currentActivity;
                       const title = String(a?.titulo || a?.title || a?.name || '');

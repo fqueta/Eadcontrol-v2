@@ -271,6 +271,30 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
             </Button>
             {isAuthenticated && user ? (
               <>
+                {/**
+                 * studentMobileLinks
+                 * pt-BR: Mostra funções da área do aluno no mobile.
+                 * en-US: Shows student area functions on mobile.
+                 */}
+                <div className="border-t my-2" />
+                <Button asChild variant="ghost" className="w-full justify-start" onClick={() => setMobileNavOpen(false)}>
+                  <Link to="/aluno">Painel</Link>
+                </Button>
+                <Button asChild variant="ghost" className="w-full justify-start" onClick={() => setMobileNavOpen(false)}>
+                  <Link to="/aluno/cursos">Meus cursos</Link>
+                </Button>
+                <Button asChild variant="ghost" className="w-full justify-start" onClick={() => setMobileNavOpen(false)}>
+                  <Link to="/aluno/faturas">Minhas faturas</Link>
+                </Button>
+                <Button asChild variant="ghost" className="w-full justify-start" onClick={() => setMobileNavOpen(false)}>
+                  <Link to="/aluno/pedidos">Meus pedidos</Link>
+                </Button>
+                <Button asChild variant="ghost" className="w-full justify-start" onClick={() => setMobileNavOpen(false)}>
+                  <Link to="/aluno/notas">Minhas notas</Link>
+                </Button>
+                <Button asChild variant="ghost" className="w-full justify-start" onClick={() => setMobileNavOpen(false)}>
+                  <Link to="/aluno/perfil">Perfil</Link>
+                </Button>
                 {permission_id <= 5 && (
                   <Button asChild variant="ghost" className="w-full justify-start">
                     <Link to="/admin" onClick={() => setMobileNavOpen(false)}>Painel Administrativo</Link>

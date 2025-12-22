@@ -6,12 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
 import { publicCoursesService } from '@/services/publicCoursesService';
 import { publicEnrollmentService } from '@/services/publicEnrollmentService';
 import { useToast } from '@/hooks/use-toast';
 import { phoneApplyMask, phoneRemoveMask } from '@/lib/masks/phone-apply-mask';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 
 /**
  * extractCourseErrorMessage
@@ -138,6 +139,7 @@ export default function InviteEnroll() {
   const [termsAccepted, setTermsAccepted] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
   // Field-level errors from API validation
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   // Security helpers: honeypot & time-trap
@@ -152,6 +154,17 @@ export default function InviteEnroll() {
       loadRecaptchaScript(siteKey).catch(() => {/* ignore */});
     }
   }, []);
+
+  /**
+   * onRegistrationSuccessEffect
+   * pt-BR: Abre modal de próximo passo quando o cadastro é concluído.
+   * en-US: Opens next-step modal when registration completes.
+   */
+  useEffect(() => {
+    if (registrationSuccess) {
+      setSuccessModalOpen(true);
+    }
+  }, [registrationSuccess]);
 
   /**
    * handlePhoneChange
@@ -324,10 +337,7 @@ export default function InviteEnroll() {
         (resp && (resp.matricula?.id || resp.client?.id)) || resp?.success
       );
       setRegistrationSuccess(success);
-      toast({
-        title: 'Cadastro realizado',
-        description: 'Enviamos um e-mail de boas-vindas. Agora você pode ir para o curso pelo botão abaixo.',
-      });
+      // Sucesso: sem toast para evitar duplicidade, o modal cuidará do próximo passo visível.
       // Opcional: navegar para a página do aluno (exige login)
       // navigate(`/aluno/cursos/${courseSlug}`);
     } catch (err: any) {
@@ -471,17 +481,6 @@ export default function InviteEnroll() {
                 <Button type="submit" disabled={!canSubmit || submitting}>
                   {submitting ? 'Enviando…' : 'Confirmar matrícula'}
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={!registrationSuccess}
-                  onClick={() => navigate(`/aluno/cursos/${courseSlug}`)}
-                >
-                  Ir para o curso
-                </Button>
-                {registrationSuccess && (
-                  <span className="text-sm text-green-600">Cadastro confirmado! Você já pode ir para o curso.</span>
-                )}
                 {/* Honeypot (should stay empty) */}
                 <input
                   type="text"
@@ -495,6 +494,40 @@ export default function InviteEnroll() {
             </form>
           </CardContent>
         </Card>
+        {/**
+         * SuccessNextStepAlertDialog
+         * pt-BR: Modal bloqueante de sucesso com título do curso destacado e CTA.
+         * en-US: Blocking success modal with highlighted course title and CTA.
+         */}
+        <AlertDialog open={successModalOpen} onOpenChange={setSuccessModalOpen}>
+          <AlertDialogContent className="sm:max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 justify-center">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                Cadastro concluído
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {course?.title ? (
+                  <span className="block text-base font-semibold text-foreground">{String((course as any)?.title)}</span>
+                ) : (
+                  'Matrícula confirmada com sucesso.'
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-2 text-sm">
+              <p>Enviamos um e-mail de boas-vindas.</p>
+              <p className="font-medium">Próximo passo: acessar seu curso agora.</p>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogAction
+                onClick={() => navigate(`/aluno/cursos/${courseSlug}`)}
+                title="Abrir consumo do curso"
+              >
+                Ir para o curso
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </InclusiveSiteLayout>
   );

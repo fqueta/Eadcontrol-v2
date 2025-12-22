@@ -2885,4 +2885,18 @@ class Qlib
             return false;
         }
     }
+    /**
+     * externa o link do frontend que está na tabela opcoes
+     */
+    static function get_frontend_url(){
+        $frontendUrl = self::qoption('default_frontend_url');
+        return $frontendUrl;
+    }
+    /**
+     * externa link da logo cadastrado na tabela opcoes
+     */
+    static function get_logo_url(){
+        $logoUrl = self::qoption('app_logo_url');
+        return $logoUrl;
+    }
 }

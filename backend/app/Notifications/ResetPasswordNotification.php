@@ -5,6 +5,7 @@ namespace App\Notifications;
 use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordBase;
 use Illuminate\Notifications\Messages\MailMessage;
 use App\Notifications\Channels\BrevoChannel;
+use App\Services\Qlib;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\File;
@@ -18,6 +19,12 @@ class ResetPasswordNotification extends ResetPasswordBase
      * @param mixed $notifiable
      * @return array
      */
+    public $frontendUrl = '';
+    public function __construct($token)
+    {
+        $this->token = $token;
+        $this->frontendUrl = Qlib::get_frontend_url();
+    }
     public function via($notifiable)
     {
         $hasBrevo = (string) (config('services.brevo.api_key') ?? '') !== '';
@@ -39,12 +46,11 @@ class ResetPasswordNotification extends ResetPasswordBase
     public function toMail($notifiable)
     {
         // Base do frontend: usa config('app.frontend_url') parametrizada via .env
-        $frontendUrl = rtrim((string) config('app.frontend_url'), '/');
-        $resetLink = $frontendUrl . '/reset-password/' . $this->token . '?email=' . urlencode($notifiable->email);
+        $resetLink = $this->frontendUrl . '/reset-password/' . $this->token . '?email=' . urlencode($notifiable->email);
 
         // Renderiza nosso template com o tema/layout do projeto
         $logoDataUri = $this->getLogoDataUri();
-        $logoSrc = $this->getLogoSrc();
+        $logoSrc = Qlib::get_logo_url();
 
         return (new MailMessage)
             ->subject('Redefinição de Senha')
@@ -71,8 +77,7 @@ class ResetPasswordNotification extends ResetPasswordBase
     public function toBrevo($notifiable)
     {
         // Base do frontend: usa config('app.frontend_url') parametrizada via .env
-        $frontendUrl = rtrim((string) config('app.frontend_url'), '/');
-        $resetLink = $frontendUrl . '/reset-password/' . $this->token . '?email=' . urlencode($notifiable->email);
+        $resetLink = $this->frontendUrl . '/reset-password/' . $this->token . '?email=' . urlencode($notifiable->email);
 
         // Reaproveita o mesmo template Blade para o conteúdo HTML do Brevo
         $html = View::make('emails.password_reset', [
