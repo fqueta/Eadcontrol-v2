@@ -236,8 +236,36 @@ class FileStorageController extends Controller
                 $query->where('post_status', $active ? 'publish' : 'draft');
             }
         }
+        /**
+         * pt-BR: Inclui domínio tenant-aware na resposta (campo `url`) e também
+         *        um campo auxiliar `relative_url` sem host. Assim, clientes
+         *        podem usar a URL absoluta quando necessário e ainda ter o
+         *        caminho relativo disponível para cenários específicos.
+         * en-US: Include tenant-aware absolute domain in `url` and also provide
+         *        `relative_url` (host-agnostic). Clients can use absolute URL
+         *        when needed while retaining a relative path for specific cases.
+         */
         $items = $query->paginate($perPage);
-        $items->getCollection()->transform(fn ($item) => $this->map_file($item));
+        $items->getCollection()->transform(function ($item) {
+            $payload = $this->map_file($item);
+            // Preferir derivar ambos (absolute + relative) via file path quando disponível
+            $path = $payload['file']['path'] ?? null;
+            if ($path) {
+                // URL absoluta, tenant-aware
+                $payload['url'] = $this->buildRelativeUrl($path);
+                // URL relativa (sem host)
+                $payload['relative_url'] = '/' . ltrim('storage/' . ltrim($path, '/'), '/');
+                return $payload;
+            }
+            // Fallback: extrai apenas o path da URL existente
+            $u = $payload['url'] ?? null;
+            if ($u) {
+                $p = parse_url($u, PHP_URL_PATH) ?: $u;
+                // Mantém `url` como está (pode já ser absoluta) e inclui relativa
+                $payload['relative_url'] = '/' . ltrim($p, '/');
+            }
+            return $payload;
+        });
         return response()->json($items);
     }
 
