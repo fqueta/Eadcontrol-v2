@@ -27,7 +27,7 @@ class WelcomeEmailNotification extends Notification
      * pt-BR: Inicializa a notificação com dados do destinatário e curso.
      * en-US: Initializes the notification with recipient and course data.
      */
-    public function __construct(string $recipientName, string $courseTitle, $courseId = null)
+    public function __construct(string $recipientName, string $courseTitle, $courseId = null, string $curseSlug = null)
     {
         $this->recipientName = $recipientName;
         $this->courseTitle = $courseTitle;

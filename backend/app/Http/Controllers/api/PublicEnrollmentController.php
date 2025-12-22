@@ -347,7 +347,7 @@ class PublicEnrollmentController extends Controller
         }
 
         // Disparar e-mail de boas vindas (após commit da transação)
-        $client->notify(new WelcomeNotification($courseId));
+        $client->notify(new WelcomeNotification($courseId, $course->slug, $course->nome));
 
         return response()->json([
             'message' => 'Cliente cadastrado e matrícula criada com sucesso',

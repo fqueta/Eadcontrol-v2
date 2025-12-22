@@ -2899,4 +2899,12 @@ class Qlib
         $logoUrl = self::qoption('app_logo_url');
         return $logoUrl;
     }
+    /**
+     * externa o nome da empresa cadastrado na tabela opcoes
+     */
+    static function get_company_name(){
+        $companyName = self::qoption('app_institution_name');
+        return $companyName;
+    }
+
 }

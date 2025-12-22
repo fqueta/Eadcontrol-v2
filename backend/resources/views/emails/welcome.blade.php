@@ -53,6 +53,9 @@
                         <a class="btn" href="{{ $loginUrl }}" target="_blank" rel="noopener">Acessar minha conta</a>
                     </div>
                 @endif
+                @if (!empty($courseSlug))
+                    <p>Você está matriculado no curso <a href="{{ url('/aluno/cursos/' . $courseSlug) }}" target="_blank" rel="noopener">{{ $courseSlug }}</a>.</p>
+                @endif
                 <p class="muted">Se você não solicitou este cadastro, ignore este e-mail.</p>
             </div>
             <div class="footer">

@@ -18,13 +18,21 @@ class WelcomeNotification extends Notification
     /** @var int */
     protected $courseId;
 
+    /** @var string */
+    protected $courseSlug;
+
+    /** @var string */
+    protected $courseName;
+
     /**
      * Construtor.
      * @param int $courseId ID do curso para a matrícula.
      */
-    public function __construct(int $courseId)
+    public function __construct(int $courseId, string $courseSlug='',string $courseName='')
     {
         $this->courseId = $courseId;
+        $this->courseSlug = $courseSlug;
+        $this->courseName = $courseName;
     }
 
     /**
@@ -49,8 +57,11 @@ class WelcomeNotification extends Notification
             ->view('emails.welcome', [
                 'loginUrl' => $loginUrl,
                 'courseId' => $this->courseId,
+                'courseSlug' => $this->courseSlug,
                 'logoDataUri' => $this->getLogoDataUri(),
                 'logoSrc' => Qlib::get_logo_url(),
+                'companyName' => Qlib::get_company_name(),
+                'courseName' => $this->courseName,
             ]);
     }
 
