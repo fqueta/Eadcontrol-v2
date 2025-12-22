@@ -255,6 +255,9 @@ class FileStorageController extends Controller
                 $payload['url'] = $this->buildRelativeUrl($path);
                 // URL relativa (sem host)
                 $payload['relative_url'] = '/' . ltrim('storage/' . ltrim($path, '/'), '/');
+                // Normaliza também o campo de arquivo
+                $payload['file']['url'] = $this->buildRelativeUrl($path);
+                $payload['file']['relative_url'] = '/' . ltrim('storage/' . ltrim($path, '/'), '/');
                 return $payload;
             }
             // Fallback: extrai apenas o path da URL existente
@@ -263,6 +266,17 @@ class FileStorageController extends Controller
                 $p = parse_url($u, PHP_URL_PATH) ?: $u;
                 // Mantém `url` como está (pode já ser absoluta) e inclui relativa
                 $payload['relative_url'] = '/' . ltrim($p, '/');
+            }
+            // Fallback para normalização de file.url quando não há path
+            $fu = $payload['file']['url'] ?? null;
+            if ($fu) {
+                $fp = parse_url($fu, PHP_URL_PATH) ?: $fu;
+                $payload['file']['relative_url'] = '/' . ltrim($fp, '/');
+                // Se houver file.path, monta absoluta tenant-aware
+                $fpath = $payload['file']['path'] ?? null;
+                if ($fpath) {
+                    $payload['file']['url'] = $this->buildRelativeUrl($fpath);
+                }
             }
             return $payload;
         });
