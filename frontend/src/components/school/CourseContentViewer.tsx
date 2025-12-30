@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock, Star, ChevronDown, ChevronUp } from 'lucide-react';
+ import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock, Star, ChevronDown, ChevronUp, GraduationCap, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { progressService } from '@/services/progressService';
 import { useToast } from '@/hooks/use-toast';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import commentsService from '@/services/commentsService';
+import { certificatesService } from '@/services/certificatesService';
 
 /**
  * VideoDescriptionToggle
@@ -1482,6 +1483,48 @@ function htmlEquals(a: string, b: string): boolean {
    *        etc.). Used to keep auto-skip active only on automatic selections.
    */
   const selectionIntentRef = useRef<'user' | 'auto'>('auto');
+  const [showSidebar, setShowSidebar] = useState<boolean>(true);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState<boolean>(false);
+  /**
+   * generatingCert
+   * pt-BR: Estado de geração de certificado (PDF) para feedback no botão.
+   * en-US: Certificate (PDF) generation state for button feedback.
+   */
+  const [generatingCert, setGeneratingCert] = useState<boolean>(false);
+  /**
+   * handleRequestCertificate
+   * pt-BR: Solicita geração do certificado (PDF) para a matrícula atual.
+   *        Faz download local do arquivo e exibe feedback.
+   * en-US: Requests certificate (PDF) generation for current enrollment.
+   *        Downloads the file and shows feedback.
+   */
+  async function handleRequestCertificate() {
+    try {
+      if (!enrollmentId) {
+        toast({ title: 'Matrícula inválida', description: 'Não foi possível identificar sua matrícula.', variant: 'destructive' } as any);
+        return;
+      }
+      setGeneratingCert(true);
+      const blob = await certificatesService.generatePdf(enrollmentId);
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = `certificado_${String(enrollmentId)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+      toast({ title: 'Certificado gerado', description: 'Download iniciado com sucesso.' });
+    } catch (err: any) {
+      toast({
+        title: 'Falha ao gerar certificado',
+        description: String(err?.message || 'Tente novamente mais tarde.'),
+        variant: 'destructive',
+      } as any);
+    } finally {
+      setGeneratingCert(false);
+    }
+  }
 
   /**
    * readActivityFromUrl effect
@@ -1843,65 +1886,104 @@ function htmlEquals(a: string, b: string): boolean {
        * en-US: Reduce paddings and gaps on mobile to avoid excessive spacing
        *        and make better use of the content area.
        */}
-      <div className="sticky top-0 z-10 bg-background text-foreground border-b px-2 py-2 md:px-3 md:py-3 grid grid-cols-1 gap-1 md:gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-        <Input
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            // Reset to first item on new search
-            selectionIntentRef.current = 'auto';
-            setCurrentIndex(0);
-          }}
-          placeholder="Buscar conteúdo do curso"
-          className="w-full md:max-w-md h-9 md:h-10"
-        />
-        {/* pt-BR: Toggle da lista de atividades no mobile */}
-        {/* en-US: Activities list toggle on mobile */}
-        <Button
-          variant="secondary"
-          size="sm"
-          className="md:hidden h-8 px-2"
-          onClick={() => setMobileSidebarOpen(true)}
-        >
-          <Folder className="h-4 w-4 mr-1" /> Atividades
-        </Button>
-        {/* Summary row */}
-        <div className="col-span-1 md:col-span-2 text-[11px] md:text-sm flex flex-wrap items-center gap-1 md:gap-2 md:justify-end">
-          {courseTotalLabel && (
-            <span className="px-2 py-[2px] rounded-full bg-muted text-muted-foreground">
-              {courseTotalLabel}
-            </span>
-          )}
-          <span className="px-2 py-[2px] rounded-full bg-muted text-muted-foreground">
-            {progressText}
-          </span>
-          {completedSummaryText && (
-            <span className="px-2 py-[2px] rounded-full bg-muted text-muted-foreground">
-              {completedSummaryText}
-            </span>
-          )}
-          {/* pt-BR: Barra percentual de progresso total do curso */}
-          {/* en-US: Total course progress percentage bar */}
-          <span className="flex items-center gap-2">
-            <div className="w-20 md:w-24 h-2 bg-muted rounded overflow-hidden">
-              <div className="h-full bg-primary" style={{ width: `${courseProgressPercent}%` }} />
-            </div>
-            <span className="text-[10px] md:text-xs">{courseProgressPercent}%</span>
-          </span>
-          {/* pt-BR: Alterna colapso de módulos inativos */}
-          {/* en-US: Toggle collapse for inactive modules */}
-          <Button title="Mostrar ou recolher atividades" variant="outline" size="sm" onClick={() => setCollapseInactiveModules((v) => !v)}>
-            {collapseInactiveModules ? (
-              <><ChevronUp className="h-3.5 w-3.5 mr-1" /> Mostrar todos</>
+      <div className="sticky top-0 z-10 bg-background text-foreground border-b px-2 py-2 md:px-3 md:py-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="hidden md:block">
+            <Input
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                selectionIntentRef.current = 'auto';
+                setCurrentIndex(0);
+              }}
+              placeholder="Buscar conteúdo do curso"
+              className="w-[280px] md:max-w-md h-10"
+            />
+          </div>
+          <div className="flex md:hidden items-center gap-2">
+            {mobileSearchOpen ? (
+              <Input
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  selectionIntentRef.current = 'auto';
+                  setCurrentIndex(0);
+                }}
+                placeholder="Buscar conteúdo do curso"
+                className="w-[60%] h-9"
+              />
             ) : (
-              <><ChevronDown className="h-3.5 w-3.5 mr-1" /> Recolher inativos</>
+              <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => setMobileSearchOpen(true)} title="Buscar">
+                <Search className="h-4 w-4" />
+              </Button>
             )}
-          </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              title={showSidebar ? 'Esconder painel lateral' : 'Mostrar painel lateral'}
+              variant="ghost"
+              size="sm"
+              className="hidden md:inline-flex h-8 w-8 p-0 items-center justify-center"
+              onClick={() => setShowSidebar((v) => !v)}
+            >
+              {showSidebar ? (<ChevronLeft className="h-3.5 w-3.5" />) : (<ChevronRight className="h-3.5 w-3.5" />)}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="md:hidden h-8 px-2 whitespace-nowrap"
+              onClick={() => setMobileSidebarOpen(true)}
+              title="Abrir atividades"
+            >
+              <Folder className="h-4 w-4 mr-1" /> Atividades
+            </Button>
+            <Button
+              size="sm"
+              className="h-8 px-2 whitespace-nowrap"
+              onClick={handleRequestCertificate}
+              disabled={generatingCert || !enrollmentId || courseProgressPercent < 100}
+              title={!enrollmentId ? 'Matrícula não identificada' : (courseProgressPercent < 100 ? 'Conclua todas as atividades para solicitar o certificado' : 'Gerar certificado em PDF')}
+            >
+              <GraduationCap className="h-3.5 w-3.5 mr-1" />
+              {generatingCert ? 'Gerando…' : 'Solicitar certificado'}
+            </Button>
+            <Button title="Mostrar ou recolher atividades" variant="outline" size="sm" className="hidden md:inline-flex" onClick={() => setCollapseInactiveModules((v) => !v)}>
+              {collapseInactiveModules ? (
+                <><ChevronUp className="h-3.5 w-3.5 mr-1" /> Mostrar todos</>
+              ) : (
+                <><ChevronDown className="h-3.5 w-3.5 mr-1" /> Recolher inativos</>
+              )}
+            </Button>
+            
+          </div>
           {progressLoading && (
             <span className="flex items-center gap-1 text-[11px] md:text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" /> sincronizando…
             </span>
           )}
+          <span className="ml-auto flex items-center gap-2 text-[11px] md:text-sm">
+           {courseTotalLabel && (
+             <span className="px-2 py-[2px] rounded-full bg-muted text-muted-foreground">
+               {courseTotalLabel}
+             </span>
+           )}
+           <span className="px-2 py-[2px] rounded-full bg-muted text-muted-foreground">
+             {progressText}
+           </span>
+           {completedSummaryText && (
+             <span className="px-2 py-[2px] rounded-full bg-muted text-muted-foreground">
+               {completedSummaryText}
+             </span>
+           )}
+           {/* pt-BR: Barra percentual de progresso total do curso */}
+           {/* en-US: Total course progress percentage bar */}
+          <span className="flex items-center gap-2">
+            <div className="w-16 md:w-24 h-1 md:h-2 bg-muted rounded overflow-hidden">
+              <div className="h-full md:bg-primary bg-secondary" style={{ width: `${courseProgressPercent}%` }} />
+            </div>
+            <span className="hidden md:inline text-[10px] md:text-xs">{courseProgressPercent}%</span>
+          </span>
+          </span>
         </div>
       </div>
 
@@ -1994,6 +2076,7 @@ function htmlEquals(a: string, b: string): boolean {
       {/* Main content: sidebar + viewer */}
       <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
         {/* Sidebar */}
+        {showSidebar && (
         <aside className="hidden md:block w-[320px] border-r overflow-y-auto p-2">
           {modules.map((m: any, mi: number) => {
             const title = m?.titulo || m?.title || m?.name || `Módulo ${mi + 1}`;
@@ -2111,6 +2194,7 @@ function htmlEquals(a: string, b: string): boolean {
             );
           })}
         </aside>
+        )}
 
         {/* Viewer */}
         {/**
@@ -2251,12 +2335,6 @@ function htmlEquals(a: string, b: string): boolean {
                       <h2 className="text-xl font-semibold break-words line-clamp-2">
                         {String(currentActivity?.titulo || currentActivity?.title || currentActivity?.name || '')}
                       </h2>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => { try { navigator.clipboard.writeText(window.location.href); } catch {} }}
-                        title="Copiar link da atividade"
-                      >Copiar link</Button>
                     </div>
                     {(() => {
                       // pt-BR: Selo "Concluído" quando a atividade atual consta em completedIds.
@@ -2394,9 +2472,6 @@ function htmlEquals(a: string, b: string): boolean {
                 <div>
                   <h3 className="text-lg font-semibold">Comentários da atividade</h3>
                   <p className="text-sm text-muted-foreground">Somente comentários aprovados são exibidos. Comentários publicados entram em moderação.</p>
-                </div>
-                <div>
-                  <Button variant="outline" size="sm" onClick={() => { try { navigator.clipboard.writeText(window.location.href); } catch {} }}>Copiar link</Button>
                 </div>
               </div>
 
