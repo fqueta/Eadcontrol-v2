@@ -10,6 +10,7 @@ import { BookOpen, Receipt, ShoppingCart, GraduationCap, UserCircle } from 'luci
 import { coursesService } from '@/services/coursesService';
 import { publicCoursesService } from '@/services/publicCoursesService';
 import { useToast } from '@/hooks/use-toast';
+import { certificatesService } from '@/services/certificatesService';
 
 /**
  * StudentArea
@@ -532,6 +533,32 @@ export default function StudentArea() {
                         <Button size="sm" variant="default" onClick={() => openCertificateInternal(e)}>Ver certificado</Button>
                         <Button size="sm" variant={disabled ? 'outline' : 'secondary'} disabled={disabled} onClick={() => openCertificateExternal(e)}>
                           {disabled ? 'Indisponível' : 'Abrir URL' }
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            try {
+                              const blob = await certificatesService.generatePdf(e.id);
+                              const objectUrl = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = objectUrl;
+                              a.download = `certificado_${String(e.id)}.pdf`;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              URL.revokeObjectURL(objectUrl);
+                              toast({ title: 'Certificado gerado', description: 'Download iniciado com sucesso.' });
+                            } catch (err: any) {
+                              toast({
+                                title: 'Falha ao gerar certificado',
+                                description: String(err?.message || 'Tente novamente mais tarde.'),
+                                variant: 'destructive',
+                              });
+                            }
+                          }}
+                        >
+                          Solicitar PDF
                         </Button>
                       </div>
                     </div>

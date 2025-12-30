@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Post;
 use App\Models\Matricula;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class CertificatesController extends Controller
 {
@@ -129,5 +130,64 @@ class CertificatesController extends Controller
                 'preferencias' => $preferencias,
             ],
         ]);
+    }
+
+    public function generatePdf(string $enrollmentId, Request $request)
+    {
+        $matricula = Matricula::find($enrollmentId);
+        if (!$matricula) {
+            return response()->json([
+                'error' => 'Matrícula não encontrada'
+            ], 404);
+        }
+
+        $post = Post::ofType('certificado')->published()->first();
+        $config = $post ? ($post->config ?? []) : [];
+
+        $studentName = (string)($matricula->cliente_nome ?? $matricula->aluno_nome ?? $matricula->nome ?? '');
+        $courseName = (string)($matricula->curso_nome ?? $matricula->nome_curso ?? '');
+        $hours = (string)($matricula->curso_carga_horaria ?? $matricula->carga_horaria ?? '');
+        $completionDate = (string)($matricula->data_conclusao ?? $matricula->conclusao_data ?? '');
+
+        $placeholders = [
+            'studentName' => $studentName,
+            'courseName' => $courseName,
+            'hours' => $hours,
+            'completionDate' => $completionDate,
+        ];
+
+        $title = (string)($config['title'] ?? 'Certificado de Conclusão');
+        $body = (string)($config['body'] ?? 'Certificamos que {studentName} concluiu o curso {courseName}.');
+        $footerLeft = (string)($config['footerLeft'] ?? 'Coordenador');
+        $footerRight = (string)($config['footerRight'] ?? 'Diretor');
+        $bgUrl = (string)($config['bgUrl'] ?? '');
+        $accentColor = (string)($config['accentColor'] ?? '#111827');
+
+        $bodyResolved = preg_replace_callback('/\{(.*?)\}/', function ($m) use ($placeholders) {
+            $key = $m[1] ?? '';
+            return $placeholders[$key] ?? $m[0];
+        }, $body);
+
+        $validationUrl = url('/certificado/validar/' . urlencode($matricula->id));
+
+        $html = view('certificates.pdf', [
+            'title' => $title,
+            'body' => $bodyResolved,
+            'footerLeft' => $footerLeft,
+            'footerRight' => $footerRight,
+            'bgUrl' => $bgUrl,
+            'accentColor' => $accentColor,
+            'validationUrl' => $validationUrl,
+        ])->render();
+
+        $paper = $request->input('paper', 'A4');
+        $orientation = $request->input('orientation', 'portrait');
+
+        Pdf::setOptions(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true]);
+        $pdf = Pdf::loadHTML($html);
+        $pdf->setPaper($paper, $orientation);
+
+        $filename = 'certificado_' . $matricula->id . '.pdf';
+        return $pdf->download($filename);
     }
 }

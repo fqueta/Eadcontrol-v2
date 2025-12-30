@@ -2,6 +2,7 @@ import { useMemo, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { coursesService } from '@/services/coursesService';
 import { publicCoursesService } from '@/services/publicCoursesService';
 import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
@@ -148,6 +149,32 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
     const arr = c?.modulos || c?.modules || [];
     return Array.isArray(arr) ? arr : [];
   }, [course]);
+  const toSeconds = (val: any, unit: string) => {
+    const v = Number(val || 0);
+    const u = String(unit || '').toLowerCase();
+    if (!v) return 0;
+    if (u.includes('seg')) return v;
+    if (u.includes('min')) return v * 60;
+    if (u.includes('h')) return v * 3600;
+    return v;
+  };
+  const formatDuration = (seconds: number) => {
+    const s = Math.max(0, Math.floor(seconds));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(h)}:${pad(m)}:${pad(ss)}`;
+  };
+  const courseTotalLabel = useMemo(() => {
+    const total = modules.reduce((acc, m) => {
+      const acts: any[] = Array.isArray(m?.atividades || m?.activities) ? (m?.atividades || m?.activities) : [];
+      const sumActs = acts.reduce((a, b) => a + toSeconds(b?.duracao ?? b?.duration, String(b?.unidade_duracao ?? b?.type_duration)), 0);
+      if (sumActs > 0) return acc + sumActs;
+      return acc + toSeconds(m?.duration ?? 0, String(m?.tipo_duracao ?? '').toLowerCase());
+    }, 0);
+    return total ? `Total ${formatDuration(total)}` : '';
+  }, [modules]);
 
   /**
    * ActivityComments
@@ -678,11 +705,20 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
        * en-US: Reduce paddings and spacing on mobile to open up more visible
        *        area for the activity viewer.
        */}
-      <div className="container mx-auto p-2 md:p-4 space-y-4 md:space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>{isLoading ? 'Carregando...' : title}</CardTitle>
-            <CardDescription>Área do aluno • Conteúdos do curso</CardDescription>
+      <div className="container mx-auto p-2 md:p-4 space-y-2 md:space-y-6">
+        <Card className="border-0 shadow-none md:border md:shadow-sm md:rounded-lg">
+          <CardHeader className="py-2 md:py-4">
+            <div className="flex items-start justify-between gap-2 md:gap-3">
+              <div className="min-w-0">
+                <CardTitle className="text-lg md:text-2xl leading-tight break-words line-clamp-2">{isLoading ? 'Carregando...' : title}</CardTitle>
+                <CardDescription className="hidden md:block">Área do aluno • Conteúdos do curso</CardDescription>
+              </div>
+              <div className="hidden md:flex items-center gap-2">
+                {courseTotalLabel && (
+                  <Badge variant="outline" className="shrink-0">{courseTotalLabel}</Badge>
+                )}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {error && <div className="text-red-600">Falha ao carregar o curso.</div>}
