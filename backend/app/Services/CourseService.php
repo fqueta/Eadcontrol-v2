@@ -152,11 +152,11 @@ class CourseService
 
             foreach ($activitiesPayload as $act) {
                 if (!is_array($act)) { continue; }
-                $activityExternalId = isset($act['id']) && is_numeric($act['id']) ? (int) $act['id'] : null;
-                if(!$activityExternalId){
-                     $activityExternalId = isset($act['id_antigo']) && is_numeric($act['id_antigo']) ? (int) $act['activity_id'] : null;
-                }
-
+                // $activityExternalId = isset($act['id']) && is_numeric($act['id']) ? (int) $act['id'] : null;
+                // if(!$activityExternalId){
+                    $activityExternalId = $act['id_antigo'] ?? null;
+                // }
+                
                 // Lookup existing Activity
                 $existingActivity = null;
                 if ($activityExternalId) {
@@ -166,15 +166,15 @@ class CourseService
                         ->first();
                 }
                 $localActivityId = $existingActivity ? $existingActivity->ID : null;
-
+                
                 $actTitle = is_string($act['title'] ?? '') ? ($act['title'] ?? '') : ($act['name'] ?? '');
                 if (is_array($actTitle)) $actTitle = json_encode($actTitle);
-
+                
                 $actDesc = is_string($act['description'] ?? '') ? ($act['description'] ?? '') : '';
                 if (is_array($actDesc)) $actDesc = '';
-
+                
                 $actContent = is_string($act['content'] ?? '') ? ($act['content'] ?? '') : json_encode($act['content'] ?? '');
-
+                
                 $mappedActivity = [
                     'post_title' => $actTitle,
                     'post_excerpt' => $actDesc,
@@ -198,6 +198,7 @@ class CourseService
                     'excluido' => 'n',
                     'deletado' => 'n',
                 ];
+                // dd($mappedActivity);
 
                 $actNameBase = $act['name'] ?? $act['title'] ?? '';
                 if(is_array($actNameBase)) $actNameBase = $actTitle;
@@ -215,7 +216,6 @@ class CourseService
 
                 $activitiesResult[] = array_merge($act, [ 'id' => $activityId ]);
             }
-
             // Save Template in Module Config
             try {
                 $template = $this->buildActivityTemplate($activitiesPayload);
