@@ -134,6 +134,8 @@ export default function SystemSettings() {
     backupRetention: "",
     url_api_aeroclube: "",
     token_api_aeroclube: "",
+    import_users_url: "", // New state for import URL
+    import_type: "users", // New state for import type
   });
 
   /**
@@ -674,6 +676,39 @@ export default function SystemSettings() {
   };
 
   /**
+   * Handle Import Users from URL
+   */
+  /**
+   * Handle Import Users from URL
+   */
+  const handleImportUsers = async () => {
+    const url = advancedInputSettings.import_users_url;
+    const type = advancedInputSettings.import_type || 'users';
+
+    if (!url) {
+      toast.error('Por favor, informe a URL de importação.');
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+        const result = await systemSettingsService.importUsers(url, type);
+        
+        if (result.success) {
+            toast.success(result.message || 'Importação realizada com sucesso!');
+        } else {
+            toast.error(result.message || 'Erro na importação.');
+        }
+
+    } catch (error: any) {
+        console.error('Import exception:', error);
+        toast.error(`Erro ao importar: ${error.message || 'Erro desconhecido'}`);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  /**
    * Carrega as configurações avançadas da API
    */
   const loadAdvancedSettings = async () => {
@@ -691,6 +726,8 @@ export default function SystemSettings() {
         backupRetention: data.backupRetention || "",
         url_api_aeroclube: data.url_api_aeroclube || "",
         token_api_aeroclube: data.token_api_aeroclube || "",
+        import_users_url: "", // Not saved in backend settings typically, reset to empty
+        import_type: "users",
       });
       
       // Também atualiza as outras configurações se necessário
@@ -1430,6 +1467,56 @@ export default function SystemSettings() {
                 />
               </div>
               
+            </CardContent>
+          </Card>
+
+           {/* Card de Importação de Usuários */}
+           <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Settings className="h-5 w-5" />
+                <span>Importação de Usuários em Massa</span>
+              </CardTitle>
+              <CardDescription>
+                Importe usuários de uma URL externa (formato Eduma/WP).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                 <div className="md:col-span-1 space-y-2">
+                    <Label htmlFor="import_type">Tipo de Importação</Label>
+                    <Select
+                        value={advancedInputSettings.import_type}
+                        onValueChange={(val) => handleAdvancedInputChange('import_type', val)}
+                    >
+                        <SelectTrigger id="import_type">
+                            <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="users">Usuários (Users)</SelectItem>
+                            <SelectItem value="courses">Cursos (Courses)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                 </div>
+                 <div className="md:col-span-3 space-y-2">
+                    <Label htmlFor="import_users_url">URL do JSON</Label>
+                    <div className="flex gap-2">
+                        <Input
+                        id="import_users_url"
+                        value={advancedInputSettings.import_users_url}
+                        onChange={(e) => handleAdvancedInputChange('import_users_url', e.target.value)}
+                        placeholder="https://exemplo.com/wp-json/..."
+                        className="flex-1"
+                        />
+                        <Button onClick={handleImportUsers} disabled={isLoading}>
+                            {isLoading ? 'Importando...' : 'Importar Agora'}
+                        </Button>
+                    </div>
+                 </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Selecione o tipo de entidade (Usuários ou Cursos) e forneça a URL correspondente.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>

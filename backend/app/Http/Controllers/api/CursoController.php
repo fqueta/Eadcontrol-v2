@@ -625,7 +625,6 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
     private function upsertModulesAndActivities(array $modulesPayload, Curso $curso, string $authorId): array
     {
         $result = [];
-
         foreach ($modulesPayload as $mod) {
             if (!is_array($mod)) { continue; }
             $moduleId = isset($mod['module_id']) && is_numeric($mod['module_id']) ? (int) $mod['module_id'] : null;

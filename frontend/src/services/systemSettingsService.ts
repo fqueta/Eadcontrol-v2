@@ -49,7 +49,17 @@ class SystemSettingsService extends BaseApiService {
     const response = await this.get<ApiResponse<AdvancedSystemSettings>>(endpoint || this.endpoint);
     return response.data;
   }
+
+  /**
+   * Import users from an external URL
+   * @param url - External URL to fetch users from
+   * @param type - Type of entity to import (users, courses, etc)
+   */
+  async importUsers(url: string, type: string = 'users'): Promise<ApiResponse<any>> {
+    return this.post<ApiResponse<any>>('/users/import', { url, type });
+  }
 }
+
 
 // Instância singleton do serviço
 export const systemSettingsService = new SystemSettingsService();

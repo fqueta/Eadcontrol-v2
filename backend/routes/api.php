@@ -97,6 +97,7 @@ Route::name('api.')->prefix('v1')->middleware([
 
     
     Route::middleware(['auth:sanctum','auth.active'])->group(function () {
+        Route::post('users/import', [\App\Http\Controllers\api\UserImportController::class, 'import'])->name('users.import');
         Route::get('user',[UserController::class,'perfil'])->name('perfil.user');
         Route::get('user/can',[UserController::class,'can_access'])->name('perfil.can');
         Route::post('/logout',[AuthController::class,'logout'])->name('logout');
