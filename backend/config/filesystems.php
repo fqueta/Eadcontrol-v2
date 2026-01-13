@@ -47,6 +47,15 @@ return [
             'report' => false,
         ],
 
+        'central' => [
+            'driver' => 'local',
+            'root' => base_path('storage/app/public'), // Force global path, ignoring tenant context
+            'url' => env('APP_URL').'/storage', // This assumes APP_URL points to the domain serving the storage link
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

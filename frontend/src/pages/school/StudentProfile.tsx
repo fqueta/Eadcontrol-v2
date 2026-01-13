@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
+import { getTenantApiUrl } from '@/lib/qlib';
 
 const profileSchema = z.object({
   name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
@@ -29,7 +30,7 @@ export default function StudentProfile() {
 
   const email = useMemo(() => (user as any)?.email || (user as any)?.mail || '', [user]);
   const clientId = useMemo(() => (user as any)?.id_cliente || (user as any)?.client_id || (user as any)?.cliente_id || '', [user]);
-  const userPhoto = (user as any)?.foto_perfil ? `${(import.meta.env.VITE_TENANT_API_URL || '').replace('/api', '')}/storage/${(user as any).foto_perfil}` : undefined;
+  const userPhoto = (user as any)?.foto_perfil ? `${getTenantApiUrl().replace('/api', '')}/storage/${(user as any).foto_perfil}` : undefined;
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),

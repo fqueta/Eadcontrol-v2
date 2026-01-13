@@ -298,8 +298,8 @@ class UserController extends Controller
             $file = $request->file('foto_perfil');
             // Using Qlib::uploadDocumento as per project pattern, or fallback to simple storage
             // Providing a direct storage implementation here for reliability:
-            // Store specifically on the 'public' disk so it's accessible via the symlink
-            $path = $file->store('uploads/users/' . $authUser->id, 'public');
+            // Store specifically on the 'central' disk so it's accessible via the global symlink
+            $path = $file->store('uploads/users/' . $authUser->id, 'central');
             
             // The path returned is already relative to the public disk root (e.g., uploads/users/...)
             $data['foto_perfil'] = $path;
