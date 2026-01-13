@@ -20,7 +20,7 @@ class CreatePermissionTables extends Migration
             // $table->json('id_menu')->nullable();
             $table->string('redirect_login')->nullable();
             $table->json('config')->nullable();
-            $table->longText('description')->nullable()->default('text');
+            $table->longText('description')->nullable();
             $table->string('guard_name')->nullable()->default('web'); // For MySQL 8.0 use string('guard_name', 125);
             $table->timestamps();
             $table->enum('active',['s','n']);

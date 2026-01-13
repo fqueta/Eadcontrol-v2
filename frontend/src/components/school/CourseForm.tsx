@@ -17,7 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { coursesService } from '@/services/coursesService';
 import { fileStorageService, type FileStorageItem } from '@/services/fileStorageService';
 import MediaLibraryModal from '@/components/media/MediaLibraryModal';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { aircraftSettingsService } from '@/services/aircraftSettingsService';
 import { CoursePayload, CourseRecord, CourseModule } from '@/types/courses';
 import { modulesService } from '@/services/modulesService';
@@ -66,6 +66,7 @@ export function CourseForm({
    */
   const [autoSlugEnabled, setAutoSlugEnabled] = useState<boolean>(true);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   /**
    * mediaOpen
    * pt-BR: Controla a abertura do modal da biblioteca de mídia para escolher imagem de capa.
@@ -157,9 +158,11 @@ export function CourseForm({
     try {
       if ((initialData as any)?.id) {
         await coursesService.updateCourse(String((initialData as any).id), normalized);
+        queryClient.invalidateQueries({ queryKey: ['courses', 'detail', String((initialData as any).id)] });
       } else {
         await coursesService.createCourse(normalized);
       }
+      queryClient.invalidateQueries({ queryKey: ['courses', 'list'] });
       toast({ title: 'Salvo', description: 'Curso salvo. Você permanece na página.' });
     } catch (e: any) {
       applyServerErrors(e);
@@ -180,9 +183,11 @@ export function CourseForm({
     try {
       if ((initialData as any)?.id) {
         await coursesService.updateCourse(String((initialData as any).id), normalized);
+        queryClient.invalidateQueries({ queryKey: ['courses', 'detail', String((initialData as any).id)] });
       } else {
         await coursesService.createCourse(normalized);
       }
+      queryClient.invalidateQueries({ queryKey: ['courses', 'list'] });
       navigate('/admin/school/courses');
     } catch (e: any) {
       applyServerErrors(e);

@@ -1,0 +1,12 @@
+node_modules
+vendor
+.git
+.env
+.idea
+.vscode
+storage/*.key
+storage/logs/*
+public/build
+public/hot
+
+bootstrap/cache/*.php

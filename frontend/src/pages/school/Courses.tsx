@@ -65,7 +65,7 @@ export default function Courses() {
    * en-US: Fetches courses with pagination, search via service.
    */
   const listQuery = useQuery({
-    queryKey: ['cursos', 'list', perPage, debouncedSearch, page],
+    queryKey: ['courses', 'list', perPage, debouncedSearch, page],
     queryFn: async (): Promise<PaginatedResponse<CourseRecord>> => {
       const params: any = { page, per_page: perPage };
       if (debouncedSearch?.trim()) params.search = debouncedSearch.trim();
@@ -84,7 +84,7 @@ export default function Courses() {
     mutationFn: async (id: string | number) => coursesService.deleteCourse(id),
     onSuccess: () => {
       toast({ title: 'Curso excluído', description: 'Registro removido.' });
-      queryClient.invalidateQueries({ queryKey: ['cursos', 'list'] });
+      queryClient.invalidateQueries({ queryKey: ['courses', 'list'] });
     },
     onError: (err: any) => {
       toast({ title: 'Erro ao excluir', description: String(err?.message ?? 'Falha ao excluir curso'), variant: 'destructive' });
@@ -122,18 +122,13 @@ export default function Courses() {
    * en-US: Converts 's'/'n' to human readable label.
    */
   const resolveSimNao = (v?: string) => (v === 's' ? 'Sim' : 'Não');
-
-  // --- UI helpers para módulos ---
-  const addModule = () => {
-    const current = form.getValues('modulos') ?? [];
-    const next: CourseModule = { etapa: 'etapa1', titulo: '', limite: '1', valor: '' };
-    form.setValue('modulos', [...current, next]);
-  };
+  // --- UI helpers ---
   const resolveCoverUrl = (c: CourseRecord) => {
     const cover = String((c?.config?.cover?.url || '').trim());
     if (cover) return cover;
     return '/placeholder.svg';
   };
+
   /**
    * resolveCoverTitle
    * pt-BR: Título/alt da imagem da capa do curso com leitura segura.
@@ -150,11 +145,7 @@ export default function Courses() {
     if (t2) return t2;
     return `Curso ${String((c as any)?.id ?? '').trim() || '-'}`;
   };
-  const removeModule = (index: number) => {
-    const current = [...(form.getValues('modulos') ?? [])];
-    current.splice(index, 1);
-    form.setValue('modulos', current);
-  };
+
 
   return (
     <div className="space-y-6">

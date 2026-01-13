@@ -1,0 +1,22 @@
+version: '3'
+
+server:
+  command: "php artisan vendor/bin/roadrunner-worker"
+  relay: pipes
+
+http:
+  address: "0.0.0.0:8000"
+  middleware: ["static", "gzip"]
+  static:
+    dir: "public"
+    forbid: [".php", ".htaccess"]
+  pool:
+    num_workers: 12 # Set to CPU core count
+    max_jobs: 500
+    allocate_timeout: 60s
+    destroy_timeout: 60s
+
+logs:
+  mode: production
+  level: error
+  output: stdout
