@@ -194,13 +194,16 @@ class AuthService {
       body = JSON.stringify(data);
     }
 
-    const response = await fetch(`${API_BASE_URL}/user/profile`, {
-      method: 'PUT',
+    const response = await fetch(`${API_BASE_URL}/user/update-profile`, {
+      method: 'POST',
       headers,
       body,
     });
 
-    const updatedUser = await this.handleResponse<User>(response);
+    const responsePayload = await this.handleResponse<{ message?: string; user: User }>(response);
+    
+    // Extract user from response wrapper
+    const updatedUser = responsePayload.user;
     
     // Atualiza o usuário no localStorage
     localStorage.setItem('auth_user', JSON.stringify(updatedUser));

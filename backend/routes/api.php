@@ -270,6 +270,10 @@ Route::name('api.')->prefix('v1')->middleware([
         // Resumo único do dashboard (payload consolidado)
         Route::get('dashboard/summary', [DashboardChartController::class, 'summary'])
             ->name('dashboard.summary');
+            
+        // Rota para atualização de perfil
+        Route::post('user/update-profile', [UserController::class, 'updateProfile'])->name('user.update-profile');
+
         Route::get('dashboard/charts/interested-monthly', [DashboardChartController::class, 'interestedMonthly'])
             ->name('dashboard.charts.interested-monthly');
         Route::get('dashboard/charts/enrolled-monthly', [DashboardChartController::class, 'enrolledMonthly'])

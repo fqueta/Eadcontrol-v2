@@ -13,6 +13,7 @@ services:
       APP_KEY: ${APP_KEY}
       APP_DEBUG: 'false'
       APP_URL: ${APP_URL}
+      VITE_TENANT_API_URL: ${VITE_TENANT_API_URL}
       OCTANE_SERVER: roadrunner
       DB_CONNECTION: mysql
       DB_HOST: mysql
@@ -34,18 +35,27 @@ services:
       redis:
         condition: service_healthy
     deploy:
-      replicas: 3 # Simulating 3 App Nodes
+      replicas: 1
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    restart: always
+    networks:
+      - octane-net
 
   nginx:
     image: nginx:alpine
     ports:
-      - "8081:80"
+      - "80:80"
     volumes:
       - ./deployment/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
       - octane-net
     depends_on:
       - app
+      - frontend
 
   mysql:
     image: mysql:8.0

@@ -274,9 +274,10 @@ class UserController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'name'     => 'sometimes|required|string|max:255',
-            'email'    => ['sometimes','required','email', Rule::unique('users','email')->ignore($authUser->id)],
-            'password' => 'nullable|string|min:6',
+            'name'        => 'sometimes|required|string|max:255',
+            'email'       => ['sometimes','required','email', Rule::unique('users','email')->ignore($authUser->id)],
+            'password'    => 'nullable|string|min:6',
+            'foto_perfil' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         if ($validator->fails()) {
@@ -284,16 +285,33 @@ class UserController extends Controller
         }
 
         $data = $validator->validated();
+        
+        // Handle Password
         if (isset($data['password']) && $data['password']) {
             $data['password'] = Hash::make($data['password']);
         } else {
             unset($data['password']);
         }
 
+        // Handle Photo Upload
+        if ($request->hasFile('foto_perfil')) {
+            $file = $request->file('foto_perfil');
+            // Using Qlib::uploadDocumento as per project pattern, or fallback to simple storage
+            // Providing a direct storage implementation here for reliability:
+            // Store specifically on the 'public' disk so it's accessible via the symlink
+            $path = $file->store('uploads/users/' . $authUser->id, 'public');
+            
+            // The path returned is already relative to the public disk root (e.g., uploads/users/...)
+            $data['foto_perfil'] = $path;
+        }
+
         $authUser->fill($data);
         $authUser->save();
 
-        return response()->json($authUser);
+        return response()->json([
+            'message' => 'Perfil atualizado com sucesso!',
+            'user' => $authUser
+        ]);
     }
 
     /**
