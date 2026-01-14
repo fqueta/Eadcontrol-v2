@@ -77,6 +77,8 @@ return [
         '/^https:\\/\\/.*\\.eadcontrol\\.com\\.br$/',
         // Allow localhost with any port
         '/^http:\\/\\/localhost:.*$/',
+        // Allow any subdomain of incluireeducar.com.br (prod)
+        '/^https:\\/\\/.*\\.incluireeducar\\.com\\.br$/',
     ],
 
     /*
