@@ -16,7 +16,7 @@ Este guia descreve como colocar a aplicação **Eadcontrol-v2** em produção ut
 Certifique-se de que os seguintes arquivos foram criados/atualizados (já fiz isso para você):
 
 -   `frontend/Dockerfile`: Configuração para buildar o frontend.
--   `backend/docker-compose.prod.yml`: Orquestração dos serviços.
+-   `docker-compose.production.yml`: Orquestração dos serviços (na raiz do projeto).
 -   `backend/deployment/nginx/nginx.conf`: Roteamento de tráfego.
 
 ---
@@ -30,18 +30,16 @@ O método mais fácil no Portainer é conectar o repositório Git.
 3.  Escolha **Repository**.
 4.  **Repository URL**: Coloque a URL do seu Git (ex: `https://github.com/seu-usuario/Eadcontrol-v2`).
 5.  **Repository reference**: `refs/heads/main` (ou sua branch de produção).
-6.  **Compose path**: `backend/docker-compose.prod.yml`
-    -   *Nota*: O arquivo está dentro da pasta backend.
+6.  **Compose path**: `docker-compose.production.yml`
+    -   *Nota*: O arquivo está na raiz do projeto.
 7.  **Environment variables**: Adicione as variáveis do seu `.env`. Copie o conteúdo do `.env` de produção e cole aqui.
     -   Certifique-se de ajustar `APP_URL`, `VITE_TENANT_API_URL`, `DB_PASSWORD`, etc.
 8.  Clique em **Deploy the stack**.
 
 O Portainer irá clonar o repositório, buildar as imagens (pode demorar alguns minutos na primeira vez) e subir os serviços.
 
-### Ajuste de Caminhos (Importante)
-Se o Portainer reclamar do caminho `../frontend` no build, pode ser necessário mover o `backend/docker-compose.prod.yml` para a **raiz do projeto** (`/`) no seu repositório Git e ajustar os caminhos:
--   `context: ../frontend` vira `context: ./frontend`
--   `context: .` (backend) vira `context: ./backend`
+### Ajuste de Caminhos
+Como o arquivo `docker-compose.production.yml` está na raiz, os caminhos já devem estar corretos (`./backend`, `./frontend`). Se precisar mover, ajuste os `context` no arquivo.
 
 ---
 
@@ -52,7 +50,7 @@ O EasyPanel também funciona muito bem com Docker Compose.
 1.  Crie um **novo Projeto**.
 2.  Adicione um **Service** do tipo **App** (ou Custom Docker Compose se disponível).
 3.  Conecte seu **GitHub/GitLab**.
-4.  No campo **Docker Compose**, especifique o caminho: `backend/docker-compose.prod.yml`.
+4.  No campo **Docker Compose**, especifique o caminho: `docker-compose.production.yml`.
 5.  Em **Environment**, cole suas variáveis de ambiente (`.env`).
 6.  Faça o deploy.
 
@@ -65,14 +63,14 @@ Se quiser rodar na mão via terminal:
 1.  Clone o repositório:
     ```bash
     git clone https://github.com/seu-usuario/Eadcontrol-v2.git
-    cd Eadcontrol-v2/backend
+    cd Eadcontrol-v2
     ```
 
 2.  Crie o arquivo `.env` com as configurações de produção.
 
 3.  Rode o build e suba:
     ```bash
-    docker compose -f docker-compose.prod.yml up -d --build
+    docker compose -f docker-compose.production.yml up -d --build
     ```
 
 ---
