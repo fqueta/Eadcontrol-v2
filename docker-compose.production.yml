@@ -133,6 +133,24 @@ services:
       retries: 3
     restart: always
 
+  # -----------------------------------------------------------------------------
+  # Database Management (phpMyAdmin)
+  # -----------------------------------------------------------------------------
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: app_pma
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: ${DB_USERNAME}
+      PMA_PASSWORD: ${DB_PASSWORD}
+      UPLOAD_LIMIT: 64M
+    networks:
+      - app_network
+    depends_on:
+      - db
+
 # -----------------------------------------------------------------------------
 # Networks & Volumes
 # -----------------------------------------------------------------------------
