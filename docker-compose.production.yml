@@ -91,6 +91,7 @@ services:
     networks:
       - app_network
     restart: always
+    command: tail -f /dev/null
 
   # -----------------------------------------------------------------------------
   # Database (MySQL)
