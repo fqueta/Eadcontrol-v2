@@ -300,8 +300,32 @@ class AuthController extends Controller
         $success = (bool) ($data['success'] ?? false);
         $score = (float) ($data['score'] ?? 0.0);
         $actionResp = (string) ($data['action'] ?? '');
-        if (!$success) return false;
-        if ($actionResp && $actionResp !== $expectedAction) return false;
-        return $score >= $minScore;
+        
+        if (!$success) {
+            // DEBUG: Retornando erro detalhado para o frontend
+            abort(response()->json([
+                'message' => 'CAPTCHA Failed (Google Request)',
+                'debug' => $data,
+                'errors' => ['captcha_token' => ['Invalid CAPTCHA token']]
+            ], 422));
+        }
+        
+        if ($actionResp && $actionResp !== $expectedAction) {
+             abort(response()->json([
+                'message' => 'CAPTCHA Action Mismatch',
+                'debug' => $data,
+                 'errors' => ['captcha_token' => ['Action mismatch']]
+            ], 422));
+        }
+
+        if ($score < $minScore) {
+             abort(response()->json([
+                'message' => 'CAPTCHA Low Score',
+                'debug' => $data,
+                'errors' => ['captcha_token' => ['Low score']]
+            ], 422));
+        }
+
+        return true;
     }
 }
