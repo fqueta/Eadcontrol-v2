@@ -16,7 +16,7 @@ services:
       # Uncomment below to mount SSL certificates
       # - ./backend/deployment/certs:/etc/nginx/certs:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /home/eadcontrol/Eadcontrol-v2/certbot-var:/var/www/certbot
+      - ./certbot-var:/var/www/certbot
     depends_on:
       - backend
       - frontend
