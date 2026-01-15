@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -286,6 +287,11 @@ class AuthController extends Controller
             'secret' => $secret,
             'response' => $token,
             'remoteip' => $request->ip(),
+        ]);
+
+        Log::info('Recaptcha Check', [
+            'ip' => $request->ip(),
+            'response' => $resp->json(),
         ]);
         if (!$resp->ok()) {
             return false;
