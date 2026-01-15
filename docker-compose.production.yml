@@ -85,6 +85,8 @@ services:
     volumes:
       # Persist Storage (Uploads)
       - storage_public:/var/www/html/storage/app/public
+      # Mount Code for live updates
+      - ./backend:/var/www/html
     depends_on:
       db:
         condition: service_healthy
