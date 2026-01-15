@@ -53,7 +53,6 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
-        // dd($user);
         // Impede login de usuário inativo (ativo != 's')
         if (($user->ativo ?? null) !== 's') {
             return response()->json(['error' => 'Usuário inativo'], 405);
