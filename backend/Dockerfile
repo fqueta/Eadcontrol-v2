@@ -58,7 +58,7 @@ COPY --from=vendor /app/vendor ./vendor
 COPY . .
 
 # Copy Production RoadRunner Config
-COPY deployment/octane/rr.yaml .rr.yaml
+COPY deployment/octane/rr.yaml .rr.production.yaml
 
 # Create directory for RoadRunner binary and ensure permissions
 RUN mkdir -p storage/logs \
@@ -75,4 +75,4 @@ RUN chmod +x /usr/local/bin/rr
 EXPOSE 8000
 
 # Run Octane
-CMD ["/usr/local/bin/rr", "serve", "-c", ".rr.yaml"]
+CMD ["/usr/local/bin/rr", "serve", "-c", ".rr.production.yaml"]
