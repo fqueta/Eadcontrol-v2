@@ -1407,8 +1407,29 @@ function htmlEquals(a: string, b: string): boolean {
       };
     }
 
-    // pt-BR: Sem flush global — salvamento apenas em eventos de pausa.
-    // en-US: No global flush — save only on pause events.
+    // pt-BR: Salvamento periódico em reprodução usando throttle interno.
+    // en-US: Periodic saving during playback using internal throttle.
+    {
+      const periodicTickMs = 1000;
+      let periodicId: any = null;
+      const startPeriodic = () => {
+        if (periodicId) return;
+        periodicId = setInterval(() => {
+          if (destroyed) { clearInterval(periodicId); periodicId = null; return; }
+          try {
+            if (!startedPlaybackRef.current) return;
+            const t = Number(getCurrentTimeRef.current?.() || 0) || 0;
+            if (t > 0) persistPosition(t, false);
+          } catch {}
+        }, periodicTickMs);
+      };
+      startPeriodic();
+      const prevCleanup = playerCleanupRef.current;
+      playerCleanupRef.current = () => {
+        if (periodicId) { clearInterval(periodicId); periodicId = null; }
+        try { prevCleanup?.(); } catch {}
+      };
+    }
 
     return () => { destroyed = true; playerCleanupRef.current?.(); };
   }, [currentActivity, course, modules]);
@@ -1858,13 +1879,10 @@ function htmlEquals(a: string, b: string): boolean {
         const a: any = filteredActivities[i];
         const id = a?.id ?? a?.activity_id ?? `${a?._moduleIndex}-${a?._activityIndex}`;
         const sid = String(id);
-        const pmItem = progressMap[sid];
-        const isCompleted = pmItem ? Boolean(pmItem.completed) : completedIds.has(sid);
+        const isCompleted = completedIds.has(sid);
         if (!isCompleted) {
           selectionIntentRef.current = 'user';
           setCurrentIndex(i);
-          console.log('proxima',i);
-          
           return;
         }
       }

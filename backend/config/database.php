@@ -57,6 +57,15 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
+            'sticky' => true,
+            'read' => [
+                'host' => env('DB_READ_HOST', env('DB_HOST', '127.0.0.1')),
+                'port' => env('DB_READ_PORT', env('DB_PORT', '3306')),
+            ],
+            'write' => [
+                'host' => env('DB_WRITE_HOST', env('DB_HOST', '127.0.0.1')),
+                'port' => env('DB_WRITE_PORT', env('DB_PORT', '3306')),
+            ],
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
@@ -73,6 +82,15 @@ return [
             'prefix' => '',
             'strict' => true,
             'engine' => null,
+            'sticky' => true,
+            'read' => [
+                'host' => env('DB_READ_HOST', env('DB_HOST', '127.0.0.1')),
+                'port' => env('DB_READ_PORT', env('DB_PORT', '3306')),
+            ],
+            'write' => [
+                'host' => env('DB_WRITE_HOST', env('DB_HOST', '127.0.0.1')),
+                'port' => env('DB_WRITE_PORT', env('DB_PORT', '3306')),
+            ],
         ],
 
         'mariadb' => [

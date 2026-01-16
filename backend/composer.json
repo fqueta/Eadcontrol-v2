@@ -21,6 +21,7 @@
         "laravel/tinker": "^2.10.1",
         "laravel/ui": "^4.0",
         "maatwebsite/excel": "^3.1",
+        "predis/predis": "^2.0",
         "seyyedam7/laravel-html-parser": "^2.2",
         "spiral/roadrunner-cli": "^2.7",
         "spiral/roadrunner-http": "^3.6",

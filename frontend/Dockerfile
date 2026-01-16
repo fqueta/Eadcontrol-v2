@@ -6,6 +6,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
+ARG VITE_TENANT_API_URL
+ENV VITE_TENANT_API_URL=${VITE_TENANT_API_URL}
+
 COPY . .
 RUN npm run build
 

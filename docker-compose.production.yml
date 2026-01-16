@@ -32,6 +32,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_TENANT_API_URL=${VITE_TENANT_API_URL}
     # Expose only to the internal network (Gateway accesses it)
     expose:
       - "80"
@@ -76,12 +78,20 @@ services:
       QUEUE_CONNECTION: redis
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_CLIENT: ${REDIS_CLIENT:-phpredis}
+      REDIS_PERSISTENT: ${REDIS_PERSISTENT:-true}
       
       # Octane
       OCTANE_SERVER: roadrunner
       
       # Filesystem (Crucial for Storage)
       FILESYSTEM_DISK: public
+      # Frontend/API URLs e cookies
+      APP_URL: ${APP_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
+      SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS}
+      SESSION_DOMAIN: ${SESSION_DOMAIN}
+      RECAPTCHA_SECRET: ${RECAPTCHA_SECRET}
     volumes:
       # Persist Storage (Uploads)
       - storage_public:/var/www/html/storage/app/public
@@ -113,6 +123,7 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
+      - ./backend/deployment/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
     networks:
       - app_network
     healthcheck:
@@ -122,6 +133,33 @@ services:
       retries: 3
     restart: always
 
+#  # -----------------------------------------------------------------------------
+#  # Read Replica (MySQL) - opcional
+#  # -----------------------------------------------------------------------------
+#  # Descomente e configure para habilitar replicação assíncrona
+#  # db_replica:
+#  #   image: mysql:8.0
+#  #   container_name: app_db_replica
+#  #   environment:
+#  #     MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+#  #   volumes:
+#  #     - db_replica_data:/var/lib/mysql
+#  #   networks:
+#  #     - app_network
+#  #   restart: always
+#
+#  # -----------------------------------------------------------------------------
+#  # ProxySQL/MySQL Router - opcional
+#  # -----------------------------------------------------------------------------
+#  # proxysql:
+#  #   image: proxysql/proxysql
+#  #   container_name: app_proxysql
+#  #   ports:
+#  #     - "6032:6032" # admin
+#  #     - "6033:6033" # mysql clients
+#  #   networks:
+#  #     - app_network
+#  #   restart: always
   # -----------------------------------------------------------------------------
   # Cache/Queue (Redis)
   # -----------------------------------------------------------------------------
@@ -157,6 +195,20 @@ services:
     depends_on:
       - db
 
+#  # -----------------------------------------------------------------------------
+#  # Backup (Cron) - opcional
+#  # -----------------------------------------------------------------------------
+#  # backup:
+#  #   image: alpine:latest
+#  #   container_name: app_backup
+#  #   volumes:
+#  #     - ./backend/deployment/backup:/backup:ro
+#  #     - db_data:/var/lib/mysql:ro
+#  #     - ./backups:/backups
+#  #   entrypoint: [\"/bin/sh\",\"/backup/run.sh\"]
+#  #   networks:
+#  #     - app_network
+#  #   restart: always
 # -----------------------------------------------------------------------------
 # Networks & Volumes
 # -----------------------------------------------------------------------------
@@ -168,3 +220,4 @@ volumes:
   db_data:
   redis_data:
   storage_public: # Named volume for persistent user uploads
+  # db_replica_data:
