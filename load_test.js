@@ -15,8 +15,13 @@ export const options = {
 };
 
 export default function () {
-  // Teste na API (Login ou Rota Pública)
-  const res = http.get('https://api-cursos.incluireeducar.com.br/api/v1/health-check'); // Ajuste a rota se necessário
+  // Teste no Frontend (Nginx Static)
+  const res = http.get('https://cursos.incluireeducar.com.br/'); 
+
+  // Debug: Se falhar, mostrar o erro no console (apenas 1% das vezes para não poluir)
+  if (res.status !== 200 && Math.random() < 0.01) {
+    console.log('Erro Status:', res.status, 'Body:', res.body ? res.body.substring(0, 100) : 'Sem corpo');
+  }
 
   check(res, {
     'status is 200': (r) => r.status === 200,
