@@ -8,7 +8,8 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('matriculas', function (Blueprint $table) {
-            $table->index('id_cliente');
+            // Especificar tamanho para colunas TEXT ao criar índice
+            $table->index([\DB::raw('id_cliente(36)')], 'matriculas_id_cliente_index');
             $table->index('id_curso');
             $table->index('id_turma');
             $table->index('situacao_id');
@@ -22,7 +23,7 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('matriculas', function (Blueprint $table) {
-            $table->dropIndex(['id_cliente']);
+            $table->dropIndex('matriculas_id_cliente_index');
             $table->dropIndex(['id_curso']);
             $table->dropIndex(['id_turma']);
             $table->dropIndex(['situacao_id']);
