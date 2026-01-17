@@ -87,7 +87,6 @@ services:
       # Filesystem (Crucial for Storage)
       FILESYSTEM_DISK: public
       # Frontend/API URLs e cookies
-      APP_URL: ${APP_URL}
       FRONTEND_URL: ${FRONTEND_URL}
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS}
       SESSION_DOMAIN: ${SESSION_DOMAIN}
