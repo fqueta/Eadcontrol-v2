@@ -15,19 +15,25 @@ export function getTenantIdFromSubdomain(): string | null {
  * en-US: Returns tenant API base, WITHOUT version. E.g.: "http://{tenant_id}.localhost:8000/api".
  */
 export function getTenantApiUrl(): string {
-  // Prefer VITE_TENANT_API_URL; fallback to VITE_API_URL; otherwise use sensible default
-  const raw =
-    (import.meta.env as any).VITE_TENANT_API_URL ||
-    'https://api-'+location.host+'/api' ||
-    'http://{tenant_id}.localhost:8000/api';
+  let url = '';
+  const envUrl = (import.meta.env as any).VITE_TENANT_API_URL;
 
+  const host = window.location.host; 
+  if (envUrl) {
+      url = envUrl;
+  } else if (host.includes('localhost') || host.includes('127.0.0.1')) {
+     // Local development heuristic
+     url = 'http://{tenant_id}.localhost:8000/api';
+  } else {
+    // Production heuristic
+    url = `https://api-${host}/api`;
+  }
+
+  // Perform substitution
   const tenant_id = getTenantIdFromSubdomain() || 'default';
-  // console.log('tenant_id', tenant_id);
-  const replaced = raw.replace('{tenant_id}', tenant_id); 
-  //raw.includes('{tenant_id}') ? raw.replace('{tenant_id}', tenant_id) : raw;
-  // console.log('replaced', replaced);
-  // Normalize: remove trailing slashes to avoid double slashes when concatenating version
-  return replaced.replace(/\/+$/, '');
+  url = url.replace('{tenant_id}', tenant_id);
+
+  return url.replace(/\/+$/, '');
 }
 
 /**

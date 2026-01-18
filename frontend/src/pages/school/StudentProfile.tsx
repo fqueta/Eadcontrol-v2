@@ -54,7 +54,7 @@ export default function StudentProfile() {
   // Enhanced photo logic to check multiple fields
   const userPhoto = useMemo(() => {
     // Check specific fields
-    const path = (user as any)?.foto_perfil || user?.avatar; 
+    let path = (user as any)?.foto_perfil || user?.avatar; 
     
     // If it's a full URL (avatar_url sometimes returns this), use it directly
     if (user?.avatar_url && user.avatar_url.startsWith('http')) return user.avatar_url;
@@ -64,9 +64,19 @@ export default function StudentProfile() {
         // If path already starts with http, return it (just in case)
         if (path.startsWith('http')) return path;
         
+        // Normalize path: strict checking for storage prefix to avoid doubling
+        path = path.replace(/^\//, ''); // Remove leading slash
+        if (path.startsWith('storage/')) {
+            path = path.replace('storage/', '');
+        }
+
         // Clean api url to get base url
         const baseUrl = getTenantApiUrl().replace('/api', '');
-        return `${baseUrl}/storage/${path}`;
+        
+        // Add timestamp if available to bust cache
+        const timestamp = user?.updated_at ? `?t=${new Date(user.updated_at).getTime()}` : '';
+        
+        return `${baseUrl}/storage/${path}${timestamp}`;
     }
     
     return undefined;
