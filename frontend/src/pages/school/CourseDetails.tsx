@@ -285,40 +285,49 @@ export default function CourseDetails() {
 
   return (
     <InclusiveSiteLayout>
-      <section className="py-10">
-        <div className="container mx-auto">
+      <section className="py-6 md:py-10 bg-slate-50 dark:bg-black/50 min-h-screen transition-colors duration-500">
+        <div className="container mx-auto px-4">
           {/* Header area */}
           {/**
            * Header
            * pt-BR: Usa as mesmas cores do layout (gradiente violeta/fúcsia) e mantém a identidade visual com a logo via InclusiveSiteLayout.
            * en-US: Uses the same layout colors (violet/fuchsia gradient) and keeps visual identity with the logo via InclusiveSiteLayout.
            */}
-          <div className="relative overflow-hidden rounded-t bg-gradient-to-r from-violet-700 via-violet-600 to-fuchsia-600 text-white px-6 py-8">
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{title}</h1>
-            {error && (
-              <p className="mt-2 text-sm text-white/90">Falha ao carregar informações do curso.</p>
-            )}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-900 via-violet-800 to-fuchsia-900 text-white shadow-xl mb-8">
+            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent" />
+            <div className="absolute -right-20 -top-20 h-96 w-96 rounded-full bg-violet-500/20 blur-3xl" />
+            <div className="relative z-10 px-8 py-10 md:py-14">
+              <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-2 drop-shadow-md">{title}</h1>
+              {error && (
+                <p className="mt-2 text-sm text-white/90 bg-red-500/20 inline-block px-3 py-1 rounded-full">Falha ao carregar informações do curso.</p>
+              )}
+            </div>
           </div>
 
           {/* Main grid */}
-          <div className="grid md:grid-cols-3 gap-6 bg-white rounded-b p-6 shadow-sm">
+          <div className="grid lg:grid-cols-3 gap-8">
             {/* Left: description and highlights */}
-            <div className="md:col-span-2 space-y-6">
-              <Card className="border-violet-200">
-                <CardHeader>
-                  <CardTitle className="text-violet-800">Por que realizar este curso?</CardTitle>
-                  <CardDescription>
-                    Confira os benefícios e o conteúdo programático.
+            <div className="lg:col-span-2 space-y-8">
+              <Card className="border-0 shadow-lg bg-white dark:bg-slate-900 overflow-hidden ring-1 ring-slate-200 dark:ring-slate-800">
+                <CardHeader className="bg-violet-50/50 dark:bg-violet-900/10 border-b border-violet-100 dark:border-violet-800/50 pb-6">
+                  <CardTitle className="text-2xl text-violet-800 dark:text-violet-300 font-bold">Por que realizar este curso?</CardTitle>
+                  <CardDescription className="text-base">
+                    Confira os benefícios e o conteúdo programático detalhado.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6 pt-6">
                   {description && renderDescriptionHtml(description)}
                   {highlights.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-medium mb-2">Destaques</h3>
-                      <ul className="list-disc ml-6 space-y-1">
+                    <div className="bg-violet-50 dark:bg-violet-900/20 p-5 rounded-xl border border-violet-100 dark:border-violet-800/50">
+                      <h3 className="text-base font-semibold text-violet-900 dark:text-violet-300 mb-3 flex items-center gap-2">
+                        <span className="text-xl">✨</span> Destaques
+                      </h3>
+                      <ul className="grid sm:grid-cols-2 gap-2 text-sm">
                         {highlights.map((h, i) => (
-                          <li key={i}>{h}</li>
+                          <li key={i} className="flex items-start gap-2">
+                             <span className="text-violet-500 mt-1">•</span>
+                             <span className="text-slate-700 dark:text-slate-300">{h}</span>
+                          </li>
                         ))}
                       </ul>
                     </div>
@@ -326,21 +335,24 @@ export default function CourseDetails() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>O que você vai aprender?</CardTitle>
+              <Card className="border-0 shadow-md bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl">O que você vai aprender?</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-4">
                   {modules.length === 0 && (
-                    <p className="text-sm text-muted-foreground">Conteúdo do curso será exibido aqui.</p>
+                    <p className="text-sm text-muted-foreground italic">Conteúdo do curso será exibido aqui.</p>
                   )}
                   {modules.map((m: any, idx: number) => (
-                    <div key={idx} className="rounded-md border p-3">
-                      <div className="font-medium">{m?.titulo || `Módulo ${idx + 1}`}</div>
+                    <div key={idx} className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <div className="font-semibold text-violet-900 dark:text-violet-300 mb-2">{m?.titulo || `Módulo ${idx + 1}`}</div>
                       {Array.isArray(m?.atividades) && m.atividades.length > 0 && (
-                        <ul className="mt-2 list-disc ml-5 space-y-1">
+                        <ul className="space-y-1.5 ml-1">
                           {m.atividades.map((a: any, j: number) => (
-                            <li key={j}>{a?.titulo || a?.name || `Aula ${j + 1}`}</li>
+                            <li key={j} className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                               <div className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
+                               {a?.titulo || a?.name || `Aula ${j + 1}`}
+                            </li>
                           ))}
                         </ul>
                       )}
@@ -349,22 +361,29 @@ export default function CourseDetails() {
                 </CardContent>
               </Card>
 
-              <div className="rounded-md bg-violet-700 text-white p-4">
-                <div className="font-semibold">Facilidades de pagamento</div>
-                <p className="text-sm text-white/90 mt-1">
-                  Parcelamento e condições especiais podem ser aplicadas de acordo com a política da escola.
-                </p>
+              <div className="rounded-xl bg-gradient-to-r from-violet-700 to-fuchsia-700 text-white p-6 shadow-lg relative overflow-hidden">
+                 <div className="absolute top-0 right-0 p-8 opacity-10 font-bold text-9xl leading-none transform translate-x-10 -translate-y-10">
+                   %
+                 </div>
+                <div className="relative z-10">
+                    <div className="font-bold text-lg mb-1">Facilidades de pagamento</div>
+                    <p className="text-white/90 text-sm md:text-base">
+                    Parcelamento facilitado e condições especiais podem ser aplicadas de acordo com a política da escola. Entre em contato para saber mais.
+                    </p>
+                </div>
               </div>
 
-              <Card>
+              <Card className="border-0 shadow-md bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800">
                 <CardHeader>
-                  <CardTitle>Interessados e contato</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <span>📧</span> Interessados e contato
+                  </CardTitle>
                   <CardDescription>Preencha seus dados para receber mais informações</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {submitSuccess && successMessage && (
-                    <div className="mb-3 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 p-2 text-sm">
-                      {successMessage}
+                    <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 p-4 text-sm flex items-center gap-2">
+                       <span className="text-xl">✅</span> {successMessage}
                     </div>
                   )}
                   {/**
@@ -372,39 +391,39 @@ export default function CourseDetails() {
                    * pt-BR: Campo de mensagem oculto conforme solicitado; envia interesse criando matrícula.
                    * en-US: Message field hidden as requested; submits interest by creating enrollment.
                    */}
-                  <form className="grid grid-cols-1 md:grid-cols-2 gap-3" onSubmit={handleSubmitInterest}>
+                  <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmitInterest}>
                     <input
-                      className="rounded-md border p-2"
+                      className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-violet-500/50 transition-all dark:text-white"
                       placeholder="Nome completo"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                     />
                     <input
-                      className="rounded-md border p-2"
+                      className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-violet-500/50 transition-all dark:text-white"
                       placeholder="Email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
                     <input
-                      className="rounded-md border p-2"
+                      className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-violet-500/50 transition-all dark:text-white"
                       placeholder="Telefone/WhatsApp"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                     />
                     <input
-                      className="rounded-md border p-2"
+                      className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-violet-500/50 transition-all dark:text-white"
                       placeholder="Cidade/Estado"
                       value={cityState}
                       onChange={(e) => setCityState(e.target.value)}
                     />
                     {/* Mensagem oculta conforme solicitação */}
                     <div className="md:col-span-2 hidden">
-                      <textarea className="w-full rounded-md border p-2" rows={4} placeholder="Mensagem" />
+                      <textarea className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5" rows={4} placeholder="Mensagem" />
                     </div>
-                    <div className="md:col-span-2 flex justify-end">
-                      <Button type="submit" className="bg-violet-700 hover:bg-violet-800" disabled={isSubmitting}>
-                        {isSubmitting ? 'Enviando...' : 'Enviar'}
+                    <div className="md:col-span-2 flex justify-end mt-2">
+                      <Button type="submit" className="bg-violet-700 hover:bg-violet-800 text-white rounded-full px-8 shadow-md hover:shadow-lg transition-all" disabled={isSubmitting}>
+                        {isSubmitting ? 'Enviando...' : 'Enviar interesse'}
                       </Button>
                     </div>
                   </form>
@@ -413,43 +432,74 @@ export default function CourseDetails() {
             </div>
 
             {/* Right: cover and price box */}
-            <div className="md:col-span-1 space-y-4">
-              <Card>
-                <CardContent className="p-2">
-                  {coverUrl ? (
-                    <img src={coverUrl} alt={title} className="rounded-md w-full h-auto object-cover" />
-                  ) : (
-                    <div className="bg-muted h-48 rounded-md flex items-center justify-center">Sem imagem</div>
-                  )}
-                </CardContent>
-              </Card>
+            <div className="lg:col-span-1 space-y-6">
+              <div className="sticky top-24 space-y-6">
+                <Card className="border-0 shadow-xl overflow-hidden rounded-xl bg-white dark:bg-slate-900 h-auto">
+                    {coverUrl ? (
+                        <div className="relative">
+                            <img src={coverUrl} alt={title} className="w-full h-auto object-cover aspect-video" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                        </div>
+                    ) : (
+                        <div className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 aspect-video flex items-center justify-center text-slate-400">
+                            <span className="text-4xl">🎓</span>
+                        </div>
+                    )}
+                </Card>
 
-              <Card className="border-violet-300">
-                <CardContent className="p-4">
-                  <div className="text-sm text-muted-foreground">Preço</div>
-                  <div className="text-3xl font-bold text-violet-700 mt-1">
-                    {priceBox.valor ? `R$ ${priceBox.valor}` : 'Consultar'}
-                  </div>
-                  <Separator className="my-3" />
-                  <div className="space-y-1 text-sm">
-                    {priceBox.parcelas && priceBox.valorParcela ? (
-                      <div>ou até <span className="font-semibold">{priceBox.parcelas}x</span> de <span className="font-semibold">R$ {priceBox.valorParcela}</span></div>
-                    ) : (
-                      <div>Entre em contato para condições de pagamento</div>
-                    )}
-                  </div>
-                  <div className="mt-3 flex gap-2">
-                    {isAlreadyEnrolled ? (
-                      <>
-                        <Button disabled className="w-full" title="Já matriculado">Já matriculado</Button>
-                        <Button variant="outline" onClick={() => navigate(`/aluno/cursos/${String(id)}`)} className="w-full">Ir para o curso</Button>
-                      </>
-                    ) : (
-                      <Button onClick={handleBuy} className="w-full bg-violet-700 hover:bg-violet-800">Comprar agora</Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                <Card className="border-2 border-violet-100 dark:border-violet-900 shadow-xl bg-white dark:bg-slate-900 rounded-xl overflow-hidden relative">
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-violet-600 to-fuchsia-600" />
+                    <CardContent className="p-6">
+                    <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Preço do curso</div>
+                    <div className="text-4xl font-extrabold text-violet-700 dark:text-violet-400 mt-1 mb-4 flex items-baseline gap-1">
+                         <span className="text-lg font-normal text-muted-foreground">R$</span>
+                        {priceBox.valor || 'Consultar'}
+                    </div>
+                    
+                    <Separator className="my-4 bg-slate-100 dark:bg-slate-800" />
+                    
+                    <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+                        {priceBox.parcelas && priceBox.valorParcela ? (
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center text-violet-600">💳</div>
+                            <div>
+                                Até <span className="font-bold ml-0.5">{priceBox.parcelas}x</span> de <span className="font-bold ml-0.5">R$ {priceBox.valorParcela}</span>
+                            </div>
+                        </div>
+                        ) : (
+                        <div className="flex items-center gap-2">
+                             <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center">💬</div>
+                            <span>Entre em contato para condições</span>
+                        </div>
+                        )}
+                         <div className="flex items-center gap-2">
+                             <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">🔒</div>
+                             <span>Pagamento 100% seguro</span>
+                        </div>
+                    </div>
+
+                    <div className="mt-6 flex flex-col gap-3">
+                        {isAlreadyEnrolled ? (
+                        <>
+                            <Button disabled className="w-full bg-slate-100 text-slate-400 border-0" variant="outline">
+                                ✅ Você já está matriculado
+                            </Button>
+                            <Button onClick={() => navigate(`/aluno/cursos/${String(id)}`)} className="w-full bg-violet-600 hover:bg-violet-700 text-white shadow-md">
+                                Acessar Curso
+                            </Button>
+                        </>
+                        ) : (
+                        <Button onClick={handleBuy} className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white font-bold h-12 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all rounded-lg">
+                            Comprar agora
+                        </Button>
+                        )}
+                         <p className="text-xs text-center text-muted-foreground mt-2">
+                            Acesso imediato após confirmação
+                        </p>
+                    </div>
+                    </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </div>

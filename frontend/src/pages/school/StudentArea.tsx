@@ -245,10 +245,10 @@ export default function StudentArea() {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         {/* Meus cursos */}
-        <Card className="hover:shadow-sm transition-shadow">
+        <Card className="hover:shadow-md hover:border-violet-300 dark:hover:border-violet-700 transition-all cursor-pointer" onClick={() => navigate('/aluno/cursos')}>
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4" />
+              <BookOpen className="w-5 h-5 text-violet-600 dark:text-violet-400" />
               <CardTitle className="text-base">Meus cursos</CardTitle>
             </div>
             <CardDescription>Cursos matriculados</CardDescription>
@@ -256,16 +256,16 @@ export default function StudentArea() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-2xl font-semibold">{coursesCount}</div>
-              <Button size="sm" variant="outline" onClick={() => navigate('/aluno/cursos')}>Abrir</Button>
+              <Button size="sm" variant="outline">Abrir</Button>
             </div>
           </CardContent>
         </Card>
 
         {/* Minhas faturas */}
-        <Card className="hover:shadow-sm transition-shadow">
+        <Card className="hover:shadow-md hover:border-violet-300 dark:hover:border-violet-700 transition-all cursor-pointer" onClick={() => navigate('/aluno/faturas')}>
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <Receipt className="w-4 h-4" />
+              <Receipt className="w-5 h-5 text-violet-600 dark:text-violet-400" />
               <CardTitle className="text-base">Minhas faturas</CardTitle>
             </div>
             <CardDescription>Resumo financeiro</CardDescription>
@@ -273,16 +273,16 @@ export default function StudentArea() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-2xl font-semibold">—</div>
-              <Button size="sm" variant="outline" onClick={() => navigate('/aluno/faturas')}>Abrir</Button>
+              <Button size="sm" variant="outline">Abrir</Button>
             </div>
           </CardContent>
         </Card>
 
         {/* Meus pedidos */}
-        <Card className="hover:shadow-sm transition-shadow">
+        <Card className="hover:shadow-md hover:border-violet-300 dark:hover:border-violet-700 transition-all cursor-pointer" onClick={() => navigate('/aluno/pedidos')}>
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <ShoppingCart className="w-4 h-4" />
+              <ShoppingCart className="w-5 h-5 text-violet-600 dark:text-violet-400" />
               <CardTitle className="text-base">Meus pedidos</CardTitle>
             </div>
             <CardDescription>Vendas/OS vinculadas</CardDescription>
@@ -290,16 +290,16 @@ export default function StudentArea() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-2xl font-semibold">—</div>
-              <Button size="sm" variant="outline" onClick={() => navigate('/aluno/pedidos')}>Abrir</Button>
+              <Button size="sm" variant="outline">Abrir</Button>
             </div>
           </CardContent>
         </Card>
 
         {/* Minhas notas */}
-        <Card className="hover:shadow-sm transition-shadow">
+        <Card className="hover:shadow-md hover:border-violet-300 dark:hover:border-violet-700 transition-all cursor-pointer" onClick={() => navigate('/aluno/notas')}>
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <GraduationCap className="w-4 h-4" />
+              <GraduationCap className="w-5 h-5 text-violet-600 dark:text-violet-400" />
               <CardTitle className="text-base">Minhas notas</CardTitle>
             </div>
             <CardDescription>Média e avaliações</CardDescription>
@@ -307,16 +307,16 @@ export default function StudentArea() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-2xl font-semibold">—</div>
-              <Button size="sm" variant="outline" onClick={() => navigate('/aluno/notas')}>Abrir</Button>
+              <Button size="sm" variant="outline">Abrir</Button>
             </div>
           </CardContent>
         </Card>
 
         {/* Perfil */}
-        <Card className="hover:shadow-sm transition-shadow">
+        <Card className="hover:shadow-md hover:border-violet-300 dark:hover:border-violet-700 transition-all cursor-pointer" onClick={() => navigate('/aluno/perfil')}>
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <UserCircle className="w-4 h-4" />
+              <UserCircle className="w-5 h-5 text-violet-600 dark:text-violet-400" />
               <CardTitle className="text-base">Perfil</CardTitle>
             </div>
             <CardDescription>{userName}</CardDescription>
@@ -324,7 +324,7 @@ export default function StudentArea() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-2xl font-semibold">—</div>
-              <Button size="sm" variant="outline" onClick={() => navigate('/aluno/perfil')}>Abrir</Button>
+              <Button size="sm" variant="outline">Abrir</Button>
             </div>
           </CardContent>
         </Card>

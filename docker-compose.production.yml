@@ -94,6 +94,20 @@ services:
       REDIS_CLIENT: ${REDIS_CLIENT:-phpredis}
       REDIS_PERSISTENT: ${REDIS_PERSISTENT:-true}
       
+      # Email (ensure backend can send synchronously if needed)
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME}
+
+      # Brevo (Sendinblue) API for Notification channel
+      BREVO_API_KEY: ${BREVO_API_KEY}
+      BREVO_API_URL: ${BREVO_API_URL:-https://api.brevo.com/v3}
+      
       # Octane
       OCTANE_SERVER: roadrunner
       
@@ -173,6 +187,10 @@ services:
       MAIL_ENCRYPTION: ${MAIL_ENCRYPTION}
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME}
+      
+      # Brevo (Sendinblue) API for Notification channel
+      BREVO_API_KEY: ${BREVO_API_KEY}
+      BREVO_API_URL: ${BREVO_API_URL:-https://api.brevo.com/v3}
     volumes:
       # Persist Storage (Uploads)
       - storage_public:/var/www/html/storage/app/public

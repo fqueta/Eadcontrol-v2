@@ -1407,29 +1407,9 @@ function htmlEquals(a: string, b: string): boolean {
       };
     }
 
-    // pt-BR: Salvamento periódico em reprodução usando throttle interno.
-    // en-US: Periodic saving during playback using internal throttle.
-    {
-      const periodicTickMs = 1000;
-      let periodicId: any = null;
-      const startPeriodic = () => {
-        if (periodicId) return;
-        periodicId = setInterval(() => {
-          if (destroyed) { clearInterval(periodicId); periodicId = null; return; }
-          try {
-            if (!startedPlaybackRef.current) return;
-            const t = Number(getCurrentTimeRef.current?.() || 0) || 0;
-            if (t > 0) persistPosition(t, false);
-          } catch {}
-        }, periodicTickMs);
-      };
-      startPeriodic();
-      const prevCleanup = playerCleanupRef.current;
-      playerCleanupRef.current = () => {
-        if (periodicId) { clearInterval(periodicId); periodicId = null; }
-        try { prevCleanup?.(); } catch {}
-      };
-    }
+    // pt-BR: Salvamento periódico removido para evitar sobrecarga. Salva apenas no pause.
+    // en-US: Periodic saving removed to avoid overload. Saves only on pause.
+
 
     return () => { destroyed = true; playerCleanupRef.current?.(); };
   }, [currentActivity, course, modules]);

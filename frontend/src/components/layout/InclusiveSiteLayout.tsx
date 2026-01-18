@@ -126,9 +126,9 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
   const permission_id: any = user?.permission_id;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-emerald-50">
+    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-emerald-50 dark:from-slate-950 dark:via-violet-950/10 dark:to-slate-950 transition-colors duration-500">
       {/* Header */}
-      <header className="bg-white/80 dark:bg-violet-950/60 backdrop-blur-md border-b border-violet-200 dark:border-violet-800 sticky top-0 z-50">
+      <header className="bg-white/70 dark:bg-slate-950/70 backdrop-blur-md border-b border-violet-200/50 dark:border-violet-800/30 sticky top-0 z-50 transition-colors duration-500">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <BrandLogo
@@ -322,7 +322,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
       <main className="min-h-[60vh]">{children}</main>
 
       {/* Footer */}
-      <footer className="bg-violet-900 text-white py-12 px-4">
+      <footer className="bg-violet-900 dark:bg-slate-950 border-t border-violet-800 dark:border-violet-900 text-white py-12 px-4 transition-colors duration-500">
         <div className="container mx-auto">
           <div className="grid md:grid-cols-3 gap-8">
             <div>

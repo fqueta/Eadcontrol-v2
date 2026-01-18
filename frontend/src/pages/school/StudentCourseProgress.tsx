@@ -175,93 +175,190 @@ export default function StudentCourseProgress() {
    * pt-BR: Renderiza linha de atividade com status.
    * en-US: Renders activity row with status.
    */
-  function renderActivityItem(m: any, a: any, idx: number) {
-    const title = String(a?.titulo || a?.title || `Atividade ${idx + 1}`);
-    const status = a?.completed ? 'Concluída' : (a?.needs_resume ? 'Retomar' : 'Pendente');
-    const Icon = a?.completed ? CheckCircle2 : (a?.needs_resume ? PauseCircle : PlayCircle);
-    const badgeVariant = a?.completed ? 'default' : (a?.needs_resume ? 'secondary' : 'outline');
-    return (
-      <div className="flex items-center justify-between p-2 border rounded-md">
-        <div>
-          <div className="font-medium">{title}</div>
-          <div className="text-xs text-muted-foreground">{String(m?.titulo || m?.title || '')}</div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={badgeVariant as any} className={a?.completed ? 'bg-emerald-600' : ''}>
-            <Icon className="h-4 w-4 mr-1" /> {status}
-          </Badge>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <InclusiveSiteLayout>
-      <div className="container mx-auto p-4 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Acompanhamento de Progresso</h1>
-          <p className="text-muted-foreground">{String((course as any)?.titulo || (course as any)?.nome || slug || '')}</p>
-        </div>
+      <div className="min-h-screen bg-slate-50 dark:bg-black/50 py-8 transition-colors duration-500">
+        <div className="container mx-auto px-4 space-y-8">
+          
+          {/* Premium Header */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-900 via-violet-800 to-fuchsia-900 text-white shadow-xl">
+             <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent" />
+             <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-violet-500/20 blur-3xl" />
+             <div className="relative z-10 px-8 py-10 md:py-12">
+                <div className="flex flex-col gap-2">
+                   <div className="flex items-center gap-2 text-violet-200 text-sm font-medium uppercase tracking-wider">
+                      <span className="bg-white/10 px-2 py-0.5 rounded text-xs">Progresso</span>
+                      <span>•</span>
+                      <span>Acompanhamento</span>
+                   </div>
+                   <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight drop-shadow-md">
+                      {String((course as any)?.titulo || (course as any)?.nome || slug || '')}
+                   </h1>
+                   <div className="flex items-center gap-2 mt-2">
+                      <Button 
+                         onClick={goToCourse}
+                         className="bg-white text-violet-900 hover:bg-violet-50 font-semibold shadow-sm border-0"
+                         size="sm"
+                      >
+                         <PlayCircle className="w-4 h-4 mr-2" /> Continuar cursando
+                      </Button>
+                   </div>
+                </div>
+             </div>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Resumo</CardTitle>
-            <CardDescription>Progresso baseado no currículo da matrícula</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading && (
-              <div className="text-muted-foreground">Carregando progresso...</div>
-            )}
-            {!isLoading && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline">Atividades: {total}</Badge>
-                  <Badge variant="default">Concluídas: {completed}</Badge>
-                  <Badge variant="secondary">Progresso: {percent}%</Badge>
-                </div>
-                {nextActivityTitle && (
-                  <div className="text-sm text-muted-foreground">Próxima atividade: {nextActivityTitle}</div>
-                )}
-                <div className="w-full bg-muted h-2 rounded">
-                  <div className="bg-primary h-2 rounded" style={{ width: `${percent}%` }} />
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={goToCourse}>Continuar curso</Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Módulos e atividades</CardTitle>
-            <CardDescription>Lista detalhada por módulo</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {Array.isArray((curriculum as any)?.curriculum) && (curriculum as any).curriculum.length > 0 ? (
-              <div className="space-y-3">
-                {(curriculum as any).curriculum.map((m: any, mi: number) => (
-                  <div key={mi} className="space-y-2">
-                    <div className="font-semibold">{String(m?.titulo || m?.title || `Módulo ${mi + 1}`)}</div>
-                    <div className="space-y-2">
-                      {Array.isArray(m?.atividades) && m.atividades.length > 0 ? (
-                        m.atividades.map((a: any, ai: number) => (
-                          <div key={`${mi}-${ai}`}>{renderActivityItem(m, a, ai)}</div>
-                        ))
-                      ) : (
-                        <div className="text-sm text-muted-foreground">Sem atividades</div>
+          <div className="grid md:grid-cols-3 gap-8">
+             {/* Left Column: Summary & Stats */}
+             <div className="md:col-span-1 space-y-6">
+                <Card className="border-0 shadow-lg bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800 overflow-hidden">
+                   <CardHeader className="bg-violet-50/50 dark:bg-violet-900/10 border-b border-violet-100 dark:border-violet-800/50 pb-4">
+                      <CardTitle className="text-violet-800 dark:text-violet-300">Resumo Geral</CardTitle>
+                      <CardDescription>Status atual do seu aprendizado</CardDescription>
+                   </CardHeader>
+                   <CardContent className="pt-6 space-y-6">
+                      {isLoading && (
+                         <div className="flex justify-center py-4">
+                            <div className="animate-spin w-6 h-6 border-4 border-violet-500 border-t-transparent rounded-full"></div>
+                         </div>
                       )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-muted-foreground">Currículo não disponível para a matrícula.</div>
-            )}
-          </CardContent>
-        </Card>
+                      {!isLoading && (
+                         <>
+                           <div className="flex flex-col items-center justify-center py-2">
+                              <div className="relative w-32 h-32 flex items-center justify-center">
+                                 <svg className="w-full h-full transform -rotate-90">
+                                    <circle
+                                       className="text-slate-100 dark:text-slate-800"
+                                       strokeWidth="10"
+                                       stroke="currentColor"
+                                       fill="transparent"
+                                       r="58"
+                                       cx="64"
+                                       cy="64"
+                                    />
+                                    <circle
+                                       className="text-violet-600 dark:text-violet-500 transition-all duration-1000 ease-out"
+                                       strokeWidth="10"
+                                       strokeDasharray={365}
+                                       strokeDashoffset={365 - (365 * percent) / 100}
+                                       strokeLinecap="round"
+                                       stroke="currentColor"
+                                       fill="transparent"
+                                       r="58"
+                                       cx="64"
+                                       cy="64"
+                                    />
+                                 </svg>
+                                 <div className="absolute inset-0 flex flex-col items-center justify-center text-violet-900 dark:text-violet-100">
+                                    <span className="text-3xl font-bold">{percent}%</span>
+                                 </div>
+                              </div>
+                           </div>
+                           
+                           <div className="grid grid-cols-2 gap-4">
+                              <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 text-center">
+                                 <div className="text-2xl font-bold text-slate-700 dark:text-slate-200">{completed}</div>
+                                 <div className="text-xs text-muted-foreground uppercase tracking-wide">Concluídas</div>
+                              </div>
+                              <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 text-center">
+                                 <div className="text-2xl font-bold text-slate-700 dark:text-slate-200">{total}</div>
+                                 <div className="text-xs text-muted-foreground uppercase tracking-wide">Total</div>
+                              </div>
+                           </div>
+
+                           {nextActivityTitle && (
+                              <div className="bg-violet-50 dark:bg-violet-900/20 p-4 rounded-xl border border-violet-100 dark:border-violet-800/50">
+                                 <div className="text-xs font-semibold text-violet-800 dark:text-violet-300 uppercase mb-1">Próxima Atividade</div>
+                                 <div className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2 leading-relaxed">
+                                    {nextActivityTitle}
+                                 </div>
+                                 <Button 
+                                    size="sm" 
+                                    className="w-full mt-3 bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
+                                    onClick={goToCourse}
+                                 >
+                                    Ir para atividade
+                                 </Button>
+                              </div>
+                           )}
+                         </>
+                      )}
+                   </CardContent>
+                </Card>
+             </div>
+
+             {/* Right Column: Detailed List */}
+             <div className="md:col-span-2">
+                <Card className="border-0 shadow-lg bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800 h-full">
+                   <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-4">
+                      <CardTitle>Histórico Detalhado</CardTitle>
+                      <CardDescription>Acompanhe cada etapa da sua jornada</CardDescription>
+                   </CardHeader>
+                   <CardContent className="pt-6">
+                      {Array.isArray((curriculum as any)?.curriculum) && (curriculum as any).curriculum.length > 0 ? (
+                        <div className="space-y-8">
+                           {(curriculum as any).curriculum.map((m: any, mi: number) => (
+                              <div key={mi} className="relative pl-6 border-l-2 border-slate-200 dark:border-slate-800 last:border-0 pb-2">
+                                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-violet-100 dark:bg-violet-900 border-2 border-violet-500" />
+                                 <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 leading-none">
+                                    {String(m?.titulo || m?.title || `Módulo ${mi + 1}`)}
+                                 </h3>
+                                 <div className="space-y-3">
+                                    {Array.isArray(m?.atividades) && m.atividades.length > 0 ? (
+                                       m.atividades.map((a: any, ai: number) => (
+                                          <div key={`${mi}-${ai}`} className="group">
+                                             {renderActivityItem(m, a, ai)}
+                                          </div>
+                                       ))
+                                    ) : (
+                                       <div className="text-sm text-muted-foreground italic pl-2">Sem atividades neste módulo</div>
+                                    )}
+                                 </div>
+                              </div>
+                           ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                           <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 text-2xl">📋</div>
+                           <p className="text-muted-foreground">O currículo detalhado não está disponível para esta matrícula.</p>
+                        </div>
+                      )}
+                   </CardContent>
+                </Card>
+             </div>
+          </div>
+
+        </div>
       </div>
     </InclusiveSiteLayout>
   );
+}
+
+function renderActivityItem(m: any, a: any, idx: number) {
+    const title = String(a?.titulo || a?.title || `Atividade ${idx + 1}`);
+    const status = a?.completed ? 'Concluída' : (a?.needs_resume ? 'Em andamento' : 'Pendente');
+    const Icon = a?.completed ? CheckCircle2 : (a?.needs_resume ? PauseCircle : PlayCircle);
+    
+    // Premium row styling
+    return (
+       <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 hover:border-violet-200 dark:hover:border-violet-800 transition-colors">
+          <div className="flex items-center gap-3">
+             <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${a?.completed ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30' : (a?.needs_resume ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30' : 'bg-slate-200 text-slate-400 dark:bg-slate-800')}`}>
+                <Icon className="w-4 h-4" />
+             </div>
+             <div>
+                <div className={`font-medium text-sm ${a?.completed ? 'text-slate-600 dark:text-slate-400 line-through decoration-slate-400/50' : 'text-slate-900 dark:text-slate-200'}`}>
+                   {title}
+                </div>
+             </div>
+          </div>
+          <div>
+             <Badge 
+                variant={a?.completed ? 'default' : (a?.needs_resume ? 'secondary' : 'outline')} 
+                className={`${a?.completed ? 'bg-emerald-600 hover:bg-emerald-700' : (a?.needs_resume ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-700')}`}
+             >
+                {status}
+             </Badge>
+          </div>
+       </div>
+    );
 }

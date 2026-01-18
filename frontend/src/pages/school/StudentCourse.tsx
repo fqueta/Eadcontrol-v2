@@ -705,9 +705,9 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
        * en-US: Reduce paddings and spacing on mobile to open up more visible
        *        area for the activity viewer.
        */}
-      <div className="container mx-auto p-2 md:p-4 space-y-2 md:space-y-6">
-        <Card className="border-0 shadow-none md:border md:shadow-sm md:rounded-lg">
-          <CardHeader className="py-2 md:py-4">
+      <div className="container mx-auto p-0 md:p-4 space-y-0 md:space-y-6">
+        <Card className="border-0 shadow-none md:border md:shadow-lg md:rounded-xl dark:bg-slate-900/50 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="py-2 md:py-4 bg-violet-50/50 dark:bg-violet-950/20 border-b border-violet-100 dark:border-violet-800/50">
             <div className="flex items-start justify-between gap-2 md:gap-3">
               <div className="min-w-0">
                 <CardTitle className="text-lg md:text-2xl leading-tight break-words line-clamp-2">{isLoading ? 'Carregando...' : title}</CardTitle>

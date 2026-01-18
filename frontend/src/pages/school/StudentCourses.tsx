@@ -79,7 +79,7 @@ export default function StudentCourses() {
    * en-US: Normalize paginated response into array.
    */
   const enrollments = useMemo(() => {
-    const arr = (enrollmentsResp?.data || enrollmentsResp?.items || []) as any[];
+    const arr = ((enrollmentsResp as any)?.data || (enrollmentsResp as any)?.items || []) as any[];
     return Array.isArray(arr) ? arr : [];
   }, [enrollmentsResp]);
 
@@ -276,35 +276,88 @@ export default function StudentCourses() {
     const disabledNav = !resolveCourseSlug(enroll) && !resolveCourseId(enroll);
 
     return (
-      <Card key={String(enroll?.id || Math.random())} className="hover:shadow-sm transition-shadow">
+      <Card 
+        key={String(enroll?.id || Math.random())} 
+        className="group overflow-hidden border border-border/50 rounded-xl bg-card hover:bg-card/80 shadow-sm hover:shadow-xl hover:shadow-violet-500/10 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col h-full"
+        onClick={() => {
+           if (!disabledNav) {
+              if (activeCategory === 'mat') handleContinueCourse(enroll);
+              else handleViewInterestedCourse(enroll);
+           }
+        }}
+      >
         {viewMode === 'grid' && (
-          <div className="w-full h-36 bg-muted overflow-hidden">
-            {coverUrl ? (
-              <img src={coverUrl} alt={title} className="w-full h-36 object-cover" />
-            ) : (
-              <div className="w-full h-36 flex items-center justify-center text-muted-foreground">Sem capa</div>
-            )}
+          <div className="relative w-full h-40 overflow-hidden">
+             {coverUrl ? (
+                <img 
+                  src={coverUrl} 
+                  alt={title} 
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                />
+             ) : (
+                <div className="w-full h-full bg-gradient-to-br from-violet-100 to-emerald-100 dark:from-violet-900/30 dark:to-emerald-900/30 flex items-center justify-center">
+                   <span className="text-4xl opacity-30">🎓</span>
+                </div>
+             )}
+             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+             {status && (
+               <Badge className="absolute top-2 right-2 shadow-sm bg-white/90 text-slate-800 backdrop-blur-sm dark:bg-slate-900/90 dark:text-slate-100 border-0">
+                  {status}
+               </Badge>
+             )}
           </div>
         )}
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">{title}</CardTitle>
-            {status && <Badge variant="outline">{status}</Badge>}
+        <CardHeader className="p-5 pb-2 flex-grow">
+          <div className="flex items-start justify-between gap-2">
+            <CardTitle className="text-lg font-bold line-clamp-2 leading-tight group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+               {title}
+            </CardTitle>
           </div>
-          <CardDescription>Curso • acesso e detalhes</CardDescription>
+          <CardDescription className="line-clamp-1 text-xs mt-1">
+             {resolveTurmaName(enroll) || 'Curso online'}
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex gap-2">
+        <CardContent className="p-5 pt-2">
+          <div className="flex flex-col gap-2 mt-auto">
             {activeCategory === 'mat' ? (
-              <>
-                <Button size="sm" disabled={disabledNav} onClick={() => handleContinueCourse(enroll)}>{actionLabel}</Button>
-                <Button size="sm" variant="outline" disabled={disabledNav} onClick={() => handleViewProgress(enroll)}>Progresso</Button>
-              </>
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                   size="sm" 
+                   disabled={disabledNav} 
+                   onClick={(e) => { e.stopPropagation(); handleContinueCourse(enroll); }}
+                   className={isConcluded ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-violet-600 hover:bg-violet-700 text-white"}
+                >
+                   {actionLabel}
+                </Button>
+                <Button 
+                   size="sm" 
+                   variant="outline" 
+                   disabled={disabledNav} 
+                   onClick={(e) => { e.stopPropagation(); handleViewProgress(enroll); }}
+                   className="border-violet-200 dark:border-violet-800 hover:bg-violet-50 dark:hover:bg-violet-900/20"
+                >
+                   Progresso
+                </Button>
+                 {hasCertificate && (
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="col-span-2 text-xs h-6 text-muted-foreground hover:text-violet-600"
+                    onClick={(e) => { e.stopPropagation(); window.open((enroll?.preferencias || {})?.certificate_url, '_blank'); }}
+                  >
+                    🏆 Ver Certificado
+                  </Button>
+                )}
+              </div>
             ) : (
-              <Button size="sm" disabled={disabledNav} onClick={() => handleViewInterestedCourse(enroll)}>Ver curso</Button>
-            )}
-            {activeCategory === 'mat' && hasCertificate && (
-              <Button size="sm" variant="outline" onClick={() => window.open((enroll?.preferencias || {})?.certificate_url, '_blank')}>Certificado</Button>
+              <Button 
+                size="sm" 
+                disabled={disabledNav} 
+                onClick={(e) => { e.stopPropagation(); handleViewInterestedCourse(enroll); }}
+                className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+              >
+                Ver detalhes do curso
+              </Button>
             )}
           </div>
         </CardContent>
@@ -314,68 +367,204 @@ export default function StudentCourses() {
 
   return (
     <InclusiveSiteLayout>
-      <div className="container mx-auto p-4 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Meus cursos</h1>
-          <p className="text-muted-foreground">Lista de cursos matriculados e de interesse</p>
+       <div className="min-h-screen bg-slate-50 dark:bg-black/50 py-8 transition-colors duration-500">
+        <div className="container mx-auto px-4 space-y-8">
+        
+        {/* Premium Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-900 via-violet-800 to-fuchsia-900 text-white shadow-xl">
+           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent" />
+           <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-violet-500/20 blur-3xl" />
+           <div className="relative z-10 px-8 py-10 md:py-12 flex flex-col md:flex-row items-center md:items-end justify-between gap-6">
+              <div>
+                <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-2 drop-shadow-md">Meus Cursos</h1>
+                <p className="text-violet-100 text-lg max-w-xl">
+                  Gerencie sua jornada de aprendizado. Acesse seus cursos matriculados e confira novos interesses.
+                </p>
+              </div>
+              
+              {/* Controls inside Header for premium feel */}
+               <div className="bg-white/10 backdrop-blur-md border border-white/20 p-1.5 rounded-xl flex items-center gap-1">
+                 <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className={`text-white hover:bg-white/20 ${activeCategory === 'mat' ? 'bg-white/20 shadow-sm font-semibold' : 'opacity-80'}`}
+                    onClick={() => setActiveCategory('mat')}
+                 >
+                    Matriculados
+                 </Button>
+                 <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className={`text-white hover:bg-white/20 ${activeCategory === 'int' ? 'bg-white/20 shadow-sm font-semibold' : 'opacity-80'}`}
+                    onClick={() => setActiveCategory('int')}
+                 >
+                    Interesse
+                 </Button>
+                 <div className="w-px h-6 bg-white/20 mx-1" />
+                 <div className="flex bg-black/20 rounded-lg p-0.5">
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className={`h-8 w-8 text-white hover:bg-white/20 ${viewMode === 'grid' ? 'bg-white/20' : ''}`}
+                      onClick={() => setViewMode('grid')}
+                      title="Grade"
+                    >
+                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                    </Button>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className={`h-8 w-8 text-white hover:bg-white/20 ${viewMode === 'list' ? 'bg-white/20' : ''}`}
+                      onClick={() => setViewMode('list')}
+                      title="Lista"
+                    >
+                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+                    </Button>
+                 </div>
+              </div>
+           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Cursos</CardTitle>
-            <CardDescription>Filtre por categoria e escolha o modo de exibição</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2 items-center mb-4">
-              <span className="text-sm text-muted-foreground">Categoria:</span>
-              <Button size="sm" variant={activeCategory === 'mat' ? 'default' : 'outline'} onClick={() => setActiveCategory('mat')}>Matriculado</Button>
-              <Button size="sm" variant={activeCategory === 'int' ? 'default' : 'outline'} onClick={() => setActiveCategory('int')}>Interesse</Button>
-              <div className="ml-auto flex gap-2">
-                <Button size="sm" variant={viewMode === 'grid' ? 'default' : 'outline'} onClick={() => setViewMode('grid')}>Grade</Button>
-                <Button size="sm" variant={viewMode === 'list' ? 'default' : 'outline'} onClick={() => setViewMode('list')}>Lista</Button>
-              </div>
-            </div>
-            {error && (<div className="text-red-600">Falha ao carregar matrículas.</div>)}
-            {isLoading && (<div className="text-muted-foreground">Carregando suas matrículas...</div>)}
-            {!isLoading && enrollments.length === 0 && (
-              <div className="text-muted-foreground">Você ainda não possui matrículas ativas.</div>
-            )}
-            {viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {enrollments.map(renderEnrollmentCard)}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {enrollments.map((enroll) => {
-                  // Calcula conclusão e disponibilidade local para a lista
-                  const status = String(enroll?.situacao || '').trim();
-                  const hasCertificate = Boolean((enroll?.preferencias || {})?.certificate_url);
-                  const statusLower = status.toLowerCase();
-                  const isConcludedLocal = statusLower.includes('conclu') || statusLower.includes('finaliz') || statusLower.includes('complet') || hasCertificate;
-                  const disabledNav = !resolveCourseSlug(enroll) && !resolveCourseId(enroll);
-                  return (
-                    <div key={String(enroll?.id || Math.random())} className="flex items-center justify-between p-3 border rounded">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{resolveCourseTitle(enroll)}</span>
-                        {resolveTurmaName(enroll) && (
-                          <span className="text-xs text-muted-foreground">{resolveTurmaName(enroll)}</span>
-                        )}
-                      </div>
-                      {activeCategory === 'mat' ? (
-                        <div className="flex gap-2">
-                          <Button size="sm" disabled={disabledNav} onClick={() => handleContinueCourse(enroll)}>{isConcludedLocal ? 'Revisar' : 'Continuar'}</Button>
-                          <Button size="sm" variant="outline" disabled={disabledNav} onClick={() => handleViewProgress(enroll)}>Progresso</Button>
-                        </div>
-                      ) : (
-                        <Button size="sm" disabled={disabledNav} onClick={() => handleViewInterestedCourse(enroll)}>Ver curso</Button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Content Area */}
+        <div className="min-h-[400px]">
+             {error && (
+                <div className="p-4 rounded-lg bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 text-center animate-in fade-in">
+                   Falha ao carregar suas matrículas. Tente recarregar a página.
+                </div>
+             )}
+            
+             {isLoading && (
+                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground animate-in fade-in">
+                   <div className="animate-spin mb-4 w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full"></div>
+                   <p>Carregando seus cursos...</p>
+                </div>
+             )}
+
+             {!isLoading && enrollments.length === 0 && (
+               <div className="flex flex-col items-center justify-center py-20 text-center animate-in zoom-in-95 duration-500">
+                  <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                     <span className="text-4xl">🎓</span>
+                  </div>
+                  <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+                     {activeCategory === 'mat' ? 'Nenhuma matrícula encontrada' : 'Nenhum curso marcado como interesse'}
+                  </h3>
+                  <p className="text-muted-foreground max-w-md mx-auto mb-8">
+                     {activeCategory === 'mat' 
+                        ? 'Você ainda não está matriculado em nenhum curso. Explore nosso catálogo e comece a aprender hoje mesmo!' 
+                        : 'Você ainda não demonstrou interesse em nenhum curso. Navegue pelos cursos disponíveis e marque os que gostar.'}
+                  </p>
+                  <Button 
+                    onClick={() => navigate('/cursos')}
+                    className="bg-violet-600 hover:bg-violet-700 text-white rounded-full px-8 shadow-lg hover:shadow-xl transition-all"
+                  >
+                     Explorar Cursos
+                  </Button>
+               </div>
+             )}
+
+             {!isLoading && enrollments.length > 0 && (
+                <>
+                   {viewMode === 'grid' ? (
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                       {enrollments.map(renderEnrollmentCard)}
+                     </div>
+                   ) : (
+                     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                       {enrollments.map((enroll) => {
+                         const status = String(enroll?.situacao || '').trim();
+                         const hasCertificate = Boolean((enroll?.preferencias || {})?.certificate_url);
+                         const statusLower = status.toLowerCase();
+                         const isConcludedLocal = statusLower.includes('conclu') || statusLower.includes('finaliz') || statusLower.includes('complet') || hasCertificate;
+                         const disabledNav = !resolveCourseSlug(enroll) && !resolveCourseId(enroll);
+                         const coverUrl = resolveCoverUrl(enroll);
+                         
+                         return (
+                           <div 
+                              key={String(enroll?.id || Math.random())} 
+                              className="group flex flex-col md:flex-row md:items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:shadow-md hover:border-violet-200 dark:hover:border-violet-800 transition-all cursor-pointer"
+                              onClick={() => {
+                                 if (!disabledNav) {
+                                    if (activeCategory === 'mat') handleContinueCourse(enroll);
+                                    else handleViewInterestedCourse(enroll);
+                                 }
+                              }}
+                           >
+                             <div className="flex items-center gap-4">
+                               <div className="hidden md:block w-16 h-16 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
+                                  {coverUrl ? (
+                                     <img src={coverUrl} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                     <div className="w-full h-full flex items-center justify-center text-lg">🎓</div>
+                                  )}
+                               </div>
+                               <div className="flex flex-col">
+                                 <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 group-hover:text-violet-600 transition-colors">
+                                    {resolveCourseTitle(enroll)}
+                                 </h3>
+                                 <div className="flex items-center gap-2 mt-1">
+                                    {resolveTurmaName(enroll) && (
+                                       <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500">
+                                          {resolveTurmaName(enroll)}
+                                       </span>
+                                    )}
+                                    {status && (
+                                       <span className="text-xs text-muted-foreground">• {status}</span>
+                                    )}
+                                 </div>
+                               </div>
+                             </div>
+                             
+                             <div className="flex items-center gap-3 mt-4 md:mt-0 md:ml-auto">
+                               {activeCategory === 'mat' ? (
+                                 <>
+                                   {hasCertificate && (
+                                       <Button 
+                                          size="sm" 
+                                          variant="ghost" 
+                                          title="Ver certificado"
+                                          onClick={(e) => { e.stopPropagation(); window.open((enroll?.preferencias || {})?.certificate_url, '_blank'); }}
+                                       >
+                                          🏆
+                                       </Button>
+                                   )}
+                                   <Button 
+                                      size="sm" 
+                                      variant="outline" 
+                                      disabled={disabledNav} 
+                                      onClick={(e) => { e.stopPropagation(); handleViewProgress(enroll); }}
+                                      className="hidden sm:flex"
+                                   >
+                                      Progresso
+                                   </Button>
+                                   <Button 
+                                      size="sm" 
+                                      disabled={disabledNav} 
+                                      onClick={(e) => { e.stopPropagation(); handleContinueCourse(enroll); }}
+                                      className={isConcludedLocal ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" : "bg-violet-600 hover:bg-violet-700 text-white shadow-sm"}
+                                   >
+                                      {isConcludedLocal ? 'Revisar' : 'Continuar'}
+                                   </Button>
+                                 </>
+                               ) : (
+                                 <Button 
+                                    size="sm" 
+                                    disabled={disabledNav} 
+                                    onClick={(e) => { e.stopPropagation(); handleViewInterestedCourse(enroll); }}
+                                    className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
+                                 >
+                                    Ver detalhes
+                                 </Button>
+                               )}
+                             </div>
+                           </div>
+                         );
+                       })}
+                     </div>
+                   )}
+                </>
+             )}
+        </div>
+        </div>
       </div>
     </InclusiveSiteLayout>
   );
