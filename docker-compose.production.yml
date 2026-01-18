@@ -126,6 +126,66 @@ services:
     # command: php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=8000
 
   # -----------------------------------------------------------------------------
+  # Queue Worker (Laravel Queue)
+  # -----------------------------------------------------------------------------
+  # Processes background jobs (emails, notifications, etc)
+  queue:
+    image: eadcontrol-backend:latest
+    container_name: octane_queue
+    command: php artisan queue:work --tries=3
+    environment:
+      APP_NAME: "${APP_NAME:-EadControl}"
+      APP_ENV: production
+      APP_KEY: ${APP_KEY}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: ${APP_URL}
+      APP_BASE_PATH: /var/www/html
+      
+      # Database
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      
+      # Redis
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_CLIENT: ${REDIS_CLIENT:-phpredis}
+      REDIS_PERSISTENT: ${REDIS_PERSISTENT:-true}
+      
+      # Octane
+      OCTANE_SERVER: roadrunner
+      
+      # Filesystem
+      FILESYSTEM_DISK: public
+      
+      # Email
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME}
+    volumes:
+      # Persist Storage (Uploads)
+      - storage_public:/var/www/html/storage/app/public
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app_network
+    restart: always
+
+  # -----------------------------------------------------------------------------
   # Database (MySQL)
   # -----------------------------------------------------------------------------
   db:

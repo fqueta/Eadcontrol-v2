@@ -318,3 +318,29 @@ Route::post('/v1/teste-json-simple', function(\Illuminate\Http\Request $request)
         'encoding_fixed' => true
     ]);
 });
+
+// Rota para criar tenant em ambiente de desenvolvimento
+Route::post('/v1/dev/create-tenant', function(\Illuminate\Http\Request $request) {
+    // Verifica se é ambiente local ou dev
+    if (!app()->environment(['local', 'testing', 'dev'])) {
+        return response()->json(['message' => 'Not allowed in this environment'], 403);
+    }
+
+    $request->validate([
+        'id' => 'required|string|unique:tenants,id',
+        'domain' => 'required|string|unique:domains,domain',
+    ]);
+
+    try {
+        $tenant = \App\Models\Tenant::create(['id' => $request->id]);
+        $tenant->domains()->create(['domain' => $request->domain]);
+
+        return response()->json([
+            'message' => 'Tenant created successfully',
+            'tenant' => $tenant,
+            'domain' => $request->domain
+        ], 201);
+    } catch (\Exception $e) {
+        return response()->json(['message' => 'Error creating tenant: ' . $e->getMessage()], 500);
+    }
+});
