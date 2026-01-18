@@ -193,15 +193,15 @@ export default function StudentProfile() {
         <div className="container mx-auto px-4 space-y-8 max-w-7xl">
 
           {/* Premium Header */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-900 via-violet-800 to-fuchsia-900 text-white shadow-xl">
+          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-primary via-blue-600 to-indigo-700 text-white shadow-xl">
              <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent" />
-             <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-violet-500/20 blur-3xl" />
+             <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-blue-400/20 blur-3xl" />
              <div className="relative z-10 px-8 py-10 flex flex-col md:flex-row items-center md:items-end justify-between gap-6">
                 <div className="flex items-center gap-6">
                    <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                       <Avatar className="h-24 w-24 md:h-32 md:w-32 border-4 border-white/20 shadow-xl transition-transform group-hover:scale-105">
                         <AvatarImage src={userPhoto} className="object-cover" />
-                        <AvatarFallback className="text-3xl bg-violet-200 text-violet-800">{getInitials(String(user?.name || 'Aluno'))}</AvatarFallback>
+                        <AvatarFallback className="text-3xl bg-blue-100 text-primary">{getInitials(String(user?.name || 'Aluno'))}</AvatarFallback>
                       </Avatar>
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 rounded-full transition-all backdrop-blur-sm">
                          {uploading ? <Loader2 className="w-8 h-8 animate-spin" /> : <Camera className="w-8 h-8" />}
@@ -217,7 +217,7 @@ export default function StudentProfile() {
                    </div>
                    <div>
                       <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-1">{String(user?.name || 'Bem-vindo')}</h1>
-                      <p className="text-violet-100 opacity-90 flex items-center gap-2">
+                      <p className="text-blue-50 opacity-90 flex items-center gap-2">
                         <span className="bg-white/10 px-2 py-0.5 rounded text-sm">{String(email || '—')}</span>
                       </p>
                    </div>
@@ -225,7 +225,7 @@ export default function StudentProfile() {
                 
                 <Button 
                    onClick={() => setIsEditing(!isEditing)}
-                   className={`${isEditing ? 'bg-red-500 hover:bg-red-600' : 'bg-white text-violet-900 hover:bg-violet-50'} shadow-lg border-0 transition-all font-semibold min-w-[140px]`}
+                   className={`${isEditing ? 'bg-red-500 hover:bg-red-600' : 'bg-white text-primary hover:bg-blue-50'} shadow-lg border-0 transition-all font-semibold min-w-[140px]`}
                 >
                    {isEditing ? 'Cancelar Edição' : 'Editar Perfil'}
                 </Button>
@@ -239,7 +239,7 @@ export default function StudentProfile() {
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     <Card className="border-0 shadow-md bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800">
                        <CardHeader className="border-b border-slate-100 dark:border-slate-800">
-                          <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400">
+                          <div className="flex items-center gap-2 text-primary dark:text-blue-400">
                              <UserIcon className="w-5 h-5" />
                              <CardTitle>Dados Pessoais</CardTitle>
                           </div>
@@ -293,7 +293,7 @@ export default function StudentProfile() {
 
                     <Card className="border-0 shadow-md bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800">
                        <CardHeader className="border-b border-slate-100 dark:border-slate-800">
-                          <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400">
+                          <div className="flex items-center gap-2 text-primary dark:text-blue-400">
                              <MapPin className="w-5 h-5" />
                              <CardTitle>Endereço e Contato</CardTitle>
                           </div>
@@ -341,16 +341,16 @@ export default function StudentProfile() {
              {/* Right Column: Actions & Security */}
              <div className="space-y-6">
                  {isEditing && (
-                    <Card className="border-2 border-violet-500/20 shadow-lg bg-violet-50 dark:bg-violet-900/10 sticky top-24">
+                    <Card className="border-2 border-blue-500/20 shadow-lg bg-blue-50 dark:bg-blue-900/10 sticky top-24">
                        <CardHeader>
-                          <CardTitle className="text-violet-700 dark:text-violet-300">Salvar Alterações</CardTitle>
+                          <CardTitle className="text-primary dark:text-blue-300">Salvar Alterações</CardTitle>
                           <CardDescription>Confirme os novos dados para atualizar seu perfil.</CardDescription>
                        </CardHeader>
                        <CardContent>
                           <Button 
                               onClick={handleSubmit(onSubmit)} 
                               disabled={isSubmitting} 
-                              className="w-full bg-violet-600 hover:bg-violet-700 text-white shadow-md h-12 text-lg"
+                              className="w-full bg-primary hover:bg-blue-700 text-white shadow-md h-12 text-lg"
                           >
                              {isSubmitting && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                              Salvar Perfil
@@ -359,7 +359,7 @@ export default function StudentProfile() {
                     </Card>
                  )}
 
-                 <Card className={`border-0 shadow-md ring-1 ring-slate-200 dark:ring-slate-800 transition-all ${isChangingPassword ? 'bg-violet-50 dark:bg-violet-900/10 ring-violet-200 dark:ring-violet-800' : 'bg-white dark:bg-slate-900'}`}>
+                 <Card className={`border-0 shadow-md ring-1 ring-slate-200 dark:ring-slate-800 transition-all ${isChangingPassword ? 'bg-blue-50 dark:bg-blue-900/10 ring-blue-200 dark:ring-blue-800' : 'bg-white dark:bg-slate-900'}`}>
                     <CardHeader className="border-b border-slate-100 dark:border-slate-800 cursor-pointer" onClick={() => !isChangingPassword && setIsChangingPassword(true)}>
                        <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
@@ -401,7 +401,7 @@ export default function StudentProfile() {
                                   {passwordErrors.new_password_confirmation && <span className="text-xs text-red-500">{passwordErrors.new_password_confirmation.message}</span>}
                               </div>
                               <div className="flex gap-2 pt-2">
-                                <Button type="submit" disabled={isSubmittingPassword} className="flex-1 bg-violet-600 hover:bg-violet-700 text-white">
+                                <Button type="submit" disabled={isSubmittingPassword} className="flex-1 bg-primary hover:bg-blue-700 text-white">
                                     {isSubmittingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                     Atualizar Senha
                                 </Button>

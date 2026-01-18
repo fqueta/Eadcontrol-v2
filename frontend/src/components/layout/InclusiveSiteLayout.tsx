@@ -126,49 +126,52 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
   const permission_id: any = user?.permission_id;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-emerald-50 dark:from-slate-950 dark:via-violet-950/10 dark:to-slate-950 transition-colors duration-500">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-slate-50 dark:from-slate-950 dark:via-blue-950/10 dark:to-slate-950 transition-colors duration-500">
       {/* Header */}
-      <header className="bg-white/70 dark:bg-slate-950/70 backdrop-blur-md border-b border-violet-200/50 dark:border-violet-800/30 sticky top-0 z-50 transition-colors duration-500">
+      <header className="bg-white/70 dark:bg-slate-950/70 backdrop-blur-md border-b border-primary/10 dark:border-blue-800/30 sticky top-0 z-50 transition-colors duration-500">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <BrandLogo
               alt="Marca"
               fallbackSrc="https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=375,fit=crop,q=95/AQExkVPy2aUDzpqL/sem-nome-250-x-125-px-4-AzGMXn77KQTvDXrP.png"
-              className="h-10 rounded-md ring-1 ring-violet-200/40 dark:ring-violet-700/40 p-1 drop-shadow-sm"
+              className="h-10 rounded-md ring-1 ring-primary/20 dark:ring-primary/40 p-1 drop-shadow-sm"
             />
             <div className="hidden md:block">
-              <h1 className="text-xl font-bold text-violet-800 dark:text-violet-100">Incluir & Educar</h1>
-              <p className="text-xs text-violet-600 dark:text-violet-300">Tecnologia que Inclui. Educação que Transforma.</p>
+              <h1 className="text-xl font-bold text-primary dark:text-blue-400">Incluir & Educar</h1>
+              <p className="text-xs text-muted-foreground dark:text-blue-200">Tecnologia que Inclui. Educação que Transforma.</p>
             </div>
           </div>
           {/* Mobile actions: theme toggle + menu */}
           <div className="flex md:hidden items-center gap-2">
-            <Button variant="outline" size="icon" className="border-violet-300 text-violet-700 hover:bg-violet-50 dark:text-violet-100 dark:border-violet-700" onClick={toggleDarkMode} aria-label="Alternar tema">
+            <Button variant="outline" size="icon" className="border-primary/20 text-primary hover:bg-blue-50 dark:text-blue-100 dark:border-blue-800" onClick={toggleDarkMode} aria-label="Alternar tema">
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
-            <Button variant="outline" size="icon" className="border-violet-300 text-violet-700 hover:bg-violet-50 dark:text-violet-100 dark:border-violet-700" onClick={() => setMobileNavOpen(true)} aria-label="Abrir menu">
+            <Button variant="outline" size="icon" className="border-primary/20 text-primary hover:bg-blue-50 dark:text-blue-100 dark:border-blue-800" onClick={() => setMobileNavOpen(true)} aria-label="Abrir menu">
               <Menu className="w-4 h-4" />
             </Button>
           </div>
           <div className="hidden md:flex space-x-3 items-center">
-            <Button asChild variant="ghost" className="text-violet-700 hover:bg-violet-50">
+            <Button asChild variant="ghost" className="text-primary hover:bg-blue-50 hover:text-primary">
+              <Link to="/">Início</Link>
+            </Button>
+            <Button asChild variant="ghost" className="text-primary hover:bg-blue-50 hover:text-primary">
               <Link to="/cursos">Cursos</Link>
             </Button>
-            <Button asChild variant="ghost" className="text-violet-700 hover:bg-violet-50">
+            <Button asChild variant="ghost" className="text-primary hover:bg-blue-50 hover:text-primary">
               <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer">
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Site institucional
               </a>
             </Button>
             {/* Theme toggle (desktop only) */}
-            <Button variant="outline" className="border-violet-300 text-violet-700 hover:bg-violet-50 dark:text-violet-100 dark:border-violet-700" onClick={toggleDarkMode}>
+            <Button variant="outline" className="border-primary/20 text-primary hover:bg-blue-50 dark:text-blue-100 dark:border-blue-800" onClick={toggleDarkMode}>
               {isDark ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
               {isDark ? 'Modo claro' : 'Modo escuro'}
             </Button>
             {isAuthenticated && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="border-violet-300 text-violet-700 hover:bg-violet-50">
+                  <Button variant="outline" className="border-primary/20 text-primary hover:bg-blue-50">
                     <User className="w-4 h-4 mr-2" />
                     {user.name}
                     <ChevronDown className="w-4 h-4 ml-2" />
@@ -239,10 +242,10 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
               </DropdownMenu>
             ) : (
               <>
-                <Button variant="outline" asChild className="border-violet-300 text-violet-700 hover:bg-violet-50">
+                <Button variant="outline" asChild className="border-primary/20 text-primary hover:bg-blue-50">
                   <Link to="/login">Entrar</Link>
                 </Button>
-                <Button asChild className="bg-violet-700 hover:bg-violet-800">
+                <Button asChild className="bg-primary hover:bg-blue-700">
                   <Link to="/public-client-form">Cadastrar</Link>
                 </Button>
               </>
@@ -309,7 +312,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
                 <Button asChild variant="outline" className="w-full justify-start" onClick={() => setMobileNavOpen(false)}>
                   <Link to="/login">Entrar</Link>
                 </Button>
-                <Button asChild className="w-full justify-start bg-violet-700 hover:bg-violet-800" onClick={() => setMobileNavOpen(false)}>
+                <Button asChild className="w-full justify-start bg-primary hover:bg-blue-700" onClick={() => setMobileNavOpen(false)}>
                   <Link to="/public-client-form">Cadastrar</Link>
                 </Button>
               </>
@@ -322,7 +325,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
       <main className="min-h-[60vh]">{children}</main>
 
       {/* Footer */}
-      <footer className="bg-violet-900 dark:bg-slate-950 border-t border-violet-800 dark:border-violet-900 text-white py-12 px-4 transition-colors duration-500">
+      <footer className="bg-slate-900 dark:bg-slate-950 border-t border-slate-800 dark:border-blue-900 text-white py-12 px-4 transition-colors duration-500">
         <div className="container mx-auto">
           <div className="grid md:grid-cols-3 gap-8">
             <div>
@@ -330,37 +333,37 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
                 <BrandLogo
                   alt="Marca"
                   fallbackSrc="https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=375,fit=crop,q=95/AQExkVPy2aUDzpqL/sem-nome-250-x-125-px-4-AzGMXn77KQTvDXrP.png"
-                  className="h-8"
+                  className="h-8 brightness-0 invert"
                 />
                 <div>
                   <h3 className="font-bold">Incluir & Educar</h3>
-                  <p className="text-sm text-violet-200">Tecnologia com propósito</p>
+                  <p className="text-sm text-slate-400">Tecnologia com propósito</p>
                 </div>
               </div>
-              <p className="text-violet-200 text-sm">
+              <p className="text-slate-400 text-sm">
                 A maior distribuidora de soluções educacionais inclusivas do Brasil.
               </p>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Acesso rápido</h4>
-              <ul className="space-y-2 text-sm text-violet-200">
-                <li><Link to="/cursos" className="hover:text-white">Cursos</Link></li>
-                <li><Link to="/login" className="hover:text-white">Entrar</Link></li>
-                <li><Link to="/public-client-form" className="hover:text-white">Cadastro</Link></li>
+              <ul className="space-y-2 text-sm text-slate-400">
+                <li><Link to="/cursos" className="hover:text-white transition-colors">Cursos</Link></li>
+                <li><Link to="/login" className="hover:text-white transition-colors">Entrar</Link></li>
+                <li><Link to="/public-client-form" className="hover:text-white transition-colors">Cadastro</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Institucional</h4>
-              <ul className="space-y-2 text-sm text-violet-200">
+              <ul className="space-y-2 text-sm text-slate-400">
                 <li>
-                  <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer" className="hover:text-white">
+                  <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
                     Site oficial
                   </a>
                 </li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-violet-800 mt-8 pt-8 text-center text-sm text-violet-200">
+          <div className="border-t border-slate-800 mt-8 pt-8 text-center text-sm text-slate-500">
             <p>&copy; {new Date().getFullYear()} Incluir & Educar. Todos os direitos reservados.</p>
           </div>
         </div>

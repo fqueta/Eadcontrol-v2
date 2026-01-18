@@ -132,8 +132,8 @@ export default function ResetPassword() {
         {/* Brand logo */}
         <BrandLogo alt="Aeroclube JF" className="h-10" />
         <div>
-          <p className="text-sm font-semibold text-blue-800">Aeroclube de Juiz de Fora</p>
-          <p className="text-xs text-blue-600">Escola de aviação</p>
+          <p className="text-sm font-semibold text-primary">Aeroclube de Juiz de Fora</p>
+          <p className="text-xs text-muted-foreground">Escola de aviação</p>
         </div>
       </div>
 
@@ -144,27 +144,26 @@ export default function ResetPassword() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nova Senha</FormLabel>
+                <FormLabel className="text-primary font-medium">Nova Senha</FormLabel>
                 <FormControl>
                   <div className="relative">
                     <Input
                       type={showPassword ? 'text' : 'password'}
                       placeholder="Sua nova senha"
+                      className="border-primary/20 focus:border-primary focus:ring-primary pr-10"
                       {...field}
                     />
-                    <Button
+                    <button
                       type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
                       ) : (
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-4 w-4 text-muted-foreground" />
                       )}
-                    </Button>
+                    </button>
                   </div>
                 </FormControl>
                 <FormMessage />
@@ -177,27 +176,26 @@ export default function ResetPassword() {
             name="password_confirmation"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Confirmar Nova Senha</FormLabel>
+                <FormLabel className="text-primary font-medium">Confirmar Nova Senha</FormLabel>
                 <FormControl>
                   <div className="relative">
                     <Input
                       type={showPasswordConfirmation ? 'text' : 'password'}
                       placeholder="Confirme sua nova senha"
+                       className="border-primary/20 focus:border-primary focus:ring-primary pr-10"
                       {...field}
                     />
-                    <Button
+                    <button
                       type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
                       onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)}
                     >
                       {showPasswordConfirmation ? (
-                        <EyeOff className="h-4 w-4" />
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
                       ) : (
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-4 w-4 text-muted-foreground" />
                       )}
-                    </Button>
+                    </button>
                   </div>
                 </FormControl>
                 <FormMessage />
@@ -207,7 +205,7 @@ export default function ResetPassword() {
 
           <Button 
             type="submit" 
-            className="w-full bg-blue-700 hover:bg-blue-800" 
+            className="w-full bg-primary hover:bg-primary/90 rounded-md" 
             disabled={isLoading}
           >
             {isLoading ? 'Redefinindo...' : 'Redefinir Senha'}
@@ -216,7 +214,7 @@ export default function ResetPassword() {
       </Form>
 
       <div className="text-center text-sm">
-        <Link to="/login" className="text-blue-700 hover:underline">
+        <Link to="/login" className="text-primary hover:text-primary/90 hover:underline">
           Voltar ao Login
         </Link>
       </div>

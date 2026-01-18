@@ -178,15 +178,15 @@ export default function Login() {
                     <ArrowLeft className="h-4 w-4" />
                   </Link>
                 </Button>
-                <div className="flex-1 text-center">
+                  <div className="flex-1 text-center">
                   {/* Brand logo (dinâmico via API/options) */}
                   <BrandLogo alt={institutionName || 'Logo'} className="h-10 mx-auto mb-2" />
-                  <h1 className="text-xl font-bold text-blue-700">{institutionName}</h1>
-                  <p className="text-xs text-blue-600">{institutionSlogan}</p>
+                  <h1 className="text-xl font-bold text-primary">{institutionName}</h1>
+                  <p className="text-xs text-muted-foreground">{institutionSlogan}</p>
                 </div>
               </div>
 
-              <p className="text-blue-600 text-sm mb-6 text-center">
+              <p className="text-muted-foreground text-sm mb-6 text-center">
                 Entre em sua conta para continuar
               </p>
 
@@ -197,12 +197,12 @@ export default function Login() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-blue-700 font-medium">Email</FormLabel>
+                        <FormLabel className="text-primary font-medium">Email</FormLabel>
                         <FormControl>
                           <Input
                             type="email"
                             placeholder="seu@email.com"
-                            className="border-blue-200 focus:border-blue-500 focus:ring-blue-500"
+                            className="border-primary/20 focus:border-primary focus:ring-primary"
                             {...field}
                           />
                         </FormControl>
@@ -216,13 +216,13 @@ export default function Login() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-blue-700 font-medium">Senha</FormLabel>
+                        <FormLabel className="text-primary font-medium">Senha</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Input
                               type={showPassword ? 'text' : 'password'}
                               placeholder="Sua senha"
-                              className="border-blue-200 focus:border-blue-500 focus:ring-blue-500 pr-10"
+                              className="border-primary/20 focus:border-primary focus:ring-primary pr-10"
                               {...field}
                             />
                             <button
@@ -231,9 +231,9 @@ export default function Login() {
                               onClick={() => setShowPassword(!showPassword)}
                             >
                               {showPassword ? (
-                                <EyeOff className="h-4 w-4 text-blue-400" />
+                                <EyeOff className="h-4 w-4 text-muted-foreground" />
                               ) : (
-                                <Eye className="h-4 w-4 text-blue-400" />
+                                <Eye className="h-4 w-4 text-muted-foreground" />
                               )}
                             </button>
                           </div>
@@ -253,10 +253,10 @@ export default function Login() {
                             <Checkbox
                               checked={field.value}
                               onCheckedChange={field.onChange}
-                              className="border-blue-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                              className="border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                             />
                           </FormControl>
-                          <FormLabel className="text-sm text-blue-600">
+                          <FormLabel className="text-sm text-muted-foreground">
                             Lembrar de mim
                           </FormLabel>
                         </FormItem>
@@ -265,7 +265,7 @@ export default function Login() {
                     
                     <Link
                       to="/forgot-password"
-                      className="text-sm text-blue-600 hover:text-blue-800 underline font-medium"
+                      className="text-sm text-primary hover:text-blue-700 underline font-medium"
                     >
                       Esqueceu a senha?
                     </Link>
@@ -273,7 +273,7 @@ export default function Login() {
 
                   <Button 
                     type="submit" 
-                    className="w-full bg-blue-700 hover:bg-blue-800 text-white font-medium" 
+                    className="w-full bg-primary hover:bg-blue-700 text-white font-medium rounded-md" 
                     disabled={isLoading}
                   >
                     {isLoading ? 'Entrando...' : 'Entrar'}
@@ -282,8 +282,8 @@ export default function Login() {
               </Form>
 
               <div className="text-center text-sm mt-4">
-                <span className="text-blue-100">Não tem uma conta? </span>
-                <Link to="/public-client-form" className="text-blue-100 underline hover:text-white font-medium">
+                <span className="text-muted-foreground">Não tem uma conta? </span>
+                <Link to="/public-client-form" className="text-primary underline hover:text-blue-700 font-medium">
                   Cadastre-se
                 </Link>
               </div>

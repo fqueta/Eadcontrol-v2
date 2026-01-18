@@ -192,7 +192,7 @@ export default function Register() {
 
       <div className="text-center text-sm">
         <span className="text-muted-foreground">Já tem uma conta? </span>
-        <Link to="/login" className="text-primary hover:underline">
+        <Link to="/login" className="text-primary hover:underline hover:text-blue-700">
           Entre aqui
         </Link>
       </div>

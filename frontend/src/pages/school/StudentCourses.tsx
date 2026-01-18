@@ -278,7 +278,7 @@ export default function StudentCourses() {
     return (
       <Card 
         key={String(enroll?.id || Math.random())} 
-        className="group overflow-hidden border border-border/50 rounded-xl bg-card hover:bg-card/80 shadow-sm hover:shadow-xl hover:shadow-violet-500/10 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col h-full"
+        className="group overflow-hidden border border-border/50 rounded-lg bg-card hover:bg-card/80 shadow-sm hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col h-full"
         onClick={() => {
            if (!disabledNav) {
               if (activeCategory === 'mat') handleContinueCourse(enroll);
@@ -295,7 +295,7 @@ export default function StudentCourses() {
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
                 />
              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-violet-100 to-emerald-100 dark:from-violet-900/30 dark:to-emerald-900/30 flex items-center justify-center">
+                <div className="w-full h-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex items-center justify-center">
                    <span className="text-4xl opacity-30">🎓</span>
                 </div>
              )}
@@ -309,7 +309,7 @@ export default function StudentCourses() {
         )}
         <CardHeader className="p-5 pb-2 flex-grow">
           <div className="flex items-start justify-between gap-2">
-            <CardTitle className="text-lg font-bold line-clamp-2 leading-tight group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+            <CardTitle className="text-lg font-bold line-clamp-2 leading-tight group-hover:text-primary dark:group-hover:text-blue-400 transition-colors">
                {title}
             </CardTitle>
           </div>
@@ -325,7 +325,7 @@ export default function StudentCourses() {
                    size="sm" 
                    disabled={disabledNav} 
                    onClick={(e) => { e.stopPropagation(); handleContinueCourse(enroll); }}
-                   className={isConcluded ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-violet-600 hover:bg-violet-700 text-white"}
+                   className={isConcluded ? "bg-emerald-600 hover:bg-emerald-700 text-white rounded-md" : "bg-primary hover:bg-blue-700 text-white rounded-md"}
                 >
                    {actionLabel}
                 </Button>
@@ -334,7 +334,7 @@ export default function StudentCourses() {
                    variant="outline" 
                    disabled={disabledNav} 
                    onClick={(e) => { e.stopPropagation(); handleViewProgress(enroll); }}
-                   className="border-violet-200 dark:border-violet-800 hover:bg-violet-50 dark:hover:bg-violet-900/20"
+                   className="border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/20 rounded-md"
                 >
                    Progresso
                 </Button>
@@ -342,7 +342,7 @@ export default function StudentCourses() {
                   <Button 
                     size="sm" 
                     variant="ghost" 
-                    className="col-span-2 text-xs h-6 text-muted-foreground hover:text-violet-600"
+                    className="col-span-2 text-xs h-6 text-muted-foreground hover:text-primary"
                     onClick={(e) => { e.stopPropagation(); window.open((enroll?.preferencias || {})?.certificate_url, '_blank'); }}
                   >
                     🏆 Ver Certificado
@@ -354,7 +354,7 @@ export default function StudentCourses() {
                 size="sm" 
                 disabled={disabledNav} 
                 onClick={(e) => { e.stopPropagation(); handleViewInterestedCourse(enroll); }}
-                className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+                className="w-full bg-primary hover:bg-blue-700 text-white rounded-md"
               >
                 Ver detalhes do curso
               </Button>
@@ -371,23 +371,23 @@ export default function StudentCourses() {
         <div className="container mx-auto px-4 space-y-8">
         
         {/* Premium Header */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-900 via-violet-800 to-fuchsia-900 text-white shadow-xl">
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-primary via-blue-600 to-indigo-700 text-white shadow-xl">
            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent" />
-           <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-violet-500/20 blur-3xl" />
+           <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-blue-400/20 blur-3xl" />
            <div className="relative z-10 px-8 py-10 md:py-12 flex flex-col md:flex-row items-center md:items-end justify-between gap-6">
               <div>
                 <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-2 drop-shadow-md">Meus Cursos</h1>
-                <p className="text-violet-100 text-lg max-w-xl">
+                <p className="text-blue-50 text-lg max-w-xl">
                   Gerencie sua jornada de aprendizado. Acesse seus cursos matriculados e confira novos interesses.
                 </p>
               </div>
               
               {/* Controls inside Header for premium feel */}
-               <div className="bg-white/10 backdrop-blur-md border border-white/20 p-1.5 rounded-xl flex items-center gap-1">
+               <div className="bg-white/10 backdrop-blur-md border border-white/20 p-1.5 rounded-md flex items-center gap-1">
                  <Button 
                     size="sm" 
                     variant="ghost" 
-                    className={`text-white hover:bg-white/20 ${activeCategory === 'mat' ? 'bg-white/20 shadow-sm font-semibold' : 'opacity-80'}`}
+                    className={`text-white hover:bg-white/20 rounded-sm ${activeCategory === 'mat' ? 'bg-white/20 shadow-sm font-semibold' : 'opacity-80'}`}
                     onClick={() => setActiveCategory('mat')}
                  >
                     Matriculados
@@ -395,17 +395,17 @@ export default function StudentCourses() {
                  <Button 
                     size="sm" 
                     variant="ghost" 
-                    className={`text-white hover:bg-white/20 ${activeCategory === 'int' ? 'bg-white/20 shadow-sm font-semibold' : 'opacity-80'}`}
+                    className={`text-white hover:bg-white/20 rounded-sm ${activeCategory === 'int' ? 'bg-white/20 shadow-sm font-semibold' : 'opacity-80'}`}
                     onClick={() => setActiveCategory('int')}
                  >
                     Interesse
                  </Button>
                  <div className="w-px h-6 bg-white/20 mx-1" />
-                 <div className="flex bg-black/20 rounded-lg p-0.5">
+                 <div className="flex bg-black/20 rounded-md p-0.5">
                     <Button 
                       size="icon" 
                       variant="ghost" 
-                      className={`h-8 w-8 text-white hover:bg-white/20 ${viewMode === 'grid' ? 'bg-white/20' : ''}`}
+                      className={`h-8 w-8 text-white hover:bg-white/20 rounded-sm ${viewMode === 'grid' ? 'bg-white/20' : ''}`}
                       onClick={() => setViewMode('grid')}
                       title="Grade"
                     >
@@ -414,7 +414,7 @@ export default function StudentCourses() {
                     <Button 
                       size="icon" 
                       variant="ghost" 
-                      className={`h-8 w-8 text-white hover:bg-white/20 ${viewMode === 'list' ? 'bg-white/20' : ''}`}
+                      className={`h-8 w-8 text-white hover:bg-white/20 rounded-sm ${viewMode === 'list' ? 'bg-white/20' : ''}`}
                       onClick={() => setViewMode('list')}
                       title="Lista"
                     >
@@ -435,7 +435,7 @@ export default function StudentCourses() {
             
              {isLoading && (
                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground animate-in fade-in">
-                   <div className="animate-spin mb-4 w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full"></div>
+                   <div className="animate-spin mb-4 w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
                    <p>Carregando seus cursos...</p>
                 </div>
              )}
@@ -455,7 +455,7 @@ export default function StudentCourses() {
                   </p>
                   <Button 
                     onClick={() => navigate('/cursos')}
-                    className="bg-violet-600 hover:bg-violet-700 text-white rounded-full px-8 shadow-lg hover:shadow-xl transition-all"
+                    className="bg-primary hover:bg-blue-700 text-white rounded-full px-8 shadow-lg hover:shadow-xl transition-all"
                   >
                      Explorar Cursos
                   </Button>
@@ -481,7 +481,7 @@ export default function StudentCourses() {
                          return (
                            <div 
                               key={String(enroll?.id || Math.random())} 
-                              className="group flex flex-col md:flex-row md:items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:shadow-md hover:border-violet-200 dark:hover:border-violet-800 transition-all cursor-pointer"
+                              className="group flex flex-col md:flex-row md:items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg hover:shadow-md hover:border-primary/20 dark:hover:border-blue-800 transition-all cursor-pointer"
                               onClick={() => {
                                  if (!disabledNav) {
                                     if (activeCategory === 'mat') handleContinueCourse(enroll);
@@ -490,7 +490,7 @@ export default function StudentCourses() {
                               }}
                            >
                              <div className="flex items-center gap-4">
-                               <div className="hidden md:block w-16 h-16 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
+                               <div className="hidden md:block w-16 h-16 rounded-md overflow-hidden bg-slate-100 flex-shrink-0">
                                   {coverUrl ? (
                                      <img src={coverUrl} alt="" className="w-full h-full object-cover" />
                                   ) : (
@@ -498,7 +498,7 @@ export default function StudentCourses() {
                                   )}
                                </div>
                                <div className="flex flex-col">
-                                 <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 group-hover:text-violet-600 transition-colors">
+                                 <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors">
                                     {resolveCourseTitle(enroll)}
                                  </h3>
                                  <div className="flex items-center gap-2 mt-1">
@@ -532,7 +532,7 @@ export default function StudentCourses() {
                                       variant="outline" 
                                       disabled={disabledNav} 
                                       onClick={(e) => { e.stopPropagation(); handleViewProgress(enroll); }}
-                                      className="hidden sm:flex"
+                                      className="hidden sm:flex rounded-md"
                                    >
                                       Progresso
                                    </Button>
@@ -540,7 +540,7 @@ export default function StudentCourses() {
                                       size="sm" 
                                       disabled={disabledNav} 
                                       onClick={(e) => { e.stopPropagation(); handleContinueCourse(enroll); }}
-                                      className={isConcludedLocal ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" : "bg-violet-600 hover:bg-violet-700 text-white shadow-sm"}
+                                      className={isConcludedLocal ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm rounded-md" : "bg-primary hover:bg-blue-700 text-white shadow-sm rounded-md"}
                                    >
                                       {isConcludedLocal ? 'Revisar' : 'Continuar'}
                                    </Button>
@@ -550,7 +550,7 @@ export default function StudentCourses() {
                                     size="sm" 
                                     disabled={disabledNav} 
                                     onClick={(e) => { e.stopPropagation(); handleViewInterestedCourse(enroll); }}
-                                    className="bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
+                                    className="bg-primary hover:bg-blue-700 text-white shadow-sm rounded-md"
                                  >
                                     Ver detalhes
                                  </Button>

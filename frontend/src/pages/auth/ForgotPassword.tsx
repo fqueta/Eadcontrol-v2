@@ -119,8 +119,8 @@ export default function ForgotPassword() {
           {/* Brand logo */}
           <BrandLogo alt="Aeroclube JF" className="h-10" />
           <div>
-            <p className="text-sm font-semibold text-blue-800">{institutionName}</p>
-            <p className="text-xs text-blue-600">{institutionSlogan}</p>
+            <p className="text-sm font-semibold text-primary">{institutionName}</p>
+            <p className="text-xs text-muted-foreground">{institutionSlogan}</p>
           </div>
         </div>
 
@@ -129,12 +129,12 @@ export default function ForgotPassword() {
             Enviamos um link para redefinir sua senha para o email fornecido.
           </p>
           <div className="space-y-2">
-            <Button asChild className="w-full bg-blue-700 hover:bg-blue-800">
+            <Button asChild className="w-full bg-primary hover:bg-blue-700 rounded-md">
               <Link to="/login">Voltar ao Login</Link>
             </Button>
             <Button 
               variant="outline" 
-              className="w-full border-blue-300 text-blue-700 hover:bg-blue-50"
+              className="w-full border-primary/20 text-primary hover:bg-blue-50 rounded-md"
               onClick={() => setEmailSent(false)}
             >
               Tentar Novamente
@@ -155,8 +155,8 @@ export default function ForgotPassword() {
         {/* Brand logo */}
         <BrandLogo alt="Aeroclube JF" className="h-10" />
         <div>
-          <p className="text-sm font-semibold text-blue-800">{institutionName}</p>
-          <p className="text-xs text-blue-600">{institutionSlogan}</p>
+          <p className="text-sm font-semibold text-primary">{institutionName}</p>
+          <p className="text-xs text-muted-foreground">{institutionSlogan}</p>
         </div>
       </div>
 
@@ -172,6 +172,7 @@ export default function ForgotPassword() {
                   <Input
                     type="email"
                     placeholder="seu@email.com"
+                    className="border-primary/20 focus:border-primary focus:ring-primary"
                     {...field}
                   />
                 </FormControl>
@@ -182,16 +183,16 @@ export default function ForgotPassword() {
 
           <Button 
             type="submit" 
-            className="w-full bg-blue-700 hover:bg-blue-800" 
+            className="w-full bg-primary hover:bg-blue-700 rounded-md" 
             disabled={isLoading}
           >
-            {isLoading ? 'Enviando...' : 'Enviar Link de Recuperação'}
+             {isLoading ? 'Enviando...' : 'Enviar Link de Recuperação'}
           </Button>
         </form>
       </Form>
 
       <div className="text-center text-sm">
-        <Link to="/login" className="text-blue-700 hover:underline">
+        <Link to="/login" className="text-primary hover:text-blue-700 hover:underline">
           Voltar ao Login
         </Link>
       </div>

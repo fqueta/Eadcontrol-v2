@@ -290,16 +290,16 @@ export default function CourseDetails() {
           {/* Header area */}
           {/**
            * Header
-           * pt-BR: Usa as mesmas cores do layout (gradiente violeta/fúcsia) e mantém a identidade visual com a logo via InclusiveSiteLayout.
-           * en-US: Uses the same layout colors (violet/fuchsia gradient) and keeps visual identity with the logo via InclusiveSiteLayout.
+           * pt-BR: Usa as mesmas cores do layout (gradiente azul brand) e mantém a identidade visual com a logo via InclusiveSiteLayout.
+           * en-US: Uses the same layout colors (brand blue gradient) and keeps visual identity with the logo via InclusiveSiteLayout.
            */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-900 via-violet-800 to-fuchsia-900 text-white shadow-xl mb-8">
+          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-primary via-blue-600 to-indigo-700 text-white shadow-xl mb-8">
             <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent" />
-            <div className="absolute -right-20 -top-20 h-96 w-96 rounded-full bg-violet-500/20 blur-3xl" />
+            <div className="absolute -right-20 -top-20 h-96 w-96 rounded-full bg-blue-400/20 blur-3xl" />
             <div className="relative z-10 px-8 py-10 md:py-14">
               <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-2 drop-shadow-md">{title}</h1>
               {error && (
-                <p className="mt-2 text-sm text-white/90 bg-red-500/20 inline-block px-3 py-1 rounded-full">Falha ao carregar informações do curso.</p>
+                <p className="mt-2 text-sm text-white/90 bg-red-500/20 inline-block px-3 py-1 rounded-md">Falha ao carregar informações do curso.</p>
               )}
             </div>
           </div>
@@ -308,9 +308,9 @@ export default function CourseDetails() {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Left: description and highlights */}
             <div className="lg:col-span-2 space-y-8">
-              <Card className="border-0 shadow-lg bg-white dark:bg-slate-900 overflow-hidden ring-1 ring-slate-200 dark:ring-slate-800">
-                <CardHeader className="bg-violet-50/50 dark:bg-violet-900/10 border-b border-violet-100 dark:border-violet-800/50 pb-6">
-                  <CardTitle className="text-2xl text-violet-800 dark:text-violet-300 font-bold">Por que realizar este curso?</CardTitle>
+              <Card className="border-0 shadow-lg bg-white dark:bg-slate-900 overflow-hidden ring-1 ring-slate-200 dark:ring-slate-800 rounded-lg">
+                <CardHeader className="bg-blue-50/50 dark:bg-blue-900/10 border-b border-blue-100 dark:border-blue-800/50 pb-6">
+                  <CardTitle className="text-2xl text-primary dark:text-blue-300 font-bold">Por que realizar este curso?</CardTitle>
                   <CardDescription className="text-base">
                     Confira os benefícios e o conteúdo programático detalhado.
                   </CardDescription>
@@ -318,14 +318,14 @@ export default function CourseDetails() {
                 <CardContent className="space-y-6 pt-6">
                   {description && renderDescriptionHtml(description)}
                   {highlights.length > 0 && (
-                    <div className="bg-violet-50 dark:bg-violet-900/20 p-5 rounded-xl border border-violet-100 dark:border-violet-800/50">
-                      <h3 className="text-base font-semibold text-violet-900 dark:text-violet-300 mb-3 flex items-center gap-2">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-lg border border-blue-100 dark:border-blue-800/50">
+                      <h3 className="text-base font-semibold text-primary dark:text-blue-300 mb-3 flex items-center gap-2">
                         <span className="text-xl">✨</span> Destaques
                       </h3>
                       <ul className="grid sm:grid-cols-2 gap-2 text-sm">
                         {highlights.map((h, i) => (
                           <li key={i} className="flex items-start gap-2">
-                             <span className="text-violet-500 mt-1">•</span>
+                             <span className="text-primary mt-1">•</span>
                              <span className="text-slate-700 dark:text-slate-300">{h}</span>
                           </li>
                         ))}
@@ -335,7 +335,7 @@ export default function CourseDetails() {
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-md bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800">
+              <Card className="border-0 shadow-md bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800 rounded-lg">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-xl">O que você vai aprender?</CardTitle>
                 </CardHeader>
@@ -344,8 +344,8 @@ export default function CourseDetails() {
                     <p className="text-sm text-muted-foreground italic">Conteúdo do curso será exibido aqui.</p>
                   )}
                   {modules.map((m: any, idx: number) => (
-                    <div key={idx} className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                      <div className="font-semibold text-violet-900 dark:text-violet-300 mb-2">{m?.titulo || `Módulo ${idx + 1}`}</div>
+                    <div key={idx} className="rounded-lg border border-slate-200 dark:border-slate-800 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <div className="font-semibold text-primary dark:text-blue-300 mb-2">{m?.titulo || `Módulo ${idx + 1}`}</div>
                       {Array.isArray(m?.atividades) && m.atividades.length > 0 && (
                         <ul className="space-y-1.5 ml-1">
                           {m.atividades.map((a: any, j: number) => (
@@ -361,7 +361,7 @@ export default function CourseDetails() {
                 </CardContent>
               </Card>
 
-              <div className="rounded-xl bg-gradient-to-r from-violet-700 to-fuchsia-700 text-white p-6 shadow-lg relative overflow-hidden">
+              <div className="rounded-lg bg-gradient-to-r from-primary to-blue-600 text-white p-6 shadow-lg relative overflow-hidden">
                  <div className="absolute top-0 right-0 p-8 opacity-10 font-bold text-9xl leading-none transform translate-x-10 -translate-y-10">
                    %
                  </div>
@@ -373,7 +373,7 @@ export default function CourseDetails() {
                 </div>
               </div>
 
-              <Card className="border-0 shadow-md bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800">
+              <Card className="border-0 shadow-md bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800 rounded-lg">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <span>📧</span> Interessados e contato
@@ -393,36 +393,36 @@ export default function CourseDetails() {
                    */}
                   <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmitInterest}>
                     <input
-                      className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-violet-500/50 transition-all dark:text-white"
+                      className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white"
                       placeholder="Nome completo"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                     />
                     <input
-                      className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-violet-500/50 transition-all dark:text-white"
+                      className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white"
                       placeholder="Email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
                     <input
-                      className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-violet-500/50 transition-all dark:text-white"
+                      className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white"
                       placeholder="Telefone/WhatsApp"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                     />
                     <input
-                      className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-violet-500/50 transition-all dark:text-white"
+                      className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white"
                       placeholder="Cidade/Estado"
                       value={cityState}
                       onChange={(e) => setCityState(e.target.value)}
                     />
                     {/* Mensagem oculta conforme solicitação */}
                     <div className="md:col-span-2 hidden">
-                      <textarea className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5" rows={4} placeholder="Mensagem" />
+                      <textarea className="w-full rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5" rows={4} placeholder="Mensagem" />
                     </div>
                     <div className="md:col-span-2 flex justify-end mt-2">
-                      <Button type="submit" className="bg-violet-700 hover:bg-violet-800 text-white rounded-full px-8 shadow-md hover:shadow-lg transition-all" disabled={isSubmitting}>
+                      <Button type="submit" className="bg-primary hover:bg-blue-700 text-white rounded-md px-8 shadow-md hover:shadow-lg transition-all" disabled={isSubmitting}>
                         {isSubmitting ? 'Enviando...' : 'Enviar interesse'}
                       </Button>
                     </div>
@@ -434,7 +434,7 @@ export default function CourseDetails() {
             {/* Right: cover and price box */}
             <div className="lg:col-span-1 space-y-6">
               <div className="sticky top-24 space-y-6">
-                <Card className="border-0 shadow-xl overflow-hidden rounded-xl bg-white dark:bg-slate-900 h-auto">
+                <Card className="border-0 shadow-xl overflow-hidden rounded-lg bg-white dark:bg-slate-900 h-auto">
                     {coverUrl ? (
                         <div className="relative">
                             <img src={coverUrl} alt={title} className="w-full h-auto object-cover aspect-video" />
@@ -447,11 +447,11 @@ export default function CourseDetails() {
                     )}
                 </Card>
 
-                <Card className="border-2 border-violet-100 dark:border-violet-900 shadow-xl bg-white dark:bg-slate-900 rounded-xl overflow-hidden relative">
-                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-violet-600 to-fuchsia-600" />
+                <Card className="border-2 border-blue-100 dark:border-blue-900 shadow-xl bg-white dark:bg-slate-900 rounded-lg overflow-hidden relative">
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary to-secondary" />
                     <CardContent className="p-6">
                     <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Preço do curso</div>
-                    <div className="text-4xl font-extrabold text-violet-700 dark:text-violet-400 mt-1 mb-4 flex items-baseline gap-1">
+                    <div className="text-4xl font-extrabold text-primary dark:text-blue-400 mt-1 mb-4 flex items-baseline gap-1">
                          <span className="text-lg font-normal text-muted-foreground">R$</span>
                         {priceBox.valor || 'Consultar'}
                     </div>
@@ -461,7 +461,7 @@ export default function CourseDetails() {
                     <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
                         {priceBox.parcelas && priceBox.valorParcela ? (
                         <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center text-violet-600">💳</div>
+                            <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-primary">💳</div>
                             <div>
                                 Até <span className="font-bold ml-0.5">{priceBox.parcelas}x</span> de <span className="font-bold ml-0.5">R$ {priceBox.valorParcela}</span>
                             </div>
@@ -481,15 +481,15 @@ export default function CourseDetails() {
                     <div className="mt-6 flex flex-col gap-3">
                         {isAlreadyEnrolled ? (
                         <>
-                            <Button disabled className="w-full bg-slate-100 text-slate-400 border-0" variant="outline">
+                            <Button disabled className="w-full bg-slate-100 text-slate-400 border-0 rounded-md" variant="outline">
                                 ✅ Você já está matriculado
                             </Button>
-                            <Button onClick={() => navigate(`/aluno/cursos/${String(id)}`)} className="w-full bg-violet-600 hover:bg-violet-700 text-white shadow-md">
+                            <Button onClick={() => navigate(`/aluno/cursos/${String(id)}`)} className="w-full bg-primary hover:bg-blue-700 text-white shadow-md rounded-md">
                                 Acessar Curso
                             </Button>
                         </>
                         ) : (
-                        <Button onClick={handleBuy} className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white font-bold h-12 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all rounded-lg">
+                        <Button onClick={handleBuy} className="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-blue-700 hover:to-blue-600 text-white font-bold h-12 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all rounded-md">
                             Comprar agora
                         </Button>
                         )}

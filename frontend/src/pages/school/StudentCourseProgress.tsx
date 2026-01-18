@@ -181,12 +181,12 @@ export default function StudentCourseProgress() {
         <div className="container mx-auto px-4 space-y-8">
           
           {/* Premium Header */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-900 via-violet-800 to-fuchsia-900 text-white shadow-xl">
+          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-primary via-blue-600 to-indigo-700 text-white shadow-xl">
              <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent" />
-             <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-violet-500/20 blur-3xl" />
+             <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-blue-400/20 blur-3xl" />
              <div className="relative z-10 px-8 py-10 md:py-12">
                 <div className="flex flex-col gap-2">
-                   <div className="flex items-center gap-2 text-violet-200 text-sm font-medium uppercase tracking-wider">
+                   <div className="flex items-center gap-2 text-blue-100 text-sm font-medium uppercase tracking-wider">
                       <span className="bg-white/10 px-2 py-0.5 rounded text-xs">Progresso</span>
                       <span>•</span>
                       <span>Acompanhamento</span>
@@ -197,7 +197,7 @@ export default function StudentCourseProgress() {
                    <div className="flex items-center gap-2 mt-2">
                       <Button 
                          onClick={goToCourse}
-                         className="bg-white text-violet-900 hover:bg-violet-50 font-semibold shadow-sm border-0"
+                         className="bg-white text-primary hover:bg-blue-50 font-semibold shadow-sm border-0 rounded-md"
                          size="sm"
                       >
                          <PlayCircle className="w-4 h-4 mr-2" /> Continuar cursando
@@ -210,15 +210,15 @@ export default function StudentCourseProgress() {
           <div className="grid md:grid-cols-3 gap-8">
              {/* Left Column: Summary & Stats */}
              <div className="md:col-span-1 space-y-6">
-                <Card className="border-0 shadow-lg bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800 overflow-hidden">
-                   <CardHeader className="bg-violet-50/50 dark:bg-violet-900/10 border-b border-violet-100 dark:border-violet-800/50 pb-4">
-                      <CardTitle className="text-violet-800 dark:text-violet-300">Resumo Geral</CardTitle>
+                <Card className="border-0 shadow-lg bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800 overflow-hidden rounded-lg">
+                   <CardHeader className="bg-blue-50/50 dark:bg-blue-900/10 border-b border-blue-100 dark:border-blue-800/50 pb-4">
+                      <CardTitle className="text-primary dark:text-blue-300">Resumo Geral</CardTitle>
                       <CardDescription>Status atual do seu aprendizado</CardDescription>
                    </CardHeader>
                    <CardContent className="pt-6 space-y-6">
                       {isLoading && (
                          <div className="flex justify-center py-4">
-                            <div className="animate-spin w-6 h-6 border-4 border-violet-500 border-t-transparent rounded-full"></div>
+                            <div className="animate-spin w-6 h-6 border-4 border-primary border-t-transparent rounded-full"></div>
                          </div>
                       )}
                       {!isLoading && (
@@ -236,7 +236,7 @@ export default function StudentCourseProgress() {
                                        cy="64"
                                     />
                                     <circle
-                                       className="text-violet-600 dark:text-violet-500 transition-all duration-1000 ease-out"
+                                       className="text-primary dark:text-blue-500 transition-all duration-1000 ease-out"
                                        strokeWidth="10"
                                        strokeDasharray={365}
                                        strokeDashoffset={365 - (365 * percent) / 100}
@@ -248,32 +248,32 @@ export default function StudentCourseProgress() {
                                        cy="64"
                                     />
                                  </svg>
-                                 <div className="absolute inset-0 flex flex-col items-center justify-center text-violet-900 dark:text-violet-100">
+                                 <div className="absolute inset-0 flex flex-col items-center justify-center text-primary dark:text-white">
                                     <span className="text-3xl font-bold">{percent}%</span>
                                  </div>
                               </div>
                            </div>
                            
                            <div className="grid grid-cols-2 gap-4">
-                              <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 text-center">
+                              <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800 text-center">
                                  <div className="text-2xl font-bold text-slate-700 dark:text-slate-200">{completed}</div>
                                  <div className="text-xs text-muted-foreground uppercase tracking-wide">Concluídas</div>
                               </div>
-                              <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 text-center">
+                              <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800 text-center">
                                  <div className="text-2xl font-bold text-slate-700 dark:text-slate-200">{total}</div>
                                  <div className="text-xs text-muted-foreground uppercase tracking-wide">Total</div>
                               </div>
                            </div>
 
                            {nextActivityTitle && (
-                              <div className="bg-violet-50 dark:bg-violet-900/20 p-4 rounded-xl border border-violet-100 dark:border-violet-800/50">
-                                 <div className="text-xs font-semibold text-violet-800 dark:text-violet-300 uppercase mb-1">Próxima Atividade</div>
+                              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800/50">
+                                 <div className="text-xs font-semibold text-primary dark:text-blue-300 uppercase mb-1">Próxima Atividade</div>
                                  <div className="text-sm text-slate-700 dark:text-slate-300 line-clamp-2 leading-relaxed">
                                     {nextActivityTitle}
                                  </div>
                                  <Button 
                                     size="sm" 
-                                    className="w-full mt-3 bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
+                                    className="w-full mt-3 bg-primary hover:bg-blue-700 text-white shadow-sm rounded-md"
                                     onClick={goToCourse}
                                  >
                                     Ir para atividade
@@ -288,7 +288,7 @@ export default function StudentCourseProgress() {
 
              {/* Right Column: Detailed List */}
              <div className="md:col-span-2">
-                <Card className="border-0 shadow-lg bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800 h-full">
+                <Card className="border-0 shadow-lg bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800 h-full rounded-lg">
                    <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-4">
                       <CardTitle>Histórico Detalhado</CardTitle>
                       <CardDescription>Acompanhe cada etapa da sua jornada</CardDescription>
@@ -298,7 +298,7 @@ export default function StudentCourseProgress() {
                         <div className="space-y-8">
                            {(curriculum as any).curriculum.map((m: any, mi: number) => (
                               <div key={mi} className="relative pl-6 border-l-2 border-slate-200 dark:border-slate-800 last:border-0 pb-2">
-                                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-violet-100 dark:bg-violet-900 border-2 border-violet-500" />
+                                 <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-100 dark:bg-blue-900 border-2 border-primary" />
                                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 leading-none">
                                     {String(m?.titulo || m?.title || `Módulo ${mi + 1}`)}
                                  </h3>
@@ -340,7 +340,7 @@ function renderActivityItem(m: any, a: any, idx: number) {
     
     // Premium row styling
     return (
-       <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 hover:border-violet-200 dark:hover:border-violet-800 transition-colors">
+       <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 hover:border-primary/30 dark:hover:border-blue-800 transition-colors">
           <div className="flex items-center gap-3">
              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${a?.completed ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30' : (a?.needs_resume ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30' : 'bg-slate-200 text-slate-400 dark:bg-slate-800')}`}>
                 <Icon className="w-4 h-4" />
