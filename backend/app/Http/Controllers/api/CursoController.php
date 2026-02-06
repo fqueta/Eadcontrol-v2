@@ -8,6 +8,8 @@ use App\Http\Requests\UpdateCursoRequest;
 use App\Models\Curso;
 use App\Models\Module;
 use App\Models\Activity;
+use App\Models\Question;
+use App\Models\QuestionOption;
 use App\Services\PermissionService;
 use App\Services\Qlib;
 use Illuminate\Http\Request;
@@ -119,6 +121,23 @@ class CursoController extends Controller
                 $mappedActivity['post_name'] = (new Activity())->generateSlug($act['title']);
             }
             $activityModel = Activity::create($mappedActivity);
+
+            // PT: Sincronizar questões se for um quiz e houver questões no template
+            // EN: Sync questions if it is a quiz and there are questions in the template
+            $type = $mappedActivity['config']['type_activities'] ?? null;
+            if ($type === 'quiz' && !empty($act['quiz_questions']) && is_array($act['quiz_questions'])) {
+                $syncData = [];
+                $order = 0;
+                foreach ($act['quiz_questions'] as $q) {
+                    if (isset($q['id'])) {
+                        $syncData[$q['id']] = ['ordem' => $order++];
+                    }
+                }
+                if (!empty($syncData)) {
+                    $activityModel->questions()->sync($syncData);
+                }
+            }
+
             $created[] = [
                 'id' => (int) $activityModel->ID,
                 'title' => $mappedActivity['post_title'],
@@ -143,14 +162,23 @@ class CursoController extends Controller
         $items = Activity::where('post_parent', $moduleId)->get();
         $template = [];
         foreach ($items as $it) {
-            $template[] = [
+            $config = is_array($it->config) ? $it->config : [];
+            $mapped = [
                 'name' => $it->post_name,
                 'title' => $it->post_title,
                 'description' => $it->post_excerpt,
                 'content' => $it->post_content,
                 'active' => $it->post_status === 'publish',
-                'config' => is_array($it->config) ? $it->config : [],
+                'config' => $config,
             ];
+
+            // Carregar as questões se for um quiz
+            $type = $config['type_activities'] ?? null;
+            if ($type === 'quiz') {
+                $mapped['quiz_questions'] = $this->loadQuizQuestions($it);
+            }
+
+            $template[] = $mapped;
         }
         return $template;
     }
@@ -266,7 +294,7 @@ class CursoController extends Controller
             return response()->json(['error' => 'Curso não encontrado'], 404);
         }
 
-        return response()->json($curso, 200);
+        return response()->json($this->enrichCourseWithQuizQuestions($curso), 200);
     }
 
     /**
@@ -295,7 +323,7 @@ class CursoController extends Controller
         // }
 
         if ($curso) {
-            return response()->json($curso, 200);
+            return response()->json($this->enrichCourseWithQuizQuestions($curso), 200);
         }
 
         // 2) Fallback legado: tentar 'campo_bus'
@@ -306,7 +334,7 @@ class CursoController extends Controller
             ->first();
 
         if ($cursoCampoBus) {
-            return response()->json($cursoCampoBus, 200);
+            return response()->json($this->enrichCourseWithQuizQuestions($cursoCampoBus), 200);
         }
 
         // 3) Fallback: buscar candidatos por nome/título e comparar slug em PHP
@@ -325,7 +353,7 @@ class CursoController extends Controller
         foreach ($candidatos as $c) {
             $base = $c->titulo ?: $c->nome ?: '';
             if ($base !== '' && Str::slug($base) === $normalized) {
-                return response()->json($c, 200);
+                return response()->json($this->enrichCourseWithQuizQuestions($c), 200);
             }
         }
 
@@ -395,7 +423,7 @@ class CursoController extends Controller
         }
 
         return response()->json([
-            'data' => $curso->fresh(),
+            'data' => $this->enrichCourseWithQuizQuestions($curso->fresh()),
             'message' => isset($id) ? 'Curso atualizado com sucesso' : 'Curso criado com sucesso',
             'status' => 201,
         ], 201);
@@ -424,7 +452,7 @@ class CursoController extends Controller
             return response()->json(['error' => 'Curso não encontrado'], 404);
         }
 
-        return response()->json($curso);
+        return response()->json($this->enrichCourseWithQuizQuestions($curso));
     }
 
     /**
@@ -471,7 +499,7 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
         }
 
         return response()->json([
-            'data' => $curso->fresh(),
+            'data' => $this->enrichCourseWithQuizQuestions($curso->fresh()),
             'message' => 'Curso atualizado com sucesso',
         ], 200);
     }
@@ -688,6 +716,7 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
                         'type_activities' => $act['type_activities'] ?? null,
                         'type_duration' => $act['type_duration'] ?? null,
                         'duration' => $act['duration'] ?? null,
+                        'quiz_config' => $act['quiz_config'] ?? null,
                     ],
                     'post_type' => 'activities',
                     'token' => Qlib::token(),
@@ -713,6 +742,12 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
                 } else {
                     $activityModel = Activity::create($mappedActivity);
                     $activityId = (int) $activityModel->ID;
+                }
+
+                // PT: Processar perguntas do quiz se for do tipo quiz
+                // EN: Process quiz questions if it's a quiz type
+                if (($act['type_activities'] ?? '') === 'quiz' && isset($act['quiz_questions']) && is_array($act['quiz_questions'])) {
+                    $this->syncQuizQuestions($activityModel, $act['quiz_questions'], $authorId);
                 }
 
                 // Monta retorno da atividade com ID
@@ -741,30 +776,66 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
     }
 
     /**
-     * PT: Constrói um template reutilizável a partir do payload das atividades de um módulo.
-     *     Remove campos voláteis (id, status runtime) e mantém estrutura essencial.
-     * EN: Build a reusable template from module activities' payload,
-     *     removing volatile fields and preserving the essential structure.
+     * pt-BR: Sincroniza perguntas e opções de um quiz com a atividade.
+     * en-US: Synchronizes quiz questions and options with the activity.
      */
-    private function buildActivityTemplate(array $activitiesPayload): array
+    private function syncQuizQuestions(Activity $activity, array $questions, string $authorId)
     {
-        $template = [];
-        foreach ($activitiesPayload as $act) {
-            if (!is_array($act)) { continue; }
-            $template[] = [
-                'name' => $act['name'] ?? null,
-                'title' => $act['title'] ?? null,
-                'description' => $act['description'] ?? null,
-                'content' => $act['content'] ?? null,
-                'active' => $this->normalizeActiveFlag($act['active'] ?? 's'),
-                'config' => [
-                    'type_activities' => $act['type_activities'] ?? null,
-                    'type_duration' => $act['type_duration'] ?? null,
-                    'duration' => $act['duration'] ?? null,
-                ],
-            ];
+        $questionIds = [];
+        $ordem = 0;
+
+        foreach ($questions as $qData) {
+            $questionId = isset($qData['id']) && is_numeric($qData['id']) ? (int) $qData['id'] : null;
+            
+            $question = Question::updateOrCreate(
+                ['id' => $questionId],
+                [
+                    'enunciado' => $qData['enunciado'] ?? '',
+                    'tipo_pergunta' => $qData['tipo_pergunta'] ?? 'multipla_escolha',
+                    'explicacao' => $qData['explicacao'] ?? null,
+                    'pontos' => $qData['pontos'] ?? 0,
+                    'author_id' => (int) $authorId,
+                    'active' => 's'
+                ]
+            );
+
+            $questionIds[$question->id] = ['ordem' => $ordem++];
+
+            // Sincronizar opções
+            if ($question->tipo_pergunta === 'multipla_escolha' && isset($qData['opcoes']) && is_array($qData['opcoes'])) {
+                $optionIds = [];
+                foreach ($qData['opcoes'] as $oData) {
+                    $optionId = isset($oData['id']) && is_numeric($oData['id']) ? (int) $oData['id'] : null;
+                    $option = QuestionOption::updateOrCreate(
+                        ['id' => $optionId, 'question_id' => $question->id],
+                        [
+                            'texto' => $oData['texto'] ?? '',
+                            'correta' => ($oData['correta'] ?? false) ? 's' : 'n'
+                        ]
+                    );
+                    $optionIds[] = $option->id;
+                }
+                // Remover opções antigas que não foram enviadas
+                $question->options()->whereNotIn('id', $optionIds)->delete();
+            } elseif ($question->tipo_pergunta === 'verdadeiro_falso') {
+                // Para V/F, criamos duas opções fixas se não existirem
+                $correta = $qData['resposta_correta'] ?? 'verdadeiro';
+                
+                QuestionOption::updateOrCreate(
+                    ['question_id' => $question->id, 'texto' => 'verdadeiro'],
+                    ['correta' => $correta === 'verdadeiro' ? 's' : 'n']
+                );
+                QuestionOption::updateOrCreate(
+                    ['question_id' => $question->id, 'texto' => 'falso'],
+                    ['correta' => $correta === 'falso' ? 's' : 'n']
+                );
+                // Limpar qualquer outra opção
+                $question->options()->whereNotIn('texto', ['verdadeiro', 'falso'])->delete();
+            }
         }
-        return $template;
+
+        // Sincronizar o relacionamento com a atividade (tabela pivot)
+        $activity->questions()->sync($questionIds);
     }
 
     /**
@@ -919,4 +990,77 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
             'message' => 'Curso excluído permanentemente com sucesso',
         ], 200);
     }
+
+    /**
+     * pt-BR: Enriquece o objeto curso com as perguntas dos quizzes carregadas do banco.
+     * en-US: Enriches the course object with quiz questions loaded from the database.
+     */
+    private function enrichCourseWithQuizQuestions($curso)
+    {
+        if (!$curso || empty($curso->modulos)) return $curso;
+
+        $modulos = $curso->modulos;
+        $changed = false;
+
+        foreach ($modulos as &$mod) {
+            $atividades = isset($mod['atividades']) ? $mod['atividades'] : (isset($mod['activities']) ? $mod['activities'] : []);
+            foreach ($atividades as &$act) {
+                $tipo = strtolower($act['type_activities'] ?? $act['tipo'] ?? '');
+                if ($tipo === 'quiz') {
+                    $activityId = $act['id'] ?? $act['activity_id'] ?? null;
+                    if ($activityId) {
+                        $activityModel = Activity::find($activityId);
+                        if ($activityModel) {
+                            $act['quiz_questions'] = $this->loadQuizQuestions($activityModel);
+                            
+                            // Sincronizar quiz_config se estiver no post config
+                            if (!isset($act['quiz_config']) && isset($activityModel->config['quiz_config'])) {
+                                $act['quiz_config'] = $activityModel->config['quiz_config'];
+                            }
+                            $changed = true;
+                        }
+                    }
+                }
+            }
+            if (isset($mod['atividades'])) $mod['atividades'] = $atividades;
+            if (isset($mod['activities'])) $mod['activities'] = $atividades;
+        }
+
+        if ($changed) {
+            $curso->modulos = $modulos;
+        }
+
+        return $curso;
+    }
+
+    /**
+     * pt-BR: Carrega perguntas e opções de uma atividade de quiz.
+     * en-US: Loads questions and options for a quiz activity.
+     */
+    private function loadQuizQuestions(Activity $activity): array
+    {
+        $questions = $activity->questions()->with('options')->orderBy('activity_questions.ordem')->get();
+        
+        return $questions->map(function($q) {
+            return [
+                'id' => $q->id,
+                'tipo_pergunta' => $q->tipo_pergunta,
+                'enunciado' => $q->enunciado,
+                'explicacao' => $q->explicacao,
+                'pontos' => $q->pontos,
+                'resposta_correta' => $q->tipo_pergunta === 'verdadeiro_falso' 
+                    ? ($q->options->where('correta', 's')->first()?->texto === 'verdadeiro' ? 'verdadeiro' : 'falso')
+                    : null,
+                'opcoes' => $q->options->map(function($o) {
+                    return [
+                        'id' => $o->id,
+                        'texto' => $o->texto,
+                        'correta' => $o->correta === 's'
+
+                    ];
+                })->toArray()
+            ];
+        })->toArray();
+    }
 }
+

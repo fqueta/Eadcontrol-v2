@@ -1,10 +1,10 @@
 import React, { useMemo, useState, useEffect, useRef, useDeferredValue, memo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
- import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock, Star, ChevronDown, ChevronUp, GraduationCap, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+ import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock, Star, ChevronDown, ChevronUp, GraduationCap, ChevronLeft, ChevronRight, Search, Circle, CircleCheck, AlertCircle, XCircle } from 'lucide-react';
 import { progressService } from '@/services/progressService';
 import { useToast } from '@/hooks/use-toast';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import commentsService from '@/services/commentsService';
 import { certificatesService } from '@/services/certificatesService';
+import { QuizGradeDetail } from './components/QuizGradeDetail';
 
 /**
  * VideoDescriptionToggle
@@ -58,6 +59,523 @@ function StarRating({ value, onChange }: { value: number; onChange: (n: number) 
           <Star className={`h-4 w-4 ${n <= value ? 'text-amber-500 fill-amber-500' : 'text-muted-foreground'}`} />
         </button>
       ))}
+    </div>
+  );
+}
+
+/**
+ * QuizViewer
+ * pt-BR: Componente para exibir e processar o quiz para o aluno.
+ * en-US: Component to display and process the quiz for the student.
+ */
+interface QuizViewerProps {
+  activity: any;
+  onComplete: (score: number) => void;
+  initialState?: any;
+  onProgressUpdate?: (state: any) => void;
+}
+
+function QuizViewer({
+  activity,
+  onComplete,
+  initialState,
+  onProgressUpdate
+}: QuizViewerProps) {
+  const [currentStep, setCurrentStep] = useState<'intro' | 'playing' | 'result'>('intro');
+  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, any>>({});
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+
+  const questions = (activity?.quiz_questions || []) as any[];
+  const config = activity?.quiz_config || {};
+  const currentQuestion = questions[currentQuestionIdx];
+
+  // Restore state on mount
+  useEffect(() => {
+    if (initialState) {
+        if (initialState.answers) setAnswers(initialState.answers);
+        if (typeof initialState.currentQuestionIdx === 'number') setCurrentQuestionIdx(initialState.currentQuestionIdx);
+        if (typeof initialState.timeRemaining === 'number') setTimeRemaining(initialState.timeRemaining);
+        
+        // If we have progress, jump to playing
+        if (initialState.answers && Object.keys(initialState.answers).length > 0) {
+            setCurrentStep('playing');
+        }
+    }
+  }, [initialState]);
+
+  // Refs for auto-saving on exit
+  const stateRef = useRef({ answers, currentQuestionIdx, timeRemaining });
+  useEffect(() => {
+    stateRef.current = { answers, currentQuestionIdx, timeRemaining };
+  }, [answers, currentQuestionIdx, timeRemaining]);
+
+  // LocalStorage key helper
+  const getStorageKey = () => `quiz_temp_${activity?.id}_${activity?._moduleIndex}`;
+
+  // Restore state on mount (Merge initialState + LocalStorage if needed)
+  useEffect(() => {
+    let restoredTimer = null;
+    try {
+        const local = localStorage.getItem(getStorageKey());
+        if (local) {
+            const parsed = JSON.parse(local);
+            if (parsed && typeof parsed.timeRemaining === 'number') {
+                restoredTimer = parsed.timeRemaining;
+            }
+        }
+    } catch {}
+
+    if (initialState) {
+        let savedAnswers = {};
+        if (initialState.answers) {
+            savedAnswers = initialState.answers;
+            setAnswers(savedAnswers);
+        }
+        
+        // Calculate correct resume index: skip answered questions
+        let resumeIdx = typeof initialState.currentQuestionIdx === 'number' ? initialState.currentQuestionIdx : 0;
+        
+        // If the saved index is already answered, move forward
+        // This handles the case where we saved on "Next" (saving current answered q) but didn't save the new index yet.
+        while (resumeIdx < questions.length && (savedAnswers as any)[questions[resumeIdx]?.id || resumeIdx]) {
+            resumeIdx++;
+        }
+        // Ensure we don't go out of bounds (though if all answered, maybe we should show result? For now stay at last)
+        if (resumeIdx >= questions.length && questions.length > 0) {
+             resumeIdx = questions.length - 1;
+             // If completely finished, maybe we should be in result? 
+             // But the user might want to review or submit. 
+             // For now, let's just cap at last question.
+        }
+        
+        setCurrentQuestionIdx(resumeIdx);
+        
+        // Timer preference: saved DB time vs Restored Timer
+        const dbTime = initialState.timeRemaining;
+        if (typeof dbTime === 'number' && dbTime > 0) {
+             setTimeRemaining(dbTime);
+        } else if (restoredTimer !== null) {
+             setTimeRemaining(restoredTimer);
+        }
+
+        // If we have progress, jump to playing
+        if (Object.keys(savedAnswers).length > 0) {
+            setCurrentStep('playing');
+        }
+    }
+  }, [initialState]);
+
+  // Save to DB helper
+  const saveToDb = () => {
+      if (onProgressUpdate) {
+          onProgressUpdate({
+              answers: stateRef.current.answers,
+              currentQuestionIdx: stateRef.current.currentQuestionIdx,
+              timeRemaining: stateRef.current.timeRemaining,
+              timestamp: Date.now()
+          });
+      }
+      // Also clear local storage if finished? No, only on complete.
+  };
+
+  // Timer Effect: Update State + LocalStorage
+  useEffect(() => {
+    if (currentStep === 'playing' && timeRemaining !== null) {
+      if (timeRemaining <= 0) {
+        handleNext(true); 
+        return;
+      }
+
+      const timerId = setInterval(() => {
+        setTimeRemaining((prev) => {
+            const next = prev !== null ? prev - 1 : null;
+            // Write to localStorage
+            try {
+               localStorage.setItem(getStorageKey(), JSON.stringify({ timeRemaining: next, timestamp: Date.now() }));
+            } catch {}
+            return next;
+        });
+      }, 1000);
+
+      return () => clearInterval(timerId);
+    }
+  }, [currentStep, timeRemaining]);
+
+  // Save on Unmount (Exit)
+  useEffect(() => {
+      return () => {
+          // Only save if playing
+          if (currentStep === 'playing') {
+              saveToDb();
+          }
+      };
+  }, [currentStep]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+
+  const handleStart = () => {
+    // If we have saved state, deciding to "Restart" should probably wipe it?
+    // For now, let's assume Start means fresh start unless we already restored.
+    // Ideally, if 'playing' was set by restore, we are already started.
+    // If user clicks "Start Quiz" manually, it wipes state.
+    setAnswers({});
+    setCurrentQuestionIdx(0);
+    setCurrentStep('playing');
+    setShowFeedback(false);
+    if (config.time_limit && config.time_limit > 0) {
+        setTimeRemaining(config.time_limit * 60);
+    } else {
+        setTimeRemaining(null);
+    }
+  };
+
+  const handleSelectOption = (questionId: number, optionId: number | string) => {
+    if (showFeedback) return; // Prevent changing answer while showing feedback
+    setAnswers((prev) => ({ ...prev, [questionId]: optionId }));
+  };
+
+  const calculateScore = () => {
+    let correctCount = 0;
+    questions.forEach((q, idx) => {
+      const answer = answers[q.id || idx];
+      if (q.tipo_pergunta === 'multipla_escolha') {
+        const correctOpt = q.opcoes?.find((o: any) => o.correta === true || o.correta === 's');
+        if (correctOpt && String(correctOpt.id) === String(answer)) {
+          correctCount++;
+        }
+      } else if (q.tipo_pergunta === 'verdadeiro_falso') {
+        if (String(q.resposta_correta) === String(answer)) {
+          correctCount++;
+        }
+      }
+    });
+    return (correctCount / questions.length) * 100;
+  };
+
+  const handleNext = (forceFinish = false) => {
+    // Flag logic starts below
+
+    const isShowAnswersEnabled = config.show_answers === true || config.show_answers === 's' || config.show_answers === 'true' || config.show_answers === 1;
+    // pt-BR: Nova flag para mostrar correção imediata
+    // en-US: New flag for immediate correction
+    const isCorrectionEnabled = config.mostrar_correcao === true;
+
+    if (!forceFinish && (isShowAnswersEnabled || isCorrectionEnabled) && !showFeedback) {
+      setShowFeedback(true);
+      return;
+    }
+
+    // Verify answer (checkpoint) -> Save to DB
+    saveToDb();
+
+    setShowFeedback(false);
+    if (!forceFinish && currentQuestionIdx < questions.length - 1) {
+      setCurrentQuestionIdx(currentQuestionIdx + 1);
+    } else {
+      setCurrentStep('result');
+      const score = calculateScore();
+      onComplete(score);
+      // Clear local storage on finish
+      try { localStorage.removeItem(getStorageKey()); } catch {}
+    }
+  };
+
+
+  if (questions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+        <h3 className="text-lg font-medium">Este quiz não possui perguntas.</h3>
+      </div>
+    );
+  }
+
+  if (currentStep === 'intro') {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center space-y-6">
+        <div className="bg-primary/10 p-4 rounded-full">
+          <FileText className="h-12 w-12 text-primary" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold">{activity.titulo || 'Quiz'}</h2>
+          <p className="text-muted-foreground mt-2 max-w-md">
+            {activity.descricao || 'Responda às perguntas para testar seus conhecimentos e completar a atividade.'}
+          </p>
+        </div>
+        <div className="flex items-center gap-4 text-sm font-medium">
+          <div className="flex items-center gap-1">
+            <Badge variant="outline">{questions.length} Questões</Badge>
+          </div>
+          {config.min_score && (
+            <div className="flex items-center gap-1">
+              <Badge variant="outline">Mínimo: {config.min_score}%</Badge>
+            </div>
+          )}
+          {config.time_limit > 0 && (
+             <div className="flex items-center gap-1">
+               <Badge variant="outline" className="gap-1">
+                 <Clock className="h-3 w-3" /> {config.time_limit} min
+               </Badge>
+             </div>
+          )}
+        </div>
+        <Button onClick={handleStart} size="lg" className="w-full max-w-xs">
+          Iniciar Quiz
+        </Button>
+      </div>
+    );
+  }
+
+  if (currentStep === 'result') {
+    const score = calculateScore();
+    const isPassed = score >= (Number(config.min_score) || 0);
+
+    return (
+      <div className="flex flex-col items-center justify-center py-8 text-center space-y-6 animate-in fade-in zoom-in duration-300">
+        <div className={`p-4 rounded-full ${isPassed ? 'bg-green-100' : 'bg-red-100'}`}>
+          {isPassed ? (
+            <CircleCheck className="h-16 w-16 text-green-600" />
+          ) : (
+            <XCircle className="h-16 w-16 text-red-600" />
+          )}
+        </div>
+        <div>
+          <h2 className="text-3xl font-bold">{isPassed ? 'Parabéns!' : 'Não foi desta vez.'}</h2>
+          <p className="text-muted-foreground mt-2">
+            Você atingiu <strong>{Math.round(score)}%</strong> de aproveitamento.
+          </p>
+        </div>
+        
+        {!isPassed && (
+          <p className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-lg border border-red-100">
+            É necessário atingir pelo menos {config.min_score}% para ser aprovado.
+          </p>
+        )}
+
+        <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
+          <Button onClick={handleStart} variant="outline" className="flex-1">
+            Tentar Novamente
+          </Button>
+          {isPassed && (
+            <Button onClick={() => window.location.reload()} className="flex-1">
+              Continuar
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="py-4 space-y-6 max-w-3xl mx-auto">
+      {/* Quiz Progress & Timer */}
+      <div className="space-y-2">
+        <div className="flex justify-between items-center text-xs font-medium text-muted-foreground">
+          <span>Pergunta {currentQuestionIdx + 1} de {questions.length}</span>
+          <div className="flex items-center gap-3">
+             {timeRemaining !== null && (
+               <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full ${timeRemaining < 60 ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-muted/50 text-foreground'}`}>
+                 <Clock className="h-3.5 w-3.5" />
+                 <span className="font-mono text-sm">{formatTime(timeRemaining)}</span>
+               </div>
+             )}
+             <span>{Math.round(((currentQuestionIdx) / questions.length) * 100)}%</span>
+          </div>
+        </div>
+        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-primary transition-all duration-300" 
+            style={{ width: `${((currentQuestionIdx + 1) / questions.length) * 100}%` }} 
+          />
+        </div>
+      </div>
+
+      {/* Correction Feedback Banner */}
+      {showFeedback && config.mostrar_correcao === true && (
+        <div className={`p-4 rounded-lg border flex items-start gap-3 animate-in fade-in slide-in-from-top-2 ${
+           (() => {
+             const answer = answers[currentQuestion.id || currentQuestionIdx];
+             let isCorrect = false;
+             if (currentQuestion.tipo_pergunta === 'multipla_escolha') {
+               const correctOpt = (currentQuestion.opcoes || []).find((o: any) => o.correta === true || o.correta === 's');
+               isCorrect = correctOpt && String(correctOpt.id) === String(answer);
+             } else {
+               isCorrect = String(currentQuestion.resposta_correta) === String(answer);
+             }
+             return isCorrect ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800';
+           })()
+        }`}>
+          {(() => {
+             const answer = answers[currentQuestion.id || currentQuestionIdx];
+             let isCorrect = false;
+             if (currentQuestion.tipo_pergunta === 'multipla_escolha') {
+               const correctOpt = (currentQuestion.opcoes || []).find((o: any) => o.correta === true || o.correta === 's');
+               isCorrect = correctOpt && String(correctOpt.id) === String(answer);
+             } else {
+               isCorrect = String(currentQuestion.resposta_correta) === String(answer);
+             }
+             return isCorrect ? (
+                <>
+                  <CircleCheck className="h-5 w-5 shrink-0 mt-0.5 text-green-600" />
+                  <div>
+                    <h4 className="font-semibold text-sm">A resposta está correta!</h4>
+                    <p className="text-xs mt-1 text-green-700">Muito bem, você acertou esta questão.</p>
+                  </div>
+                </>
+             ) : (
+                <>
+                  <XCircle className="h-5 w-5 shrink-0 mt-0.5 text-red-600" />
+                  <div>
+                    <h4 className="font-semibold text-sm">Resposta incorreta</h4>
+                    <p className="text-xs mt-1 text-red-700">Revise o conteúdo e tente novamente.</p>
+                  </div>
+                </>
+             );
+          })()}
+        </div>
+      )}
+
+      {/* Question */}
+      <div className="space-y-6">
+        <div className="space-y-4">
+          <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
+            {currentQuestion.tipo_pergunta === 'multipla_escolha' ? 'Múltipla Escolha' : 'Verdadeiro ou Falso'}
+          </Badge>
+          <h3 className="text-lg md:text-xl font-semibold leading-relaxed">
+            {currentQuestion.enunciado}
+          </h3>
+        </div>
+
+        {/* Options */}
+        <div className="space-y-3">
+          {currentQuestion.tipo_pergunta === 'multipla_escolha' ? (
+            (currentQuestion.opcoes || []).map((opt: any, oIdx: number) => {
+              const isSelected = String(answers[currentQuestion.id || currentQuestionIdx]) === String(opt.id);
+              const isCorrect = opt.correta === true || opt.correta === 's';
+              
+              let variantClass = 'border-muted hover:border-primary/50 hover:bg-muted/50';
+              let iconClass = 'border-muted-foreground/30 group-hover:border-primary/50';
+              
+              if (showFeedback) {
+                if (isCorrect) {
+                  variantClass = 'border-green-500 bg-green-50 hover:bg-green-50 cursor-default';
+                  iconClass = 'border-green-500 bg-green-500 text-white';
+                } else if (isSelected) {
+                  variantClass = 'border-red-500 bg-red-50 hover:bg-red-50 cursor-default';
+                  iconClass = 'border-red-500 bg-red-500 text-white';
+                } else {
+                   variantClass = 'border-muted opacity-50 cursor-default';
+                }
+              } else if (isSelected) {
+                variantClass = 'border-primary bg-primary/5 shadow-sm';
+                iconClass = 'border-primary bg-primary text-white';
+              }
+
+              return (
+                <button
+                  key={opt.id || oIdx}
+                  onClick={() => handleSelectOption(currentQuestion.id || currentQuestionIdx, opt.id)}
+                  disabled={showFeedback}
+                  className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-start gap-3 group ${variantClass}`}
+                >
+                  <div className={`mt-0.5 shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${iconClass}`}>
+                    {showFeedback ? (
+                      isCorrect ? <Check className="h-3 w-3" /> : (isSelected ? <XCircle className="h-3 w-3" /> : (isSelected && <div className="w-2 h-2 rounded-full bg-white" />))
+                    ) : (
+                      isSelected && <div className="w-2 h-2 rounded-full bg-white" />
+                    )}
+                  </div>
+                  <span className={`text-sm md:text-base ${isSelected || (showFeedback && isCorrect) ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
+                    {opt.texto}
+                  </span>
+                </button>
+              );
+            })
+          ) : (
+            ['verdadeiro', 'falso'].map((val) => {
+              const isSelected = String(answers[currentQuestion.id || currentQuestionIdx]) === val;
+              const isCorrect = String(currentQuestion.resposta_correta) === val;
+
+              let variantClass = 'border-muted hover:border-primary/50 hover:bg-muted/50';
+              let iconClass = 'border-muted-foreground/30 group-hover:border-primary/50';
+              
+              if (showFeedback) {
+                if (isCorrect) {
+                   variantClass = 'border-green-500 bg-green-50 hover:bg-green-50 cursor-default';
+                   iconClass = 'border-green-500 bg-green-500 text-white';
+                } else if (isSelected) {
+                   variantClass = 'border-red-500 bg-red-50 hover:bg-red-50 cursor-default';
+                   iconClass = 'border-red-500 bg-red-500 text-white';
+                } else {
+                   variantClass = 'border-muted opacity-50 cursor-default';
+                }
+              } else if (isSelected) {
+                variantClass = 'border-primary bg-primary/5 shadow-sm';
+                iconClass = 'border-primary bg-primary text-white';
+              }
+
+              return (
+                <button
+                  key={val}
+                  onClick={() => handleSelectOption(currentQuestion.id || currentQuestionIdx, val)}
+                  disabled={showFeedback}
+                  className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-start gap-3 group ${variantClass}`}
+                >
+                  <div className={`mt-0.5 shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${iconClass}`}>
+                     {showFeedback ? (
+                      isCorrect ? <Check className="h-3 w-3" /> : (isSelected ? <XCircle className="h-3 w-3" /> : (isSelected && <div className="w-2 h-2 rounded-full bg-white" />))
+                    ) : (
+                      isSelected && <div className="w-2 h-2 rounded-full bg-white" />
+                    )}
+                  </div>
+                  <span className={`text-sm md:text-base capitalize ${isSelected || (showFeedback && isCorrect) ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
+                    {val}
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {showFeedback && currentQuestion.explicacao && (
+          <div className="bg-muted/50 p-4 rounded-lg text-sm border border-muted mt-4">
+            <h4 className="font-semibold mb-1">Explicação:</h4>
+            <div dangerouslySetInnerHTML={{ __html: currentQuestion.explicacao }} />
+          </div>
+        )}
+
+        {/* Action Button */}
+        <div className="pt-4 flex justify-between items-center">
+          <Button 
+            variant="ghost" 
+            onClick={() => setCurrentStep('intro')}
+            className="text-muted-foreground"
+          >
+            Sair do Quiz
+          </Button>
+          <Button 
+            disabled={!answers[currentQuestion.id || currentQuestionIdx]} 
+            onClick={() => handleNext()}
+            size="lg"
+            className="min-w-[140px]"
+          >
+ 
+            {showFeedback
+              ? (currentQuestionIdx < questions.length - 1 ? 'Próxima Pergunta' : 'Ver Resultados')
+              : (showFeedback === false && ((config.show_answers === true || config.show_answers === 's' || config.show_answers === 'true' || config.show_answers === 1) || config.mostrar_correcao === true) 
+                  ? 'Verificar Resposta' 
+                  : (currentQuestionIdx < questions.length - 1 ? 'Próxima Pergunta' : 'Finalizar Quiz')
+                )
+            }
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -201,6 +719,164 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
    * en-US: Current index in the filtered list.
    */
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  /**
+   * completedIds
+   * pt-BR: IDs de atividades concluídas; carrega de localStorage e API.
+   * en-US: Completed activity IDs; loads from localStorage and API.
+   */
+  const courseId = course?.id ?? course?.course_id ?? course?.token ?? 'course';
+  const storageKey = `course_completed_${courseId}`;
+  const [completedIds, setCompletedIds] = useState<Set<string | number>>(new Set());
+  /**
+   * progressLoading
+   * pt-BR: Indica se o progresso está sendo sincronizado com o servidor.
+   * en-US: Indicates whether progress is being synchronized with the server.
+   */
+  const [progressLoading, setProgressLoading] = useState<boolean>(true);
+  /**
+   * progressMap
+   * pt-BR: Mapa de progresso por atividade (seconds/completed) vindo da API.
+   * en-US: Per-activity progress map (seconds/completed) from API.
+   */
+  const [progressMap, setProgressMap] = useState<Record<string, { seconds: number; completed: boolean }>>({});
+  /**
+   * lastCompletedId / nextActivityId
+   * pt-BR: Última concluída e próxima atividade sugerida pela API.
+   * en-US: Last completed and next suggested activity from API.
+   */
+  const [lastCompletedId, setLastCompletedId] = useState<string | number | undefined>(undefined);
+  const [nextActivityId, setNextActivityId] = useState<string | number | undefined>(undefined);
+  /**
+   * lastProgressRef
+   * pt-BR: Mantém último progresso retornado pela API para retomada (atividade/segundos).
+   * en-US: Holds last progress returned by the API for resume (activity/seconds).
+   */
+  const lastProgressRef = useRef<{ activityId?: string | number; moduleId?: string | number; seconds?: number }>({});
+  /**
+   * playbackExists
+   * pt-BR: Indica, via API, se há posição salva para a atividade atual.
+   * en-US: Indicates, via API, whether there is a saved position for the current activity.
+   */
+  const [playbackExists, setPlaybackExists] = useState<boolean>(false);
+  /**
+   * autoSelectOnceRef
+   * pt-BR: Evita redefinir a seleção inicial repetidamente após sincronizações.
+   * en-US: Prevents redefining initial selection repeatedly after syncs.
+   */
+  const autoSelectOnceRef = useRef<boolean>(false);
+  /**
+   * selectionIntentRef
+   * pt-BR: Guarda a intenção da seleção atual: 'user' quando o usuário
+   *        clicou diretamente em uma atividade concluída para revisar;
+   *        'auto' quando a seleção foi definida automaticamente (inicial,
+   *        navegação Próximo/Anterior, busca, etc.). Usado para manter o
+   *        auto-skip ativo apenas em seleções automáticas.
+   * en-US: Holds the intent of the current selection: 'user' when the user
+   *        explicitly clicked a completed activity to review; 'auto' when the
+   *        selection was set automatically (initial, Next/Previous, search,
+   *        etc.). Used to keep auto-skip active only on automatic selections.
+   */
+  const selectionIntentRef = useRef<'user' | 'auto'>('auto');
+  const [showSidebar, setShowSidebar] = useState<boolean>(true);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState<boolean>(false);
+  const [showGrades, setShowGrades] = useState<boolean>(false);
+  /**
+   * generatingCert
+   * pt-BR: Estado de geração de certificado (PDF) para feedback no botão.
+   * en-US: Certificate (PDF) generation state for button feedback.
+   */
+  const [generatingCert, setGeneratingCert] = useState<boolean>(false);
+  const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
+
+  /**
+   * fetchCurriculum
+   * pt-BR: Sincroniza o currículo e progresso com o backend.
+   * en-US: Syncs curriculum and progress with backend.
+   */
+  const fetchCurriculum = async () => {
+    setProgressLoading(true);
+    try {
+      const cur = await progressService.getEnrollmentCurriculum(enrollmentId);
+      const curriculum = Array.isArray((cur as any)?.curriculum) ? (cur as any).curriculum : [];
+      const allActivities: any[] = [];
+      curriculum.forEach((m: any) => {
+        const arr = Array.isArray(m?.atividades) ? m.atividades : [];
+        arr.forEach((a: any) => allActivities.push(a));
+      });
+      // completed_ids
+      const apiIds = allActivities
+        .filter((a) => Boolean(a?.completed))
+        .map((a) => String(a?.id ?? a?.activity_id))
+        .filter((sid) => !!sid);
+      setCompletedIds(new Set(apiIds));
+      try { localStorage.setItem(storageKey, JSON.stringify(apiIds)); } catch {}
+      // progressMap
+      const pm: Record<string, { seconds: number; completed: boolean }> = {};
+      allActivities.forEach((a) => {
+        const aid = a?.id ?? a?.activity_id;
+        if (aid !== undefined && aid !== null) {
+          const sid = String(aid);
+          const secs = Number(a?.seconds ?? a?.config?.seconds ?? 0) || 0;
+          const done = Boolean(a?.completed ?? a?.config?.completed);
+          pm[sid] = { seconds: secs, completed: done };
+          try {
+            const posKey = positionKey(courseId, sid);
+            if (done) {
+              localStorage.removeItem(posKey);
+            } else if (secs > 0) {
+              localStorage.setItem(posKey, String(Math.floor(secs)));
+            }
+          } catch {}
+        }
+      });
+      setProgressMap(pm);
+      // lastCompletedId: último concluído pela ordem de updated_at ou ordem natural
+      let lastCompletedId: string | number | undefined = undefined;
+      try {
+        const completedOrdered = allActivities
+          .filter((a) => Boolean(a?.completed))
+          .sort((a, b) => {
+            const ta = a?.updated_at ? Date.parse(a.updated_at) : -Infinity;
+            const tb = b?.updated_at ? Date.parse(b.updated_at) : -Infinity;
+            return tb - ta; // desc
+          });
+        lastCompletedId = completedOrdered[0]?.id ?? completedOrdered[0]?.activity_id;
+      } catch {}
+      if (lastCompletedId !== undefined && lastCompletedId !== null) setLastCompletedId(lastCompletedId);
+      // Seleção inicial (uma vez): 1) needs_resume; 2) primeiro não concluído
+      if (!autoSelectOnceRef.current) {
+        const completedSet = new Set(apiIds);
+        let pickIndex = -1;
+        // 1) primeira atividade com needs_resume e não concluída
+        for (let i = 0; i < filteredActivities.length; i++) {
+          const a = filteredActivities[i];
+          const id = a?.id ?? a?.activity_id ?? `${a?._moduleIndex}-${a?._activityIndex}`;
+          const sid = String(id);
+          const pmItem = progressMap[sid];
+          const needsResume = pmItem ? (pmItem.seconds > 0 && !pmItem.completed) : false;
+          const isDone = completedSet.has(sid);
+          if (needsResume && !isDone) { pickIndex = i; break; }
+        }
+        // 2) primeira não concluída
+        if (pickIndex < 0) {
+          for (let i = 0; i < filteredActivities.length; i++) {
+            const a = filteredActivities[i];
+            const id = a?.id ?? a?.activity_id ?? `${a?._moduleIndex}-${a?._activityIndex}`;
+            if (!completedSet.has(String(id))) { pickIndex = i; break; }
+          }
+        }
+        if (pickIndex >= 0) {
+          selectionIntentRef.current = 'auto';
+          setCurrentIndex(pickIndex);
+        }
+        autoSelectOnceRef.current = true;
+      }
+    } catch {}
+    finally {
+      setProgressLoading(false);
+    }
+  };
 
   /**
    * currentActivity
@@ -522,8 +1198,9 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
    * pt-BR: Mapeia o tipo de atividade considerando o payload da API (video, arquivo, leitura).
    * en-US: Maps activity type considering API payload (video, arquivo, leitura).
    */
-  const getType = (a: any) => String(a?.tipo_atividade || a?.type_activities || '').toLowerCase();
+  const getType = (a: any) => String(a?.tipo_atividade || a?.type_activities || a?.tipo || '').toLowerCase();
   const isVideo = (a: any) => getType(a).includes('video');
+  const isQuiz = (a: any) => getType(a).includes('quiz') || getType(a).includes('prova');
   const isDocument = (a: any) => {
     const t = getType(a);
     if (t.includes('document') || t.includes('pdf') || t.includes('arquivo')) return true;
@@ -778,6 +1455,56 @@ function htmlEquals(a: string, b: string): boolean {
    * en-US: Last known position (useful for Vimeo and postMessage fallback).
    */
   const lastKnownTimeRef = useRef<number>(0);
+  /* 
+   * pt-BR: Função de conclusão movida para o escopo do componente para acesso no JSX.
+   * en-US: Completion function moved to component scope for JSX access.
+   */
+  const markCompleteAndAdvance = async (score?: number) => {
+    const a = currentActivity;
+    if (!a) return;
+    const mi = a._moduleIndex;
+    const aid = getActivityId(a, mi, a._activityIndex);
+    const cid = courseId;
+    
+    // pt-BR: Garante que o handler só execute para a atividade ativa.
+    // en-US: Ensure handler runs only for the active activity.
+    if (String(activeActivityIdRef.current) !== String(aid)) return;
+    if (endedMarkedRef.current) return;
+    endedMarkedRef.current = true;
+    try {
+      const id = aid;
+      const metaSecs = Math.round(Number(toSeconds(a?.duracao ?? a?.duration, String(a?.unidade_duracao ?? a?.type_duration))) || 0);
+      const playerSecs = Math.round(Number(durationRef.current || 0) || 0);
+      const secondsPayload = playerSecs || metaSecs || 0;
+      const configPayload = score !== undefined ? { score } : {};
+      
+      setCompletedIds((prev) => {
+        const next = new Set(prev as any);
+        const sid = String(id);
+        if (!next.has(sid)) {
+          next.add(sid);
+          try { localStorage.setItem(storageKey, JSON.stringify(Array.from(next))); } catch {}
+        }
+        return next;
+      });
+      await progressService.toggleActivityCompletion({
+        course_id: cid,
+        module_id: modules[mi]?.module_id ?? modules[mi]?.id,
+        activity_id: id,
+        completed: true,
+        seconds: secondsPayload,
+        id_matricula: enrollmentId,
+        config: configPayload
+      });
+      // pt-BR: Atualiza currículo para refletir nota e conclusão.
+      // en-US: Refresh curriculum to reflect grade and completion.
+      fetchCurriculum();
+    } catch {}
+    // pt-BR: Avança para a próxima atividade não concluída (apenas uma vez)
+    // en-US: Advance to the next not-completed activity (single jump)
+    navigateToNextUncompleted();
+  };
+  
   const positionKey = (cid: any, aid: any) => `course_video_pos_${cid}_${aid}`;
 
   useEffect(() => {
@@ -902,39 +1629,7 @@ function htmlEquals(a: string, b: string): boolean {
      *        rounded integer; if player duration is 0, falls back to the
      *        activity-declared duration (duracao + unidade_duracao).
      */
-    const markCompleteAndAdvance = async () => {
-      // pt-BR: Garante que o handler só execute para a atividade ativa.
-      // en-US: Ensure handler runs only for the active activity.
-      if (String(activeActivityIdRef.current) !== String(aid)) return;
-      if (endedMarkedRef.current) return;
-      endedMarkedRef.current = true;
-      try {
-        const id = aid;
-        const metaSecs = Math.round(Number(toSeconds(a?.duracao ?? a?.duration, String(a?.unidade_duracao ?? a?.type_duration))) || 0);
-        const playerSecs = Math.round(Number(durationRef.current || 0) || 0);
-        const secondsPayload = playerSecs || metaSecs || 0;
-        setCompletedIds((prev) => {
-          const next = new Set(prev as any);
-          const sid = String(id);
-          if (!next.has(sid)) {
-            next.add(sid);
-            try { localStorage.setItem(storageKey, JSON.stringify(Array.from(next))); } catch {}
-          }
-          return next;
-        });
-        await progressService.toggleActivityCompletion({
-          course_id: cid,
-          module_id: modules[mi]?.module_id ?? modules[mi]?.id,
-          activity_id: id,
-          completed: true,
-          seconds: secondsPayload,
-          id_matricula: enrollmentId,
-        });
-      } catch {}
-      // pt-BR: Avança para a próxima atividade não concluída (apenas uma vez)
-      // en-US: Advance to the next not-completed activity (single jump)
-      navigateToNextUncompleted();
-    };
+
 
     /**
      * markCompleteForReading
@@ -975,6 +1670,7 @@ function htmlEquals(a: string, b: string): boolean {
           seconds: Math.round(Number(secondsToSend || 0) || 0),
           id_matricula: enrollmentId,
         });
+        fetchCurriculum();
         // pt-BR: Feedback visual e pequeno atraso antes de avançar (uma vez),
         //        indo para a próxima NÃO concluída.
         // en-US: Visual feedback and small delay before advancing (single),
@@ -1054,6 +1750,7 @@ function htmlEquals(a: string, b: string): boolean {
               // en-US: On video end, mark completion on server and advance.
               // pt-BR: Guarda: execute apenas para a atividade ativa.
               // en-US: Guard: run only for the active activity.
+              if (String(activeActivityIdRef.current) !== String(aid)) return;
               if (String(activeActivityIdRef.current) !== String(aid)) return;
               markCompleteAndAdvance();
             }
@@ -1289,7 +1986,7 @@ function htmlEquals(a: string, b: string): boolean {
       const readingLike = isDocument(a) || typeStr.includes('leitura') || isLink(a);
       const hasVideo = isVideo(a);
       const requiredSecs = Math.round(Number(toSeconds(a?.duracao ?? a?.duration, String(a?.unidade_duracao ?? a?.type_duration))) || 0);
-      if (readingLike && !hasVideo && requiredSecs > 0) {
+      if (readingLike && !hasVideo && !isQuiz(a) && requiredSecs > 0) {
         const startAtMs = Date.now();
         const tickMs = 1000;
         let intervalId: any = null;
@@ -1426,72 +2123,9 @@ function htmlEquals(a: string, b: string): boolean {
     return toSeconds(m?.duration ?? 0, String(m?.tipo_duracao ?? '').toLowerCase());
   }
 
-  /**
-   * completedIds
-   * pt-BR: IDs de atividades concluídas; carrega de localStorage e API.
-   * en-US: Completed activity IDs; loads from localStorage and API.
-   */
-  const courseId = course?.id ?? course?.course_id ?? course?.token ?? 'course';
-  const storageKey = `course_completed_${courseId}`;
-  const [completedIds, setCompletedIds] = useState<Set<string | number>>(new Set());
-  /**
-   * progressLoading
-   * pt-BR: Indica se o progresso está sendo sincronizado com o servidor.
-   * en-US: Indicates whether progress is being synchronized with the server.
-   */
-  const [progressLoading, setProgressLoading] = useState<boolean>(true);
-  /**
-   * progressMap
-   * pt-BR: Mapa de progresso por atividade (seconds/completed) vindo da API.
-   * en-US: Per-activity progress map (seconds/completed) from API.
-   */
-  const [progressMap, setProgressMap] = useState<Record<string, { seconds: number; completed: boolean }>>({});
-  /**
-   * lastCompletedId / nextActivityId
-   * pt-BR: Última concluída e próxima atividade sugerida pela API.
-   * en-US: Last completed and next suggested activity from API.
-   */
-  const [lastCompletedId, setLastCompletedId] = useState<string | number | undefined>(undefined);
-  const [nextActivityId, setNextActivityId] = useState<string | number | undefined>(undefined);
-  /**
-   * lastProgressRef
-   * pt-BR: Mantém último progresso retornado pela API para retomada (atividade/segundos).
-   * en-US: Holds last progress returned by the API for resume (activity/seconds).
-   */
-  const lastProgressRef = useRef<{ activityId?: string | number; moduleId?: string | number; seconds?: number }>({});
-  /**
-   * playbackExists
-   * pt-BR: Indica, via API, se há posição salva para a atividade atual.
-   * en-US: Indicates, via API, whether there is a saved position for the current activity.
-   */
-  const [playbackExists, setPlaybackExists] = useState<boolean>(false);
-  /**
-   * autoSelectOnceRef
-   * pt-BR: Evita redefinir a seleção inicial repetidamente após sincronizações.
-   * en-US: Prevents redefining initial selection repeatedly after syncs.
-   */
-  const autoSelectOnceRef = useRef<boolean>(false);
-  /**
-   * selectionIntentRef
-   * pt-BR: Guarda a intenção da seleção atual: 'user' quando o usuário
-   *        clicou diretamente em uma atividade concluída para revisar;
-   *        'auto' quando a seleção foi definida automaticamente (inicial,
-   *        navegação Próximo/Anterior, busca, etc.). Usado para manter o
-   *        auto-skip ativo apenas em seleções automáticas.
-   * en-US: Holds the intent of the current selection: 'user' when the user
-   *        explicitly clicked a completed activity to review; 'auto' when the
-   *        selection was set automatically (initial, Next/Previous, search,
-   *        etc.). Used to keep auto-skip active only on automatic selections.
-   */
-  const selectionIntentRef = useRef<'user' | 'auto'>('auto');
-  const [showSidebar, setShowSidebar] = useState<boolean>(true);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState<boolean>(false);
-  /**
-   * generatingCert
-   * pt-BR: Estado de geração de certificado (PDF) para feedback no botão.
-   * en-US: Certificate (PDF) generation state for button feedback.
-   */
-  const [generatingCert, setGeneratingCert] = useState<boolean>(false);
+
+
+
   /**
    * handleRequestCertificate
    * pt-BR: Solicita geração do certificado (PDF) para a matrícula atual.
@@ -1564,103 +2198,17 @@ function htmlEquals(a: string, b: string): boolean {
         setCompletedIds(new Set(asStrings));
       }
     } catch {}
-    // pt-BR: Sincroniza com backend; controla estado de carregamento
-    // en-US: Sync with backend; controls loading state
+    
     const schedule = (cb: () => void) => {
       try {
-        // pt-BR: Usa requestIdleCallback quando disponível para adiar sincronização pesada.
-        // en-US: Use requestIdleCallback when available to defer heavy sync.
         const ric = (window as any).requestIdleCallback as undefined | ((fn: any, opts?: any) => void);
         if (typeof ric === 'function') ric(cb, { timeout: 2000 }); else setTimeout(cb, 0);
       } catch {
         setTimeout(cb, 0);
       }
     };
-    schedule(async () => {
-      setProgressLoading(true);
-      try {
-        const cur = await progressService.getEnrollmentCurriculum(enrollmentId);
-        const curriculum = Array.isArray((cur as any)?.curriculum) ? (cur as any).curriculum : [];
-        const allActivities: any[] = [];
-        curriculum.forEach((m: any) => {
-          const arr = Array.isArray(m?.atividades) ? m.atividades : [];
-          arr.forEach((a: any) => allActivities.push(a));
-        });
-        // completed_ids
-        const apiIds = allActivities
-          .filter((a) => Boolean(a?.completed))
-          .map((a) => String(a?.id ?? a?.activity_id))
-          .filter((sid) => !!sid);
-        setCompletedIds(new Set(apiIds));
-        try { localStorage.setItem(storageKey, JSON.stringify(apiIds)); } catch {}
-        // progressMap
-        const pm: Record<string, { seconds: number; completed: boolean }> = {};
-        allActivities.forEach((a) => {
-          const aid = a?.id ?? a?.activity_id;
-          if (aid !== undefined && aid !== null) {
-            const sid = String(aid);
-            const secs = Number(a?.seconds ?? a?.config?.seconds ?? 0) || 0;
-            const done = Boolean(a?.completed ?? a?.config?.completed);
-            pm[sid] = { seconds: secs, completed: done };
-            try {
-              const posKey = positionKey(courseId, sid);
-              if (done) {
-                localStorage.removeItem(posKey);
-              } else if (secs > 0) {
-                localStorage.setItem(posKey, String(Math.floor(secs)));
-              }
-            } catch {}
-          }
-        });
-        setProgressMap(pm);
-        // lastCompletedId: último concluído pela ordem de updated_at ou ordem natural
-        let lastCompletedId: string | number | undefined = undefined;
-        try {
-          const completedOrdered = allActivities
-            .filter((a) => Boolean(a?.completed))
-            .sort((a, b) => {
-              const ta = a?.updated_at ? Date.parse(a.updated_at) : -Infinity;
-              const tb = b?.updated_at ? Date.parse(b.updated_at) : -Infinity;
-              return tb - ta; // desc
-            });
-          lastCompletedId = completedOrdered[0]?.id ?? completedOrdered[0]?.activity_id;
-        } catch {}
-        if (lastCompletedId !== undefined && lastCompletedId !== null) setLastCompletedId(lastCompletedId);
-        // Seleção inicial (uma vez): 1) needs_resume; 2) primeiro não concluído
-        if (!autoSelectOnceRef.current) {
-          const completedSet = new Set(apiIds);
-          let pickIndex = -1;
-          // 1) primeira atividade com needs_resume e não concluída
-          for (let i = 0; i < filteredActivities.length; i++) {
-            const a = filteredActivities[i];
-            const id = a?.id ?? a?.activity_id ?? `${a?._moduleIndex}-${a?._activityIndex}`;
-            const sid = String(id);
-            const pmItem = progressMap[sid];
-            const needsResume = pmItem ? (pmItem.seconds > 0 && !pmItem.completed) : false;
-            const isDone = completedSet.has(sid);
-            if (needsResume && !isDone) { pickIndex = i; break; }
-          }
-          // 2) primeira não concluída
-          if (pickIndex < 0) {
-            for (let i = 0; i < filteredActivities.length; i++) {
-              const a = filteredActivities[i];
-              const id = a?.id ?? a?.activity_id ?? `${a?._moduleIndex}-${a?._activityIndex}`;
-              if (!completedSet.has(String(id))) { pickIndex = i; break; }
-            }
-          }
-          if (pickIndex >= 0) {
-            selectionIntentRef.current = 'auto';
-            setCurrentIndex(pickIndex);
-          }
-          autoSelectOnceRef.current = true;
-        }
-      } catch {}
-      finally {
-        setProgressLoading(false);
-      }
-    });
+    schedule(fetchCurriculum);
   }, [storageKey, courseId, enrollmentId]);
-
   /**
    * autoSkipOnAutoSelection
    * pt-BR: Mantém o auto-skip ATIVO somente quando a seleção é automática.
@@ -1917,6 +2465,16 @@ function htmlEquals(a: string, b: string): boolean {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant={showGrades ? "default" : "secondary"}
+              size="sm"
+              onClick={() => setShowGrades(!showGrades)}
+              title="Meu Desempenho"
+              className="gap-2"
+            >
+               <GraduationCap className="h-4 w-4" />
+               <span className="hidden sm:inline">Notas</span>
+            </Button>
             <Button
               title={showSidebar ? 'Esconder painel lateral' : 'Mostrar painel lateral'}
               variant="ghost"
@@ -2205,7 +2763,100 @@ function htmlEquals(a: string, b: string): boolean {
         <main className="flex-1 overflow-y-auto p-1 md:p-4">
           <Card className="border-0 shadow-none md:border md:shadow-sm md:rounded-lg">
             <CardContent className="p-2 md:p-4 space-y-3 md:space-y-4 pt-2 md:pt-4">
-              {currentActivity ? (
+
+              {showGrades ? (
+                 <div className="space-y-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-bold">Meu Desempenho</h2>
+                        <Button variant="outline" size="sm" onClick={() => setShowGrades(false)}>Voltar para aula</Button>
+                    </div>
+                    {modules.map((m: any, idx: number) => {
+                        const acts = Array.isArray(m?.atividades || m?.activities) ? (m?.atividades || m?.activities) : [];
+                        // Improved quiz detection logic
+                        const gradedActs = acts.filter((a:any) => {
+                            const type = String(a?.tipo_atividade || a?.type_activities || a?.tipo || a?.post_type || '').toLowerCase();
+                            const isQuizType = type.includes('quiz') || type.includes('prova');
+                            const hasMinScore = a?.quiz_config?.min_score !== undefined;
+                            const hasRecordedScore = a?.config && typeof a.config.score !== 'undefined';
+                            return isQuizType || hasMinScore || hasRecordedScore;
+                        });
+                        
+                        if (gradedActs.length === 0) return null;
+                        
+                        return (
+                            <Card key={idx} className="mb-4 bg-card/50">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-base">{m.titulo}</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-2">
+                                        {gradedActs.map((a:any, i:number) => {
+                                            const score = a?.config?.score;
+                                            const minScore = Number(a?.quiz_config?.min_score || 0);
+                                            const hasScore = score !== undefined && score !== null;
+                                            const passed = hasScore ? Number(score) >= minScore : false;
+                                            
+                                            // Robust title fallback
+                                            const atitle = a?.titulo || a?.title || a?.name || `Atividade` ;
+                                            
+                                            // Status logic
+                                            const hasAnswers = a?.config?.answers && Object.keys(a.config.answers).length > 0;
+                                            
+                                            return (
+                                                <React.Fragment key={i}>
+                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-muted/20 p-3 rounded gap-2">
+                                                        <div>
+                                                            <div className="font-medium">{atitle}</div>
+                                                            <div className="text-xs text-muted-foreground">Mínimo para aprovação: {minScore}%</div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            {hasScore ? (
+                                                                <Badge variant={passed ? 'default' : 'destructive'} className={passed ? 'bg-green-600 hover:bg-green-700' : ''}>
+                                                                    {score}% {passed ? 'Aprovado' : 'Reprovado'}
+                                                                </Badge>
+                                                            ) : (
+                                                                <Badge variant={hasAnswers ? "secondary" : "outline"} className={hasAnswers ? "bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200" : ""}>
+                                                                    {hasAnswers ? 'Em Andamento' : 'Pendente'}
+                                                                </Badge>
+                                                            )}
+                                                            
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="sm" 
+                                                                className="h-6 px-2 text-xs"
+                                                                onClick={() => setExpandedDetails(prev => ({...prev, [i]: !prev[i]}))}
+                                                            >
+                                                                {expandedDetails[i] ? 'Ocultar Detalhes' : 'Ver Detalhes'}
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                    {/* Detail View */}
+                                                    {expandedDetails[i] && (
+                                                        <QuizGradeDetail activity={a} />
+                                                    )}
+                                                </React.Fragment>
+                                            )
+                                        })}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )
+                    })}
+                    {modules.every((m:any) => {
+                         const acts = Array.isArray(m?.atividades || m?.activities) ? (m?.atividades || m?.activities) : [];
+                         return !acts.some((a:any) => {
+                            const type = String(a?.tipo_atividade || a?.type_activities || a?.tipo || a?.post_type || '').toLowerCase();
+                            const isQuizType = type.includes('quiz') || type.includes('prova');
+                            return isQuizType || a?.quiz_config?.min_score !== undefined;
+                         });
+                    }) && (
+                        <div className="text-center py-10 text-muted-foreground">
+                            <GraduationCap className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                            <p>Nenhuma atividade avaliativa encontrada neste curso.</p>
+                        </div>
+                    )}
+                 </div>
+              ) : currentActivity ? (
                 <>
                   {/* Player area */}
                   <div className={`rounded-md md:rounded-lg overflow-hidden ${isVideo(currentActivity as any) ? 'aspect-video bg-black' : 'bg-white'}`}>
@@ -2304,6 +2955,51 @@ function htmlEquals(a: string, b: string): boolean {
                        *        Falls back to description when `content` is empty.
                        */
                       const html = String(content || desc || '');
+                      if (isQuiz(a)) {
+                        return (
+                          <div className="p-4 bg-background">
+                            <QuizViewer 
+                              activity={a}
+                              initialState={(a as any).config || {}}
+                              onProgressUpdate={(state) => {
+                                 // Auto-save progress
+                                 const cfg = (a as any).quiz_config || {};
+                                 progressService.savePlaybackPosition({
+                                    course_id: course?.id || course?.course_id || 0,
+                                    module_id: a?._moduleIndex !== -1 ? (modules[a._moduleIndex]?.module_id ?? modules[a._moduleIndex]?.id) : undefined,
+                                    activity_id: getActivityId(a, a._moduleIndex, a._activityIndex),
+                                    seconds: 0,
+                                    id_matricula: enrollmentId,
+                                    config: { ...state, score: undefined } // Save intermediate state without score
+                                  }).catch(() => {});
+                              }}
+                              onComplete={(score) => {
+                                // Mark as complete only if score is enough
+                                const cfg = (a as any).quiz_config || {};
+                                const minScore = Number(cfg.min_score) || 0;
+                                if (score >= minScore) {
+                                  markCompleteAndAdvance(score);
+                                } else {
+                                  // pt-BR: Salva a nota mesmo reprovado, sem marcar como concluído.
+                                  // en-US: Save grade even if failed, without marking as completed.
+                                  progressService.savePlaybackPosition({
+                                    course_id: course?.id || course?.course_id || 0,
+                                    module_id: a?._moduleIndex !== -1 ? (modules[a._moduleIndex]?.module_id ?? modules[a._moduleIndex]?.id) : undefined,
+                                    activity_id: getActivityId(a, a._moduleIndex, a._activityIndex),
+                                    seconds: 0,
+                                    id_matricula: enrollmentId,
+                                    config: { score }
+                                  }).then(() => {
+                                      // pt-BR: Atualiza currículo para refletir nota reprovada.
+                                      // en-US: Refresh curriculum to reflect failed grade.
+                                      fetchCurriculum();
+                                  }).catch(() => {});
+                                }
+                              }} 
+                            />
+                          </div>
+                        );
+                      }
                       if (!html.trim()) {
                         return (
                           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Conteúdo indisponível</div>

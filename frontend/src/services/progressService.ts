@@ -39,8 +39,25 @@ class ProgressService extends GenericApiService<any, any, any> {
      * en-US: When available, sends the student's enrollment identifier to bind progress.
      */
     id_matricula?: string | number;
+    /**
+     * config (optional)
+     * pt-BR: Metadados adicionais (ex: score).
+     * en-US: Additional metadata (e.g. score).
+     */
+    config?: any;
   }): Promise<any> {
     return this.customPost('/complete', payload);
+  }
+
+  /**
+   * getCourseGrades
+   * pt-BR: Obtém o relatório de notas/desempenho dos alunos no curso (Admin).
+   * en-US: Gets course grades/performance report (Admin).
+   */
+  async getCourseGrades(course_id: string | number): Promise<Array<any>> {
+    const res = await this.customGet(`/course/${course_id}/grades`);
+    const data = (res && typeof res === 'object' && 'data' in res) ? (res as any).data : res;
+    return Array.isArray(data) ? data : [];
   }
 
   /**
@@ -233,6 +250,7 @@ class ProgressService extends GenericApiService<any, any, any> {
     activity_id: string | number;
     seconds: number;
     id_matricula?: string | number;
+    config?: any;
   }): Promise<any> {
     // pt-BR: Envia payload incluindo opcionalmente id_matricula conforme solicitado.
     // en-US: Sends payload optionally including id_matricula as requested.

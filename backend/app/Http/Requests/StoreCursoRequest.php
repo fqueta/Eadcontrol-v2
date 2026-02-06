@@ -90,6 +90,10 @@ class StoreCursoRequest extends FormRequest
             'modulos.*.atividades.*.type_duration' => ['nullable','string','max:50'],
             'modulos.*.atividades.*.type_activities' => ['required','string','max:50'],
             'modulos.*.atividades.*.active' => ['nullable', Rule::in(['s','n','true','false','1','0'])],
+            
+            // Campos de quiz
+            'modulos.*.atividades.*.quiz_questions' => ['nullable', 'array'],
+            'modulos.*.atividades.*.quiz_config' => ['nullable', 'array'],
         ];
     }
 }

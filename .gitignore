@@ -1,3 +1,9 @@
-.vite/
-.env
-CHEATSHEET.md
+# Ignore everything in the root
+/*
+
+# Except these directories
+!/backend/
+!/frontend/
+
+# And keep the .gitignore itself
+!.gitignore

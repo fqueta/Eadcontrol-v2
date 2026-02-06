@@ -38,4 +38,20 @@ class ActivityProgress extends Model
         'completed' => 'boolean',
         'config' => 'array',
     ];
+
+    /**
+     * Relationship: Enrollment (Matricula)
+     */
+    public function matricula()
+    {
+        return $this->belongsTo(Matricula::class, 'id_matricula');
+    }
+
+    /**
+     * Relationship: Activity
+     */
+    public function activity()
+    {
+        return $this->belongsTo(Activity::class, 'activity_id');
+    }
 }

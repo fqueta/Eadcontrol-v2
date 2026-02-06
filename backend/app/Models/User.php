@@ -32,12 +32,16 @@ class User extends Authenticatable
         'reg_excluido',
         'deletado',
         'reg_deletado',
+        'celular',
     ];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
         'config' => 'array',
         'preferencias' => 'array',
+        'genero' => 'string',
+        'celular' => 'string',
+        'cpf' => 'string',
     ];
 
     protected $hidden = [
@@ -75,6 +79,30 @@ class User extends Authenticatable
     //             ];
     //         });
     // }
+
+    /**
+     * Mutator para garantir que genero seja sempre string
+     */
+    public function setGeneroAttribute($value)
+    {
+        $this->attributes['genero'] = $value !== null ? (string) $value : null;
+    }
+
+    /**
+     * Mutator para garantir que celular seja sempre string
+     */
+    public function setCelularAttribute($value)
+    {
+        $this->attributes['celular'] = $value !== null ? (string) $value : null;
+    }
+
+    /**
+     * Mutator para garantir que CPF seja sempre string
+     */
+    public function setCpfAttribute($value)
+    {
+        $this->attributes['cpf'] = $value !== null ? (string) $value : null;
+    }
 
     /**
      * Dispara a notificação de redefinição de senha usando nossa

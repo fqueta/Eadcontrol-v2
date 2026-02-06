@@ -117,4 +117,15 @@ class Activity extends Model
     {
         return Str::slug($name);
     }
+
+    /**
+     * Relacionamento com as questões do quiz.
+     * EN: Relationship with quiz questions.
+     */
+    public function questions()
+    {
+        return $this->belongsToMany(Question::class, 'activity_questions', 'activity_id', 'question_id')
+                    ->withPivot('ordem')
+                    ->withTimestamps();
+    }
 }

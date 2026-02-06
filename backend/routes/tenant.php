@@ -197,6 +197,7 @@ Route::name('api.')->prefix('api/v1')->middleware([
         // User profile routes (self-service)
         Route::get('user/profile',[UserController::class,'profile'])->name('user.profile.show');
         Route::put('user/profile',[UserController::class,'updateProfile'])->name('user.profile.update');
+        Route::post('user/change-password',[UserController::class,'changePassword'])->name('user.change-password');
         Route::get('user/can',[UserController::class,'can_access'])->name('perfil.can');
         Route::post('/logout',[AuthController::class,'logout'])->name('logout');
         Route::apiResource('users', UserController::class,['parameters' => [
@@ -266,6 +267,11 @@ Route::name('api.')->prefix('api/v1')->middleware([
         Route::post('activities-progress/complete', [ActivitiesProgressController::class, 'complete'])
             ->name('activities-progress.complete')
             ->middleware('throttle:120,1');
+
+        // Relatório de notas do curso (Admin)
+        Route::get('activities-progress/course/{course_id}/grades', [ActivitiesProgressController::class, 'getCourseGrades'])
+            ->name('activities-progress.course.grades')
+            ->middleware('throttle:60,1');
 
         // Desmarcar atividade como concluída
         Route::post('activities-progress/incomplete', [ActivitiesProgressController::class, 'incomplete'])

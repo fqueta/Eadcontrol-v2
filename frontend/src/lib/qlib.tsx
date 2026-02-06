@@ -23,7 +23,7 @@ export function getTenantApiUrl(): string {
       url = envUrl;
   } else if (host.includes('localhost') || host.includes('127.0.0.1')) {
      // Local development heuristic
-     url = 'http://{tenant_id}.localhost:8000/api';
+     url = 'http://{tenant_id}.localhost:8004/api';
   } else {
     // Production heuristic
     url = `https://api-${host}/api`;

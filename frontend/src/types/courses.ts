@@ -56,6 +56,11 @@ export interface CourseConfig {
   pagina_venda: CourseSalePage;
   adc: CourseADCConfig;
   ead: CourseEADConfig;
+  cover?: {
+    url: string;
+    file_id?: number | string;
+    title?: string;
+  };
 }
 
 /**
@@ -63,6 +68,12 @@ export interface CourseConfig {
  */
 export interface CourseModule {
   etapa: 'etapa1' | 'etapa2' | string;
+  title?: string; // Add alias if needed by UI
+  name?: string; // Add alias if needed by UI
+  active?: 's' | 'n'; // Module active state
+  description?: string;
+  tipo_duracao?: 'seg' | 'min' | 'hrs';
+  duration?: string;
   titulo: string;
   limite: string; // número em string (mantemos compatível com backend)
   valor?: string; // currency string
@@ -186,6 +197,82 @@ export interface CourseRecord extends CoursePayload {
 }
 
 /**
+ * QuizQuestionOption
+ * pt-BR: Opção de resposta para perguntas de múltipla escolha.
+ * en-US: Answer option for multiple choice questions.
+ */
+export interface QuizQuestionOption {
+  /**
+   * id
+   * pt-BR: Identificador único da opção (gerado localmente).
+   * en-US: Unique option identifier (locally generated).
+   */
+  id: string;
+  /**
+   * texto
+   * pt-BR: Texto da alternativa.
+   * en-US: Option text.
+   */
+  texto: string;
+  /**
+   * correta
+   * pt-BR: Indica se esta é a resposta correta.
+   * en-US: Indicates if this is the correct answer.
+   */
+  correta: boolean;
+}
+
+/**
+ * QuizQuestion
+ * pt-BR: Representa uma pergunta de quiz/avaliação.
+ * en-US: Represents a quiz/assessment question.
+ */
+export interface QuizQuestion {
+  /**
+   * id
+   * pt-BR: Identificador único da pergunta (gerado localmente).
+   * en-US: Unique question identifier (locally generated).
+   */
+  id: string;
+  /**
+   * tipo_pergunta
+   * pt-BR: Tipo da pergunta (multipla_escolha ou verdadeiro_falso).
+   * en-US: Question type (multiple_choice or true_false).
+   */
+  tipo_pergunta: 'multipla_escolha' | 'verdadeiro_falso';
+  /**
+   * enunciado
+   * pt-BR: Texto da pergunta/enunciado.
+   * en-US: Question statement/text.
+   */
+  enunciado: string;
+  /**
+   * opcoes
+   * pt-BR: Lista de opções para múltipla escolha (2-6 opções).
+   * en-US: Options list for multiple choice (2-6 options).
+   */
+  opcoes?: QuizQuestionOption[];
+  /**
+   * resposta_correta
+   * pt-BR: Para verdadeiro/falso: 'verdadeiro' ou 'falso'.
+   * en-US: For true/false: 'verdadeiro' or 'falso'.
+   */
+  resposta_correta?: 'verdadeiro' | 'falso';
+  /**
+   * explicacao
+   * pt-BR: Explicação opcional exibida após resposta.
+   * en-US: Optional explanation shown after answering.
+   */
+  explicacao?: string;
+  /**
+   * pontos
+   * pt-BR: Pontuação desta pergunta (default: 1).
+   * en-US: Points for this question (default: 1).
+   */
+  pontos?: number;
+}
+
+/**
  * CourseActivity
  * pt-BR: Representa uma atividade dentro de um módulo do curso.
  * en-US: Represents an activity within a course module.
@@ -209,6 +296,30 @@ export interface CourseActivity {
    * en-US: Activity type (video, quiz, reading, file, assignment).
    */
   tipo: 'video' | 'quiz' | 'leitura' | 'arquivo' | 'tarefa' | string;
+  /**
+   * active
+   * pt-BR: Status de ativação da atividade.
+   * en-US: Activity activation status.
+   */
+  active?: 's' | 'n';
+  /**
+   * video_url
+   * pt-BR: URL do vídeo (se tipo=video).
+   * en-US: Video URL (if type=video).
+   */
+  video_url?: string;
+  /**
+   * video_source
+   * pt-BR: Fonte do vídeo (youtube, vimeo).
+   * en-US: Video source (youtube, vimeo).
+   */
+  video_source?: 'youtube' | 'vimeo' | string;
+  /**
+   * arquivo_url
+   * pt-BR: URL do arquivo (se tipo=arquivo).
+   * en-US: File URL (if type=file).
+   */
+  arquivo_url?: string;
   /**
    * descricao
    * pt-BR: Descrição opcional do conteúdo ou objetivo.
@@ -239,4 +350,23 @@ export interface CourseActivity {
    * en-US: Optionally references an already registered Activity for reuse.
    */
   activity_id?: string;
+  /**
+   * quiz_questions
+   * pt-BR: Lista de perguntas quando tipo="quiz".
+   * en-US: Questions list when type="quiz".
+   */
+  quiz_questions?: QuizQuestion[];
+  /**
+   * quiz_config
+   * pt-BR: Configurações do quiz (nota mínima, tentativas, etc).
+   * en-US: Quiz configuration (minimum score, attempts, etc).
+   */
+  quiz_config?: {
+    nota_minima?: number;
+    tentativas?: number;
+    mostrar_respostas?: boolean;
+    mostrar_correcao?: boolean;
+    ordem_aleatoria?: boolean;
+    time_limit?: number;
+  };
 }

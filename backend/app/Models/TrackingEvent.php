@@ -19,6 +19,10 @@ class TrackingEvent extends Model
         'phone',
         'url',
         'ip_address',
+        'user_id',
+        'resource_type',
+        'resource_id',
+        'metadata',
     ];
 
     /**
@@ -29,7 +33,24 @@ class TrackingEvent extends Model
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'metadata' => 'array',
     ];
+
+    /**
+     * Relationship to the user who triggered the event.
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id'); // Assuming user_id is string/uuid handled by model or DB
+    }
+
+    /**
+     * Polymorphic relationship to the resource (Course, Activity, etc).
+     */
+    public function resource()
+    {
+        return $this->morphTo();
+    }
 
     /**
      * Scope para filtrar por tipo de evento

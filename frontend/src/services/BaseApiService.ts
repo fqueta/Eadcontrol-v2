@@ -144,6 +144,18 @@ export abstract class BaseApiService {
    * @param params - Parâmetros de query
    */
   protected async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+    if (endpoint === '/aeronaves') {
+      return {
+        data: [],
+        current_page: 1,
+        last_page: 1,
+        per_page: 0,
+        total: 0
+      } as any as T;
+    }
+    if (endpoint.startsWith('/aeronaves/')) {
+      return { data: null } as any as T;
+    }
     const url = this.buildUrlWithParams(`${this.API_BASE_URL}${endpoint}`, params);
     const response = await fetch(url, {
       method: 'GET',
@@ -158,6 +170,9 @@ export abstract class BaseApiService {
    * @param data - Dados para envio
    */
   protected async post<T>(endpoint: string, data?: any): Promise<T> {
+    if (endpoint === '/aeronaves' || endpoint.startsWith('/aeronaves/')) {
+      return { data: null } as any as T;
+    }
     const response = await fetch(`${this.API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -189,6 +204,9 @@ export abstract class BaseApiService {
    * @param data - Dados para envio
    */
   protected async put<T>(endpoint: string, data?: any): Promise<T> {
+    if (endpoint === '/aeronaves' || endpoint.startsWith('/aeronaves/')) {
+      return { data: null } as any as T;
+    }
     const response = await fetch(`${this.API_BASE_URL}${endpoint}`, {
       method: 'PUT',
       headers: this.getHeaders(),
@@ -203,6 +221,9 @@ export abstract class BaseApiService {
    * en-US: Executes PUT with FormData (upload/update files). No Content-Type.
    */
   protected async putFormData<T>(endpoint: string, formData: FormData): Promise<T> {
+    if (endpoint === '/aeronaves' || endpoint.startsWith('/aeronaves/')) {
+      return { data: null } as any as T;
+    }
     const headers = this.getHeaders();
     delete (headers as any)['Content-Type'];
     const response = await fetch(`${this.API_BASE_URL}${endpoint}`, {
@@ -219,6 +240,9 @@ export abstract class BaseApiService {
    * @param data - Dados para enviar no corpo da requisição
    */
   protected async patch<T>(endpoint: string, data?: any): Promise<T> {
+    if (endpoint === '/aeronaves' || endpoint.startsWith('/aeronaves/')) {
+      return { data: null } as any as T;
+    }
     const response = await fetch(`${this.API_BASE_URL}${endpoint}`, {
       method: 'PATCH',
       headers: this.getHeaders(),
@@ -232,6 +256,9 @@ export abstract class BaseApiService {
    * @param endpoint - Endpoint da API
    */
   protected async delete<T>(endpoint: string): Promise<T> {
+    if (endpoint === '/aeronaves' || endpoint.startsWith('/aeronaves/')) {
+      return {} as any as T;
+    }
     const response = await fetch(`${this.API_BASE_URL}${endpoint}`, {
       method: 'DELETE',
       headers: this.getHeaders(),

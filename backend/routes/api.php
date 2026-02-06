@@ -257,6 +257,7 @@ Route::name('api.')->prefix('v1')->middleware([
         Route::put('certificates/template', [CertificatesController::class, 'saveTemplate'])->name('certificates.template.put');
         Route::post('certificates/generate/{enrollmentId}', [CertificatesController::class, 'generatePdf'])->name('certificates.generate');
         Route::get('tracking-events', [TrackingEventController::class, 'index'])->name('tracking-events.index');
+        Route::get('tracking/dashboard', [TrackingEventController::class, 'dashboardStats'])->name('tracking.dashboard');
         // Rota aninhada para cadastro de etapas de um funil específico
         Route::post('funnels/{id}/stages', [StageController::class, 'storeForFunnel'])->name('funnels.stages.store');
         // Listar etapas de um funil específico, ordenadas por order

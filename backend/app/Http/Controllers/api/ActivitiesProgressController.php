@@ -662,6 +662,42 @@ class ActivitiesProgressController extends Controller
                             $videoProvider = 'vimeo';
                         }
                     }
+
+                    // PT: Carregar questões do quiz se for atividade do tipo quiz
+                    // EN: Load quiz questions if activity type is quiz
+                    $quizQuestions = null;
+                    $quizConfig = null;
+                    if ($typeActivities === 'quiz' && $activity) {
+                        // Reutilizar lógica de carregamento de questões (manual aqui para evitar dependência circular com CursoController)
+                        $qs = $activity->questions()->with('options')->orderBy('activity_questions.ordem')->get();
+                        $quizQuestions = $qs->map(function($q) {
+                            return [
+                                'id' => $q->id,
+                                'tipo_pergunta' => $q->tipo_pergunta,
+                                'enunciado' => $q->enunciado,
+                                'explicacao' => $q->explicacao,
+                                'pontos' => $q->pontos,
+                                'resposta_correta' => $q->tipo_pergunta === 'verdadeiro_falso' 
+                                    ? ($q->options->where('correta', 's')->first()?->texto === 'verdadeiro' ? 'verdadeiro' : 'falso')
+                                    : null,
+                                'opcoes' => $q->options->map(function($o) {
+                                    return [
+                                        'id' => $o->id,
+                                        'texto' => $o->texto,
+                                        'correta' => $o->correta === 's'
+                                    ];
+                                })->toArray()
+                            ];
+                        })->toArray();
+                        
+                        // Sincronizar quiz_config se presente
+                        if (!isset($act['quiz_config']) && isset($activity->config['quiz_config'])) {
+                            $quizConfig = $activity->config['quiz_config'];
+                        } else {
+                            $quizConfig = $act['quiz_config'] ?? null;
+                        }
+                    }
+
                     $atividadesOut[] = [
                         'activity_id' => $activityId,
                         'title' => $act['title'] ?? (($activities[$activityId] ?? null)?->post_title),
@@ -671,6 +707,8 @@ class ActivitiesProgressController extends Controller
                         'duration' => $act['duration'] ?? null, // solicitado
                         'type_duration' => $act['type_duration'] ?? null,
                         'type_activities' => $act['type_activities'] ?? null,
+                        'quiz_questions' => $quizQuestions, // Added
+                        'quiz_config' => $quizConfig,       // Added
                         'video_provider' => $videoProvider,
                         'active' => $act['active'] ?? null,
                         'id' => $act['id'] ?? $activityId,
@@ -715,12 +753,43 @@ class ActivitiesProgressController extends Controller
                             $videoProvider = 'vimeo';
                         }
                     }
+
+                     // PT: Carregar questões do quiz se for atividade do tipo quiz (fallback loop)
+                     $quizQuestions = null;
+                     $quizConfig = null;
+                     $typeActivities = $activity->config['type_activities'] ?? null; // Try to infer from activity config
+                     if ($typeActivities === 'quiz') {
+                         $qs = $activity->questions()->with('options')->orderBy('activity_questions.ordem')->get();
+                         $quizQuestions = $qs->map(function($q) {
+                             return [
+                                 'id' => $q->id,
+                                 'tipo_pergunta' => $q->tipo_pergunta,
+                                 'enunciado' => $q->enunciado,
+                                 'explicacao' => $q->explicacao,
+                                 'pontos' => $q->pontos,
+                                 'resposta_correta' => $q->tipo_pergunta === 'verdadeiro_falso' 
+                                     ? ($q->options->where('correta', 's')->first()?->texto === 'verdadeiro' ? 'verdadeiro' : 'falso')
+                                     : null,
+                                 'opcoes' => $q->options->map(function($o) {
+                                     return [
+                                         'id' => $o->id,
+                                         'texto' => $o->texto,
+                                         'correta' => $o->correta === 's'
+                                     ];
+                                 })->toArray()
+                             ];
+                         })->toArray();
+                         $quizConfig = $activity->config['quiz_config'] ?? null;
+                     }
+
                     $atividadesOut[] = [
                         'activity_id' => $activityId,
                         'title' => $activity->post_title,
                         'duration' => null,
                         'type_duration' => null,
-                        'type_activities' => null,
+                        'type_activities' => $typeActivities,
+                        'quiz_questions' => $quizQuestions, // Added
+                        'quiz_config' => $quizConfig,       // Added
                         'video_provider' => $videoProvider,
                         'active' => null,
                         'id' => $activityId,
@@ -752,5 +821,47 @@ class ActivitiesProgressController extends Controller
             'modules_total' => count($curriculum),
             'curriculum' => $curriculum,
         ], 200);
+    }
+
+    /**
+     * Retorna as notas/desempenho dos alunos no curso (para admin).
+     * EN: Returns students' grades/performance in the course (for admin).
+     */
+    public function getCourseGrades(Request $request, $course_id)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+
+        // Permitir apenas admins ou instrutores (ex: permission_id != 7 ou algo assim)
+        // Adjust permission check as needed. Assuming clients (7) cannot see this.
+        if ((int)($user->permission_id ?? 0) === 7) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+
+        // Buscar todo o progresso do curso que tenha 'score' no config
+        $grades = ActivityProgress::where('course_id', $course_id)
+            ->with(['matricula.student:id,name,email', 'activity:id,post_title'])
+            ->get()
+            ->filter(function($p) {
+                // Filtra apenas registros que tenham pontuação definida
+                return isset($p->config['score']);
+            })
+            ->map(function($p) {
+                return [
+                    'id' => $p->id,
+                    'student_id' => $p->matricula->student->id ?? null,
+                    'student_name' => $p->matricula->student->name ?? 'Aluno Removido',
+                    'student_email' => $p->matricula->student->email ?? '',
+                    'activity_id' => $p->activity_id,
+                    'activity_title' => $p->activity->post_title ?? 'Atividade Removida',
+                    'score' => $p->config['score'],
+                    'completed_at' => $p->updated_at,
+                ];
+            })
+            ->values(); // Resetar índices do array
+
+        return response()->json($grades);
     }
 }

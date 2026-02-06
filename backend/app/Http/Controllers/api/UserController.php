@@ -8,6 +8,7 @@ use App\Services\PermissionService;
 use App\Services\Qlib;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -273,44 +274,140 @@ class UserController extends Controller
             return response()->json(['error' => 'Usuário inativo'], 405);
         }
 
+        // Validação dos campos diretos e config
         $validator = Validator::make($request->all(), [
-            'name'        => 'sometimes|required|string|max:255',
-            'email'       => ['sometimes','required','email', Rule::unique('users','email')->ignore($authUser->id)],
+            'name'        => 'nullable|string|max:255',
+            'email'       => ['nullable','email', Rule::unique('users','email')->ignore($authUser->id)],
             'password'    => 'nullable|string|min:6',
             'foto_perfil' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'cpf'         => 'nullable|string|max:20',
+            'celular'     => 'nullable|string|max:20',
+            'genero'      => 'nullable|string|max:10',
+            'config'      => 'nullable|array',
+            'config.nascimento'  => 'nullable|date',
+            'config.rg'          => 'nullable|string|max:20',
+            'config.escolaridade' => 'nullable|string|max:100',
+            'config.profissao'    => 'nullable|string|max:100',
+            'config.cep'          => 'nullable|string|max:10',
+            'config.endereco'     => 'nullable|string|max:255',
+            'config.numero'       => 'nullable|string|max:20',
+            'config.complemento'  => 'nullable|string|max:100',
+            'config.bairro'       => 'nullable|string|max:100',
+            'config.cidade'       => 'nullable|string|max:100',
+            'config.uf'           => 'nullable|string|max:2',
+            'config.observacoes'  => 'nullable|string|max:1000',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $data = $validator->validated();
+        $validated = $validator->validated();
+        
+        // Preparar array de atualização
+        $updateData = [];
+
+        // Campos diretos - converter explicitamente para string
+        if (isset($validated['name'])) {
+            $updateData['name'] = strval(trim($validated['name']));
+        }
+        if (isset($validated['email'])) {
+            $updateData['email'] = strval(trim($validated['email']));
+        }
+        if (isset($validated['cpf'])) {
+            $updateData['cpf'] = strval(trim($validated['cpf']));
+        }
+        if (isset($validated['celular'])) {
+            $updateData['celular'] = strval(trim($validated['celular']));
+        }
+        if (isset($validated['genero'])) {
+            $updateData['genero'] = strval(trim($validated['genero']));
+        }
         
         // Handle Password
-        if (isset($data['password']) && $data['password']) {
-            $data['password'] = Hash::make($data['password']);
-        } else {
-            unset($data['password']);
+        if (isset($validated['password']) && $validated['password']) {
+            $updateData['password'] = Hash::make($validated['password']);
         }
 
         // Handle Photo Upload
         if ($request->hasFile('foto_perfil')) {
             $file = $request->file('foto_perfil');
-            // Using Qlib::uploadDocumento as per project pattern, or fallback to simple storage
-            // Providing a direct storage implementation here for reliability:
-            // Store specifically on the 'central' disk so it's accessible via the global symlink
-            $path = $file->store('uploads/users/' . $authUser->id, 'central');
-            
-            // The path returned is already relative to the public disk root (e.g., uploads/users/...)
-            $data['foto_perfil'] = $path;
+            $path = $file->store('uploads/users/' . $authUser->id, 'public');
+            $updateData['foto_perfil'] = strval($path);
         }
 
-        $authUser->fill($data);
-        $authUser->save();
+        // Handle config fields
+        if (isset($validated['config']) && is_array($validated['config'])) {
+            // Pega o config atual ou inicia array vazio
+            $currentConfig = is_array($authUser->config) ? $authUser->config : [];
+            
+            // Limpar valores vazios e garantir que são strings
+            $cleanConfig = [];
+            foreach ($validated['config'] as $key => $value) {
+                if ($value !== null && $value !== '') {
+                    $cleanConfig[$key] = strval(trim($value));
+                }
+            }
+            
+            // Merge com os novos valores
+            $newConfig = array_merge($currentConfig, $cleanConfig);
+            
+            // Eloquent vai converter automaticamente array para JSON graças ao cast
+            $updateData['config'] = $newConfig;
+        }
+
+        // DEBUG: Log dos dados antes do update
+        \Log::info('UpdateProfile - Dados para atualização:', [
+            'updateData' => $updateData,
+            'user_id' => $authUser->id
+        ]);
+
+        // Usar DB::table() com bindings explícitos para evitar problemas de type inference
+        \DB::table('users')
+            ->where('id', $authUser->id)
+            ->update($updateData);
 
         return response()->json([
+            'data' => User::find($authUser->id),
             'message' => 'Perfil atualizado com sucesso!',
-            'user' => $authUser
+            'status' => 200
+        ]);
+    }
+
+    /**
+     * Alterar senha do usuário autenticado
+     */
+    public function changePassword(Request $request)
+    {
+        $authUser = $request->user();
+        if (!$authUser || ($authUser->ativo ?? null) !== 's') {
+            return response()->json(['error' => 'Usuário inativo'], 405);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:6|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Verificar se a senha atual está correta
+        if (!Hash::check($request->current_password, $authUser->password)) {
+            return response()->json([
+                'errors' => ['current_password' => ['A senha atual está incorreta.']]
+            ], 422);
+        }
+
+        // Atualizar senha
+        DB::table('users')
+            ->where('id', $authUser->id)
+            ->update(['password' => Hash::make($request->new_password)]);
+
+        return response()->json([
+            'message' => 'Senha alterada com sucesso!',
+            'status' => 200
         ]);
     }
 

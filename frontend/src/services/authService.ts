@@ -217,7 +217,7 @@ class AuthService {
     new_password_confirmation: string;
   }): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/user/change-password`, {
-      method: 'PUT',
+      method: 'POST',
       headers: this.getHeaders(true),
       body: JSON.stringify(passwordData),
     });

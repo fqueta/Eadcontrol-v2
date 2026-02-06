@@ -219,6 +219,7 @@ export default function Courses() {
                       <DropdownMenuLabel>Ações</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => goToEdit(c.id)}>Editar</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate(`/admin/school/courses/${c.id}/grades`)}>Ver Notas</DropdownMenuItem>
                       <DropdownMenuItem className="text-red-600" onClick={() => deleteMutation.mutate(c.id)}>Excluir</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

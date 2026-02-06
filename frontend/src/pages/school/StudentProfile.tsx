@@ -3,11 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserCircle, Save, KeyRound, Loader2, Camera, MapPin, User as UserIcon, Phone, Calendar, X } from 'lucide-react';
+import { UserCircle, Save, KeyRound, Loader2, Camera, MapPin, User as UserIcon, Phone, Calendar, X, Briefcase, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,19 +14,31 @@ import { toast } from 'sonner';
 import { getTenantApiUrl } from '@/lib/qlib';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { mascaraCpf } from '@/lib/qlib';
+import { phoneApplyMask, phoneRemoveMask } from '@/lib/masks/phone-apply-mask';
+import { cepApplyMask, cepRemoveMask } from '@/lib/masks/cep-apply-mask';
+import { getSiteKey, getRecaptchaToken } from '@/lib/recaptcha';
 
 const profileSchema = z.object({
   name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   email: z.string().email("Email inválido"),
   cpf: z.string().optional(),
-  phone: z.string().optional(),
-  birth_date: z.string().optional(),
-  gender: z.string().optional(),
-  bio: z.string().optional(),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  zip_code: z.string().optional(),
+  celular: z.string().optional(),
+  genero: z.string().optional(),
+  config: z.object({
+    nascimento: z.string().optional(),
+    rg: z.string().optional(),
+    escolaridade: z.string().optional(),
+    profissao: z.string().optional(),
+    cep: z.string().optional(),
+    endereco: z.string().optional(),
+    numero: z.string().optional(),
+    complemento: z.string().optional(),
+    bairro: z.string().optional(),
+    cidade: z.string().optional(),
+    uf: z.string().optional(),
+    observacoes: z.string().optional(),
+  }).optional(),
 });
 
 const passwordSchema = z.object({
@@ -42,38 +53,49 @@ const passwordSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
+interface ViaCepResponse {
+  cep: string;
+  logradouro: string;
+  complemento: string;
+  bairro: string;
+  localidade: string;
+  uf: string;
+  erro?: boolean;
+}
+
 export default function StudentProfile() {
   const { user, updateProfile, changePassword } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [loadingCep, setLoadingCep] = useState(false);
+  const [cpfValue, setCpfValue] = useState('');
+  const [celularValue, setCelularValue] = useState('');
+  const [cepValue, setCepValue] = useState('');
+  
+  // Estados para controlar visibilidade das senhas
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const email = useMemo(() => (user as any)?.email || (user as any)?.mail || '', [user]);
   
-  // Enhanced photo logic to check multiple fields
   const userPhoto = useMemo(() => {
-    // Check specific fields
     let path = (user as any)?.foto_perfil || user?.avatar; 
     
-    // If it's a full URL (avatar_url sometimes returns this), use it directly
     if (user?.avatar_url && user.avatar_url.startsWith('http')) return user.avatar_url;
 
-    // If we have a path, prepend storage URL
     if (path) {
-        // If path already starts with http, return it (just in case)
         if (path.startsWith('http')) return path;
         
-        // Normalize path: strict checking for storage prefix to avoid doubling
-        path = path.replace(/^\//, ''); // Remove leading slash
+        path = path.replace(/^\//, '');
         if (path.startsWith('storage/')) {
             path = path.replace('storage/', '');
         }
 
-        // Clean api url to get base url
         const baseUrl = getTenantApiUrl().replace('/api', '');
-        
-        // Add timestamp if available to bust cache
         const timestamp = user?.updated_at ? `?t=${new Date(user.updated_at).getTime()}` : '';
         
         return `${baseUrl}/storage/${path}${timestamp}`;
@@ -88,28 +110,23 @@ export default function StudentProfile() {
       name: user?.name || '',
       email: email,
       cpf: user?.cpf || '',
-      phone: user?.phone || '',
-      birth_date: user?.birth_date || '',
-      gender: user?.gender || '',
-      bio: user?.bio || '',
-      address: user?.address || '',
-      city: user?.city || '',
-      state: user?.state || '',
-      zip_code: user?.zip_code || '',
+      celular: user?.celular || '',
+      genero: user?.genero || '',
+      config: {
+        nascimento: user?.config?.nascimento || '',
+        rg: user?.config?.rg || '',
+        escolaridade: user?.config?.escolaridade || '',
+        profissao: user?.config?.profissao || '',
+        cep: user?.config?.cep || '',
+        endereco: user?.config?.endereco || '',
+        numero: user?.config?.numero || '',
+        complemento: user?.config?.complemento || '',
+        bairro: user?.config?.bairro || '',
+        cidade: user?.config?.cidade || '',
+        uf: user?.config?.uf || '',
+        observacoes: user?.config?.observacoes || '',
+      }
     },
-    values: { // Update form when user data loads
-      name: user?.name || '',
-      email: email,
-      cpf: user?.cpf || '',
-      phone: user?.phone || '',
-      birth_date: user?.birth_date || '',
-      gender: user?.gender || '',
-      bio: user?.bio || '',
-      address: user?.address || '',
-      city: user?.city || '',
-      state: user?.state || '',
-      zip_code: user?.zip_code || '',
-    }
   });
 
   const { 
@@ -121,6 +138,85 @@ export default function StudentProfile() {
     resolver: zodResolver(passwordSchema),
   });
 
+  // Initialize masked values when user data loads
+  useEffect(() => {
+    if (user) {
+      setCpfValue(user.cpf ? mascaraCpf(user.cpf) : '');
+      setCelularValue(user.celular || '');
+      setCepValue(user.config?.cep ? cepApplyMask(user.config.cep) : '');
+      
+      // Update form values
+      setValue('name', user.name || '');
+      setValue('email', email);
+      setValue('cpf', user.cpf || '');
+      setValue('celular', user.celular || '');
+      setValue('genero', user.genero || '');
+      setValue('config.nascimento', user.config?.nascimento || '');
+      setValue('config.rg', user.config?.rg || '');
+      setValue('config.escolaridade', user.config?.escolaridade || '');
+      setValue('config.profissao', user.config?.profissao || '');
+      setValue('config.cep', user.config?.cep || '');
+      setValue('config.endereco', user.config?.endereco || '');
+      setValue('config.numero', user.config?.numero || '');
+      setValue('config.complemento', user.config?.complemento || '');
+      setValue('config.bairro', user.config?.bairro || '');
+      setValue('config.cidade', user.config?.cidade || '');
+      setValue('config.uf', user.config?.uf || '');
+      setValue('config.observacoes', user.config?.observacoes || '');
+    }
+  }, [user, email, setValue]);
+
+  const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const masked = cepApplyMask(e.target.value);
+    setCepValue(masked);
+    const clean = cepRemoveMask(masked);
+    setValue('config.cep', clean);
+    
+    if (clean.length === 8) {
+      fetchAddressByCep(clean);
+    }
+  };
+
+  const fetchAddressByCep = async (cep: string) => {
+    try {
+      setLoadingCep(true);
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data: ViaCepResponse = await response.json();
+      
+      if (data.erro) {
+        toast.error('CEP não encontrado');
+        return;
+      }
+
+      // Auto-fill address fields
+      if (data.logradouro) setValue('config.endereco', data.logradouro);
+      if (data.bairro) setValue('config.bairro', data.bairro);
+      if (data.localidade) setValue('config.cidade', data.localidade);
+      if (data.uf) setValue('config.uf', data.uf);
+      
+      toast.success('Endereço encontrado!');
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+      toast.error('Erro ao consultar CEP');
+    } finally {
+      setLoadingCep(false);
+    }
+  };
+
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const masked = mascaraCpf(e.target.value);
+    setCpfValue(masked);
+    const clean = masked.replace(/\D/g, '');
+    setValue('cpf', clean);
+  };
+
+  const handleCelularChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const masked = phoneApplyMask(e.target.value);
+    setCelularValue(masked);
+    const clean = phoneRemoveMask(masked);
+    setValue('celular', clean);
+  };
+
   function getInitials(name?: string): string {
     const s = String(name || '').trim();
     if (!s) return 'AL';
@@ -131,19 +227,38 @@ export default function StudentProfile() {
   }
 
   const onSubmit = async (data: ProfileFormValues) => {
-    const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-            formData.append(key, value);
-        }
-    });
+    console.log('📤 Dados do formulário antes do envio:', data);
     
-    // Use context updateProfile which handles API + State update
-    const success = await updateProfile(formData);
+    // Criar FormData apenas para foto, senão enviar JSON
+    const payload: any = {
+      name: data.name,
+      email: data.email,
+    };
+
+    // Adicionar campos opcionais apenas se tiverem valor
+    if (data.cpf) payload.cpf = data.cpf;
+    if (data.celular) payload.celular = data.celular;
+    if (data.genero) payload.genero = data.genero;
+
+    // Adicionar config com todos os campos
+    if (data.config) {
+      payload.config = {};
+      Object.entries(data.config).forEach(([key, value]) => {
+        if (value) {
+          payload.config[key] = value;
+        }
+      });
+    }
+
+    console.log('📦 Payload JSON a ser enviado:', payload);
+    
+    const success = await updateProfile(payload);
     
     if (success) {
       setIsEditing(false);
       toast.success('Perfil atualizado com sucesso!');
+    } else {
+      toast.error('Erro ao atualizar perfil. Verifique os dados.');
     }
   };
 
@@ -168,18 +283,34 @@ export default function StudentProfile() {
         return;
     }
 
+    if (file.size > 2 * 1024 * 1024) {
+        toast.error('A imagem deve ter no máximo 2MB.');
+        return;
+    }
+
     try {
         setUploading(true);
         const formData = new FormData();
         formData.append('foto_perfil', file);
-        formData.append('name', user?.name || ''); // Some APIs require name when updating
+        formData.append('name', user?.name || ''); 
+        
+        if (user?.email) {
+            formData.append('email', user.email);
+        }
 
         const success = await updateProfile(formData);
-        if (success) {
-            toast.success('Foto atualizada!');
+        
+        if (e.target) {
+            e.target.value = '';
         }
-    } catch (error) {
-        console.error(error);
+
+        if (success) {
+            toast.success('Foto atualizada com sucesso!');
+        }
+    } catch (error: any) {
+        console.error('Upload error:', error);
+        const msg = error?.response?.data?.message || error?.body?.message || 'Erro ao atualizar foto.';
+        toast.error(msg);
     } finally {
         setUploading(false);
     }
@@ -223,12 +354,14 @@ export default function StudentProfile() {
                    </div>
                 </div>
                 
-                <Button 
-                   onClick={() => setIsEditing(!isEditing)}
-                   className={`${isEditing ? 'bg-red-500 hover:bg-red-600' : 'bg-white text-primary hover:bg-blue-50'} shadow-lg border-0 transition-all font-semibold min-w-[140px]`}
-                >
-                   {isEditing ? 'Cancelar Edição' : 'Editar Perfil'}
-                </Button>
+                <div className="flex flex-col gap-2">
+                    <Button 
+                       onClick={() => setIsEditing(!isEditing)}
+                       className={`${isEditing ? 'bg-red-500 hover:bg-red-600' : 'bg-white text-primary hover:bg-blue-50'} shadow-lg border-0 transition-all font-semibold min-w-[140px]`}
+                    >
+                       {isEditing ? 'Cancelar Edição' : 'Editar Perfil'}
+                    </Button>
+                </div>
              </div>
           </div>
 
@@ -254,39 +387,61 @@ export default function StudentProfile() {
                           
                           <div className="space-y-2">
                               <Label htmlFor="cpf">CPF</Label>
-                              <Input id="cpf" {...register('cpf')} readOnly={!isEditing} className={readOnlyClass} placeholder="000.000.000-00" />
+                              <Input 
+                                id="cpf" 
+                                value={cpfValue}
+                                onChange={handleCpfChange}
+                                readOnly={!isEditing} 
+                                className={readOnlyClass} 
+                                placeholder="000.000.000-00" 
+                                maxLength={14}
+                              />
                           </div>
 
                           <div className="space-y-2">
-                              <Label htmlFor="birth_date">Data de Nascimento</Label>
+                              <Label htmlFor="rg">RG</Label>
+                              <Input id="rg" {...register('config.rg')} readOnly={!isEditing} className={readOnlyClass} placeholder="00.000.000-0" />
+                          </div>
+
+                          <div className="space-y-2">
+                              <Label htmlFor="nascimento">Data de Nascimento</Label>
                               <div className="relative">
-                                 <Input id="birth_date" type="date" {...register('birth_date')} readOnly={!isEditing} className={readOnlyClass} />
+                                 <Input id="nascimento" type="date" {...register('config.nascimento')} readOnly={!isEditing} className={readOnlyClass} />
                                  {!isEditing && <Calendar className="absolute right-3 top-2.5 w-4 h-4 text-muted-foreground opacity-50" />}
                               </div>
                           </div>
 
                           <div className="space-y-2">
-                              <Label htmlFor="gender">Gênero</Label>
+                              <Label htmlFor="genero">Gênero</Label>
                               {isEditing ? (
-                                  <Select onValueChange={(val) => setValue('gender', val)} defaultValue={user?.gender || ''}>
+                                  <Select onValueChange={(val) => setValue('genero', val)} value={watch('genero') || ''}>
                                     <SelectTrigger>
                                       <SelectValue placeholder="Selecione" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="M">Masculino</SelectItem>
-                                      <SelectItem value="F">Feminino</SelectItem>
-                                      <SelectItem value="O">Outro</SelectItem>
-                                      <SelectItem value="N">Prefiro não informar</SelectItem>
+                                      <SelectItem value="m">Masculino</SelectItem>
+                                      <SelectItem value="f">Feminino</SelectItem>
+                                      <SelectItem value="ni">Prefiro não informar</SelectItem>
                                     </SelectContent>
                                   </Select>
                               ) : (
-                                  <Input value={user?.gender === 'M' ? 'Masculino' : user?.gender === 'F' ? 'Feminino' : user?.gender === 'O' ? 'Outro' : user?.gender === 'N' ? 'Prefiro não informar' : user?.gender || ''} readOnly className={readOnlyClass} />
+                                  <Input value={user?.genero === 'm' ? 'Masculino' : user?.genero === 'f' ? 'Feminino' : user?.genero === 'ni' ? 'Prefiro não informar' : user?.genero || ''} readOnly className={readOnlyClass} />
                               )}
                           </div>
 
+                          <div className="space-y-2">
+                              <Label htmlFor="escolaridade">Escolaridade</Label>
+                              <Input id="escolaridade" {...register('config.escolaridade')} readOnly={!isEditing} className={readOnlyClass} placeholder="Ex: Ensino Médio Completo" />
+                          </div>
+
+                          <div className="space-y-2">
+                              <Label htmlFor="profissao">Profissão</Label>
+                              <Input id="profissao" {...register('config.profissao')} readOnly={!isEditing} className={readOnlyClass} placeholder="Ex: Estudante" />
+                          </div>
+
                           <div className="space-y-2 col-span-2">
-                              <Label htmlFor="bio">Biografia / Sobre mim</Label>
-                              <Textarea id="bio" {...register('bio')} readOnly={!isEditing} className={`resize-none ${readOnlyClass}`} rows={3} placeholder="Conte um pouco sobre você..." />
+                              <Label htmlFor="observacoes">Observações</Label>
+                              <Textarea id="observacoes" {...register('config.observacoes')} readOnly={!isEditing} className={`resize-none ${readOnlyClass}`} rows={3} placeholder="Informações adicionais..." />
                           </div>
                        </CardContent>
                     </Card>
@@ -307,31 +462,64 @@ export default function StudentProfile() {
                           </div>
 
                            <div className="space-y-2 col-span-2 md:col-span-1">
-                              <Label htmlFor="phone">Telefone / WhatsApp</Label>
+                              <Label htmlFor="celular">Celular / WhatsApp</Label>
                               <div className="relative">
-                                 <Input id="phone" {...register('phone')} readOnly={!isEditing} className={readOnlyClass} placeholder="(00) 00000-0000" />
+                                 <Input 
+                                   id="celular" 
+                                   value={celularValue}
+                                   onChange={handleCelularChange}
+                                   readOnly={!isEditing} 
+                                   className={readOnlyClass} 
+                                   placeholder="+55 (00) 00000-0000" 
+                                 />
                                  {!isEditing && <Phone className="absolute right-3 top-2.5 w-4 h-4 text-muted-foreground opacity-50" />}
                               </div>
                           </div>
 
                           <div className="space-y-2 col-span-2 md:col-span-1">
-                              <Label htmlFor="zip_code">CEP</Label>
-                              <Input id="zip_code" {...register('zip_code')} readOnly={!isEditing} className={readOnlyClass} placeholder="00000-000" />
+                              <Label htmlFor="cep">CEP</Label>
+                              <div className="relative">
+                                <Input 
+                                  id="cep" 
+                                  value={cepValue}
+                                  onChange={handleCepChange}
+                                  readOnly={!isEditing} 
+                                  className={readOnlyClass} 
+                                  placeholder="00000-000" 
+                                  maxLength={9}
+                                />
+                                {loadingCep && <Loader2 className="absolute right-3 top-2.5 w-4 h-4 animate-spin text-primary" />}
+                              </div>
                           </div>
 
                           <div className="space-y-2 col-span-2">
-                              <Label htmlFor="address">Endereço Completo</Label>
-                              <Input id="address" {...register('address')} readOnly={!isEditing} className={readOnlyClass} placeholder="Rua, Número, Bairro" />
+                              <Label htmlFor="endereco">Endereço</Label>
+                              <Input id="endereco" {...register('config.endereco')} readOnly={!isEditing} className={readOnlyClass} placeholder="Rua, Avenida..." />
                           </div>
 
                           <div className="space-y-2">
-                              <Label htmlFor="city">Cidade</Label>
-                              <Input id="city" {...register('city')} readOnly={!isEditing} className={readOnlyClass} />
+                              <Label htmlFor="numero">Número</Label>
+                              <Input id="numero" {...register('config.numero')} readOnly={!isEditing} className={readOnlyClass} placeholder="123" />
                           </div>
 
                           <div className="space-y-2">
-                              <Label htmlFor="state">Estado (UF)</Label>
-                              <Input id="state" {...register('state')} readOnly={!isEditing} className={readOnlyClass} maxLength={2} placeholder="SP" />
+                              <Label htmlFor="complemento">Complemento</Label>
+                              <Input id="complemento" {...register('config.complemento')} readOnly={!isEditing} className={readOnlyClass} placeholder="Apt, Bloco..." />
+                          </div>
+
+                          <div className="space-y-2">
+                              <Label htmlFor="bairro">Bairro</Label>
+                              <Input id="bairro" {...register('config.bairro')} readOnly={!isEditing} className={readOnlyClass} />
+                          </div>
+
+                          <div className="space-y-2">
+                              <Label htmlFor="cidade">Cidade</Label>
+                              <Input id="cidade" {...register('config.cidade')} readOnly={!isEditing} className={readOnlyClass} />
+                          </div>
+
+                          <div className="space-y-2">
+                              <Label htmlFor="uf">Estado (UF)</Label>
+                              <Input id="uf" {...register('config.uf')} readOnly={!isEditing} className={readOnlyClass} maxLength={2} placeholder="SP" />
                           </div>
                        </CardContent>
                     </Card>
@@ -387,17 +575,59 @@ export default function StudentProfile() {
                           <form onSubmit={handleSubmitPassword(onPasswordSubmit)} className="space-y-4 animate-in fade-in slide-in-from-top-2">
                               <div className="space-y-2">
                                   <Label htmlFor="current_password">Senha Atual</Label>
-                                  <Input id="current_password" type="password" {...registerPassword('current_password')} className="bg-white dark:bg-slate-950" />
+                                  <div className="relative">
+                                    <Input 
+                                      id="current_password" 
+                                      type={showCurrentPassword ? "text" : "password"} 
+                                      {...registerPassword('current_password')} 
+                                      className="bg-white dark:bg-slate-950 pr-10" 
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                      className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                      {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                  </div>
                                   {passwordErrors.current_password && <span className="text-xs text-red-500">{passwordErrors.current_password.message}</span>}
                               </div>
                               <div className="space-y-2">
                                   <Label htmlFor="new_password">Nova Senha</Label>
-                                  <Input id="new_password" type="password" {...registerPassword('new_password')} className="bg-white dark:bg-slate-950" />
+                                  <div className="relative">
+                                    <Input 
+                                      id="new_password" 
+                                      type={showNewPassword ? "text" : "password"} 
+                                      {...registerPassword('new_password')} 
+                                      className="bg-white dark:bg-slate-950 pr-10" 
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowNewPassword(!showNewPassword)}
+                                      className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                  </div>
                                   {passwordErrors.new_password && <span className="text-xs text-red-500">{passwordErrors.new_password.message}</span>}
                               </div>
                               <div className="space-y-2">
                                   <Label htmlFor="new_password_confirmation">Confirmar Nova Senha</Label>
-                                  <Input id="new_password_confirmation" type="password" {...registerPassword('new_password_confirmation')} className="bg-white dark:bg-slate-950" />
+                                  <div className="relative">
+                                    <Input 
+                                      id="new_password_confirmation" 
+                                      type={showConfirmPassword ? "text" : "password"} 
+                                      {...registerPassword('new_password_confirmation')} 
+                                      className="bg-white dark:bg-slate-950 pr-10" 
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                      className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                  </div>
                                   {passwordErrors.new_password_confirmation && <span className="text-xs text-red-500">{passwordErrors.new_password_confirmation.message}</span>}
                               </div>
                               <div className="flex gap-2 pt-2">

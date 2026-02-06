@@ -102,4 +102,20 @@ class Matricula extends Model
     {
         return $this->belongsToMany(Parcelamento::class, 'matricula_parcelamento', 'matricula_id', 'parcelamento_id')->withTimestamps();
     }
+
+    /**
+     * Relationship: Student (User)
+     */
+    public function student()
+    {
+        return $this->belongsTo(User::class, 'id_cliente');
+    }
+
+    /**
+     * Relationship: Course (Curso)
+     */
+    public function course()
+    {
+        return $this->belongsTo(Curso::class, 'id_curso');
+    }
 }

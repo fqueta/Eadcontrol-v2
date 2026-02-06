@@ -112,6 +112,7 @@ import CertificateTemplate from "./pages/school/CertificateTemplate";
 import CertificateGenerate from "./pages/school/CertificateGenerate";
 import CertificateView from "./pages/school/CertificateView";
 import CertificateValidate from "./pages/school/CertificateValidate";
+import AdminCourseGrades from "./pages/school/AdminCourseGrades";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -380,6 +381,16 @@ const App = () => {
                   </AppLayout>
                 </AdminProtectedRoute>
               } />
+
+              {/* Escola / Cursos — Notas dos alunos (admin) */}
+              <Route path="/admin/school/courses/:id/grades" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <AdminCourseGrades />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+
 
               {/* Escola / Matrículas — Detalhe de progresso (admin) */}
               <Route path="/admin/school/enrollments/:id/progress" element={
