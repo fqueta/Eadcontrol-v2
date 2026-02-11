@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import commentsService from '@/services/commentsService';
 import { certificatesService } from '@/services/certificatesService';
 import { QuizGradeDetail } from './components/QuizGradeDetail';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 /**
  * VideoDescriptionToggle
@@ -598,6 +599,7 @@ function QuizViewer({
  * en-US: Course content viewer; now accepts `enrollmentId` to send with progress payloads.
  */
 export default function CourseContentViewer({ course, onActivityChange, enrollmentId }: { course: any; onActivityChange?: (activity: any) => void; enrollmentId?: string | number }) {
+  const { trackEvent } = useAnalytics();
   /**
    * Router hooks
    * pt-BR: Integra com o roteador para ler e atualizar a URL de cada atividade.
@@ -1516,6 +1518,21 @@ function htmlEquals(a: string, b: string): boolean {
     const ai = a._activityIndex;
     const aid = getActivityId(a, mi, ai);
     const cid = course?.id ?? course?.course_id ?? course?.token ?? 'course';
+    // Rastrear visualização da atividade
+    if (aid && !isNaN(Number(aid))) {
+        trackEvent('view', {
+            resource_type: 'App\\Models\\Activity',
+            resource_id: Number(aid),
+            url: window.location.href,
+            metadata: {
+                course_id: cid,
+                module_index: mi,
+                activity_index: ai,
+                title: a.titulo || a.title
+            }
+        });
+    }
+
     // pt-BR: Atualiza guarda de atividade ativa e reseta refs que podem vazar estado.
     // en-US: Update active activity guard and reset refs that may leak state.
     activeActivityIdRef.current = aid;

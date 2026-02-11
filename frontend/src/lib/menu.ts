@@ -231,6 +231,12 @@ export const defaultMenu: MenuItemDTO[] = [
         url: "/admin/reports/financial",
         permission: "reports.financial.view",
         can_view: true
+      },
+      {
+        title: "Acesso de Conteúdo",
+        url: "/admin/reports/content-access",
+        permission: "reports.view",
+        can_view: true
       }
     ]
   },

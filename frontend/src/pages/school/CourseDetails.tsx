@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { getTenantIdFromSubdomain } from '@/lib/qlib';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
@@ -13,6 +14,7 @@ import { emailsService } from '@/services/emailsService';
 import { publicEnrollmentService } from '@/services/publicEnrollmentService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEnrollmentsList } from '@/hooks/enrollments';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 /**
  * CourseDetails
@@ -32,6 +34,7 @@ export default function CourseDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { trackEvent } = useAnalytics();
 
   /**
    * useQuery — course
@@ -88,6 +91,25 @@ export default function CourseDetails() {
     const c: any = course || {};
     return c?.titulo || c?.nome || (id ? `Curso ${id}` : 'Curso');
   }, [course, id]);
+
+  /**
+   * Analytics Tracking
+   * pt-BR: Rastreia a visualização da página de detalhes do curso.
+   * en-US: Tracks the course details page view.
+   */
+  useEffect(() => {
+    if (courseNumericId) {
+      trackEvent('view', {
+        resource_type: 'App\\Models\\Curso',
+        resource_id: courseNumericId,
+        url: window.location.href,
+        metadata: {
+          title: title,
+          slug: id
+        }
+      });
+    }
+  }, [courseNumericId, trackEvent, title, id]);
 
   const description = useMemo(() => {
     const c: any = course || {};
@@ -200,7 +222,11 @@ export default function CourseDetails() {
   const handleBuy = () => {
     const c: any = course || {};
     if (isAlreadyEnrolled) {
-      toast.error('Você já está matriculado neste curso.');
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Você já está matriculado neste curso."
+      });
       // Direciona para a página do aluno
       if (id) navigate(`/aluno/cursos/${String(id)}`);
       return;
@@ -227,12 +253,20 @@ export default function CourseDetails() {
       const courseId = String(c?.id || '');
 
       if (!fullName || !email) {
-        toast.error('Informe nome e e-mail para prosseguir.');
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Informe nome e e-mail para prosseguir."
+        });
         return;
       }
+      
+      const institution = getTenantIdFromSubdomain() || 'default';
 
       // Registra interesse via endpoint público sem autenticação
+      // Registra interesse via endpoint público sem autenticação
       await publicEnrollmentService.registerInterest({
+        institution,
         name: `Interesse • ${fullName}`,
         email,
         phone,
@@ -248,7 +282,10 @@ export default function CourseDetails() {
           course_id: courseId ? Number(courseId) : undefined,
           course_title: String(c?.titulo || title),
         });
-        toast.success('Interesse enviado! Matrícula criada e email de boas-vindas disparado.');
+        toast({
+          title: "Sucesso",
+          description: "Interesse enviado! Matrícula criada e email de boas-vindas disparado."
+        });
         setSubmitSuccess(true);
         setSuccessMessage('Interesse enviado! Em breve entraremos em contato por e-mail.');
         resetInterestFormFields();
@@ -266,7 +303,10 @@ export default function CourseDetails() {
           `Atenciosamente,\nEquipe Incluir & Educar`
         );
         window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
-        toast.success('Interesse enviado! Matrícula criada. Email fallback aberto.');
+        toast({
+          title: "Sucesso",
+          description: "Interesse enviado! Matrícula criada. Email fallback aberto."
+        });
         setSubmitSuccess(true);
         setSuccessMessage('Interesse enviado! Abrimos seu e-mail para confirmar o contato.');
         resetInterestFormFields();
@@ -275,7 +315,11 @@ export default function CourseDetails() {
       // handleBuy();
     } catch (err: any) {
       console.error('Erro ao enviar interesse:', err);
-      toast.error('Falha ao enviar interesse. Tente novamente.');
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Falha ao enviar interesse. Tente novamente."
+      });
       setSubmitSuccess(false);
       setSuccessMessage('');
     } finally {

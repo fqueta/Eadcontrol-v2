@@ -166,6 +166,10 @@ Route::name('api.')->prefix('api/v1')->middleware([
         ->middleware('throttle:40,1');
 
 
+
+    // Rota pública para registrar tracking (sem autenticação)
+    Route::post('tracking', [TrackingEventController::class, 'store'])->name('tracking.store');
+
     Route::middleware(['auth:sanctum','auth.active'])->group(function () {
         // Gestão de convites (admin)
         // EN: Invite management (admin)
@@ -550,9 +554,12 @@ Route::name('api.')->prefix('api/v1')->middleware([
         ]]);
 
         // Rotas para tracking events
-        Route::apiResource('tracking', TrackingEventController::class,['parameters' => [
-            'tracking' => 'id'
-        ]]);
+        Route::get('tracking/dashboard', [TrackingEventController::class, 'dashboardStats'])->name('tracking.dashboard');
+        // Route::apiResource('tracking', TrackingEventController::class,['parameters' => [
+        //     'tracking' => 'id'
+        // ]])->only(['index', 'destroy']);
+        Route::get('tracking', [TrackingEventController::class, 'index'])->name('tracking.index');
+        Route::delete('tracking/{id}', [TrackingEventController::class, 'destroy'])->name('tracking.destroy');
         Route::get('tracking-events', [TrackingEventController::class, 'index'])->name('tracking-events.index');
         // rota flexível de filtros
         Route::get('menus', [MenuController::class, 'getMenus']);

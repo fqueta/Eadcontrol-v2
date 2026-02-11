@@ -6,6 +6,7 @@ export interface MenuItemDTO {
   title: string;
   url?: string;
   icon?: string;
+  permission?: string;
   can_view?: boolean | number | '0' | '1';
   items?: MenuItemDTO[];
 }

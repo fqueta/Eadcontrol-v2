@@ -42,7 +42,7 @@
     "icon": "LineChart",
     "submenu": [
       { "title": "Geral", "url": "/reports/relatorio-geral" },
-      { "title": "Vendas", "url": "/reports/relatorio-vendas" },
+      { "title": "Acesso de conteudo", "url": "/reports/content-access" },
       { "title": "Pós Venda", "url": "/reports/relatorio-escola" },
       { "title": "Balanço", "url": "/reports/relatorio-balanco" },
       { "title": "Turmas", "url": "/reports/relatorio-turmas" },

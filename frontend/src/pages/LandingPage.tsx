@@ -20,7 +20,7 @@ import { getInstitutionName, getInstitutionSlogan } from "@/lib/branding";
  * en-US: Public home page. Dynamically reads institution name from options
  *        (via `getInstitutionName` util) and uses it in hero texts.
  */
-const LandingPage = () => {
+const LandingPage = ({ linkLoja }: { linkLoja?: string }) => {
   // Institution display name and slogan (from saved branding)
   const institutionName = getInstitutionName();
   const institutionSlogan = getInstitutionSlogan();

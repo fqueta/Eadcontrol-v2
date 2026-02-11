@@ -260,6 +260,25 @@ class TrackingEventController extends Controller
             ->orderBy('date')
             ->get();
 
+        // 5. Últimos acessos dos usuários
+        $usersAccess = TrackingEvent::select('user_id', DB::raw('MAX(created_at) as last_access'))
+            ->where('event_type', 'view')
+            ->whereNotNull('user_id')
+            ->groupBy('user_id')
+            ->orderByDesc('last_access')
+            ->limit(50)
+            ->with('user:id,name,email')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'user_id' => $item->user_id,
+                    'name' => $item->user ? $item->user->name : 'Usuário Removido',
+                    'email' => $item->user ? $item->user->email : null,
+                    'last_access' => $item->last_access, // Já é datetime string ou Carbon se cast
+                    // Se precisar formatar no backend: Carbon::parse($item->last_access)->format('d/m/Y H:i')
+                ];
+            });
+
         return response()->json([
             'overview' => [
                 'total_views' => $totalViews,
@@ -268,6 +287,7 @@ class TrackingEventController extends Controller
             'top_courses' => $topCourses,
             'top_activities' => $topActivities,
             'views_chart' => $viewsByDay,
+            'users_access' => $usersAccess,
         ]);
     }
 }

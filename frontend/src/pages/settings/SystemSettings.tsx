@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Settings, Save, Palette, Link, Image as ImageIcon, Building2 } from "lucide-react";
-import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription, getInstitutionUrl } from "@/lib/branding";
+import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription, getInstitutionUrl, syncBrandingToMetaTags } from "@/lib/branding";
 import { systemSettingsService, AdvancedSystemSettings } from "@/services/systemSettingsService";
 import { useApiOptions } from "@/hooks/useApiOptions";
 import { useFunnelsList, useStagesList } from "@/hooks/funnels";
@@ -68,7 +68,7 @@ export default function SystemSettings() {
   ), [defaultFunnelOption, localApiOptions]);
   const { data: stagesData, isLoading: isLoadingStages } = useStagesList(String(selectedDefaultFunnelId || ''), { per_page: 200 }, { enabled: !!selectedDefaultFunnelId });
   const stagesForDefaultFunnel = React.useMemo(() => (
-    stagesData?.data || (stagesData as any)?.items || []
+    (stagesData as any)?.data || (stagesData as any)?.items || []
   ), [stagesData]);
 
   // Estados para configurações básicas - Switch
@@ -219,12 +219,8 @@ export default function SystemSettings() {
       const fav = (localStorage.getItem('app_favicon_url') || '').trim();
       const soc = (localStorage.getItem('app_social_image_url') || '').trim();
       const inst = (localStorage.getItem('app_institution_name') || '').trim();
-      // Already initialized above; only hydrate from API if missing
-      const needLogo = !logo && !brandingLogoUrl;
-      const needFav = !fav && !brandingFaviconUrl;
-      const needSoc = !soc && !brandingSocialUrl;
-      const needInst = !inst; // nome não tem state local dedicado
-      if (!(needLogo || needFav || needSoc || needInst)) return;
+      // Optimization: Always try to sync from API if options are available
+      // to ensure settings page reflects the database
       const getOpt = (key: string) => (apiOptions || []).find((o: any) => String(o?.url || '') === key);
       const getOptByKeys = (keys: string[]) => {
         for (const k of keys) {
@@ -233,73 +229,61 @@ export default function SystemSettings() {
         }
         return null;
       };
-      if (needLogo) {
-        const o = getOpt('app_logo_url');
-        const val = (o && (o.value ?? o.current_value ?? '')) || '';
-        const v = String(val).trim();
-        if (v) {
-          setBrandingLogoUrl(v);
-          try { localStorage.setItem('app_logo_url', v); } catch {}
-          (window as any).__APP_LOGO_URL__ = v;
-        }
+
+      const optLogo = getOpt('app_logo_url');
+      const valLogo = (optLogo && (optLogo.value ?? '')) || '';
+      if (valLogo && valLogo !== brandingLogoUrl) {
+        setBrandingLogoUrl(valLogo);
+        localStorage.setItem('app_logo_url', valLogo);
+        (window as any).__APP_LOGO_URL__ = valLogo;
       }
-      if (needFav) {
-        const o = getOpt('app_favicon_url');
-        const val = (o && (o.value ?? o.current_value ?? '')) || '';
-        const v = String(val).trim();
-        if (v) {
-          setBrandingFaviconUrl(v);
-          try { localStorage.setItem('app_favicon_url', v); } catch {}
-          (window as any).__APP_FAVICON_URL__ = v;
-        }
+
+      const optFav = getOpt('app_favicon_url');
+      const valFav = (optFav && (optFav.value ?? '')) || '';
+      if (valFav && valFav !== brandingFaviconUrl) {
+        setBrandingFaviconUrl(valFav);
+        localStorage.setItem('app_favicon_url', valFav);
+        (window as any).__APP_FAVICON_URL__ = valFav;
       }
-      if (needSoc) {
-        const o = getOpt('app_social_image_url');
-        const val = (o && (o.value ?? o.current_value ?? '')) || '';
-        const v = String(val).trim();
-        if (v) {
-          setBrandingSocialUrl(v);
-          try { localStorage.setItem('app_social_image_url', v); } catch {}
-          (window as any).__APP_SOCIAL_IMAGE_URL__ = v;
-        }
+
+      const optSoc = getOpt('app_social_image_url');
+      const valSoc = (optSoc && (optSoc.value ?? '')) || '';
+      if (valSoc && valSoc !== brandingSocialUrl) {
+        setBrandingSocialUrl(valSoc);
+        localStorage.setItem('app_social_image_url', valSoc);
+        (window as any).__APP_SOCIAL_IMAGE_URL__ = valSoc;
       }
-      if (needInst) {
-        const o = getOptByKeys(['app_institution_name', 'site_name', 'app_name']);
-        const val = (o && (o.value ?? o.current_value ?? '')) || '';
-        const v = String(val).trim();
-        if (v) {
-          try { localStorage.setItem('app_institution_name', v); } catch {}
-          const anyWin = window as any;
-          anyWin.__APP_INSTITUTION_NAME__ = v;
-          anyWin.__APP_SITE_NAME__ = anyWin.__APP_SITE_NAME__ || v;
-          anyWin.__APP_APP_NAME__ = anyWin.__APP_APP_NAME__ || v;
-          setInstitutionName(v);
-        }
+
+      const oInst = getOptByKeys(['app_institution_name', 'site_name', 'app_name']);
+      const valInst = (oInst && (oInst.value ?? '')) || '';
+      if (valInst && valInst !== institutionName) {
+        setInstitutionName(valInst);
+        localStorage.setItem('app_institution_name', valInst);
+        (window as any).__APP_INSTITUTION_NAME__ = valInst;
       }
-      // Optional hydration for slogan/description/url if present in API
+
       const optSlogan = getOptByKeys(['app_institution_slogan']);
-      const valSlogan = (optSlogan && (optSlogan.value ?? optSlogan.current_value ?? '')) || '';
-      if (String(valSlogan).trim()) {
-        const s = String(valSlogan).trim();
-        try { localStorage.setItem('app_institution_slogan', s); } catch {}
-        (window as any).__APP_INSTITUTION_SLOGAN__ = s;
-        setInstitutionSlogan(s);
+      const valSlogan = (optSlogan && (optSlogan.value ?? '')) || '';
+      if (valSlogan && valSlogan !== institutionSlogan) {
+        setInstitutionSlogan(valSlogan);
+        localStorage.setItem('app_institution_slogan', valSlogan);
+        (window as any).__APP_INSTITUTION_SLOGAN__ = valSlogan;
       }
+
       const optDesc = getOptByKeys(['app_institution_description']);
-      const valDesc = (optDesc && (optDesc.value ?? optDesc.current_value ?? '')) || '';
-      if (String(valDesc).trim()) {
-        const d = String(valDesc).trim();
-        try { localStorage.setItem('app_institution_description', d); } catch {}
-        (window as any).__APP_INSTITUTION_DESCRIPTION__ = d;
-        setInstitutionDescription(d);
+      const valDesc = (optDesc && (optDesc.value ?? '')) || '';
+      if (valDesc && valDesc !== institutionDescription) {
+        setInstitutionDescription(valDesc);
+        localStorage.setItem('app_institution_description', valDesc);
+        (window as any).__APP_INSTITUTION_DESCRIPTION__ = valDesc;
       }
+
       const optUrl = getOptByKeys(['app_institution_url']);
-      const valUrl = (optUrl && (optUrl.value ?? optUrl.current_value ?? '')) || '';
-      if (String(valUrl).trim()) {
-        const u = String(valUrl).trim();
-        try { localStorage.setItem('app_institution_url', u); } catch {}
-        (window as any).__APP_INSTITUTION_URL__ = u;
-        setInstitutionUrl(u);
+      const valUrl = (optUrl && (optUrl.value ?? '')) || '';
+      if (valUrl && valUrl !== institutionUrl) {
+        setInstitutionUrl(valUrl);
+        localStorage.setItem('app_institution_url', valUrl);
+        (window as any).__APP_INSTITUTION_URL__ = valUrl;
       }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -339,11 +323,10 @@ export default function SystemSettings() {
         ...(d ? { app_institution_description: d } : {}),
         ...(u ? { app_institution_url: u } : {}),
       });
-      if (!ok) {
-        toast.warning('Nome salvo localmente; falha ao persistir em opções da API.');
-      } else {
-        toast.success('Nome da instituição salvo com sucesso.');
-      }
+      // Update meta tags immediately
+      syncBrandingToMetaTags({ name: v, slogan: s, description: d });
+
+      toast.success('Nome da instituição salvo com sucesso.');
     } catch (error: any) {
       toast.error(`Falha ao salvar nome: ${error?.message || 'erro desconhecido'}`);
     }

@@ -11,6 +11,8 @@ import { AdminProtectedRoute } from "./components/auth/AdminProtectedRoute";
 import { AuthRedirect } from "./components/auth/AuthRedirect";
 import { AppLayout } from "./components/layout/AppLayout";
 import FaviconUpdater from "@/components/branding/FaviconUpdater";
+import { hydrateBrandingFromPublicApi, applyBrandingFromPersistedSources } from "@/lib/branding";
+import { useEffect } from "react";
 // import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import ClientView from "./pages/ClientView";
@@ -113,6 +115,7 @@ import CertificateGenerate from "./pages/school/CertificateGenerate";
 import CertificateView from "./pages/school/CertificateView";
 import CertificateValidate from "./pages/school/CertificateValidate";
 import AdminCourseGrades from "./pages/school/AdminCourseGrades";
+import ContentAccessReport from "./pages/reports/ContentAccessReport";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -153,6 +156,18 @@ const queryClient = new QueryClient({
  * and UserPrefsProvider, ensuring context availability across routes/layouts.
  */
 const App = () => {
+  useEffect(() => {
+    // Initial branding application from local sources (fast)
+    applyBrandingFromPersistedSources();
+    
+    // Asynchronous hydration from API (up-to-date)
+    hydrateBrandingFromPublicApi({ persist: true })
+      .then(() => {
+        applyBrandingFromPersistedSources();
+      })
+      .catch(() => {});
+  }, []);
+
   const link_loja = "/loja";
   return (
     <QueryClientProvider client={queryClient}>
@@ -696,6 +711,15 @@ const App = () => {
                 <AdminProtectedRoute>
                   <AppLayout>
                     <Categories />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+
+              {/* Relatórios — Acesso de Conteúdo */}
+              <Route path="/admin/reports/content-access" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <ContentAccessReport />
                   </AppLayout>
                 </AdminProtectedRoute>
               } />

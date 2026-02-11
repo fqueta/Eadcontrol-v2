@@ -203,6 +203,45 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
 }
 
 /**
+ * syncBrandingToMetaTags
+ * pt-BR: Sincroniza o título da página e metatags (OG/Twitter) de forma consistente.
+ * en-US: Synchronizes page title and metatags (OG/Twitter) consistently.
+ */
+export function syncBrandingToMetaTags(data: { name?: string; slogan?: string; description?: string }): void {
+  const { name, slogan, description } = data;
+  const resolvedTitle = name ? (slogan ? `${name} — ${slogan}` : name) : null;
+
+  if (resolvedTitle) {
+    document.title = resolvedTitle;
+    const titleEl = document.getElementById('app-title');
+    if (titleEl) titleEl.textContent = resolvedTitle;
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute('content', resolvedTitle);
+  }
+
+  if (description) {
+    const descEl = document.getElementById('app-description') || document.querySelector('meta[name="description"]');
+    if (descEl) descEl.setAttribute('content', description);
+    const ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) ogDesc.setAttribute('content', description);
+  }
+}
+
+/**
+ * applyBrandingFromPersistedSources
+ * pt-BR: Reaplica branding a partir das fontes (localStorage/window) e metatags.
+ * en-US: Re-applies branding from sources (localStorage/window) and metatags.
+ */
+export function applyBrandingFromPersistedSources(): void {
+  const name = getInstitutionName();
+  const slogan = getInstitutionSlogan();
+  const description = getInstitutionDescription();
+  
+  syncBrandingToMetaTags({ name, slogan, description });
+  applyBrandingFavicon();
+}
+
+/**
  * getInstitutionNameAsync
  * pt-BR: Versão assíncrona que consulta a API se o nome não estiver nas fontes
  *        locais; persiste e retorna o nome, com fallback para `defaultName`.
