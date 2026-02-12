@@ -12,6 +12,7 @@ interface ClientsTableProps {
   clients: ClientRecord[];
   onEdit: (client: ClientRecord) => void;
   onDelete: (client: ClientRecord) => void;
+  onForceDelete?: (client: ClientRecord) => void;
   isLoading: boolean;
   /**
    * Indica se a visualização atual é a Lixeira.
@@ -25,7 +26,7 @@ interface ClientsTableProps {
  * Renders client rows with owner and status. When `trashEnabled` is true,
  * shows a purple banner at the top, hides the Delete action, e exibe "Restaurar".
  */
-export function ClientsTable({ clients, onEdit, onDelete, isLoading, trashEnabled }: ClientsTableProps) {
+export function ClientsTable({ clients, onEdit, onDelete, onForceDelete, isLoading, trashEnabled }: ClientsTableProps) {
   const navigate = useNavigate();
   const location = useLocation();
   // Garantir que clients seja sempre um array válido
@@ -134,15 +135,22 @@ export function ClientsTable({ clients, onEdit, onDelete, isLoading, trashEnable
                     <DropdownMenuItem onClick={() => navigate(`/admin/clients/${client.id}/edit`, { state: { from: location } })}>
                       <Pencil className="mr-2 h-4 w-4" /> Editar
                     </DropdownMenuItem>
-                    {trashEnabled && (
-                      <DropdownMenuItem 
-                        onClick={() => restoreClientMutation.mutate(client.id)}
-                        disabled={restoreClientMutation.isPending}
-                      >
-                        <RotateCcw className="mr-2 h-4 w-4" /> Restaurar
-                      </DropdownMenuItem>
-                    )}
-                    {!trashEnabled && (
+                    {trashEnabled ? (
+                      <>
+                        <DropdownMenuItem 
+                          onClick={() => restoreClientMutation.mutate(client.id)}
+                          disabled={restoreClientMutation.isPending}
+                        >
+                          <RotateCcw className="mr-2 h-4 w-4" /> Restaurar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => onForceDelete?.(client)}
+                          className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Excluir permanentemente
+                        </DropdownMenuItem>
+                      </>
+                    ) : (
                       <DropdownMenuItem onClick={() => onDelete(client)}>
                         <Trash2 className="mr-2 h-4 w-4" /> Excluir
                       </DropdownMenuItem>

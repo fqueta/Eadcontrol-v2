@@ -75,10 +75,10 @@ export interface UsersListParams {
    */
   consultores?: boolean;
   /**
-   * pt-BR: Campo de ordenação no backend (ex.: 'name').
    * en-US: Backend sort field (e.g., 'name').
    */
   sort?: string;
+  excluido?: string;
 }
 
 export interface Paginated<T> {

@@ -97,7 +97,7 @@ class PermissionService
         // dd($name);
         if($name=='api.permissions.index' || $name == 'api.permissions.update' || $name == 'api.permissions.show' || $name == 'api.permissions.store' || $name == 'api.permissions.destroy'){
             $url = '/settings/permissions';
-        }elseif($name=='api.users.index' || $name == 'api.users.update' || $name == 'api.users.show' || $name == 'api.users.store' || $name == 'api.users.destroy'){
+        }elseif($name=='api.users.index' || $name == 'api.users.trash' || $name == 'api.users.update' || $name == 'api.users.show' || $name == 'api.users.store' || $name == 'api.users.destroy'){
             $url = '/settings/users';
         }elseif($name=='api.parcelamentos.index' || $name == 'api.parcelamentos.update' || $name == 'api.parcelamentos.show' || $name == 'api.parcelamentos.store' || $name == 'api.parcelamentos.destroy'){
             $url = '/settings/table-installment';

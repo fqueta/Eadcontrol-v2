@@ -580,7 +580,9 @@ class ClientController extends Controller
 
         $query = Client::withoutGlobalScope('client')
             ->where('permission_id', $this->cliente_permission_id)
-            ->where('deletado', 's')
+            ->where(function($q) {
+                $q->where('deletado', 's')->orWhere('excluido', 's');
+            })
             ->orderBy($order_by, $order);
 
         if ($request->filled('email')) {
@@ -627,13 +629,19 @@ class ClientController extends Controller
 
         $client = Client::withoutGlobalScope('client')
             ->where('id', $id)
-            ->where('deletado', 's')
+            ->where(function($q) {
+                $q->where('deletado', 's')->orWhere('excluido', 's');
+            })
             ->where('permission_id', $this->cliente_permission_id)
             ->firstOrFail();
 
         $client->update([
             'deletado' => 'n',
-            'reg_deletado' => null
+            'excluido' => 'n',
+            'ativo' => 's',
+            'status' => 'actived',
+            'reg_deletado' => null,
+            'reg_excluido' => null
         ]);
 
         return response()->json([

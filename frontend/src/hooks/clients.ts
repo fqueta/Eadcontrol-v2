@@ -76,3 +76,25 @@ export function useRestoreClient(mutationOptions?: any) {
     ...mutationOptions,
   });
 }
+
+/**
+ * Hook para excluir cliente permanentemente (force delete)
+ */
+export function useForceDeleteClient(mutationOptions?: any) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => clientsService.forceDeleteClient(id),
+    onSuccess: (data, id) => {
+      // Invalida lista de lixeira
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      toast.success('Cliente excluído permanentemente!');
+      mutationOptions?.onSuccess?.(data, id, undefined);
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao excluir cliente permanentemente: ${error.message}`);
+      mutationOptions?.onError?.(error, undefined as any, undefined);
+    },
+    ...mutationOptions,
+  });
+}

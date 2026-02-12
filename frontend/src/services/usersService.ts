@@ -67,7 +67,26 @@ class UsersService {
       searchParams.append('sort', params.sort);
     }
 
-    const url = `${API_BASE_URL}/users${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
+    if (params?.sort) {
+      searchParams.append('sort', params.sort);
+    }
+    
+    let endpoint = '/users';
+    // If requesting trashed items, use the trash endpoint
+    // Note: The service methods usually just take params, so we might need to adjust logic based on how `listUsers` is called.
+    // However, looking at ClientController, standard practice here is to use a specific endpoint or param.
+    // User controller has a specific `trash` method mapped to `/users/trash`.
+    // But `useUsersList` calls `listUsers`.
+    // Let's check `params` for a flag. We'll add an `excluido` param support.
+    
+    if (params?.excluido === 's') {
+      endpoint = '/users/trash';
+      // The trash endpoint in UserController accepts 'per_page', 'search', etc.
+      // We don't need to append 'excluido=s' to the trash endpoint query string if the endpoint itself implies it,
+      // but keeping it doesn't hurt.
+    }
+
+    const url = `${API_BASE_URL}${endpoint}${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
     
     const response = await fetch(url, {
       method: 'GET',
@@ -144,6 +163,39 @@ class UsersService {
       await this.handleResponse(response);
     } catch (error) {
       throw new Error(`Erro ao excluir usuário: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Restaura um usuário
+   * @param id ID do usuário
+   */
+  async restoreUser(id: string): Promise<UserRecord> {
+    const response = await fetch(`${API_BASE_URL}/users/${id}/restore`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<UserRecord>(response);
+  }
+
+  /**
+   * Exclui permanentemente um usuário
+   * @param id ID do usuário
+   */
+  async forceDeleteUser(id: string): Promise<void> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/${id}/force`, {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+      });
+
+      if (response.status === 404) {
+        throw new Error('Usuário não encontrado');
+      }
+
+      await this.handleResponse(response);
+    } catch (error) {
+      throw new Error(`Erro ao excluir usuário permanentemente: ${(error as Error).message}`);
     }
   }
 

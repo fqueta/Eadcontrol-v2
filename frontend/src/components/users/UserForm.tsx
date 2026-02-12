@@ -10,9 +10,10 @@ import { SmartDocumentInput } from '@/components/lib/SmartDocumentInput';
 import { MaskedInputField } from '@/components/lib/MaskedInputField';
 import { UseFormReturn } from 'react-hook-form';
 import { Eye, EyeOff } from 'lucide-react';
+import { phoneApplyMask } from '@/lib/masks/phone-apply-mask';
 
 interface Permission {
-  id: number;
+  id: number | string;
   name: string;
 }
 
@@ -21,9 +22,9 @@ interface Permission {
  * User form data structure used by react-hook-form
  */
 interface UserFormData {
-  name: string;
-  email: string;
-  permission_id: string;
+  name?: string;
+  email?: string;
+  permission_id?: string;
   tipo_pessoa?: 'pf' | 'pj';
   password?: string;
   genero?: 'm' | 'f' | 'ni';

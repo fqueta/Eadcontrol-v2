@@ -459,13 +459,25 @@ class UserController extends Controller
         return response()->json(['status' => 'valid']);
     }
 
-     /**
+    /**
      * Lista usuários marcados como deletados/excluídos (lixeira)
      */
     public function trash(Request $request)
     {
+        $user = request()->user();
+        if (!$user) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+        if (!$this->permissionService->isHasPermission('view')) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+
         $perPage = $request->input('per_page', 10);
         $query = User::query();
+        
+        // Ensure we are filtering by permission level if needed, similar to index
+        $query->where('permission_id','!=',$this->cliente_permission_id);
+
         $query->where(function($q) {
             $q->where('deletado', 's')->orWhere('excluido', 's');
         });
@@ -479,6 +491,13 @@ class UserController extends Controller
         }
         if ($request->filled('cnpj')) {
             $query->where('cnpj', 'like', '%' . $request->input('cnpj') . '%');
+        }
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhere('email', 'like', '%' . $search . '%');
+            });
         }
 
         $users = $query->paginate($perPage);
@@ -595,10 +614,74 @@ class UserController extends Controller
         $userToDelete->update([
             'excluido'     => 's',
             'deletado'     => 's',
-            'reg_deletado' =>['data'=>now()->toDateTimeString(),'user_id'=>request()->user()->id] ,
+            'ativo'        => 'n', // Also deactivate
+            'status'       => 'inactived',
+            'reg_deletado' =>['data'=>now()->toDateTimeString(), 'user_id'=>request()->user()->id],
         ]);
         return response()->json([
             'message' => 'Usuário marcado como deletado com sucesso'
         ], 200);
+    }
+
+    /**
+     * Restaurar usuário da lixeira
+     */
+    public function restore(Request $request, string $id)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+        if (!$this->permissionService->isHasPermission('delete')) { // Usually same permission as delete
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+
+        $userToRestore = User::where('id', $id)
+            ->where(function($q) {
+                $q->where('deletado', 's')->orWhere('excluido', 's');
+            })
+            ->firstOrFail();
+
+        $userToRestore->update([
+            'deletado' => 'n',
+            'excluido' => 'n',
+            'ativo' => 's',
+            'status' => 'actived', // Optional: restore as active
+            'reg_deletado' => null,
+            'reg_excluido' => null
+        ]);
+
+        return response()->json([
+            'message' => 'Usuário restaurado com sucesso',
+            'status' => 200
+        ]);
+    }
+
+    /**
+     * Excluir permanentemente
+     */
+    public function forceDelete(Request $request, string $id)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+        // Force delete might require higher permission, using 'delete' for now or a specific 'force_delete' if available
+        if (!$this->permissionService->isHasPermission('delete')) { 
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+
+        $userToDelete = User::where('id', $id)
+            ->where(function($q) {
+                $q->where('deletado', 's')->orWhere('excluido', 's');
+            })
+            ->firstOrFail();
+
+        $userToDelete->delete(); // Hard delete from DB
+
+        return response()->json([
+            'message' => 'Usuário excluído permanentemente',
+            'status' => 200
+        ]);
     }
 }

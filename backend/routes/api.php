@@ -101,6 +101,9 @@ Route::name('api.')->prefix('v1')->middleware([
         Route::get('user',[UserController::class,'perfil'])->name('perfil.user');
         Route::get('user/can',[UserController::class,'can_access'])->name('perfil.can');
         Route::post('/logout',[AuthController::class,'logout'])->name('logout');
+        Route::get('users/trash', [UserController::class, 'trash'])->name('users.trash');
+        Route::put('users/{id}/restore', [UserController::class, 'restore'])->name('users.restore');
+        Route::delete('users/{id}/force', [UserController::class, 'forceDelete'])->name('users.forceDelete');
         Route::apiResource('users', UserController::class,['parameters' => [
             'users' => 'id'
         ]]);
@@ -233,7 +236,7 @@ Route::name('api.')->prefix('v1')->middleware([
         // Route::apiResource('clients', ClientController::class,['parameters' => [
         //     'clients' => 'id'
         // ]]);
-        Route::get('users/trash', [UserController::class, 'trash'])->name('users.trash');
+
         Route::get('metrics/filter', [MetricasController::class, 'filter']);
         Route::apiResource('metrics', MetricasController::class,['parameters' => [
             'metrics' => 'id'

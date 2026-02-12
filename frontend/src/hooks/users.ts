@@ -115,3 +115,47 @@ export function useUsersPropertys() {
     },
   });
 }
+
+export function useRestoreUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => usersService.restoreUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [USERS_QUERY_KEY] });
+      toast({
+        title: "Usuário restaurado",
+        description: "O usuário foi restaurado com sucesso.",
+      });
+    },
+    onError: (error: Error & { status?: number }) => {
+      toast({
+        title: "Erro ao restaurar usuário",
+        description: error.message || "Erro desconhecido",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useForceDeleteUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => usersService.forceDeleteUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [USERS_QUERY_KEY] });
+      toast({
+        title: "Usuário excluído permanentemente",
+        description: "O usuário foi excluído permanentemente.",
+      });
+    },
+    onError: (error: Error & { status?: number }) => {
+      toast({
+        title: "Erro ao excluir usuário",
+        description: error.message || "Erro desconhecido",
+        variant: "destructive",
+      });
+    },
+  });
+}

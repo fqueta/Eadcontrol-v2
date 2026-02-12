@@ -49,7 +49,8 @@ import {
   useClientsList, 
   useCreateClient, 
   useUpdateClient,
-  useDeleteClient
+  useDeleteClient,
+  useForceDeleteClient
 } from '@/hooks/clients';
 import { generateMockClients } from '@/mocks/clients';
 import { useQueryClient } from '@tanstack/react-query';
@@ -662,6 +663,15 @@ export default function Clients() {
       return matchesSearch && matchesStatus;
     });
   }, [effectiveClients, searchTerm, statusFilter]);
+
+  // Handle force delete - memoized for performance
+  const { mutate: forceDeleteClient } = useForceDeleteClient();
+
+  const handleForceDelete = useCallback((client: ClientRecord) => {
+    if (confirm(`Tem certeza que deseja excluir permanentemente o cliente ${client.name}? Esta ação não pode ser desfeita.`)) {
+      forceDeleteClient(client.id);
+    }
+  }, [forceDeleteClient]);
 
   return (
     <div className="container mx-auto py-6 space-y-6">

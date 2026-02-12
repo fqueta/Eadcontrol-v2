@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Pencil, Trash2, CalendarIcon } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, CalendarIcon, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AddressAccordion } from "@/components/lib/AddressAccordion";
 import { UserForm } from '@/components/users/UserForm';
+import { Switch } from '@/components/ui/switch';
 import { 
   Table, 
   TableBody, 
@@ -37,6 +38,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -66,7 +76,9 @@ import {
   useUsersList, 
   useCreateUser, 
   useUpdateUser,
-  useDeleteUser
+  useDeleteUser,
+  useRestoreUser,
+  useForceDeleteUser
 } from '@/hooks/users';
 import { usePermissionsList } from '@/hooks/permissions';
 import { UserRecord, CreateUserInput } from '@/types/users';
@@ -115,10 +127,17 @@ export default function Users() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
   const [deletingUser, setDeletingUser] = useState<UserRecord | null>(null);
+  const [showTrash, setShowTrash] = useState(false);
+
+  // When showTrash changes, reset page to 1
+  useEffect(() => {
+    setPage(1);
+  }, [showTrash]);
 
   const { data: usersData, isLoading, error } = useUsersList({ 
     page, 
-    per_page: 10 
+    per_page: 10,
+    excluido: showTrash ? 's' : undefined
   });
 
   const { data: permissionsData, isLoading: isLoadingPermissions } = usePermissionsList();
@@ -127,12 +146,16 @@ export default function Users() {
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();
   const deleteMutation = useDeleteUser();
+  const restoreMutation = useRestoreUser();
+  const forceDeleteMutation = useForceDeleteUser();
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: {
       tipo_pessoa: 'pf',
       permission_id: '',
+      email: '',
+      name: '',
       password: '',
       // status: 'actived',
       genero: 'ni',
@@ -375,6 +398,16 @@ export default function Users() {
             Configure os usuários do sistema
           </CardDescription>
           <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 mr-4">
+              <Switch
+                checked={showTrash}
+                onCheckedChange={setShowTrash}
+                aria-label="Mostrar registros na lixeira"
+              />
+              <span className="text-sm text-muted-foreground w-max">
+                {showTrash ? 'Ocultar Lixeira' : 'Mostrar Lixeira'}
+              </span>
+            </div>
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
@@ -395,15 +428,17 @@ export default function Users() {
                 </p>
               ) : (
                 <>
-                  <p className="text-muted-foreground">Nenhum usuário encontrado.</p>
-                  <Button 
-                    onClick={() => handleOpenModal()} 
-                    className="mt-4"
-                    variant="outline"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Criar primeiro usuário
-                  </Button>
+                  <p className="text-muted-foreground">Nenhum usuário encontrado{showTrash ? ' na lixeira' : ''}.</p>
+                  {!showTrash && (
+                    <Button 
+                      onClick={() => handleOpenModal()} 
+                      className="mt-4"
+                      variant="outline"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Criar primeiro usuário
+                    </Button>
+                  )}
                 </>
               )}
             </div>
@@ -440,20 +475,43 @@ export default function Users() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleOpenModal(user)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDeletingUser(user)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        {showTrash ? (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => restoreMutation.mutate(user.id)}
+                                title="Restaurar"
+                              >
+                                <RotateCcw className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setDeletingUser(user)}
+                                title="Excluir Permanentemente"
+                              >
+                                <Trash2 className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenModal(user)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeletingUser(user)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -525,16 +583,38 @@ export default function Users() {
       <AlertDialog open={!!deletingUser} onOpenChange={() => setDeletingUser(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogTitle>
+              {showTrash ? 'Excluir Permanentemente' : 'Confirmar exclusão'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza de que deseja excluir o usuário "{deletingUser?.name}"? 
-              Esta ação não pode ser desfeita.
+              {showTrash ? (
+                <>
+                  Tem certeza de que deseja excluir permanentemente o usuário "{deletingUser?.name}"?
+                  <br />
+                  <span className="font-bold text-destructive">Esta ação NÃO pode ser desfeita.</span>
+                </>
+              ) : (
+                `Tem certeza de que deseja mover o usuário "${deletingUser?.name}" para a lixeira?`
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleteMutation.isPending}>
-              Excluir
+            <AlertDialogAction 
+              onClick={() => {
+                if (deletingUser) {
+                  if (showTrash) {
+                    forceDeleteMutation.mutate(deletingUser.id);
+                  } else {
+                    deleteMutation.mutate(deletingUser.id);
+                  }
+                  setDeletingUser(null);
+                }
+              }} 
+              disabled={deleteMutation.isPending || forceDeleteMutation.isPending}
+              className={showTrash ? "bg-destructive hover:bg-destructive/90" : ""}
+            >
+              {showTrash ? 'Excluir Permanentemente' : 'Excluir'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

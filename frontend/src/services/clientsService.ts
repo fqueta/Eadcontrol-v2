@@ -71,7 +71,7 @@ class ClientsService extends BaseApiService {
    * @returns Registro do cliente restaurado
    */
   async restoreClient(id: string): Promise<ClientRecord> {
-    const response = await this.patch<ClientRecord>(`/clients/${id}/restore`, {});
+    const response = await this.put<ClientRecord>(`/clients/${id}/restore`, {});
     return response;
   }
 
@@ -111,6 +111,14 @@ class ClientsService extends BaseApiService {
    */
   async registerAttendance(clientId: string, payload: CreateClientAttendanceInput): Promise<any> {
     return this.post<any>(`/clients/${clientId}/attendances`, payload);
+  }
+
+  /**
+   * Exclui cliente permanentemente (force delete)
+   * @param id - ID do cliente
+   */
+  async forceDeleteClient(id: string): Promise<ApiDeleteResponse> {
+    return super.delete<ApiDeleteResponse>(`/clients/${id}/force`);
   }
 }
 
