@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { publicCoursesService } from '@/services/publicCoursesService';
 import { CourseRecord } from '@/types/courses';
 import { useNavigate } from 'react-router-dom';
-import { LayoutGrid, List } from 'lucide-react';
+import { LayoutGrid, List, GraduationCap } from 'lucide-react';
 import { cn } from '@/lib/utils'; // Make sure utils is imported for cn
 
 /**
@@ -56,17 +56,21 @@ export default function CoursesGrid() {
   };
 
   return (
-    <section id="courses" className="space-y-6">
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        <h2 className="text-2xl font-bold text-primary dark:text-blue-100">
-           Cursos disponíveis
-        </h2>
-        <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-md flex gap-1">
+    <section id="courses" className="space-y-10 py-10">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+        <div>
+          <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+             Cursos Disponíveis
+          </h2>
+          <p className="text-muted-foreground mt-1">Explore nossa seleção de conteúdos premium</p>
+        </div>
+        
+        <div className="flex items-center gap-4 w-full md:w-auto">
+            <div className="bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-xl flex gap-1 backdrop-blur-sm border border-slate-200/50 dark:border-white/5">
                 <Button 
                    size="icon" 
                    variant="ghost" 
-                   className={cn("h-8 w-8 rounded-sm", viewMode === 'grid' ? "bg-white dark:bg-slate-700 shadow-sm text-primary dark:text-blue-400" : "text-muted-foreground")}
+                   className={cn("h-9 w-9 rounded-lg transition-all duration-300", viewMode === 'grid' ? "bg-white dark:bg-slate-700 shadow-md text-primary dark:text-blue-400" : "text-muted-foreground hover:bg-white/50 dark:hover:bg-slate-800")}
                    onClick={() => changeViewMode('grid')}
                 >
                     <LayoutGrid className="w-4 h-4" />
@@ -74,43 +78,73 @@ export default function CoursesGrid() {
                 <Button 
                    size="icon" 
                    variant="ghost" 
-                   className={cn("h-8 w-8 rounded-sm", viewMode === 'list' ? "bg-white dark:bg-slate-700 shadow-sm text-primary dark:text-blue-400" : "text-muted-foreground")}
+                   className={cn("h-9 w-9 rounded-lg transition-all duration-300", viewMode === 'list' ? "bg-white dark:bg-slate-700 shadow-md text-primary dark:text-blue-400" : "text-muted-foreground hover:bg-white/50 dark:hover:bg-slate-800")}
                    onClick={() => changeViewMode('list')}
                 >
                     <List className="w-4 h-4" />
                 </Button>
             </div>
             
-            <div className="w-full md:w-[320px] relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-search"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <div className="w-full md:w-[350px] relative group">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors duration-300">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-search"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
               </div>
               <Input 
                 value={search} 
                 onChange={(e) => setSearch(e.target.value)} 
-                placeholder="Buscar por nome ou título..." 
-                className="pl-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:border-primary focus:ring-primary transition-all rounded-md"
+                placeholder="O que você quer aprender hoje?" 
+                className="h-12 pl-11 bg-white dark:bg-slate-900/50 border-slate-200 dark:border-white/10 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all rounded-xl shadow-sm text-base"
               />
             </div>
         </div>
       </div>
 
       {isLoading && (
-        <div className="text-sm text-muted-foreground text-center py-10">
-          <div className="animate-spin inline-block w-6 h-6 border-[3px] border-current border-t-transparent text-primary rounded-full" role="status" aria-label="loading"></div>
+        <div className={cn(
+          "gap-8",
+          viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "flex flex-col"
+        )}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className={cn(
+              "animate-pulse bg-slate-100 dark:bg-slate-800/50 rounded-2xl overflow-hidden",
+              viewMode === 'grid' ? "h-[400px]" : "h-48"
+            )}>
+              <div className="h-48 bg-slate-200 dark:bg-slate-700" />
+              <div className="p-6 space-y-4">
+                <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-3/4" />
+                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full" />
+                <div className="flex justify-between items-center pt-4">
+                  <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-20" />
+                  <div className="h-10 bg-slate-200 dark:bg-slate-700 rounded w-28" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
+      
       {error && (
-        <div className="p-4 rounded-lg bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 text-center">
-          Não foi possível carregar os cursos.
+        <div className="p-8 rounded-2xl bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 text-center backdrop-blur-sm">
+          <p className="font-bold text-lg mb-2">Ops! Algo deu errado.</p>
+          <p className="text-sm opacity-80">Não foi possível carregar os cursos. Por favor, tente novamente mais tarde.</p>
+        </div>
+      )}
+      
+      {!isLoading && items.length === 0 && (
+        <div className="p-20 text-center bg-white/50 dark:bg-slate-900/20 rounded-[2rem] border border-dashed border-slate-200 dark:border-white/5">
+          <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
+            <LayoutGrid className="w-10 h-10 text-muted-foreground/30" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Nenhum curso encontrado</h3>
+          <p className="text-muted-foreground">Tente ajustar sua busca ou explore outras categorias.</p>
         </div>
       )}
       
       <div className={cn(
-          "gap-6 pb-8",
+          "gap-8 pb-12",
           viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "flex flex-col"
       )}>
-        {items.map((c) => {
+        {items.map((c, idx) => {
           const title = c.titulo || c.nome || `Curso ${c.id}`;
           const desc = c.descricao_curso || '';
           const cover = String((c as any)?.config?.cover?.url || '').trim();
@@ -120,40 +154,48 @@ export default function CoursesGrid() {
               return (
                 <Card 
                   key={c.id}
-                  className="group overflow-hidden border border-border/50 rounded-lg bg-card hover:bg-card/80 shadow-sm hover:shadow-lg hover:border-primary/20 transition-all duration-300 cursor-pointer flex flex-col md:flex-row"
+                  className="group relative overflow-hidden border border-slate-200/50 dark:border-white/5 rounded-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm hover:shadow-2xl hover:shadow-primary/5 hover:border-primary/20 transition-all duration-500 cursor-pointer flex flex-col md:flex-row shadow-sm animate-in fade-in slide-in-from-bottom duration-700 fill-mode-both"
+                  style={{ animationDelay: `${idx * 50}ms` }}
                   onClick={() => onOpenCourse(c)}
                 >
-                    <div className="relative w-full md:w-64 h-48 md:h-auto shrink-0 overflow-hidden">
+                    <div className="relative w-full md:w-72 h-48 md:h-auto shrink-0 overflow-hidden">
                         {cover ? (
                           <img
                             src={cover}
                             alt={title}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                           />
                         ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 flex items-center justify-center text-primary/50 dark:text-primary">
-                            <span className="text-4xl opacity-20">📚</span>
+                          <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
+                            <GraduationCap className="w-12 h-12 text-primary/20 dark:text-blue-400/20" />
                           </div>
                         )}
+                        <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     </div>
-                    <div className="flex-1 flex flex-col justify-between p-6">
-                        <div className="space-y-2">
-                             <div className="flex justify-between items-start">
-                                <h3 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-primary dark:group-hover:text-blue-400 transition-colors">
-                                   {title}
-                                </h3>
-                                {(price) && <span className="font-bold text-lg text-primary dark:text-blue-400 ml-4 whitespace-nowrap">R$ {price}</span>}
+                    <div className="flex-1 flex flex-col justify-between p-8">
+                        <div className="space-y-4">
+                             <div className="flex justify-between items-start gap-4">
+                                <div>
+                                  <h3 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-primary dark:group-hover:text-blue-400 transition-colors duration-300">
+                                     {title}
+                                  </h3>
+                                  <div className="flex items-center mt-2 text-xs font-semibold uppercase tracking-widest text-primary/60 dark:text-blue-400/60">
+                                    <span className="w-8 h-px bg-current mr-2 opacity-30" />
+                                    Certificado Incluso
+                                  </div>
+                                </div>
+                                {(price) && <div className="text-2xl font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-white/5 px-4 py-1.5 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm">R$ {price}</div>}
                              </div>
-                             <p className="text-muted-foreground line-clamp-2 md:line-clamp-3">
+                             <p className="text-muted-foreground leading-relaxed line-clamp-2 md:line-clamp-3 text-base">
                                 {desc}
                              </p>
                         </div>
-                        <div className="mt-4 md:mt-2 flex justify-end">
+                        <div className="mt-8 flex justify-end">
                              <Button 
                                 onClick={(e) => { e.stopPropagation(); onOpenCourse(c); }} 
-                                className="rounded-md bg-primary hover:bg-primary/90 text-primary-foreground min-w-[120px]"
+                                className="h-12 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-[1.03] active:scale-[0.98] transition-all px-8 font-bold shadow-lg"
                              >
-                                Detalhes
+                                Detalhes do Curso
                              </Button>
                         </div>
                     </div>
@@ -164,40 +206,55 @@ export default function CoursesGrid() {
           return (
             <Card
               key={c.id}
-              className="group overflow-hidden border border-border/50 rounded-lg bg-card hover:bg-card/80 shadow-sm hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col"
+              className="group relative h-full flex flex-col overflow-hidden border border-slate-200/50 dark:border-white/5 rounded-[2rem] bg-white/50 dark:bg-slate-900/50 backdrop-blur-md hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2 transition-all duration-500 cursor-pointer shadow-sm animate-in fade-in zoom-in-95 duration-700 fill-mode-both"
+              style={{ animationDelay: `${idx * 50}ms` }}
               onClick={() => onOpenCourse(c)}
             >
-              <div className="relative w-full h-48 overflow-hidden shrink-0">
+              <div className="relative w-full h-56 overflow-hidden shrink-0">
                 {cover ? (
                   <img
                     src={cover}
                     alt={title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 flex items-center justify-center text-primary/50 dark:text-primary">
-                    <span className="text-4xl opacity-20">📚</span>
+                  <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
+                    <GraduationCap className="w-16 h-16 text-primary/20 dark:text-blue-400/20" />
                   </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                {/* Overlay labels */}
+                {price && (
+                   <div className="absolute top-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 py-1.5 rounded-full font-black text-primary shadow-lg border border-white/20">
+                     R$ {price}
+                   </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500" />
               </div>
 
-              <CardHeader className="pt-5 pb-2 flex-grow">
-                <CardTitle className="text-xl font-bold tracking-tight line-clamp-1 break-words group-hover:text-primary dark:group-hover:text-blue-400 transition-colors">
+              <CardHeader className="p-8 pb-4 flex-grow space-y-3">
+                <CardTitle className="text-2xl font-black tracking-tight leading-tight line-clamp-2 min-h-[4rem] text-slate-900 dark:text-slate-100 group-hover:text-primary dark:group-hover:text-blue-400 transition-colors duration-300">
                   {title}
                 </CardTitle>
-                <CardDescription className="text-sm text-muted-foreground line-clamp-2 break-words h-10">
+                <CardDescription className="text-base text-muted-foreground line-clamp-2 leading-relaxed h-12">
                   {desc}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pb-5 pt-2 mt-auto">
-                <div className="flex items-center justify-between mt-2">
-                  <div className="text-lg font-bold text-primary dark:text-blue-400">
-                    {price ? `R$ ${price}` : 'Consultar'}
-                  </div>
-                  <Button 
+              
+              <CardContent className="p-8 pt-2 mt-auto">
+                <div className="pt-6 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                   <div className="flex -space-x-2">
+                     {[1, 2, 3].map(i => (
+                       <div key={i} className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 flex items-center justify-center overflow-hidden">
+                         <img src={`https://i.pravatar.cc/100?u=${i + idx}`} className="w-full h-full object-cover grayscale opacity-50" alt="aluno" />
+                       </div>
+                     ))}
+                     <div className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-muted-foreground mr-2">
+                       +
+                     </div>
+                   </div>
+                   <Button 
                     onClick={(e) => { e.stopPropagation(); onOpenCourse(c); }} 
-                    className="rounded-md bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-md transition-all"
+                    className="h-10 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 transition-all px-6 font-bold"
                     size="sm"
                   >
                     Detalhes

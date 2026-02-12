@@ -7,30 +7,34 @@ import React from 'react';
  */
 export default function CoursesHero() {
   return (
-    <section className="relative overflow-hidden rounded-lg bg-gradient-to-br from-primary via-blue-600 to-indigo-700 text-white shadow-lg">
-      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent" />
-      <div className="absolute -right-20 -top-20 h-96 w-96 rounded-full bg-blue-400/20 blur-3xl" />
-      <div className="absolute -left-20 -bottom-20 h-96 w-96 rounded-full bg-secondary/20 blur-3xl" />
+    <section className="relative overflow-hidden rounded-[2rem] bg-slate-900 border border-white/5 shadow-2xl">
+      {/* Mesh Gradient Background Elements */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-blue-600/30 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-indigo-600/20 blur-[120px] rounded-full" />
+        <div className="absolute top-[20%] right-[10%] w-[40%] h-[40%] bg-purple-600/10 blur-[100px] rounded-full" />
+      </div>
       
-      {/**
-       * Inner container
-       * pt-BR: Mantém o hero em largura total com conteúdo centralizado em container.
-       * en-US: Keeps hero full width with content centered in an inner container.
-       */}
-      <div className="relative">
-        <div className="container mx-auto px-6 py-16 md:py-24 flex flex-col items-center text-center md:items-start md:text-left">
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4 drop-shadow-sm">
-            Cursos
+      {/* Content */}
+      <div className="relative z-10">
+        <div className="container mx-auto px-8 py-20 md:py-32 flex flex-col items-center text-center md:items-start md:text-left">
+          <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-md text-blue-200 text-xs font-bold uppercase tracking-widest mb-6 animate-in fade-in slide-in-from-top duration-1000">
+            Nossos Cursos
+          </div>
+          <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white mb-6 animate-in fade-in slide-in-from-bottom duration-700 fill-mode-both">
+            Aprenda, Evolua, <br />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">Transforme.</span>
           </h1>
-          <p className="max-w-2xl text-lg md:text-xl text-blue-50/90 leading-relaxed mb-8">
-            Aprenda com quem vive a prática. Conteúdos objetivos, módulos bem estruturados e suporte dedicado.
+          <p className="max-w-xl text-lg md:text-xl text-slate-300/90 font-medium leading-relaxed mb-10 animate-in fade-in slide-in-from-bottom duration-1000 delay-200 fill-mode-both">
+            Conteúdos objetivos desenvolvidos por especialistas para impulsionar sua carreira com suporte dedicado em cada etapa.
           </p>
-          <div>
+          <div className="animate-in fade-in slide-in-from-bottom duration-1000 delay-300 fill-mode-both">
             <a 
               href="#courses" 
-              className="inline-flex items-center justify-center rounded-md bg-white px-8 py-3 text-base font-semibold text-primary shadow-md hover:bg-blue-50 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
+              className="group relative inline-flex items-center justify-center h-14 px-10 rounded-xl bg-white text-slate-900 font-bold text-lg shadow-[0_10px_30px_-10px_rgba(255,255,255,0.3)] hover:shadow-white/40 active:scale-95 transition-all duration-300 overflow-hidden"
             >
-              Explorar cursos
+              <span className="relative z-10">Explorar cursos</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </a>
           </div>
         </div>
