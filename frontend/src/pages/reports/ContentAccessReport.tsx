@@ -225,7 +225,7 @@ export default function ContentAccessReport() {
                       <TableCell className="font-medium">{activity.title}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-[10px] uppercase">
-                          {activity.type.split('/').pop()}
+                          {(activity.type || 'unknown').split('/').pop()}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
