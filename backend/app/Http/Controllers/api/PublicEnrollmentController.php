@@ -24,42 +24,28 @@ use Illuminate\Validation\Rule;
 class PublicEnrollmentController extends Controller
 {
     /**
-     * verifyCaptcha
-     * pt-BR: Verifica o token do reCAPTCHA v3 junto ao Google, validando ação e score.
-     * en-US: Verifies reCAPTCHA v3 token with Google, checking action and score.
+     * verifyMathChallenge
+     * pt-BR: Valida o desafio matemático simples (soma de dois números).
+     * en-US: Validates simple math challenge (sum of two numbers).
      */
-    private function verifyCaptcha(Request $request, string $expectedAction = 'invite_enroll'): bool
+    private function verifyMathChallenge(Request $request): bool
     {
-        $token = (string) $request->input('captcha_token', '');
-        $action = (string) $request->input('captcha_action', $expectedAction);
-        $secret = config('services.recaptcha.secret');
-        $verifyUrl = config('services.recaptcha.verify_url');
-        $minScore = (float) config('services.recaptcha.min_score', 0.5);
+        $a = (int) $request->input('challenge_a', 0);
+        $b = (int) $request->input('challenge_b', 0);
+        $ans = $request->input('challenge_answer');
 
-        if (!$secret || !$token) {
-            // pt-BR: No ambiente local, permitimos bypass se o segredo ou token estiverem ausentes para facilitar testes.
-            // en-US: In local environment, allow bypass if secret or token are missing to ease testing.
-            if (config('app.env') === 'local') {
-                return true;
-            }
+        // Allow creating leads/enrollments in local/testing without challenge if 'skip_captcha' is present
+        // or just rely on the frontend sending valid numbers.
+        if (config('app.env') === 'local' && $request->has('skip_captcha')) {
+            return true;
+        }
+
+        // Must have values
+        if ($a <= 0 || $b <= 0 || is_null($ans)) {
             return false;
         }
 
-        $resp = Http::asForm()->post($verifyUrl, [
-            'secret' => $secret,
-            'response' => $token,
-            'remoteip' => $request->ip(),
-        ]);
-        if (!$resp->ok()) {
-            return false;
-        }
-        $data = $resp->json();
-        $success = (bool) ($data['success'] ?? false);
-        $score = (float) ($data['score'] ?? 0.0);
-        $actionResp = (string) ($data['action'] ?? '');
-        if (!$success) return false;
-        if ($actionResp && $actionResp !== $expectedAction) return false;
-        return $score >= $minScore;
+        return ($a + $b) === (int)$ans;
     }
 
     /**
@@ -106,10 +92,10 @@ class PublicEnrollmentController extends Controller
                 'errors' => ['bot' => ['Submission flagged by anti-bot checks']],
             ], 422);
         }
-        if (!$this->verifyCaptcha($request, 'invite_enroll')) {
+        if (!$this->verifyMathChallenge($request)) {
             return response()->json([
-                'message' => 'Falha na verificação de segurança (CAPTCHA).',
-                'errors' => ['captcha_token' => ['Invalid or low-score CAPTCHA token']],
+                'message' => 'Falha na verificação de segurança (Desafio Matemático incorreto).',
+                'errors' => ['challenge_answer' => ['Resposta incorreta']],
             ], 422);
         }
 
@@ -406,10 +392,10 @@ class PublicEnrollmentController extends Controller
                 'errors' => ['bot' => ['Submission flagged by anti-bot checks']],
             ], 422);
         }
-        if (!$this->verifyCaptcha($request, 'register_interest')) {
+        if (!$this->verifyMathChallenge($request)) {
             return response()->json([
-                'message' => 'Falha na verificação de segurança (CAPTCHA).',
-                'errors' => ['captcha_token' => ['Invalid or low-score CAPTCHA token']],
+                'message' => 'Falha na verificação de segurança (Desafio Matemático incorreto).',
+                'errors' => ['challenge_answer' => ['Resposta incorreta']],
             ], 422);
         }
 

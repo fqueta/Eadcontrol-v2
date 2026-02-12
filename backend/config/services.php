@@ -60,4 +60,10 @@ return [
         'min_score' => (float) env('RECAPTCHA_MIN_SCORE', 0.5),
     ],
 
+    // Cloudflare Turnstile settings
+    'turnstile' => [
+        'secret' => env('TURNSTILE_SECRET', ''),
+        'verify_url' => env('TURNSTILE_VERIFY_URL', 'https://challenges.cloudflare.com/turnstile/v0/siteverify'),
+    ],
+
 ];

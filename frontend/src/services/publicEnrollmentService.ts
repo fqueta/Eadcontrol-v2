@@ -47,8 +47,10 @@ class PublicEnrollmentService extends BaseApiService {
     termsAccepted?: boolean;
     invite_token?: string;
     // Security fields
-    captcha_token?: string;
-    captcha_action?: string;
+    // Security fields (Math Challenge)
+    challenge_a?: number;
+    challenge_b?: number;
+    challenge_answer?: number;
     form_rendered_at?: number;
     hp_field?: string;
   }): Promise<any> {

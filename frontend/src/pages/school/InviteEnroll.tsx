@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -14,6 +14,8 @@ import { publicEnrollmentService } from '@/services/publicEnrollmentService';
 import { useToast } from '@/hooks/use-toast';
 import { phoneApplyMask, phoneRemoveMask } from '@/lib/masks/phone-apply-mask';
 import { Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+
+import { MathCaptchaWidget, MathCaptchaRef } from '@/components/ui/MathCaptchaWidget';
 
 /**
  * extractCourseErrorMessage
@@ -31,41 +33,7 @@ function extractCourseErrorMessage(err: any): string {
   } catch { /* noop */ }
   return 'Curso não encontrado';
 }
-/**
- * loadRecaptchaScript
- * pt-BR: Carrega script do reCAPTCHA v3 dinamicamente, caso ainda não esteja presente.
- * en-US: Dynamically loads reCAPTCHA v3 script if not already present.
- */
-function loadRecaptchaScript(siteKey: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if ((window as any).grecaptcha) return resolve();
-    const s = document.createElement('script');
-    s.src = `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(siteKey)}`;
-    s.async = true;
-    s.defer = true;
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error('Failed to load reCAPTCHA script'));
-    document.head.appendChild(s);
-  });
-}
 
-/**
- * getRecaptchaToken
- * pt-BR: Obtém token do reCAPTCHA v3 para a ação informada.
- * en-US: Retrieves reCAPTCHA v3 token for the given action.
- */
-async function getRecaptchaToken(siteKey: string, action: string): Promise<string> {
-  await loadRecaptchaScript(siteKey);
-  const grecaptcha = (window as any).grecaptcha;
-  if (!grecaptcha || !grecaptcha.execute) return '';
-  await new Promise((r) => grecaptcha.ready(r));
-  try {
-    const token = await grecaptcha.execute(siteKey, { action });
-    return token || '';
-  } catch {
-    return '';
-  }
-}
 
 /**
  * InviteEnroll
@@ -146,6 +114,12 @@ export default function InviteEnroll() {
   // Security helpers: honeypot & time-trap
   const [formRenderedAt, setFormRenderedAt] = useState<number>(() => Date.now());
   const [hpField, setHpField] = useState<string>('');
+  // Security helpers: honeypot & time-trap
+
+  
+  // Math CAPTCHA state
+  const mathWidgetRef = useRef<MathCaptchaRef>(null);
+  const [challenge, setChallenge] = useState<{ a: number; b: number; answer: number | null }>({ a: 0, b: 0, answer: null });
 
   useEffect(() => {
     setFormRenderedAt(Date.now());
@@ -278,8 +252,12 @@ export default function InviteEnroll() {
     // pt-BR: Exige curso válido para liberar envio.
     // en-US: Requires valid course to enable submission.
     if (courseId <= 0) return false;
+    
+    // Require Math answer
+    if (!challenge.answer) return false;
+    
     return true;
-  }, [name, email, password, confirmPassword, institution, privacyAccepted, termsAccepted, phone, isPhoneInvalid, isPasswordTooWeak, passwordsMismatch, courseId]);
+  }, [name, email, password, confirmPassword, institution, privacyAccepted, termsAccepted, phone, isPhoneInvalid, isPasswordTooWeak, passwordsMismatch, courseId, challenge.answer]);
 
   /**
    * handleSubmit
@@ -301,10 +279,10 @@ export default function InviteEnroll() {
     setFieldErrors({});
     setRegistrationSuccess(false);
     try {
-      // Acquire reCAPTCHA v3 token (backend requires it)
-      const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string;
-      const captcha_action = 'invite_enroll';
-      const captcha_token = siteKey ? await getRecaptchaToken(siteKey, captcha_action) : '';
+      // Math Challenge Payload
+      const challenge_a = challenge.a;
+      const challenge_b = challenge.b;
+      const challenge_answer = challenge.answer;
    
       const resp = await publicEnrollmentService.registerAndEnroll({
         institution,
@@ -316,9 +294,10 @@ export default function InviteEnroll() {
         privacyAccepted,
         termsAccepted,
         invite_token: inviteToken || undefined,
-        // Security payload
-        captcha_token,
-        captcha_action,
+        // Security payload (Math Challenge)
+        challenge_a,
+        challenge_b,
+        challenge_answer,
         form_rendered_at: formRenderedAt,
         hp_field: hpField,
       });
@@ -341,6 +320,9 @@ export default function InviteEnroll() {
       setFieldErrors(fErrors);
       setTimeout(() => focusFirstError(fErrors), 0);
       toast({ title: 'Erro de validação', description: details.length ? details.join('; ') : message, variant: 'destructive' });
+      // Reset Math Challenge on error
+      if (mathWidgetRef.current) mathWidgetRef.current.reset();
+      setChallenge(prev => ({ ...prev, answer: null }));
     } finally {
       setSubmitting(false);
     }
@@ -485,10 +467,18 @@ export default function InviteEnroll() {
                 )}
               </div>
 
-              <div className="md:col-span-2 flex items-center gap-2">
-                <Button type="submit" disabled={!canSubmit || submitting}>
-                  {submitting ? 'Enviando…' : 'Confirmar matrícula'}
-                </Button>
+              <div className="md:col-span-2 flex flex-col items-center gap-4">
+                <MathCaptchaWidget
+                  ref={mathWidgetRef}
+                  onVerify={(a, b, answer) => setChallenge({ a, b, answer })}
+                />
+                
+                <div className="flex items-center gap-2 w-full justify-start">
+                  <Button type="submit" disabled={!canSubmit || submitting}>
+                    {submitting ? 'Enviando…' : 'Confirmar matrícula'}
+                  </Button>
+                </div>
+
                 {/* Honeypot (should stay empty) */}
                 <input
                   type="text"
