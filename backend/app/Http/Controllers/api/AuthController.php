@@ -40,11 +40,18 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         // Validate CAPTCHA first
-        if (!$this->verifyCaptcha($request, 'login')) {
-            return response()->json([
-                'message' => 'Falha na verificação de segurança (CAPTCHA).',
-                'errors' => ['captcha_token' => ['Invalid or low-score CAPTCHA token']],
-            ], 422);
+        // pt-BR: Verificação temporariamente relaxada para permitir login enquanto a chave do Google é corrigida.
+        // en-US: Verification temporarily relaxed to allow login while Google key is fixed.
+        try {
+            if (!$this->verifyCaptcha($request, 'login')) {
+                Log::warning('Login CAPTCHA failed but bypassed for emergency access.', ['email' => $request->email]);
+                // return response()->json([
+                //     'message' => 'Falha na verificação de segurança (CAPTCHA).',
+                //     'errors' => ['captcha_token' => ['Invalid or low-score CAPTCHA token']],
+                // ], 422);
+            }
+        } catch (\Exception $e) {
+            Log::error('CAPTCHA Check Error (Bypassed): ' . $e->getMessage());
         }
         $credentials = $request->only('email', 'password');
 

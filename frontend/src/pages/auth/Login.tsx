@@ -113,11 +113,17 @@ export default function Login() {
   const onSubmit = async (data: LoginFormData) => {
     const siteKey = getSiteKey();
     const captcha_action = 'login';
-    let captcha_token = siteKey ? await getRecaptchaToken(siteKey, captcha_action) : '';
-    // Quick retry if token came empty on first attempt
-    if (siteKey && !captcha_token) {
-      await new Promise((r) => setTimeout(r, 300));
-      captcha_token = await getRecaptchaToken(siteKey, captcha_action);
+    let captcha_token = '';
+    try {
+      captcha_token = siteKey ? await getRecaptchaToken(siteKey, captcha_action) : '';
+      // Quick retry if token came empty on first attempt
+      if (siteKey && !captcha_token) {
+        await new Promise((r) => setTimeout(r, 300));
+        captcha_token = await getRecaptchaToken(siteKey, captcha_action);
+      }
+    } catch (e) {
+      console.warn('Recaptcha generation failed (likely invalid site key config), proceeding without token:', e);
+      // Proceed with empty token so user is not blocked frontend-side
     }
 
     const success = await login({
