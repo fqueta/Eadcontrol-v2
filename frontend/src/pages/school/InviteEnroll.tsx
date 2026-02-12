@@ -148,11 +148,6 @@ export default function InviteEnroll() {
 
   useEffect(() => {
     setFormRenderedAt(Date.now());
-    // Lazily load reCAPTCHA script with site key if present
-    const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string;
-    if (siteKey) {
-      loadRecaptchaScript(siteKey).catch(() => {/* ignore */});
-    }
   }, []);
 
   /**
