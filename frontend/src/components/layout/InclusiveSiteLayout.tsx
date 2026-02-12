@@ -278,69 +278,126 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
           <DrawerHeader>
             <DrawerTitle>Menu</DrawerTitle>
           </DrawerHeader>
-          <div className="p-3 space-y-2">
-            <Button asChild variant="ghost" className="w-full justify-start">
-              <Link to="/cursos" onClick={() => setMobileNavOpen(false)}>Cursos</Link>
-            </Button>
-            <Button asChild variant="ghost" className="w-full justify-start">
-              <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer">Site institucional</a>
-            </Button>
-            <div className="border-t my-2" />
-            <Button variant="outline" className="w-full justify-start" onClick={toggleDarkMode}>
-              {isDark ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />} 
-              {isDark ? 'Modo claro' : 'Modo escuro'}
-            </Button>
+          <div className="p-4 space-y-6 overflow-y-auto max-h-[80vh]">
+            <div className="space-y-1">
+              <p className="px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Navegação Principal</p>
+              <Button asChild variant="ghost" className="w-full justify-start h-12 rounded-xl px-4 hover:bg-primary/5 transition-all" onClick={() => setMobileNavOpen(false)}>
+                <Link to="/" className="flex items-center">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center mr-3">
+                    <Home className="w-4 h-4 text-slate-600" />
+                  </div>
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">Início</span>
+                </Link>
+              </Button>
+              <Button asChild variant="ghost" className="w-full justify-start h-12 rounded-xl px-4 hover:bg-primary/5 transition-all" onClick={() => setMobileNavOpen(false)}>
+                <Link to="/cursos" className="flex items-center">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center mr-3">
+                    <BookOpen className="w-4 h-4 text-slate-600" />
+                  </div>
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">Nossos Cursos</span>
+                </Link>
+              </Button>
+            </div>
+            
+            <div className="space-y-1">
+              <p className="px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Preferências</p>
+              <Button variant="outline" className="w-full justify-start h-12 rounded-xl px-4 border-slate-200 dark:border-white/5 hover:bg-primary/5 transition-all" onClick={toggleDarkMode}>
+                <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center mr-3">
+                  {isDark ? <Sun className="w-4 h-4 text-orange-500" /> : <Moon className="w-4 h-4 text-blue-600" />}
+                </div>
+                <span className="font-semibold text-slate-700 dark:text-slate-200">{isDark ? 'Mudar para Modo Claro' : 'Mudar para Modo Escuro'}</span>
+              </Button>
+            </div>
+
             {isAuthenticated && user ? (
-              <>
-                {/**
-                 * studentMobileLinks
-                 * pt-BR: Mostra funções da área do aluno no mobile.
-                 * en-US: Shows student area functions on mobile.
-                 */}
-                <div className="border-t my-2" />
-                <Button asChild variant="ghost" className="w-full justify-start" onClick={() => setMobileNavOpen(false)}>
-                  <Link to="/aluno">Painel</Link>
-                </Button>
-                <Button asChild variant="ghost" className="w-full justify-start" onClick={() => setMobileNavOpen(false)}>
-                  <Link to="/aluno/cursos">Meus cursos</Link>
-                </Button>
-                <Button asChild variant="ghost" className="w-full justify-start" onClick={() => setMobileNavOpen(false)}>
-                  <Link to="/aluno/faturas">Minhas faturas</Link>
-                </Button>
-                <Button asChild variant="ghost" className="w-full justify-start" onClick={() => setMobileNavOpen(false)}>
-                  <Link to="/aluno/pedidos">Meus pedidos</Link>
-                </Button>
-                <Button asChild variant="ghost" className="w-full justify-start" onClick={() => setMobileNavOpen(false)}>
-                  <Link to="/aluno/notas">Minhas notas</Link>
-                </Button>
-                <Button asChild variant="ghost" className="w-full justify-start" onClick={() => setMobileNavOpen(false)}>
-                  <Link to="/aluno/perfil">Perfil</Link>
-                </Button>
+              <div className="space-y-1">
+                <p className="px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Área do Aluno</p>
+                <div className="grid grid-cols-1 gap-1">
+                  <Button asChild variant="ghost" className="w-full justify-start h-12 rounded-xl px-4 hover:bg-primary/5 transition-all" onClick={() => setMobileNavOpen(false)}>
+                    <Link to="/aluno" className="flex items-center italic">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center mr-3">
+                        <Monitor className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <span className="font-semibold">Meu Painel</span>
+                    </Link>
+                  </Button>
+                  {/* Additional student links could go here if needed in drawer too */}
+                </div>
                 {permission_id <= 5 && (
-                  <Button asChild variant="ghost" className="w-full justify-start">
-                    <Link to="/admin" onClick={() => setMobileNavOpen(false)}>Painel Administrativo</Link>
+                  <Button asChild variant="ghost" className="w-full justify-start h-12 rounded-xl px-4 hover:bg-primary/5 mt-1" onClick={() => setMobileNavOpen(false)}>
+                    <Link to="/admin" className="flex items-center">
+                       <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center mr-3">
+                        <Monitor className="w-4 h-4 text-indigo-600" />
+                      </div>
+                      <span className="font-semibold text-indigo-700 dark:text-indigo-400">Painel ADM</span>
+                    </Link>
                   </Button>
                 )}
-                <Button variant="destructive" className="w-full justify-start" onClick={handleLogout} disabled={isLoggingOut}>
-                  {isLoggingOut ? 'Saindo...' : 'Sair'}
-                </Button>
-              </>
+                <div className="pt-4">
+                  <Button variant="destructive" className="w-full h-12 rounded-xl font-bold shadow-lg shadow-red-500/10" onClick={handleLogout} disabled={isLoggingOut}>
+                    <LogOut className="w-4 h-4 mr-2" />
+                    {isLoggingOut ? 'Saindo...' : 'Sair da Conta'}
+                  </Button>
+                </div>
+              </div>
             ) : (
-              <>
-                <Button asChild variant="outline" className="w-full justify-start" onClick={() => setMobileNavOpen(false)}>
-                  <Link to="/login">Entrar</Link>
+              <div className="space-y-3 pt-4 px-2">
+                <Button asChild variant="outline" className="w-full h-12 rounded-xl font-bold border-primary/20 text-primary" onClick={() => setMobileNavOpen(false)}>
+                  <Link to="/login">Acessar Conta</Link>
                 </Button>
-                <Button asChild className="w-full justify-start bg-primary hover:bg-blue-700" onClick={() => setMobileNavOpen(false)}>
-                  <Link to="/public-client-form">Cadastrar</Link>
+                <Button asChild className="w-full h-12 rounded-xl font-bold bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20" onClick={() => setMobileNavOpen(false)}>
+                  <Link to="/public-client-form">Criar Cadastro Grátis</Link>
                 </Button>
-              </>
+              </div>
             )}
           </div>
         </DrawerContent>
       </Drawer>
 
+      {/* Mobile Bottom Navigation Bar - Pattern for "App Moderno" */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-t border-white/20 dark:border-slate-800/50 shadow-[0_-4px_30px_-10px_rgba(0,0,0,0.1)] transition-all duration-300">
+        <div className="flex items-center justify-around h-16 px-2">
+          <Link to="/" className="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-blue-400 transition-colors">
+            <Home className="w-5 h-5" />
+            <span className="text-[10px] font-bold uppercase tracking-tighter">Início</span>
+          </Link>
+          <Link to="/cursos" className="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-blue-400 transition-colors">
+            <BookOpen className="w-5 h-5" />
+            <span className="text-[10px] font-bold uppercase tracking-tighter">Cursos</span>
+          </Link>
+          
+          {/* Central Action / Branding */}
+          <div className="relative -mt-8">
+            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
+            <button 
+              onClick={() => setMobileNavOpen(true)}
+              className="relative w-14 h-14 rounded-full bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-primary/30 border-4 border-white dark:border-slate-950 transition-transform active:scale-90"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+          </div>
+
+          <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-blue-400 transition-colors">
+            <ExternalLink className="w-5 h-5" />
+            <span className="text-[10px] font-bold uppercase tracking-tighter">Educar</span>
+          </a>
+          
+          {isAuthenticated ? (
+            <Link to="/aluno" className="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-blue-400 transition-colors">
+              <UserCircle className="w-5 h-5" />
+              <span className="text-[10px] font-bold uppercase tracking-tighter">Painel</span>
+            </Link>
+          ) : (
+            <Link to="/login" className="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-blue-400 transition-colors">
+              <LogOut className="w-5 h-5 rotate-180" />
+              <span className="text-[10px] font-bold uppercase tracking-tighter">Entrar</span>
+            </Link>
+          )}
+        </div>
+      </nav>
+
       {/* Page content */}
-      <main className="min-h-[60vh]">{children}</main>
+      <main className="min-h-[60vh] pb-20 md:pb-0">{children}</main>
 
       {/* Footer */}
       <footer className="bg-slate-950 border-t border-slate-900 text-white py-16 px-4 relative overflow-hidden">
