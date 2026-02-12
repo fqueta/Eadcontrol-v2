@@ -278,7 +278,23 @@ export default function CourseDetails() {
       // Security fields: reCAPTCHA v3
       const siteKey = getSiteKey();
       const captcha_action = 'register_interest';
-      const captcha_token = siteKey ? await getRecaptchaToken(siteKey, captcha_action) : '';
+      if (!siteKey) {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Configuração de segurança ausente. Tente novamente mais tarde."
+        });
+        return;
+      }
+      const captcha_token = await getRecaptchaToken(siteKey, captcha_action);
+      if (!captcha_token) {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Falha ao validar segurança. Recarregue a página e tente novamente."
+        });
+        return;
+      }
 
       // Registra interesse via endpoint público sem autenticação
       await publicEnrollmentService.registerInterest({

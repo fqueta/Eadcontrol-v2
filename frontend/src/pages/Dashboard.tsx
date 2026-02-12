@@ -127,6 +127,9 @@ export default function Dashboard() {
         <div className="flex items-center gap-2">
           <Badge className="bg-blue-100 text-blue-700">Resumo</Badge>
           <Badge className="bg-gray-100 text-gray-700">KPI</Badge>
+          <Button asChild variant="outline">
+            <Link to="/admin/reports/content-access">Relatório de Acesso</Link>
+          </Button>
         </div>
       </div>
 
@@ -221,6 +224,9 @@ export default function Dashboard() {
         </Button>
         <Button asChild variant="outline">
           <Link to="/admin/school/enroll">Curso</Link>
+        </Button>
+        <Button asChild>
+          <Link to="/admin/reports/content-access">Relatório de Acesso</Link>
         </Button>
       </div>
 
