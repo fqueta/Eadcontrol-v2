@@ -37,6 +37,11 @@ class PublicEnrollmentController extends Controller
         $minScore = (float) config('services.recaptcha.min_score', 0.5);
 
         if (!$secret || !$token) {
+            // pt-BR: No ambiente local, permitimos bypass se o segredo ou token estiverem ausentes para facilitar testes.
+            // en-US: In local environment, allow bypass if secret or token are missing to ease testing.
+            if (config('app.env') === 'local') {
+                return true;
+            }
             return false;
         }
 
