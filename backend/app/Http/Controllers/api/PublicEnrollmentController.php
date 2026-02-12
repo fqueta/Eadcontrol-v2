@@ -122,6 +122,12 @@ class PublicEnrollmentController extends Controller
         $termsAccepted = $request->boolean('termsAccepted');
         $institution = $request->input('institution');
         $situacao_id = Qlib::buscaValorDb('posts', 'post_name', 'mat','ID');
+        
+        // Sanitização simples antes da validação
+        $email = trim($email);
+        $name = trim($name);
+        $phone = is_string($phone) ? preg_replace('/\D/', '', $phone) : null;
+
         // Validação básica do payload público
         //personalizar mensagens de erro de email
         $validator = Validator::make([
