@@ -236,11 +236,6 @@ class TemaEAD {
 				$exibe .= '<link rel="stylesheet" type="text/css" href="'.RAIZ.'/app/translate/css/flag-icon.min.css">';
 			}
 			ob_start();
-			if(Url::getURL(0)=='account' || Url::getURL(3)=='comprar' || Url::getURL(0)=='atendimento' || Url::getURL(0)=='area-do-aluno'){
-				?>
-				<script src='https://www.google.com/recaptcha/api.js'></script>
-				<?
-			}
 
 			$exibe .= ob_get_clean();
 			$cft  	= $this->configuraTema($_REQUEST);

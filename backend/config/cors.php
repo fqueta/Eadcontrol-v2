@@ -38,6 +38,9 @@ return [
          // API subdomains
         'https://api-educar.eadcontrol.com.br',
         'https://api-aeroclube.eadcontrol.com.br',
+        
+        // Frontend Production - Explicit Origin
+        'https://cursos.incluireeducar.com.br',
 
         // Frontend Production - Explicit Origin
         'https://cursos.incluireeducar.com.br',

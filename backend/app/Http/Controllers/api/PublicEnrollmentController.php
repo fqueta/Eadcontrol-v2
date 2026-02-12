@@ -36,9 +36,9 @@ class PublicEnrollmentController extends Controller
     {
         // Per-email limiter (soft) to reduce abuse beyond IP throttle
         $emailForKey = (string) $request->input('email', '');
-        if ($emailForKey && config('app.env') !== 'local') {
+        if ($emailForKey) {
             $key = 'public-enroll:email:' . strtolower($emailForKey);
-            if (RateLimiter::tooManyAttempts($key, 10)) {
+            if (RateLimiter::tooManyAttempts($key, 3)) {
                 return response()->json([
                     'message' => 'Muitas tentativas para este e-mail. Tente novamente mais tarde.',
                 ], 429);
@@ -109,11 +109,6 @@ class PublicEnrollmentController extends Controller
                 'errors' => $validator->errors(),
             ], 422);
         }
-
-        // Sanitização simples
-        $email = trim($email);
-        $name = trim($name);
-        $phone = is_string($phone) ? preg_replace('/\D/', '', $phone) : null;
 
         /**
          * Transação robusta para validar e consumir convites.
@@ -361,8 +356,14 @@ class PublicEnrollmentController extends Controller
                     'meta' => ['message' => $e->getMessage()],
                 ]);
             }
+            \Illuminate\Support\Facades\Log::error('Erro no cadastro público: ' . $e->getMessage(), [
+                'exception' => $e,
+                'email' => $email,
+                'phone' => $phone,
+            ]);
             return response()->json([
                 'message' => 'Erro ao processar cadastro',
+                'debug_message' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
 
@@ -396,9 +397,9 @@ class PublicEnrollmentController extends Controller
     {
         // Per-email limiter for interest registrations
         $emailForKey = (string) $request->input('email', '');
-        if ($emailForKey && config('app.env') !== 'local') {
+        if ($emailForKey) {
             $key = 'public-interest:email:' . strtolower($emailForKey);
-            if (RateLimiter::tooManyAttempts($key, 10)) {
+            if (RateLimiter::tooManyAttempts($key, 5)) {
                 return response()->json([
                     'message' => 'Muitas tentativas para este e-mail. Tente novamente mais tarde.',
                 ], 429);

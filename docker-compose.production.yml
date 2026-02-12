@@ -1,55 +1,23 @@
 
 services:
   # -----------------------------------------------------------------------------
-  # Gateway (Reverse Proxy)
-  # -----------------------------------------------------------------------------
-  # The main entry point. Routes traffic to Frontend or Backend based on URL.
-  gateway:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      # Mount the main routing configuration
-      - ./backend/deployment/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      # Uncomment below to mount SSL certificates
-      # - ./backend/deployment/certs:/etc/nginx/certs:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - ./certbot-var:/var/www/certbot
-    depends_on:
-      - backend
-      - frontend
-    networks:
-      - app_network
-    restart: always
-    ulimits:
-      nofile:
-        soft: 100000
-        hard: 100000
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # -----------------------------------------------------------------------------
   # Frontend Application (React/Vite)
   # -----------------------------------------------------------------------------
-  # Serves static assets via its own internal Nginx
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
         - VITE_TENANT_API_URL=${VITE_TENANT_API_URL}
-    # Expose only to the internal network (Gateway accesses it)
-    expose:
-      - "80"
+        - VITE_RECAPTCHA_SITE_KEY=${VITE_RECAPTCHA_SITE_KEY}
+    ports:
+      - "8082:80"  # Exposto temporariamente até NPM funcionar
     environment:
-      # Inject env vars that might be needed at runtime (if configured) or build time
       - VITE_TENANT_API_URL=${VITE_TENANT_API_URL}
+      - VITE_RECAPTCHA_SITE_KEY=${VITE_RECAPTCHA_SITE_KEY}
     networks:
       - app_network
+      - global_network
     restart: always
     ulimits:
       nofile:
@@ -59,14 +27,12 @@ services:
   # -----------------------------------------------------------------------------
   # Backend Application (Laravel Octane)
   # -----------------------------------------------------------------------------
-  # API and Storage service
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     image: eadcontrol-backend:latest
     container_name: octane_app
-    # Expose only to the internal network
     expose:
       - "8000"
     environment:
@@ -77,24 +43,25 @@ services:
       APP_URL: ${APP_URL}
       APP_BASE_PATH: /var/www/html
       
-      # Database
+      # Database - usando mysql_prod centralizado
       DB_CONNECTION: mysql
-      DB_HOST: db
+      DB_HOST: mysql_prod
       DB_PORT: 3306
       DB_DATABASE: ${DB_DATABASE}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       
-      # Redis
+      # Redis - usando redis_prod centralizado
       CACHE_DRIVER: redis
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
-      REDIS_HOST: redis
+      REDIS_HOST: redis_prod
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_CLIENT: ${REDIS_CLIENT:-phpredis}
       REDIS_PERSISTENT: ${REDIS_PERSISTENT:-true}
       
-      # Email (ensure backend can send synchronously if needed)
+      # Email
       MAIL_MAILER: ${MAIL_MAILER:-smtp}
       MAIL_HOST: ${MAIL_HOST}
       MAIL_PORT: ${MAIL_PORT}
@@ -104,45 +71,52 @@ services:
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME}
 
-      # Brevo (Sendinblue) API for Notification channel
+      # Brevo API
       BREVO_API_KEY: ${BREVO_API_KEY}
       BREVO_API_URL: ${BREVO_API_URL:-https://api.brevo.com/v3}
       
       # Octane
       OCTANE_SERVER: roadrunner
+      OCTANE_WORKERS: 32
       
-      # Filesystem (Crucial for Storage)
+      # Filesystem
       FILESYSTEM_DISK: public
-      # Frontend/API URLs e cookies
       FRONTEND_URL: ${FRONTEND_URL}
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS}
       SESSION_DOMAIN: ${SESSION_DOMAIN}
       RECAPTCHA_SECRET: ${RECAPTCHA_SECRET}
+      RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY}
     volumes:
-      # Persist Storage (Uploads)
-      - storage_public:/var/www/html/storage/app/public
-      # Mount Code for live updates
-      # Mount Code for live updates - REMOVED for production stability
-      # - ./backend:/var/www/html
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - storage_data:/var/www/html/storage
     networks:
       - app_network
+      - global_network
+      - banco-prod_default
     restart: always
     ulimits:
       nofile:
         soft: 100000
         hard: 100000
-    #command: tail -f /dev/null
-    # command: php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=8000
+
+  # -----------------------------------------------------------------------------
+  # phpMyAdmin (Database Management)
+  # -----------------------------------------------------------------------------
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: app_pma
+    environment:
+      PMA_HOST: mysql_prod
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 300M
+    ports:
+      - "8081:80"
+    networks:
+      - banco-prod_default
+    restart: always
 
   # -----------------------------------------------------------------------------
   # Queue Worker (Laravel Queue)
   # -----------------------------------------------------------------------------
-  # Processes background jobs (emails, notifications, etc)
   queue:
     image: eadcontrol-backend:latest
     container_name: octane_queue
@@ -155,20 +129,21 @@ services:
       APP_URL: ${APP_URL}
       APP_BASE_PATH: /var/www/html
       
-      # Database
+      # Database - usando mysql_prod centralizado
       DB_CONNECTION: mysql
-      DB_HOST: db
+      DB_HOST: mysql_prod
       DB_PORT: 3306
       DB_DATABASE: ${DB_DATABASE}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       
-      # Redis
+      # Redis - usando redis_prod centralizado
       CACHE_DRIVER: redis
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
-      REDIS_HOST: redis
+      REDIS_HOST: redis_prod
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_CLIENT: ${REDIS_CLIENT:-phpredis}
       REDIS_PERSISTENT: ${REDIS_PERSISTENT:-true}
       
@@ -176,6 +151,7 @@ services:
       OCTANE_SERVER: roadrunner
       
       # Filesystem
+      FILES_STORAGE_PATH: /var/www/html/storage
       FILESYSTEM_DISK: public
       
       # Email
@@ -188,134 +164,27 @@ services:
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME}
       
-      # Brevo (Sendinblue) API for Notification channel
+      # Brevo API
       BREVO_API_KEY: ${BREVO_API_KEY}
       BREVO_API_URL: ${BREVO_API_URL:-https://api.brevo.com/v3}
     volumes:
-      # Persist Storage (Uploads)
-      - storage_public:/var/www/html/storage/app/public
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - storage_data:/var/www/html/storage
     networks:
       - app_network
+      - global_network
+      - banco-prod_default
     restart: always
 
-  # -----------------------------------------------------------------------------
-  # Database (MySQL)
-  # -----------------------------------------------------------------------------
-  db:
-    image: mysql:8.0
-    container_name: app_db
-    command: --default-authentication-plugin=mysql_native_password
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ${DB_DATABASE}
-      MYSQL_USER: ${DB_USERNAME}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - db_data:/var/lib/mysql
-      - ./backend/deployment/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
-    networks:
-      - app_network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    restart: always
-    ulimits:
-      nofile:
-        soft: 100000
-        hard: 100000
-
-#  # -----------------------------------------------------------------------------
-#  # Read Replica (MySQL) - opcional
-#  # -----------------------------------------------------------------------------
-#  # Descomente e configure para habilitar replicação assíncrona
-#  # db_replica:
-#  #   image: mysql:8.0
-#  #   container_name: app_db_replica
-#  #   environment:
-#  #     MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-#  #   volumes:
-#  #     - db_replica_data:/var/lib/mysql
-#  #   networks:
-#  #     - app_network
-#  #   restart: always
-#
-#  # -----------------------------------------------------------------------------
-#  # ProxySQL/MySQL Router - opcional
-#  # -----------------------------------------------------------------------------
-#  # proxysql:
-#  #   image: proxysql/proxysql
-#  #   container_name: app_proxysql
-#  #   ports:
-#  #     - "6032:6032" # admin
-#  #     - "6033:6033" # mysql clients
-#  #   networks:
-#  #     - app_network
-#  #   restart: always
-  # -----------------------------------------------------------------------------
-  # Cache/Queue (Redis)
-  # -----------------------------------------------------------------------------
-  redis:
-    image: redis:alpine
-    container_name: app_redis
-    volumes:
-      - redis_data:/data
-    networks:
-      - app_network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    restart: always
-
-  # -----------------------------------------------------------------------------
-  # Database Management (phpMyAdmin)
-  # -----------------------------------------------------------------------------
-  phpmyadmin:
-    image: phpmyadmin:latest
-    container_name: app_pma
-    ports:
-      - "8080:80"
-    environment:
-      PMA_HOST: db
-      PMA_USER: ${DB_USERNAME}
-      PMA_PASSWORD: ${DB_PASSWORD}
-      UPLOAD_LIMIT: 64M
-    networks:
-      - app_network
-    depends_on:
-      - db
-
-#  # -----------------------------------------------------------------------------
-#  # Backup (Cron) - opcional
-#  # -----------------------------------------------------------------------------
-#  # backup:
-#  #   image: alpine:latest
-#  #   container_name: app_backup
-#  #   volumes:
-#  #     - ./backend/deployment/backup:/backup:ro
-#  #     - db_data:/var/lib/mysql:ro
-#  #     - ./backups:/backups
-#  #   entrypoint: [\"/bin/sh\",\"/backup/run.sh\"]
-#  #   networks:
-#  #     - app_network
-#  #   restart: always
 # -----------------------------------------------------------------------------
 # Networks & Volumes
 # -----------------------------------------------------------------------------
 networks:
   app_network:
     driver: bridge
+  global_network:
+    external: true
+  banco-prod_default:
+    external: true
 
 volumes:
-  db_data:
-  redis_data:
-  storage_public: # Named volume for persistent user uploads
-  # db_replica_data:
+  storage_data:

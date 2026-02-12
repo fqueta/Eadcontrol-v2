@@ -8,13 +8,16 @@ use App\Notifications\Channels\BrevoChannel;
 use App\Traits\HasDynamicBranding;
 use Illuminate\Support\Facades\View;
 
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Bus\Queueable;
+
 /**
  * Notificação de boas-vindas para novos clientes.
  * EN: Welcome notification sent to newly registered clients.
  */
-class WelcomeNotification extends Notification
+class WelcomeNotification extends Notification implements ShouldQueue
 {
-    use HasDynamicBranding;
+    use Queueable, HasDynamicBranding;
 
     /** @var int */
     protected $courseId;
