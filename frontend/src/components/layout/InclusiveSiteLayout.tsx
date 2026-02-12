@@ -134,7 +134,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
       </div>
 
       {/* Header */}
-      <header className="bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-white/20 dark:border-slate-800/50 sticky top-0 z-50 shadow-[0_2px_20px_-2px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_30px_-5px_rgba(0,0,0,0.3)] transition-all duration-300">
+      <header className="bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-white/20 dark:border-slate-800/50 relative md:sticky md:top-0 z-50 shadow-[0_2px_20px_-2px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_30px_-5px_rgba(0,0,0,0.3)] transition-all duration-300">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-3 group cursor-pointer transition-transform duration-300 hover:scale-[1.02]">
             <BrandLogo
