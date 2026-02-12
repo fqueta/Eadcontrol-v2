@@ -26,3 +26,8 @@ yarn-error.log
 rr
 .rr.yaml
 production.env
+Dockerfile.production
+deployment/backup/crontab.example
+deployment/backup/mysql-backup.sh
+deployment/monitor.sh
+deployment/monitoring.md
