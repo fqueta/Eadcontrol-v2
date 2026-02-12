@@ -70,7 +70,7 @@ export default function CoursesGrid() {
                 <Button 
                    size="icon" 
                    variant="ghost" 
-                   className={cn("h-9 w-9 rounded-lg transition-all duration-300", viewMode === 'grid' ? "bg-white dark:bg-slate-700 shadow-md text-primary dark:text-blue-400" : "text-muted-foreground hover:bg-white/50 dark:hover:bg-slate-800")}
+                   className={cn("h-9 w-9 rounded-lg transition-all duration-300", viewMode === 'grid' ? "bg-white dark:bg-slate-700 shadow-md text-primary" : "text-muted-foreground hover:bg-white/50 dark:hover:bg-slate-800")}
                    onClick={() => changeViewMode('grid')}
                 >
                     <LayoutGrid className="w-4 h-4" />
@@ -78,7 +78,7 @@ export default function CoursesGrid() {
                 <Button 
                    size="icon" 
                    variant="ghost" 
-                   className={cn("h-9 w-9 rounded-lg transition-all duration-300", viewMode === 'list' ? "bg-white dark:bg-slate-700 shadow-md text-primary dark:text-blue-400" : "text-muted-foreground hover:bg-white/50 dark:hover:bg-slate-800")}
+                   className={cn("h-9 w-9 rounded-lg transition-all duration-300", viewMode === 'list' ? "bg-white dark:bg-slate-700 shadow-md text-primary" : "text-muted-foreground hover:bg-white/50 dark:hover:bg-slate-800")}
                    onClick={() => changeViewMode('list')}
                 >
                     <List className="w-4 h-4" />
@@ -166,8 +166,8 @@ export default function CoursesGrid() {
                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                           />
                         ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
-                            <GraduationCap className="w-12 h-12 text-primary/20 dark:text-blue-400/20" />
+                          <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
+                            <GraduationCap className="w-12 h-12 text-primary/40" />
                           </div>
                         )}
                         <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -176,10 +176,10 @@ export default function CoursesGrid() {
                         <div className="space-y-4">
                              <div className="flex justify-between items-start gap-4">
                                 <div>
-                                  <h3 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-primary dark:group-hover:text-blue-400 transition-colors duration-300">
+                                  <h3 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-primary transition-colors duration-300">
                                      {title}
                                   </h3>
-                                  <div className="flex items-center mt-2 text-xs font-semibold uppercase tracking-widest text-primary/60 dark:text-blue-400/60">
+                                  <div className="flex items-center mt-2 text-xs font-semibold uppercase tracking-widest text-primary/80">
                                     <span className="w-8 h-px bg-current mr-2 opacity-30" />
                                     Certificado Incluso
                                   </div>
@@ -193,7 +193,7 @@ export default function CoursesGrid() {
                         <div className="mt-8 flex justify-end">
                              <Button 
                                 onClick={(e) => { e.stopPropagation(); onOpenCourse(c); }} 
-                                className="h-12 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:scale-[1.03] active:scale-[0.98] transition-all px-8 font-bold shadow-lg"
+                                className="h-12 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-[1.03] active:scale-[0.98] transition-all px-8 font-bold shadow-lg"
                              >
                                 Detalhes do Curso
                              </Button>
@@ -218,8 +218,8 @@ export default function CoursesGrid() {
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
-                    <GraduationCap className="w-16 h-16 text-primary/20 dark:text-blue-400/20" />
+                  <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
+                    <GraduationCap className="w-16 h-16 text-primary/40" />
                   </div>
                 )}
                 {/* Overlay labels */}
@@ -232,7 +232,7 @@ export default function CoursesGrid() {
               </div>
 
               <CardHeader className="p-8 pb-4 flex-grow space-y-3">
-                <CardTitle className="text-2xl font-black tracking-tight leading-tight line-clamp-2 min-h-[4rem] text-slate-900 dark:text-slate-100 group-hover:text-primary dark:group-hover:text-blue-400 transition-colors duration-300">
+                <CardTitle className="text-2xl font-black tracking-tight leading-tight line-clamp-2 min-h-[4rem] text-slate-900 dark:text-slate-100 group-hover:text-primary transition-colors duration-300">
                   {title}
                 </CardTitle>
                 <CardDescription className="text-base text-muted-foreground line-clamp-2 leading-relaxed h-12">
@@ -254,7 +254,7 @@ export default function CoursesGrid() {
                    </div>
                    <Button 
                     onClick={(e) => { e.stopPropagation(); onOpenCourse(c); }} 
-                    className="h-10 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 transition-all px-6 font-bold"
+                    className="h-10 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all px-6 font-bold"
                     size="sm"
                   >
                     Detalhes

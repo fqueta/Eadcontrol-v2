@@ -55,6 +55,9 @@ class OptionController extends Controller
             'app_institution_slogan',
             'app_institution_description',
             'app_institution_url',
+            'app_primary_color',
+            'app_secondary_color',
+            'app_dark_mode_default',
         ];
 
         // Fetch options for allowed keys only

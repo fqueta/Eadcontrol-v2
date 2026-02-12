@@ -195,6 +195,41 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
         anyWin.__APP_SITE_NAME__ = anyWin.__APP_SITE_NAME__ || name;
         anyWin.__APP_APP_NAME__ = anyWin.__APP_APP_NAME__ || name;
       }
+
+      // Hydrate Appearance Settings (Colors)
+      try {
+        const primary = String(dataObj['app_primary_color'] || '').trim();
+        const secondary = String(dataObj['app_secondary_color'] || '').trim();
+        // const darkModeDefault = String(dataObj['app_dark_mode_default'] || '').trim(); // Optional: Enforce default dark mode
+
+        if (primary || secondary) {
+          const stored = localStorage.getItem('appearanceSettings');
+          let settings = stored ? JSON.parse(stored) : {};
+          
+          let changed = false;
+          if (primary && settings.primaryColor !== primary) {
+            settings.primaryColor = primary;
+            changed = true;
+          }
+          if (secondary && settings.secondaryColor !== secondary) {
+            settings.secondaryColor = secondary;
+            changed = true;
+          }
+
+          if (changed) {
+            localStorage.setItem('appearanceSettings', JSON.stringify(settings));
+            // Trigger storage event for ThemeContext to pick up immediately if in same tab
+            // Note: window.dispatchEvent(new StorageEvent(...)) doesn't work for same window in all browsers,
+            // but ThemeContext listens to 'storage' which usually fires across tabs. 
+            // To force update in current tab, we might need a custom event or direct call, 
+            // but since this runs on app init, ThemeContext might pick it up on mount or we rely on reload.
+            // For now, let's try manual dispatch for same-window listeners.
+            window.dispatchEvent(new Event('storage')); 
+          }
+        }
+      } catch (e) {
+        console.error('Failed to hydrate appearance settings:', e);
+      }
     }
     return { name, logoUrl };
   } catch {

@@ -490,10 +490,26 @@ export default function SystemSettings() {
   /**
    * Salva configurações de aparência
    */
-  const handleSaveAppearanceSettings = () => {
+  const handleSaveAppearanceSettings = async () => {
+    // 1. Salva no localStorage para aplicação imediata local
     localStorage.setItem('appearanceSettings', JSON.stringify(appearanceSettings));
     applyAppearanceSettings(appearanceSettings);
-    toast.success('Configurações de aparência salvas!');
+    
+    // 2. Persiste no backend para aplicação pública/global
+    try {
+      await systemSettingsService.saveAdvancedSettings({
+        ...advancedSwitchSettings, // Mantém outros settings se necessário, mas o endpoint /options/all aceita parcial
+        // Mapeia para as chaves esperadas no backend (prefixo app_)
+        app_primary_color: appearanceSettings.primaryColor,
+        app_secondary_color: appearanceSettings.secondaryColor,
+        app_dark_mode_default: appearanceSettings.darkMode ? 'true' : 'false',
+      } as any);
+      
+      toast.success('Aparência salva e publicada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao salvar aparência no servidor:', error);
+      toast.error('Salvo localmente, mas erro ao sincronizar com servidor.');
+    }
   };
 
   /**

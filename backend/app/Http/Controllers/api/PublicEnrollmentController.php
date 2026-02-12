@@ -406,6 +406,12 @@ class PublicEnrollmentController extends Controller
         $courseId = (int) ($request->input('id_curso', $request->input('course_id', 0)));
         $turmaId = (int) ($request->input('id_turma', 0));
 
+        // Normalize phone (digits only) before validation
+        $phone = is_string($phone) ? preg_replace('/\D/', '', $phone) : null;
+
+        // Find existing client to ignore in unique validation if email matches
+        $existingClient = Client::where('email', $email)->first();
+
         // Basic validation (email required, name required). Allow existing email.
         $validator = Validator::make([
             'email' => $email,
@@ -416,9 +422,16 @@ class PublicEnrollmentController extends Controller
         ], [
             'email' => ['required','email'],
             'name' => ['required','string','max:255'],
-            'phone' => ['nullable','string','max:32'],
+            'phone' => [
+                'nullable',
+                'string',
+                'max:32',
+                $existingClient ? Rule::unique('users', 'celular')->ignore($existingClient->id) : 'unique:users,celular'
+            ],
             'id_curso' => ['nullable','integer','min:0'],
             'institution' => ['required','string','max:255'],
+        ], [
+            'phone.unique' => 'Este número de celular já está em uso.',
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -426,9 +439,6 @@ class PublicEnrollmentController extends Controller
                 'errors' => $validator->errors(),
             ], 422);
         }
-
-        // Normalize phone (digits only)
-        $phone = is_string($phone) ? preg_replace('/\D/', '', $phone) : null;
 
         // Find existing client or create a minimal record
         $client = Client::where('email', $email)->first();

@@ -80,15 +80,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           document.documentElement.classList.remove('dark');
         }
         
-        // Aplica cor primária personalizada APENAS quando NÃO estiver no modo escuro
-        if (appearanceSettings.primaryColor && !isDarkMode) {
+        // Aplica cor primária personalizada (em ambos os modos)
+        if (appearanceSettings.primaryColor) {
           const hslColor = hexToHsl(appearanceSettings.primaryColor);
           document.documentElement.style.setProperty('--primary', hslColor);
-          // console.log(`Cor primária aplicada (modo claro): ${hslColor}`);
-        } else if (isDarkMode) {
-          // Remove a cor primária personalizada no modo escuro para usar a padrão
-          document.documentElement.style.removeProperty('--primary');
-          // console.log('Cor primária personalizada removida (modo escuro ativo)');
         }
         
         // Aplica cor secundária personalizada

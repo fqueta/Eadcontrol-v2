@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { getTenantIdFromSubdomain } from '@/lib/qlib';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -15,8 +15,8 @@ import { publicEnrollmentService } from '@/services/publicEnrollmentService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEnrollmentsList } from '@/hooks/enrollments';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { getRecaptchaToken, getSiteKey } from '@/lib/recaptcha';
 import { phoneApplyMask } from '@/lib/masks/phone-apply-mask';
+import { MathCaptchaWidget, MathCaptchaRef } from '@/components/ui/MathCaptchaWidget';
 
 
 
@@ -201,6 +201,10 @@ export default function CourseDetails() {
   // Security helpers: honeypot & time-trap
   const [formRenderedAt, setFormRenderedAt] = useState<number>(0);
   const [hpField, setHpField] = useState<string>('');
+  
+  // Security helpers: Math Challenge
+  const mathWidgetRef = useRef<MathCaptchaRef>(null);
+  const [challenge, setChallenge] = useState<{ a: number; b: number; answer: number | null }>({ a: 0, b: 0, answer: null });
 
   useEffect(() => {
     setFormRenderedAt(Date.now());
@@ -273,28 +277,16 @@ export default function CourseDetails() {
         return;
       }
       
+      if (!challenge.answer) {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Resolva o desafio matemático de segurança."
+        });
+        return;
+      }
+      
       const institution = getTenantIdFromSubdomain() || 'default';
-
-      // Security fields: reCAPTCHA v3
-      const siteKey = getSiteKey();
-      const captcha_action = 'register_interest';
-      if (!siteKey) {
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Configuração de segurança ausente. Tente novamente mais tarde."
-        });
-        return;
-      }
-      const captcha_token = await getRecaptchaToken(siteKey, captcha_action);
-      if (!captcha_token) {
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Falha ao validar segurança. Recarregue a página e tente novamente."
-        });
-        return;
-      }
 
       // Registra interesse via endpoint público sem autenticação
       await publicEnrollmentService.registerInterest({
@@ -305,10 +297,12 @@ export default function CourseDetails() {
         id_curso: courseId ? Number(courseId) : undefined,
         id_turma: 0,
         // Security payload
-        captcha_token,
-        captcha_action,
         form_rendered_at: formRenderedAt,
         hp_field: hpField,
+        // Security fields (Math Challenge)
+        challenge_a: challenge.a,
+        challenge_b: challenge.b,
+        challenge_answer: challenge.answer,
       });
 
       // Envia e-mail de boas-vindas via backend (Brevo); fallback para mailto em caso de falha
@@ -352,13 +346,32 @@ export default function CourseDetails() {
       // handleBuy();
     } catch (err: any) {
       console.error('Erro ao enviar interesse:', err);
+      
+      // pt-BR: Tenta extrair mensagem de erro amigável do backend (ex: erro de validação)
+      // en-US: Tries to extract friendly error message from backend (e.g. validation error)
+      let errorMessage = "Falha ao enviar interesse. Tente novamente.";
+      
+      if (err.body?.errors) {
+        const errors = err.body.errors;
+        // Pega a primeira mensagem de erro disponível
+        const firstErrorKey = Object.keys(errors)[0];
+        if (firstErrorKey && Array.isArray(errors[firstErrorKey]) && errors[firstErrorKey].length > 0) {
+          errorMessage = errors[firstErrorKey][0];
+        }
+      } else if (err.body?.message) {
+        errorMessage = err.body.message;
+      }
+
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Falha ao enviar interesse. Tente novamente."
+        description: errorMessage
       });
       setSubmitSuccess(false);
       setSuccessMessage('');
+      // Reset challenge on error
+      if (mathWidgetRef.current) mathWidgetRef.current.reset();
+      setChallenge(prev => ({ ...prev, answer: null }));
     } finally {
       setIsSubmitting(false);
     }
@@ -374,11 +387,20 @@ export default function CourseDetails() {
            * pt-BR: Usa as mesmas cores do layout (gradiente azul brand) e mantém a identidade visual com a logo via InclusiveSiteLayout.
            * en-US: Uses the same layout colors (brand blue gradient) and keeps visual identity with the logo via InclusiveSiteLayout.
            */}
-          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-primary via-blue-600 to-indigo-700 text-white shadow-xl mb-8">
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent" />
-            <div className="absolute -right-20 -top-20 h-96 w-96 rounded-full bg-blue-400/20 blur-3xl" />
-            <div className="relative z-10 px-8 py-10 md:py-14">
-              <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-2 drop-shadow-md">{title}</h1>
+          {/* Header area - Mesh Gradient Style */}
+          <div className="relative overflow-hidden rounded-2xl bg-slate-900 border border-white/5 shadow-2xl mb-8">
+             {/* Mesh Gradient Background Elements */}
+             <div className="absolute inset-0 z-0 bg-primary/5">
+                <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-primary/20 blur-[120px] rounded-full animate-pulse" />
+                <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-secondary/20 blur-[120px] rounded-full" />
+                <div className="absolute top-[20%] right-[10%] w-[40%] h-[40%] bg-primary/10 blur-[100px] rounded-full" />
+            </div>
+            
+            <div className="relative z-10 px-8 py-12 md:py-20">
+               <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-md text-primary-foreground/90 text-xs font-bold uppercase tracking-widest mb-6">
+                Curso Disponível
+              </div>
+              <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-white mb-4 drop-shadow-sm max-w-4xl">{title}</h1>
               {error && (
                 <p className="mt-2 text-sm text-white/90 bg-red-500/20 inline-block px-3 py-1 rounded-md">Falha ao carregar informações do curso.</p>
               )}
@@ -389,9 +411,9 @@ export default function CourseDetails() {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Left: description and highlights */}
             <div className="lg:col-span-2 space-y-8">
-              <Card className="border-0 shadow-lg bg-white dark:bg-slate-900 overflow-hidden ring-1 ring-slate-200 dark:ring-slate-800 rounded-lg">
-                <CardHeader className="bg-blue-50/50 dark:bg-blue-900/10 border-b border-blue-100 dark:border-blue-800/50 pb-6">
-                  <CardTitle className="text-2xl text-primary dark:text-blue-300 font-bold">Por que realizar este curso?</CardTitle>
+              <Card className="border border-slate-200/50 dark:border-white/5 shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md overflow-hidden rounded-2xl">
+                <CardHeader className="bg-primary/5 dark:bg-primary/10 border-b border-primary/10 dark:border-primary/20 pb-6">
+                  <CardTitle className="text-2xl text-primary font-bold">Por que realizar este curso?</CardTitle>
                   <CardDescription className="text-base">
                     Confira os benefícios e o conteúdo programático detalhado.
                   </CardDescription>
@@ -399,8 +421,8 @@ export default function CourseDetails() {
                 <CardContent className="space-y-6 pt-6">
                   {description && renderDescriptionHtml(description)}
                   {highlights.length > 0 && (
-                    <div className="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-lg border border-blue-100 dark:border-blue-800/50">
-                      <h3 className="text-base font-semibold text-primary dark:text-blue-300 mb-3 flex items-center gap-2">
+                    <div className="bg-primary/5 dark:bg-primary/10 p-5 rounded-lg border border-primary/10 dark:border-primary/20">
+                      <h3 className="text-base font-semibold text-primary mb-3 flex items-center gap-2">
                         <span className="text-xl">✨</span> Destaques
                       </h3>
                       <ul className="grid sm:grid-cols-2 gap-2 text-sm">
@@ -416,7 +438,7 @@ export default function CourseDetails() {
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-md bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800 rounded-lg">
+              <Card className="border border-slate-200/50 dark:border-white/5 shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-xl">O que você vai aprender?</CardTitle>
                 </CardHeader>
@@ -426,7 +448,7 @@ export default function CourseDetails() {
                   )}
                   {modules.map((m: any, idx: number) => (
                     <div key={idx} className="rounded-lg border border-slate-200 dark:border-slate-800 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                      <div className="font-semibold text-primary dark:text-blue-300 mb-2">{m?.titulo || `Módulo ${idx + 1}`}</div>
+                      <div className="font-semibold text-primary mb-2">{m?.titulo || `Módulo ${idx + 1}`}</div>
                       {Array.isArray(m?.atividades) && m.atividades.length > 0 && (
                         <ul className="space-y-1.5 ml-1">
                           {m.atividades.map((a: any, j: number) => (
@@ -442,7 +464,7 @@ export default function CourseDetails() {
                 </CardContent>
               </Card>
 
-              <div className="rounded-lg bg-gradient-to-r from-primary to-blue-600 text-white p-6 shadow-lg relative overflow-hidden">
+              <div className="rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 text-white p-8 shadow-xl relative overflow-hidden border border-white/10">
                  <div className="absolute top-0 right-0 p-8 opacity-10 font-bold text-9xl leading-none transform translate-x-10 -translate-y-10">
                    %
                  </div>
@@ -454,7 +476,7 @@ export default function CourseDetails() {
                 </div>
               </div>
 
-              <Card className="border-0 shadow-md bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800 rounded-lg">
+              <Card className="border border-slate-200/50 dark:border-white/5 shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <span>📧</span> Interessados e contato
@@ -502,10 +524,18 @@ export default function CourseDetails() {
                     <div className="md:col-span-2 hidden">
                       <textarea className="w-full rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5" rows={4} placeholder="Mensagem" />
                     </div>
-                    <div className="md:col-span-2 flex justify-end mt-2">
-                      <Button type="submit" className="bg-primary hover:bg-blue-700 text-white rounded-md px-8 shadow-md hover:shadow-lg transition-all" disabled={isSubmitting}>
-                        {isSubmitting ? 'Enviando...' : 'Enviar interesse'}
-                      </Button>
+                    
+                    <div className="md:col-span-2 flex flex-col items-center gap-4 mt-2">
+                      <MathCaptchaWidget
+                        ref={mathWidgetRef}
+                        onVerify={(a, b, answer) => setChallenge({ a, b, answer })}
+                      />
+                      
+                      <div className="w-full flex justify-end">
+                        <Button type="submit" className="bg-primary hover:bg-blue-700 text-white rounded-md px-8 shadow-md hover:shadow-lg transition-all" disabled={isSubmitting}>
+                          {isSubmitting ? 'Enviando...' : 'Enviar interesse'}
+                        </Button>
+                      </div>
                     </div>
                     {/* Honeypot (should stay empty) */}
                     <input
@@ -524,7 +554,7 @@ export default function CourseDetails() {
             {/* Right: cover and price box */}
             <div className="lg:col-span-1 space-y-6">
               <div className="sticky top-24 space-y-6">
-                <Card className="border-0 shadow-xl overflow-hidden rounded-lg bg-white dark:bg-slate-900 h-auto">
+                <Card className="border-0 shadow-2xl overflow-hidden rounded-2xl bg-white dark:bg-slate-900 h-auto">
                     {coverUrl ? (
                         <div className="relative">
                             <img src={coverUrl} alt={title} className="w-full h-auto object-cover aspect-video" />
@@ -537,7 +567,7 @@ export default function CourseDetails() {
                     )}
                 </Card>
 
-                <Card className="border-2 border-blue-100 dark:border-blue-900 shadow-xl bg-white dark:bg-slate-900 rounded-lg overflow-hidden relative">
+                <Card className="border border-slate-200/50 dark:border-white/5 shadow-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl overflow-hidden relative">
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary to-secondary" />
                     <CardContent className="p-6">
                     <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Preço do curso</div>
@@ -551,7 +581,7 @@ export default function CourseDetails() {
                     <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
                         {priceBox.parcelas && priceBox.valorParcela ? (
                         <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-primary">💳</div>
+                            <div className="w-8 h-8 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary">💳</div>
                             <div>
                                 Até <span className="font-bold ml-0.5">{priceBox.parcelas}x</span> de <span className="font-bold ml-0.5">R$ {priceBox.valorParcela}</span>
                             </div>
@@ -574,12 +604,12 @@ export default function CourseDetails() {
                             <Button disabled className="w-full bg-slate-100 text-slate-400 border-0 rounded-md" variant="outline">
                                 ✅ Você já está matriculado
                             </Button>
-                            <Button onClick={() => navigate(`/aluno/cursos/${String(id)}`)} className="w-full bg-primary hover:bg-blue-700 text-white shadow-md rounded-md">
+                            <Button onClick={() => navigate(`/aluno/cursos/${String(id)}`)} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-md rounded-md">
                                 Acessar Curso
                             </Button>
                         </>
                         ) : (
-                        <Button onClick={handleBuy} className="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-blue-700 hover:to-blue-600 text-white font-bold h-12 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all rounded-md">
+                        <Button onClick={handleBuy} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all rounded-md">
                             Comprar agora
                         </Button>
                         )}
