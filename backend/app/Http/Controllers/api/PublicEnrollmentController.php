@@ -89,9 +89,9 @@ class PublicEnrollmentController extends Controller
     {
         // Per-email limiter (soft) to reduce abuse beyond IP throttle
         $emailForKey = (string) $request->input('email', '');
-        if ($emailForKey) {
+        if ($emailForKey && config('app.env') !== 'local') {
             $key = 'public-enroll:email:' . strtolower($emailForKey);
-            if (RateLimiter::tooManyAttempts($key, 3)) {
+            if (RateLimiter::tooManyAttempts($key, 10)) {
                 return response()->json([
                     'message' => 'Muitas tentativas para este e-mail. Tente novamente mais tarde.',
                 ], 429);
@@ -389,9 +389,9 @@ class PublicEnrollmentController extends Controller
     {
         // Per-email limiter for interest registrations
         $emailForKey = (string) $request->input('email', '');
-        if ($emailForKey) {
+        if ($emailForKey && config('app.env') !== 'local') {
             $key = 'public-interest:email:' . strtolower($emailForKey);
-            if (RateLimiter::tooManyAttempts($key, 5)) {
+            if (RateLimiter::tooManyAttempts($key, 10)) {
                 return response()->json([
                     'message' => 'Muitas tentativas para este e-mail. Tente novamente mais tarde.',
                 ], 429);
