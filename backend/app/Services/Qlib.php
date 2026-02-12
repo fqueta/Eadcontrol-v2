@@ -1373,22 +1373,28 @@ class Qlib
     {
         $ret = false;
         $tab = 'usermeta';
-        if($user_id&&$meta_key&&$meta_value){
-            $verf = self::totalReg($tab,"WHERE user_id='$user_id' AND meta_key='$meta_key'");
-            if($verf){
-                $ret=DB::table($tab)->where('user_id',$user_id)->where('meta_key',$meta_key)->update([
-                    'meta_value'=>$meta_value,
-                    'updated_at'=>self::dataBanco(),
-                ]);
-            }else{
-                $ret=DB::table($tab)->insert([
-                    'user_id'=>$user_id,
-                    'meta_value'=>$meta_value,
-                    'meta_key'=>$meta_key,
-                    'created_at'=>self::dataBanco(),
-                ]);
+        try {
+            if (!Schema::hasTable($tab)) {
+                return false;
             }
-            //$ret = DB::table($tab)->storeOrUpdate();
+            if($user_id&&$meta_key&&$meta_value){
+                $verf = self::totalReg($tab,"WHERE user_id='$user_id' AND meta_key='$meta_key'");
+                if($verf){
+                    $ret=DB::table($tab)->where('user_id',$user_id)->where('meta_key',$meta_key)->update([
+                        'meta_value'=>$meta_value,
+                        'updated_at'=>self::dataBanco(),
+                    ]);
+                }else{
+                    $ret=DB::table($tab)->insert([
+                        'user_id'=>$user_id,
+                        'meta_value'=>$meta_value,
+                        'meta_key'=>$meta_key,
+                        'created_at'=>self::dataBanco(),
+                    ]);
+                }
+            }
+        } catch (\Throwable $e) {
+            return false;
         }
         return $ret;
     }

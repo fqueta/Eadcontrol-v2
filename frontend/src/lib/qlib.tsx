@@ -15,23 +15,33 @@ export function getTenantIdFromSubdomain(): string | null {
  * en-US: Returns tenant API base, WITHOUT version. E.g.: "http://{tenant_id}.localhost:8000/api".
  */
 export function getTenantApiUrl(): string {
-  let url = '';
-  const envUrl = (import.meta.env as any).VITE_TENANT_API_URL;
+  const host = window.location.host;
+  const protocol = window.location.protocol;
+  const tenantId = getTenantIdFromSubdomain() || 'default';
+  let envUrl: string | undefined = (import.meta.env as any).VITE_TENANT_API_URL;
 
-  const host = window.location.host; 
+  let url = '';
   if (envUrl) {
+    envUrl = envUrl.replace('{tenant_id}', tenantId);
+    const envIsLocal = /localhost|127\.0\.0\.1/.test(envUrl);
+    const hostIsProd = !/localhost|127\.0\.0\.1/.test(host);
+    if (hostIsProd && envIsLocal) {
+      url = '';
+    } else {
       url = envUrl;
-  } else if (host.includes('localhost') || host.includes('127.0.0.1')) {
-     // Local development heuristic
-     url = 'http://api-{tenant_id}.localhost:8000/api';
-  } else {
-    // Production heuristic
-    url = `https://api-${host}/api`;
+      if (protocol === 'https:' && url.startsWith('http://') && hostIsProd) {
+        url = url.replace(/^http:\/\//, 'https://');
+      }
+    }
   }
 
-  // Perform substitution
-  const tenant_id = getTenantIdFromSubdomain() || 'default';
-  url = url.replace('{tenant_id}', tenant_id);
+  if (!url) {
+    if (/localhost|127\.0\.0\.1/.test(host)) {
+      url = 'http://api-{tenant_id}.localhost:8000/api'.replace('{tenant_id}', tenantId);
+    } else {
+      url = `https://api-${host}/api`;
+    }
+  }
 
   return url.replace(/\/+$/, '');
 }

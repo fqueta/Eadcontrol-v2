@@ -149,6 +149,7 @@ export function useGenericApi<T, CreateInput, UpdateInput, ListParams = any>(
       onSuccess: (data, id) => {
         queryClient.invalidateQueries({ queryKey: [queryKey] });
         queryClient.removeQueries({ queryKey: [queryKey, 'detail', id] });
+        queryClient.refetchQueries({ queryKey: [queryKey] });
         if (!suppressToasts) toast.success(`${entityName} excluído com sucesso!`);
         mutationOptions?.onSuccess?.(data, id, undefined);
       },
