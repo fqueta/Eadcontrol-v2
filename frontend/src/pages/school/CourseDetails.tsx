@@ -15,6 +15,10 @@ import { publicEnrollmentService } from '@/services/publicEnrollmentService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEnrollmentsList } from '@/hooks/enrollments';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { getRecaptchaToken, getSiteKey } from '@/lib/recaptcha';
+import { phoneApplyMask } from '@/lib/masks/phone-apply-mask';
+
+
 
 /**
  * CourseDetails
@@ -194,6 +198,14 @@ export default function CourseDetails() {
    */
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Security helpers: honeypot & time-trap
+  const [formRenderedAt, setFormRenderedAt] = useState<number>(0);
+  const [hpField, setHpField] = useState<string>('');
+
+  useEffect(() => {
+    setFormRenderedAt(Date.now());
+  }, []);
+
   /**
    * resetInterestFormFields
    * pt-BR: Limpa os campos do formulário de interesse após envio.
@@ -263,7 +275,11 @@ export default function CourseDetails() {
       
       const institution = getTenantIdFromSubdomain() || 'default';
 
-      // Registra interesse via endpoint público sem autenticação
+      // Security fields: reCAPTCHA v3
+      const siteKey = getSiteKey();
+      const captcha_action = 'register_interest';
+      const captcha_token = siteKey ? await getRecaptchaToken(siteKey, captcha_action) : '';
+
       // Registra interesse via endpoint público sem autenticação
       await publicEnrollmentService.registerInterest({
         institution,
@@ -272,6 +288,11 @@ export default function CourseDetails() {
         phone,
         id_curso: courseId ? Number(courseId) : undefined,
         id_turma: 0,
+        // Security payload
+        captcha_token,
+        captcha_action,
+        form_rendered_at: formRenderedAt,
+        hp_field: hpField,
       });
 
       // Envia e-mail de boas-vindas via backend (Brevo); fallback para mailto em caso de falha
@@ -453,7 +474,7 @@ export default function CourseDetails() {
                       className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white"
                       placeholder="Telefone/WhatsApp"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => setPhone(phoneApplyMask(e.target.value))}
                     />
                     <input
                       className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white"
@@ -470,6 +491,15 @@ export default function CourseDetails() {
                         {isSubmitting ? 'Enviando...' : 'Enviar interesse'}
                       </Button>
                     </div>
+                    {/* Honeypot (should stay empty) */}
+                    <input
+                      type="text"
+                      value={hpField}
+                      onChange={(e) => setHpField(e.target.value)}
+                      style={{ position: 'absolute', left: '-9999px', opacity: 0 }}
+                      aria-hidden="true"
+                      tabIndex={-1}
+                    />
                   </form>
                 </CardContent>
               </Card>

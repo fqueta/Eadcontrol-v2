@@ -18,6 +18,11 @@ class PublicEnrollmentService extends BaseApiService {
     phone?: string;
     id_curso?: number;
     id_turma?: number;
+    // Security fields
+    captcha_token?: string;
+    captcha_action?: string;
+    form_rendered_at?: number;
+    hp_field?: string;
   }): Promise<any> {
     const resp = await this.post<any>('/matriculas/interested', payload);
     return resp.data || resp;
