@@ -35,9 +35,12 @@ return [
     |
     */
     'allowed_origins' => [
-        // API subdomains
+         // API subdomains
         'https://api-educar.eadcontrol.com.br',
         'https://api-aeroclube.eadcontrol.com.br',
+
+        // Frontend Production - Explicit Origin
+        'https://cursos.incluireeducar.com.br',
 
         // Frontend production domains (explicit for credentials)
         'https://educar.eadcontrol.com.br',
