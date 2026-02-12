@@ -126,6 +126,7 @@ class PublicEnrollmentController extends Controller
             'phone' => $phone,
             'privacyAccepted' => $privacyAccepted,
             'termsAccepted' => $termsAccepted,
+            'institution' => $institution,
         ], [
             'email' => ['required','email', 'unique:users,email'],
             'name' => ['required','string','max:255'],
@@ -133,6 +134,7 @@ class PublicEnrollmentController extends Controller
             'phone' => ['nullable','string','max:32', 'unique:users,celular'],
             'privacyAccepted' => ['required','boolean', Rule::in([true])],
             'termsAccepted' => ['required','boolean', Rule::in([true])],
+            'institution' => ['required','string','max:255'],
         ], [
             'email.unique' => 'Este e-mail já está em uso. Por favor, use outro. ou faça login.',
             'phone.unique' => 'Este número de celular já está em uso.',
@@ -413,11 +415,13 @@ class PublicEnrollmentController extends Controller
             'name' => $name,
             'phone' => $phone,
             'id_curso' => $courseId,
+            'institution' => $request->input('institution'),
         ], [
             'email' => ['required','email'],
             'name' => ['required','string','max:255'],
             'phone' => ['nullable','string','max:32'],
             'id_curso' => ['nullable','integer','min:0'],
+            'institution' => ['required','string','max:255'],
         ]);
         if ($validator->fails()) {
             return response()->json([

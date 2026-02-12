@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
 import { publicCoursesService } from '@/services/publicCoursesService';
 import { publicEnrollmentService } from '@/services/publicEnrollmentService';
@@ -247,7 +248,7 @@ export default function InviteEnroll() {
    * en-US: Smoothly scrolls to the first field with error and focuses it.
    */
   const focusFirstError = (errors: Record<string, string>) => {
-    const order = ['institution', 'name', 'phone', 'email', 'password', 'privacyAccepted', 'termsAccepted'];
+    const order = ['name', 'phone', 'email', 'institution', 'password', 'privacyAccepted', 'termsAccepted'];
     for (const key of order) {
       if (errors[key]) {
         const targetId = key === 'privacyAccepted' ? 'privacy' : key === 'termsAccepted' ? 'terms' : key;
@@ -269,7 +270,7 @@ export default function InviteEnroll() {
   const canSubmit = useMemo(() => {
     // pt-BR: Permite enviar mesmo se o curso não carregar; cai em fallback de "registrar interesse".
     // en-US: Allows submit even if course fails to load; falls back to "register interest".
-    const base = !!name && !!email && !!password && !!confirmPassword && privacyAccepted && termsAccepted;
+    const base = !!name && !!email && !!password && !!confirmPassword && !!institution && privacyAccepted && termsAccepted;
     if (!base) return false;
     if (isPasswordTooWeak) return false;
     if (passwordsMismatch) return false;
@@ -278,7 +279,7 @@ export default function InviteEnroll() {
     // en-US: Requires valid course to enable submission.
     if (courseId <= 0) return false;
     return true;
-  }, [name, email, password, confirmPassword, privacyAccepted, termsAccepted, phone, isPhoneInvalid, isPasswordTooWeak, passwordsMismatch, courseId]);
+  }, [name, email, password, confirmPassword, institution, privacyAccepted, termsAccepted, phone, isPhoneInvalid, isPasswordTooWeak, passwordsMismatch, courseId]);
 
   /**
    * handleSubmit
@@ -358,14 +359,6 @@ export default function InviteEnroll() {
           <CardContent>
             
             <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
-              {/* Adicionar campo tipo testo para instituição */}
-              <div className="space-y-2 md:col-span-2">
-                <Label>Instituição</Label>
-                <Input id="institution" value={institution} onChange={(e) => setInstitution(e.target.value)} placeholder="Instituição" required aria-invalid={!!fieldErrors.institution} className={fieldErrors.institution ? 'border-red-500 focus-visible:ring-red-500' : ''} />
-                {fieldErrors.institution && (
-                  <p className="text-sm text-destructive">{fieldErrors.institution}</p>
-                )}
-              </div>
               <div className="space-y-2 md:col-span-2">
                 <Label>Nome completo</Label>
                 <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" required aria-invalid={!!fieldErrors.name} className={fieldErrors.name ? 'border-red-500 focus-visible:ring-red-500' : ''} />
@@ -385,6 +378,26 @@ export default function InviteEnroll() {
                 <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" required aria-invalid={!!fieldErrors.email} className={fieldErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''} />
                 {fieldErrors.email && (
                   <p className="text-sm text-destructive">{fieldErrors.email}</p>
+                )}
+              </div>
+              {/* pt-BR: Campo Instituição como Select obrigatório */}
+              {/* en-US: Institution field as required Select */}
+              <div className="space-y-2 md:col-span-2">
+                <Label>Instituição</Label>
+                <Select value={institution} onValueChange={(val) => setInstitution(val)} required>
+                  <SelectTrigger id="institution" className={fieldErrors.institution ? 'border-red-500 focus:ring-red-500' : ''}>
+                    <SelectValue placeholder="Selecione o tipo de instituição" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Escola Particular">Escola Particular</SelectItem>
+                    <SelectItem value="Escola Municipal">Escola Municipal</SelectItem>
+                    <SelectItem value="Escola Estadual">Escola Estadual</SelectItem>
+                    <SelectItem value="Clínica">Clínica</SelectItem>
+                    <SelectItem value="Outra">Outra</SelectItem>
+                  </SelectContent>
+                </Select>
+                {fieldErrors.institution && (
+                  <p className="text-sm text-destructive">{fieldErrors.institution}</p>
                 )}
               </div>
               <div className="space-y-2 md:col-span-2">

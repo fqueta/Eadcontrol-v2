@@ -42,23 +42,22 @@ const LandingPage = ({ linkLoja }: { linkLoja?: string }) => {
             <p className="text-lg text-slate-600 mb-6 max-w-3xl mx-auto">
               Soluções educacionais inclusivas com propósito: plataformas pedagógicas, comunicação alternativa e mais.
             </p>
-            <div className="flex gap-3 justify-center">
-              <Button size="lg" asChild className="bg-primary hover:bg-blue-700 text-white rounded-md">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center max-w-md mx-auto sm:max-w-none">
+              <Button size="lg" asChild className="w-full sm:w-auto bg-primary hover:bg-blue-700 text-white rounded-md whitespace-nowrap">
                 <Link to="/cursos">
                   Cursos
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
-              <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer">
-                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white rounded-md">
+              <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer" className="w-full sm:w-auto">
+                <Button size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-md whitespace-nowrap">
                   Conhecer o site
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </a>
-              <Button size="lg" variant="outline" asChild className="border-primary/20 text-primary hover:bg-blue-50 rounded-md">
+              <Button size="lg" variant="outline" asChild className="w-full sm:w-auto border-primary/20 text-primary hover:bg-blue-50 rounded-md whitespace-nowrap">
                 <Link to="/public-client-form">Fazer cadastro</Link>
               </Button>
-              
             </div>
           </div>
         </div>

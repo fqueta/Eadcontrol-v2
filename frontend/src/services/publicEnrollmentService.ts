@@ -12,7 +12,7 @@ class PublicEnrollmentService extends BaseApiService {
    * en-US: Registers public interest with minimal data.
    */
   async registerInterest(payload: {
-    institution: string;
+    institution?: string;
     name: string;
     email: string;
     phone?: string;
@@ -36,7 +36,7 @@ class PublicEnrollmentService extends BaseApiService {
    *        Endpoint: POST `/clients/matricula` (public tenant).
    */
   async registerAndEnroll(payload: {
-    institution: string;
+    institution?: string;
     name: string;
     email: string;
     password: string;
