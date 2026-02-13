@@ -81,6 +81,7 @@ class ClientController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('email', 'like', '%' . $search . '%')
                   ->orWhere('cpf', 'like', '%' . $search . '%')
+                  ->orWhere('celular', 'like', '%' . $search . '%')
                   ->orWhere('cnpj', 'like', '%' . $search . '%')
                   ->orWhere('name', 'like', '%' . $search . '%');
             });
@@ -93,6 +94,9 @@ class ClientController extends Controller
         }
         if ($request->filled('cnpj')) {
             $query->where('cnpj', 'like', '%' . $request->input('cnpj') . '%');
+        }
+        if ($request->filled('celular')) {
+            $query->where('celular', 'like', '%' . $request->input('celular') . '%');
         }
         // Filtro por stage (stage_id ou stageId) usando JSON em config/preferencias
         if ($request->filled('stage_id') || $request->filled('stageId')) {

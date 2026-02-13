@@ -47,7 +47,8 @@ export function ValidationConflictModal({
         </AlertDialogHeader>
         <AlertDialogFooter className="flex-col sm:flex-row gap-2">
           <Button 
-            variant="outline" 
+            variant="outline"
+            className="hover:bg-primary-hover hover:text-primary-foreground border-input"
             onClick={() => {
               onOpenChange(false);
               // Small delay to allow modal to close before retry action (usually focus)
@@ -59,6 +60,7 @@ export function ValidationConflictModal({
             Tentar outro
           </Button>
           <AlertDialogAction
+            className="hover:bg-primary-hover hover:text-primary-foreground"
             onClick={() => {
               // Redireciona para login enviando a URL atual como retorno
               const currentPath = encodeURIComponent(window.location.pathname + window.location.search);

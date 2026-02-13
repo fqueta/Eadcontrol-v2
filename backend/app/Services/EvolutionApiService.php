@@ -87,4 +87,62 @@ class EvolutionApiService
             return false;
         }
     }
+
+    public static function sendLeadNotification($client, $courseId)
+    {
+        try {
+            if ($client->celular) {
+                $firstName = explode(' ', trim($client->name))[0];
+                
+                $courseTitle = 'o curso';
+                if ($courseId > 0) {
+                        $cObj = \Illuminate\Support\Facades\DB::table('cursos')->where('id', $courseId)->first();
+                        if ($cObj) {
+                        $courseTitle = $cObj->titulo ?? $cObj->nome ?? 'o curso';
+                        }
+                }
+                
+                $companyName = \App\Services\Qlib::qoption('company_name') ?: config('app.name');
+
+                $userMsg = "Olá, *{$firstName}*! 👋\n\n";
+                $userMsg .= "Recebemos seu interesse em *{$courseTitle}*.\n";
+                $userMsg .= "Em breve nossa equipe entrará em contato para passar mais detalhes.\n\n";
+                $userMsg .= "Atenciosamente,\n*{$companyName}*";
+
+                return self::sendMessage($client->celular, $userMsg);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('EvolutionAPI User Notification Error: ' . $e->getMessage());
+            return false;
+        }
+        return false;
+    }
+
+    public static function sendAdminNotificationNewInterest($client, $courseId, $matriculaId)
+    {
+        try {
+            $courseName = 'N/A';
+            if ($courseId > 0) {
+                $cObj = \Illuminate\Support\Facades\DB::table('cursos')->where('id', $courseId)->first();
+                if ($cObj) $courseName = $cObj->titulo ?? $cObj->nome ?? 'Curso #' . $courseId;
+            }
+            $companyName = \App\Services\Qlib::qoption('institution_name');
+            $msgObj = "📢 *Novo Interessado {$companyName}*\n\n";
+            $msgObj .= "👤 *Nome:* {$client->name}\n";
+            $msgObj .= "📧 *Email:* {$client->email}\n";
+            $msgObj .= "📱 *Telefone:* " . ($client->getAttribute('celular') ?: 'N/D') . "\n";
+            $msgObj .= "🎓 *Curso:* {$courseName}\n";
+            $msgObj .= "📅 *Data:* " . date('d/m/Y H:i');
+            // Fixed typo: get_front_url -> get_frontend_url
+            $msgObj .= "\n🎓 *Link:* " . \App\Services\Qlib::get_frontend_url().'/admin/sales/proposals/view/'.$matriculaId;
+
+            // Add delay to prevent ban risk when called immediately after lead notification
+            sleep(2);
+            return self::sendAdminNotification($msgObj, $courseId);
+
+        } catch (\Throwable $evt) {
+            \Illuminate\Support\Facades\Log::error('EvolutionAPI Notification Error: ' . $evt->getMessage());
+            return false;
+        }
+    }
 }

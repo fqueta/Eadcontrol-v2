@@ -569,28 +569,19 @@ class PublicEnrollmentController extends Controller
             $client->notify(new WelcomeNotification($courseId, $course->slug, $course->nome, $matricula->id));
         }
 
-        // Avaliar envio de notificação via EvolutionAPI para o administrador
-        try {
-            $courseName = 'N/A';
-            if ($courseId > 0) {
-                $cObj = DB::table('cursos')->where('id', $courseId)->first();
-                if ($cObj) $courseName = $cObj->titulo ?? $cObj->nome ?? 'Curso #' . $courseId;
-            }
-            $companyName = \App\Services\Qlib::qoption('company_name');
-            $msgObj = "📢 *Novo Interessado {$companyName}*\n\n";
-            $msgObj .= "👤 *Nome:* {$client->name}\n";
-            $msgObj .= "📧 *Email:* {$client->email}\n";
-            $msgObj .= "📱 *Telefone:* " . ($client->getAttribute('celular') ?: 'N/D') . "\n";
-            $msgObj .= "🎓 *Curso:* {$courseName}\n";
-            $msgObj .= "📅 *Data:* " . date('d/m/Y H:i');
-            $msgObj .= "\n🎓 *Link:* " . Qlib::get_front_url().'/admin/sales/proposals/view/'.$matricula->id;
+        // Enviar WhatsApp para o Lead (SOMENTE SE NÃO TIVER INTERESSE PRÉVIO)
+        // Check if there was ALREADY an interest before this new one
+        $existsPreviousInterest = Matricula::where('id_cliente', $client->id)
+            ->where('id_curso', $courseId)
+            ->where('id', '!=', $matricula->id)
+            ->exists();
 
-            \App\Services\EvolutionApiService::sendAdminNotification($msgObj, $courseId);
-
-        } catch (\Throwable $evt) {
-            // Falha silenciosa na notificação admin para não travar o retorno ao user
-            \Illuminate\Support\Facades\Log::error('EvolutionAPI Notification Error: ' . $evt->getMessage());
+        if (!$existsPreviousInterest) {
+            \App\Services\EvolutionApiService::sendLeadNotification($client, $courseId);
         }
+
+        // Enviar notificação para o Admin
+        \App\Services\EvolutionApiService::sendAdminNotificationNewInterest($client, $courseId, $matricula->id);
 
         return response()->json([
             'message' => 'Interesse registrado com sucesso',

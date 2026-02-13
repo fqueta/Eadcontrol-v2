@@ -2,11 +2,21 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, Eye, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { 
+  MoreHorizontal, 
+  Pencil, 
+  Trash2, 
+  Eye, 
+  RotateCcw,
+  Phone,
+  User 
+} from "lucide-react";
 import { ClientRecord } from '@/types/clients';
 import { useUsersList } from '@/hooks/users';
 import { useRestoreClient } from '@/hooks/clients';
+import { phoneApplyMask } from '@/lib/masks/phone-apply-mask';
 
 interface ClientsTableProps {
   clients: ClientRecord[];
@@ -93,9 +103,10 @@ export function ClientsTable({ clients, onEdit, onDelete, onForceDelete, isLoadi
         <TableHeader>
           <TableRow>
             <TableHead>Nome</TableHead>
-            <TableHead>CPF</TableHead>
+            <TableHead>CPF / CNPJ</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Proprietário</TableHead>
+            <TableHead>Celular</TableHead>
+            <TableHead>Consultor</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
@@ -108,12 +119,51 @@ export function ClientsTable({ clients, onEdit, onDelete, onForceDelete, isLoadi
               className="cursor-pointer hover:bg-muted/50"
               title={`Visualizar detalhes do cliente ${client.name} com dois cliques`}
             >
-              <TableCell className="font-medium">{client.name}</TableCell>
-              <TableCell>
-                {client.tipo_pessoa === 'pf' ? (client.cpf || 'Não informado') : (client.cnpj || 'Não informado')}
+              <TableCell className="font-medium">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={client.foto_perfil || undefined} alt={client.name} />
+                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                      {client.name.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-sm text-foreground">{client.name}</span>
+                    {client.razao && (
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-tight">{client.razao}</span>
+                    )}
+                  </div>
+                </div>
               </TableCell>
-              <TableCell>{client.email || 'Não informado'}</TableCell>
-              <TableCell>{client.autor_name || 'Não identificado'}</TableCell>
+              <TableCell>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">
+                    {client.tipo_pessoa === 'pf' ? (client.cpf || '—') : (client.cnpj || '—')}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground uppercase">
+                    {client.tipo_pessoa === 'pf' ? 'CPF' : 'CNPJ'}
+                  </span>
+                </div>
+              </TableCell>
+              <TableCell>
+                <span className="text-sm text-muted-foreground">{client.email || '—'}</span>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Phone className="h-3 w-3" />
+                  <span>
+                    {phoneApplyMask(client.celular || '') || '—'}
+                  </span>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
+                    <User className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  <span className="text-sm">{client.autor_name || '—'}</span>
+                </div>
+              </TableCell>
               <TableCell>
                 {/* Debug temporário */}
                 <div style={{fontSize: '10px', color: 'gray', marginBottom: '4px'}}>

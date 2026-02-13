@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useMask } from '@react-input/mask';
+import { useMask, format } from '@react-input/mask';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";

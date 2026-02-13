@@ -58,6 +58,7 @@ export interface ClientRecord {
   id: string;
   tipo_pessoa: "pf" | "pj";
   email: string;
+  celular?: string | null;
   name: string;
   cpf: string | null;
   cnpj: string | null;
