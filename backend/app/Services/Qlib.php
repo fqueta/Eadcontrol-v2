@@ -26,6 +26,7 @@ use DateTime;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
 use App\Models\Category;
 use App\Models\Client;
 use App\Models\ProductUnit;
@@ -67,6 +68,35 @@ class Qlib
      * @param string $cpf
      * @return boolean true | false
      */
+    /**
+     * checkEmail
+     * pt-BR: Verifica se o e-mail já existe na base de dados (users).
+     * en-US: Checks if the email already exists in the database (users).
+     * @param string $email
+     * @return array
+     */
+    static function checkEmail($email)
+    {
+        $email = trim((string) $email);
+        
+        if (!$email) {
+            return ['exists' => false, 'valid' => false, 'message' => 'Email empty'];
+        }
+
+        // Basic validation
+        $validator = Validator::make(['email' => $email], [
+            'email' => 'required|email'
+        ]);
+
+        if ($validator->fails()) {
+             return ['exists' => false, 'valid' => false, 'message' => 'Invalid email format'];
+        }
+
+        $exists = DB::table('users')->where('email', $email)->exists();
+
+        return ['exists' => $exists, 'valid' => true];
+    }
+
     static function validaCpf($cpf){
         if(empty($cpf))
            return true;

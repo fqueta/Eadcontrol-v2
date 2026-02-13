@@ -1,5 +1,6 @@
+
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { getTenantIdFromSubdomain } from '@/lib/qlib';
+import { getInstitutionName, getInstitutionWhatsApp } from '@/lib/branding';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
@@ -19,6 +20,8 @@ import { phoneApplyMask } from '@/lib/masks/phone-apply-mask';
 import { MathCaptchaWidget, MathCaptchaRef } from '@/components/ui/MathCaptchaWidget';
 
 
+
+import { ValidationConflictModal } from '@/components/modals/ValidationConflictModal';
 
 /**
  * CourseDetails
@@ -206,9 +209,33 @@ export default function CourseDetails() {
   const mathWidgetRef = useRef<MathCaptchaRef>(null);
   const [challenge, setChallenge] = useState<{ a: number; b: number; answer: number | null }>({ a: 0, b: 0, answer: null });
 
+  // Conflict Modal State
+  const [conflictModalOpen, setConflictModalOpen] = useState(false);
+  const [conflictType, setConflictType] = useState<'email' | 'phone' | null>(null);
+  const userFirst = user?.name?.split(' ')[0] || 'Aluno';
+  const { isAuthenticated } = useAuth();
+
   useEffect(() => {
     setFormRenderedAt(Date.now());
   }, []);
+
+  /**
+   * handleEmailBlur
+   */
+  const handleEmailBlur = async () => {
+    if (!email || isAuthenticated) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+
+    try {
+      const { exists } = await publicEnrollmentService.checkEmail(email);
+      if (exists) {
+        setConflictType('email');
+        setConflictModalOpen(true);
+      }
+    } catch (error) {
+      console.error('Failed to check email', error);
+    }
+  };
 
   /**
    * resetInterestFormFields
@@ -268,42 +295,48 @@ export default function CourseDetails() {
       const c: any = course || {};
       const courseId = String(c?.id || '');
 
-      if (!fullName || !email) {
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Informe nome e e-mail para prosseguir."
-        });
-        return;
-      }
+      const institution = getInstitutionName() || 'default';
       
-      if (!challenge.answer) {
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Resolva o desafio matemático de segurança."
-        });
-        return;
-      }
-      
-      const institution = getTenantIdFromSubdomain() || 'default';
-
-      // Registra interesse via endpoint público sem autenticação
-      await publicEnrollmentService.registerInterest({
+      const payload: any = {
         institution,
-        name: `Interesse • ${fullName}`,
-        email,
-        phone,
         id_curso: courseId ? Number(courseId) : undefined,
         id_turma: 0,
-        // Security payload
-        form_rendered_at: formRenderedAt,
-        hp_field: hpField,
-        // Security fields (Math Challenge)
-        challenge_a: challenge.a,
-        challenge_b: challenge.b,
-        challenge_answer: challenge.answer,
-      });
+      };
+
+      if (isAuthenticated && user) {
+        // Authenticated submission
+        payload.name = user.name;
+        payload.email = user.email;
+        payload.phone = user.celular;
+        // Skip security checks for trusted users (backend also skips)
+      } else {
+        // Unauthenticated submission
+        if (!fullName || !email) {
+          toast({ variant: "destructive", title: "Erro", description: "Informe nome e e-mail para prosseguir." });
+           setIsSubmitting(false);
+          return;
+        }
+        if (!challenge.answer) {
+          toast({ variant: "destructive", title: "Erro", description: "Resolva o desafio matemático de segurança." });
+           setIsSubmitting(false);
+          return;
+        }
+        
+        payload.name = `Interesse • ${fullName}`;
+        payload.email = email;
+        payload.phone = phone;
+        payload.form_rendered_at = formRenderedAt;
+        payload.hp_field = hpField;
+        payload.challenge_a = challenge.a;
+        payload.challenge_b = challenge.b;
+        payload.challenge_answer = challenge.answer;
+      }
+
+      // Registra interesse via endpoint público
+      await publicEnrollmentService.registerInterest(payload);
+
+      // Redirection to WhatsApp removed as per user request (only success message is shown)
+      // if (isAuthenticated && user) { ... }
 
       // Envia e-mail de boas-vindas via backend (Brevo); fallback para mailto em caso de falha
       try {
@@ -321,25 +354,14 @@ export default function CourseDetails() {
         setSuccessMessage('Interesse enviado! Em breve entraremos em contato por e-mail.');
         resetInterestFormFields();
       } catch (sendErr) {
-        console.warn('Falha ao enviar email via backend, usando mailto fallback:', sendErr);
-        const subject = encodeURIComponent(`Bem-vindo ao curso ${String(c?.titulo || title)}`);
-        const body = encodeURIComponent(
-          `Olá ${fullName},\n\n` +
-          `Obrigado pelo seu interesse no curso "${String(c?.titulo || title)}". ` +
-          `Nossa equipe entrará em contato com você em breve com mais detalhes.\n\n` +
-          `Informações fornecidas:\n` +
-          `• E-mail: ${email}\n` +
-          `• Telefone/WhatsApp: ${phone || '—'}\n` +
-          `• Cidade/Estado: ${cityState || '—'}\n\n` +
-          `Atenciosamente,\nEquipe Incluir & Educar`
-        );
-        window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
+        console.warn('Falha ao enviar email via backend (ignorado para UX):', sendErr);
+        // Fallback: Apenas notifica sucesso, sem abrir mailto
         toast({
           title: "Sucesso",
-          description: "Interesse enviado! Matrícula criada. Email fallback aberto."
+          description: "Interesse registrado! Nossa equipe entrará em contato."
         });
         setSubmitSuccess(true);
-        setSuccessMessage('Interesse enviado! Abrimos seu e-mail para confirmar o contato.');
+        setSuccessMessage('Interesse enviado! Em breve entraremos em contato.');
         resetInterestFormFields();
       }
       // Optional: direct to purchase flow if exists
@@ -494,59 +516,83 @@ export default function CourseDetails() {
                    * pt-BR: Campo de mensagem oculto conforme solicitado; envia interesse criando matrícula.
                    * en-US: Message field hidden as requested; submits interest by creating enrollment.
                    */}
-                  <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmitInterest}>
-                    <input
-                      className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white"
-                      placeholder="Nome completo"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                    />
-                    <input
-                      className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white"
-                      placeholder="Email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                    <input
-                      className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white"
-                      placeholder="Telefone/WhatsApp"
-                      value={phone}
-                      onChange={(e) => setPhone(phoneApplyMask(e.target.value))}
-                    />
-                    <input
-                      className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white"
-                      placeholder="Cidade/Estado"
-                      value={cityState}
-                      onChange={(e) => setCityState(e.target.value)}
-                    />
-                    {/* Mensagem oculta conforme solicitação */}
-                    <div className="md:col-span-2 hidden">
-                      <textarea className="w-full rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5" rows={4} placeholder="Mensagem" />
-                    </div>
-                    
-                    <div className="md:col-span-2 flex flex-col items-center gap-4 mt-2">
-                      <MathCaptchaWidget
-                        ref={mathWidgetRef}
-                        onVerify={(a, b, answer) => setChallenge({ a, b, answer })}
-                      />
-                      
-                      <div className="w-full flex justify-end">
-                        <Button type="submit" className="bg-primary hover:bg-blue-700 text-white rounded-md px-8 shadow-md hover:shadow-lg transition-all" disabled={isSubmitting}>
-                          {isSubmitting ? 'Enviando...' : 'Enviar interesse'}
-                        </Button>
+                  {/* Contact form - Smart Logic */}
+                  {isAuthenticated ? (
+                    <div className="flex flex-col items-center justify-center py-8 gap-4 text-center">
+                      <div className="p-4 rounded-full bg-primary/10 dark:bg-primary/20 text-primary mb-2">
+                        <span className="text-4xl">👋</span>
                       </div>
+                      <h3 className="text-xl font-bold text-foreground">Olá, {user?.name?.split(' ')[0]}!</h3>
+                      <p className="text-muted-foreground max-w-md">
+                        Como você já é nosso aluno, basta clicar abaixo para registrar seu interesse neste curso. 
+                        Nossa equipe entrará em contato com você.
+                      </p>
+                      <Button 
+                        onClick={() => handleSubmitInterest({ preventDefault: () => {} } as any)} 
+                        disabled={isSubmitting || submitSuccess}
+                        className="bg-primary hover:bg-blue-700 text-white rounded-full px-8 py-6 text-lg shadow-lg hover:shadow-xl transition-all mt-4 w-full sm:w-auto"
+                      >
+                        {isSubmitting ? 'Registrando...' : 'Tenho interesse neste curso'}
+                      </Button>
                     </div>
-                    {/* Honeypot (should stay empty) */}
-                    <input
-                      type="text"
-                      value={hpField}
-                      onChange={(e) => setHpField(e.target.value)}
-                      style={{ position: 'absolute', left: '-9999px', opacity: 0 }}
-                      aria-hidden="true"
-                      tabIndex={-1}
-                    />
-                  </form>
+                  ) : (
+                    <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmitInterest}>
+                      <input
+                        className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white"
+                        placeholder="Nome completo"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        required
+                      />
+                      <input
+                        className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white"
+                        placeholder="Email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        onBlur={handleEmailBlur}
+                        required
+                      />
+                      <input
+                        className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white"
+                        placeholder="Telefone/WhatsApp"
+                        value={phone}
+                        onChange={(e) => setPhone(phoneApplyMask(e.target.value))}
+                      />
+                      <input
+                        className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5 outline-none focus:ring-2 focus:ring-primary/50 transition-all dark:text-white"
+                        placeholder="Cidade/Estado"
+                        value={cityState}
+                        onChange={(e) => setCityState(e.target.value)}
+                      />
+                      {/* Mensagem oculta conforme solicitação */}
+                      <div className="md:col-span-2 hidden">
+                        <textarea className="w-full rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-2.5" rows={4} placeholder="Mensagem" />
+                      </div>
+                      
+                      <div className="md:col-span-2 flex flex-col items-center gap-4 mt-2">
+                        <MathCaptchaWidget
+                          ref={mathWidgetRef}
+                          onVerify={(a, b, answer) => setChallenge({ a, b, answer })}
+                        />
+                        
+                        <div className="w-full flex justify-end">
+                          <Button type="submit" className="bg-primary hover:bg-blue-700 text-white rounded-md px-8 shadow-md hover:shadow-lg transition-all" disabled={isSubmitting}>
+                            {isSubmitting ? 'Enviando...' : 'Enviar interesse'}
+                          </Button>
+                        </div>
+                      </div>
+                      {/* Honeypot (should stay empty) */}
+                      <input
+                        type="text"
+                        value={hpField}
+                        onChange={(e) => setHpField(e.target.value)}
+                        style={{ position: 'absolute', left: '-9999px', opacity: 0 }}
+                        aria-hidden="true"
+                        tabIndex={-1}
+                      />
+                    </form>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -623,6 +669,23 @@ export default function CourseDetails() {
             </div>
           </div>
         </div>
+        <ValidationConflictModal
+          open={conflictModalOpen}
+          onOpenChange={setConflictModalOpen}
+          conflictType={conflictType}
+          onRetry={() => {
+             const targetId = conflictType === 'email' ? 'email' : 'phone'; // simple logic
+             // For guest form fields
+             const inputs = document.querySelectorAll('input');
+             // Email is usually 2nd input, but let's rely on user click
+             // A better way would be refs, but for now scrolling to form top works
+             const form = document.querySelector('form');
+             if(form) form.scrollIntoView({ behavior: 'smooth', block: 'center'});
+             // Try to focus email input by placeholder or type
+             const emailInput = document.querySelector('input[type="email"]') as HTMLElement;
+             if(emailInput) setTimeout(() => emailInput.focus(), 150);
+          }}
+        />
       </section>
     </InclusiveSiteLayout>
   );

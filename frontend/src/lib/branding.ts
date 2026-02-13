@@ -177,12 +177,14 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
       const slogan = String(dataObj['app_institution_slogan'] || '').trim();
       const description = String(dataObj['app_institution_description'] || '').trim();
       const urlInst = String(dataObj['app_institution_url'] || '').trim();
+      const whatsapp = String(dataObj['app_whatsapp'] || '').trim();
       if (persist) {
         if (favicon) { try { localStorage.setItem('app_favicon_url', favicon); } catch {} anyWin.__APP_FAVICON_URL__ = favicon; }
         if (social) { try { localStorage.setItem('app_social_image_url', social); } catch {} anyWin.__APP_SOCIAL_IMAGE_URL__ = social; }
         if (slogan) { try { localStorage.setItem('app_institution_slogan', slogan); } catch {} anyWin.__APP_INSTITUTION_SLOGAN__ = slogan; }
         if (description) { try { localStorage.setItem('app_institution_description', description); } catch {} anyWin.__APP_INSTITUTION_DESCRIPTION__ = description; }
         if (urlInst) { try { localStorage.setItem('app_institution_url', urlInst); } catch {} anyWin.__APP_INSTITUTION_URL__ = urlInst; }
+        if (whatsapp) { try { localStorage.setItem('app_whatsapp', whatsapp); } catch {} anyWin.__APP_WHATSAPP__ = whatsapp; }
       }
     }
 
@@ -330,4 +332,22 @@ export function applyBrandingFavicon(defaultFavicon: string = '/favicon.ico'): v
   } catch {
     // ignore
   }
+}
+
+/**
+ * getInstitutionWhatsApp
+ * pt-BR: Obtém o número do WhatsApp da instituição com fallback.
+ * en-US: Gets the institution WhatsApp number with fallback.
+ */
+export function getInstitutionWhatsApp(defaultNumber: string = ''): string {
+  try {
+    const v = localStorage.getItem('app_whatsapp');
+    if (v && v.trim() !== '') return v.trim();
+  } catch {}
+  const anyWin = window as any;
+  const w = anyWin?.__APP_WHATSAPP__;
+  if (typeof w === 'string' && w.trim() !== '') return w.trim();
+  const envVal = (import.meta as any)?.env?.VITE_APP_WHATSAPP;
+  if (typeof envVal === 'string' && envVal.trim() !== '') return envVal.trim();
+  return defaultNumber;
 }

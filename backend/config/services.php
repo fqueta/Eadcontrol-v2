@@ -66,4 +66,13 @@ return [
         'verify_url' => env('TURNSTILE_VERIFY_URL', 'https://challenges.cloudflare.com/turnstile/v0/siteverify'),
     ],
 
+
+
+    // EvolutionAPI
+    'evolution' => [
+        'base_url' => env('EVOLUTION_API_URL'),
+        'api_key' => env('EVOLUTION_API_KEY'),
+        'instance' => env('EVOLUTION_INSTANCE', 'Evolution'),
+    ],
+
 ];

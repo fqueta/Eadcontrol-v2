@@ -34,6 +34,11 @@ class PublicEnrollmentController extends Controller
         $b = (int) $request->input('challenge_b', 0);
         $ans = $request->input('challenge_answer');
 
+        // Skip challenge for authenticated users (Sanctum)
+        if (auth('sanctum')->check()) {
+            return true;
+        }
+
         // Allow creating leads/enrollments in local/testing without challenge if 'skip_captcha' is present
         // or just rely on the frontend sending valid numbers.
         if (config('app.env') === 'local' && $request->has('skip_captcha')) {
@@ -57,6 +62,11 @@ class PublicEnrollmentController extends Controller
      */
     private function isBotLike(Request $request, int $minMillis = 3000): bool
     {
+        // Authenticated users are trusted (no bot check needed)
+        if (auth('sanctum')->check()) {
+            return false;
+        }
+
         $honeypot = (string) $request->input('hp_field', '');
         if ($honeypot !== '') return true;
         $renderedAt = (int) $request->input('form_rendered_at', 0);
@@ -557,6 +567,28 @@ class PublicEnrollmentController extends Controller
             $client->notify(new WelcomeNotification($courseId));
         }
 
+        // Avaliar envio de notificação via EvolutionAPI para o administrador
+        try {
+            $courseName = 'N/A';
+            if ($courseId > 0) {
+                $cObj = DB::table('cursos')->where('id', $courseId)->first();
+                if ($cObj) $courseName = $cObj->titulo ?? $cObj->nome ?? 'Curso #' . $courseId;
+            }
+            $companyName = \App\Services\Qlib::qoption('company_name');
+            $msgObj = "📢 *Novo Interessado {$companyName}*\n\n";
+            $msgObj .= "👤 *Nome:* {$client->name}\n";
+            $msgObj .= "📧 *Email:* {$client->email}\n";
+            $msgObj .= "📱 *Telefone:* " . ($client->getAttribute('celular') ?: 'N/D') . "\n";
+            $msgObj .= "🎓 *Curso:* {$courseName}\n";
+            $msgObj .= "📅 *Data:* " . date('d/m/Y H:i');
+
+            \App\Services\EvolutionApiService::sendAdminNotification($msgObj, $courseId);
+
+        } catch (\Throwable $evt) {
+            // Falha silenciosa na notificação admin para não travar o retorno ao user
+            \Illuminate\Support\Facades\Log::error('EvolutionAPI Notification Error: ' . $evt->getMessage());
+        }
+
         return response()->json([
             'message' => 'Interesse registrado com sucesso',
             'client' => [
@@ -572,5 +604,21 @@ class PublicEnrollmentController extends Controller
                 'situacao_id' => $matricula->situacao_id,
             ],
         ], 201);
+    }
+    /**
+     * checkEmail
+     * pt-BR: Verifica se o e-mail já existe na base de dados (users).
+     * en-US: Checks if the email already exists in the database (users).
+     */
+    public function checkEmail(Request $request)
+    {
+        $email = $request->input('email');
+        $check = Qlib::checkEmail($email);
+
+        if (isset($check['valid']) && !$check['valid']) {
+             return response()->json($check, 422);
+        }
+
+        return response()->json($check);
     }
 }

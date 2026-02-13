@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useMask } from '@react-input/mask';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
@@ -206,6 +207,9 @@ export default function SystemSettings() {
   const [institutionSlogan, setInstitutionSlogan] = useState<string>(() => getInstitutionSlogan());
   const [institutionDescription, setInstitutionDescription] = useState<string>(() => getInstitutionDescription());
   const [institutionUrl, setInstitutionUrl] = useState<string>(() => getInstitutionUrl());
+  const [institutionWhatsApp, setInstitutionWhatsApp] = useState<string>(() => {
+    try { return (localStorage.getItem('app_whatsapp') || '').trim(); } catch { return ''; }
+  });
 
   /**
    * hydrateBrandingFromApiOptions
@@ -222,6 +226,7 @@ export default function SystemSettings() {
       const fav = (localStorage.getItem('app_favicon_url') || '').trim();
       const soc = (localStorage.getItem('app_social_image_url') || '').trim();
       const inst = (localStorage.getItem('app_institution_name') || '').trim();
+      const whatsapp = (localStorage.getItem('app_whatsapp') || '').trim();
       // Optimization: Always try to sync from API if options are available
       // to ensure settings page reflects the database
       const getOpt = (key: string) => (apiOptions || []).find((o: any) => String(o?.url || '') === key);
@@ -295,6 +300,14 @@ export default function SystemSettings() {
         localStorage.setItem('app_institution_url', valUrl);
         (window as any).__APP_INSTITUTION_URL__ = valUrl;
       }
+
+      const optWhatsapp = getOptByKeys(['app_whatsapp']);
+      const valWhatsapp = (optWhatsapp && (optWhatsapp.value ?? '')) || '';
+      if (valWhatsapp && valWhatsapp !== institutionWhatsApp) {
+        setInstitutionWhatsApp(valWhatsapp);
+        localStorage.setItem('app_whatsapp', valWhatsapp);
+        (window as any).__APP_WHATSAPP__ = valWhatsapp;
+      }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiOptions]);
@@ -322,9 +335,13 @@ export default function SystemSettings() {
       const s = (institutionSlogan || '').trim();
       const d = (institutionDescription || '').trim();
       const u = (institutionUrl || '').trim();
+      const w = (institutionWhatsApp || '').trim();
       if (s) { try { localStorage.setItem('app_institution_slogan', s); } catch {} anyWin.__APP_INSTITUTION_SLOGAN__ = s; }
       if (d) { try { localStorage.setItem('app_institution_description', d); } catch {} anyWin.__APP_INSTITUTION_DESCRIPTION__ = d; }
       if (u) { try { localStorage.setItem('app_institution_url', u); } catch {} anyWin.__APP_INSTITUTION_URL__ = u; }
+      
+      const wClean = (institutionWhatsApp || '').replace(/\D/g, '');
+      if (wClean) { try { localStorage.setItem('app_whatsapp', wClean); } catch {} anyWin.__APP_WHATSAPP__ = wClean; }
 
       // Persist to API options
       const ok = await saveMultipleOptions({ 
@@ -332,6 +349,7 @@ export default function SystemSettings() {
         ...(s ? { app_institution_slogan: s } : {}),
         ...(d ? { app_institution_description: d } : {}),
         ...(u ? { app_institution_url: u } : {}),
+        ...(wClean ? { app_whatsapp: wClean } : {}),
       });
       // Update meta tags immediately
       syncBrandingToMetaTags({ name: v, slogan: s, description: d });
@@ -780,6 +798,8 @@ export default function SystemSettings() {
     loadAdvancedSettings();
   }, []);
 
+  const whatsappMaskRef = useMask({ mask: '+__ (__) _____-____', replacement: { _: /\d/ } });
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Cabeçalho */}
@@ -1062,6 +1082,18 @@ export default function SystemSettings() {
                 placeholder="Resumo curto para metatags e SEO"
               />
               <p className="text-sm text-muted-foreground">Aparece em descrição e OpenGraph/Twitter.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="institution_whatsapp">WhatsApp da Empresa</Label>
+              <Input
+                ref={whatsappMaskRef}
+                id="institution_whatsapp"
+                type="text"
+                value={institutionWhatsApp}
+                onChange={(e) => setInstitutionWhatsApp(e.target.value)}
+                placeholder="+55 (99) 99999-9999"
+              />
+              <p className="text-sm text-muted-foreground">Número para contato via WhatsApp (com DDI, ex: +55).</p>
             </div>
             <div className="flex justify-end pt-2">
               <Button onClick={handleSaveInstitution} className="flex items-center space-x-2">

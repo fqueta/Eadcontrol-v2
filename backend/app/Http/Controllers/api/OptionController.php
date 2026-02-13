@@ -59,6 +59,7 @@ class OptionController extends Controller
             'app_secondary_color',
             'app_hover_color',
             'app_dark_mode_default',
+            'app_whatsapp',
         ];
 
         // Fetch options for allowed keys only

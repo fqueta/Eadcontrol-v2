@@ -17,6 +17,7 @@ import { Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 import { MathCaptchaWidget, MathCaptchaRef } from '@/components/ui/MathCaptchaWidget';
+import { ValidationConflictModal } from '@/components/modals/ValidationConflictModal';
 
 /**
  * extractCourseErrorMessage
@@ -282,6 +283,28 @@ export default function InviteEnroll() {
    * en-US: Sends data to public endpoint. On success, shows toast and provides button
    *        to go to the course in the student area. Optionally navigates automatically.
    */
+  /**
+   * handleEmailBlur
+   * pt-BR: Verifica se o e-mail já existe ao sair do campo.
+   * en-US: Checks if the email already exists when leaving the field.
+   */
+  const handleEmailBlur = async () => {
+    if (!email || isAuthenticated) return;
+    
+    // Simple regex for basic validation before calling API
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+
+    try {
+      const { exists } = await publicEnrollmentService.checkEmail(email);
+      if (exists) {
+        setConflictType('email');
+        setConflictModalOpen(true);
+      }
+    } catch (error) {
+      console.error('Failed to check email existence', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
@@ -404,7 +427,7 @@ export default function InviteEnroll() {
               </div>
               <div className="space-y-2">
                 <Label>E-mail</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" required aria-invalid={!!fieldErrors.email} className={fieldErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''} />
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} onBlur={handleEmailBlur} placeholder="seu@email.com" required aria-invalid={!!fieldErrors.email} className={fieldErrors.email ? 'border-red-500 focus-visible:ring-red-500' : ''} />
                 {fieldErrors.email && (
                   <p className="text-sm text-destructive">{fieldErrors.email}</p>
                 )}
@@ -584,45 +607,25 @@ export default function InviteEnroll() {
          * en-US: Modal shown when email or phone is already registered.
          *        Offers login or correction options.
          */}
-        <AlertDialog open={conflictModalOpen} onOpenChange={setConflictModalOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {conflictType === 'email' ? 'E-mail em uso' : 'Telefone em uso'}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                Este {conflictType === 'email' ? 'e-mail' : 'número de telefone'} já está cadastrado em nosso sistema.
-                Deseja fazer login na sua conta para continuar a matrícula ou usar outro dado?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setConflictModalOpen(false);
-                  const order = ['email', 'phone'];
-                  const targetId = conflictType === 'email' ? 'email' : 'phone';
-                  const el = document.getElementById(targetId);
-                  if (el) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    el.focus();
-                  }
-                }}
-              >
-                Tentar outro
-              </Button>
-              <AlertDialogAction
-                onClick={() => {
-                  // Redireciona para login enviando a URL atual como retorno
-                  const currentPath = encodeURIComponent(window.location.pathname + window.location.search);
-                  navigate(`/login?redirect=${currentPath}`);
-                }}
-              >
-                Fazer login
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+
+
+        {/**
+         * ValidationConflictModal
+         * Reusable component for email/phone conflicts
+         */}
+        <ValidationConflictModal
+          open={conflictModalOpen}
+          onOpenChange={setConflictModalOpen}
+          conflictType={conflictType}
+          onRetry={() => {
+            const targetId = conflictType === 'email' ? 'email' : 'phone';
+            const el = document.getElementById(targetId);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              el.focus();
+            }
+          }}
+        />
         {/**
          * AlreadyEnrolledModal
          * pt-BR: Modal exibido quando o usuário já possui uma matrícula ativa no curso.

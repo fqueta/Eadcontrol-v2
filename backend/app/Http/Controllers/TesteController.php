@@ -7,11 +7,13 @@ use App\Services\Qlib;
 use Illuminate\Http\Request;
 use App\Helpers\StringHelper;
 use Database\Seeders\MenuSeeder;
+use Illuminate\Support\Facades\DB;
 
 class TesteController extends Controller
 {
     public function index(Request $request){
         $d = $request->all();
+        $type = $d['type'] ?? null;
         $ret = "";
         //someten em produção ou local que deve funcionar
         if(app()->environment('production')){
@@ -19,7 +21,11 @@ class TesteController extends Controller
         }
 
         // $ret = $this->teste_email();
-
+        if($type == 'email'){
+            $ret = $this->teste_email();
+        }elseif($type == 'whatsapp'){
+            $ret = $this->notificationWhtasappEvolution($request);
+        }
         return $ret;
     }
     public function teste_email(){
@@ -59,5 +65,31 @@ class TesteController extends Controller
         ));
 
         return "Notificação enviada para {$client->email}!";
+    }
+    public function notificationWhtasappEvolution($request){
+        // Avaliar envio de notificação via EvolutionAPI para o administrador
+        $cliente_id = $request->input('cliente_id', 1);
+        $client = \App\Models\Client::find($cliente_id);
+        $courseId = $request->input('course_id', 1);
+        
+        try {
+            $courseName = 'N/A';
+            if ($courseId > 0) {
+                $cObj = DB::table('cursos')->where('id', $courseId)->first();
+                if ($cObj) $courseName = $cObj->titulo ?? $cObj->nome ?? 'Curso #' . $courseId;
+            }
+
+            $msgObj = "📢 *Novo Interessado*\n\n";
+            $msgObj .= "👤 *Nome:* {$client->name}\n";
+            $msgObj .= "📧 *Email:* {$client->email}\n";
+            $msgObj .= "📱 *Telefone:* " . ($client->getAttribute('celular') ?: 'N/D') . "\n";
+            $msgObj .= "🎓 *Curso:* {$courseName}\n";
+            $msgObj .= "📅 *Data:* " . date('d/m/Y H:i');
+            \App\Services\EvolutionApiService::sendAdminNotification($msgObj, $courseId);
+            
+        } catch (\Throwable $evt) {
+            // Falha silenciosa na notificação admin para não travar o retorno ao user
+            \Illuminate\Support\Facades\Log::error('EvolutionAPI Notification Error: ' . $evt->getMessage());
+        }
     }
 }

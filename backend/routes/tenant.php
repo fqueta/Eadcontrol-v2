@@ -165,6 +165,11 @@ Route::name('api.')->prefix('api/v1')->middleware([
         ->name('matriculas.interested')
         ->middleware('throttle:40,1');
 
+    // Route to check email existence (public)
+    Route::post('public/check-email', [PublicEnrollmentController::class, 'checkEmail'])
+        ->name('public.check-email')
+        ->middleware('throttle:60,1');
+
 
 
     // Rota pública para registrar tracking (sem autenticação)

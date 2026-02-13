@@ -61,6 +61,16 @@ class PublicEnrollmentService extends BaseApiService {
     const resp = await this.post<any>('/clients/matricula', payload);
     return resp.data || resp;
   }
+
+  /**
+   * checkEmail
+   * pt-BR: Verifica se o e-mail já existe na base.
+   * en-US: Checks if the email already exists in the database.
+   */
+  async checkEmail(email: string): Promise<{ exists: boolean; valid?: boolean }> {
+    const resp = await this.post<{ exists: boolean; valid?: boolean }>('/public/check-email', { email });
+    return (resp as any).data || resp;
+  }
 }
 
 export const publicEnrollmentService = new PublicEnrollmentService();
