@@ -51,6 +51,7 @@ class EvolutionApiService
             ]);
 
             if ($response->successful()) {
+                Log::info("EvolutionAPI: Message sent successfully to {$phone}.");
                 return true;
             }
             // dd($response->body());
@@ -75,7 +76,9 @@ class EvolutionApiService
     {
         try {
             $adminPhone = \App\Services\Qlib::qoption('app_whatsapp');
+            Log::info("EvolutionAPI: Sending admin notification. Phone: " . ($adminPhone ?? 'NULL'));
             if (!$adminPhone) {
+                Log::warning("EvolutionAPI: 'app_whatsapp' option not found or empty.");
                 return false;
             }
             // Se desejar adicionar info do curso automaticamente, pode-se usar o courseId aqui
