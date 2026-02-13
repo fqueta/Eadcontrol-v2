@@ -41,6 +41,7 @@ services:
       APP_KEY: ${APP_KEY}
       APP_DEBUG: ${APP_DEBUG:-false}
       APP_URL: ${APP_URL}
+      LOG_CHANNEL: stderr
       APP_BASE_PATH: /var/www/html
       
       # Database - usando mysql_prod centralizado
@@ -86,6 +87,11 @@ services:
       SESSION_DOMAIN: ${SESSION_DOMAIN}
       RECAPTCHA_SECRET: ${RECAPTCHA_SECRET}
       RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY}
+      
+      # EvolutionAPI
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY}
+      EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE}
     volumes:
       - storage_data:/var/www/html/storage
     networks:
@@ -127,6 +133,7 @@ services:
       APP_KEY: ${APP_KEY}
       APP_DEBUG: ${APP_DEBUG:-false}
       APP_URL: ${APP_URL}
+      LOG_CHANNEL: stderr
       APP_BASE_PATH: /var/www/html
       
       # Database - usando mysql_prod centralizado
@@ -167,6 +174,11 @@ services:
       # Brevo API
       BREVO_API_KEY: ${BREVO_API_KEY}
       BREVO_API_URL: ${BREVO_API_URL:-https://api.brevo.com/v3}
+      
+      # EvolutionAPI
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY}
+      EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE}
     volumes:
       - storage_data:/var/www/html/storage
     networks:
