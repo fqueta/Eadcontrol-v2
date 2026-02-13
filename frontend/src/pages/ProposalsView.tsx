@@ -42,12 +42,21 @@ export default function ProposalsView() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={handleBack}>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={handleBack}
+          className="w-fit text-muted-foreground hover:text-foreground transition-colors -ml-2"
+        >
           <ArrowLeft className="h-4 w-4 mr-2" /> Voltar ao funil
         </Button>
-        <Button variant="outline" size="sm" onClick={handleEdit}>
+        <Button 
+          variant="outline" 
+          onClick={handleEdit}
+          className="shadow-sm border-muted-foreground/20 hover:bg-muted font-semibold transition-all"
+        >
           <Pencil className="h-4 w-4 mr-2" /> Editar Proposta
         </Button>
       </div>

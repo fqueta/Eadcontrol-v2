@@ -6,6 +6,7 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Services\Qlib;
 
 /**
  * Canal de notificação para envio de e-mails via API Brevo (Sendinblue).
@@ -40,15 +41,13 @@ class BrevoChannel
         }
 
         $payload = (array) $notification->toBrevo($notifiable);
-
+        $company = Qlib::get_company_name() ?? $config['from_name'];
         // Garantir remetente padrão a partir das configs
         $fromEmail = (string) ($config['from_email'] ?? '');
-        $fromName = (string) ($config['from_name'] ?? '');
         $payload['sender'] = $payload['sender'] ?? [
             'email' => $fromEmail,
-            'name' => $fromName,
+            'name' => $company,
         ];
-
         // Garantir destinatário principal
         $email = method_exists($notifiable, 'routeNotificationForMail')
             ? $notifiable->routeNotificationForMail()
@@ -67,7 +66,6 @@ class BrevoChannel
             'subject' => $payload['subject'] ?? null,
             'html_preview' => isset($payload['htmlContent']) ? Str::limit(strip_tags((string) $payload['htmlContent']), 180) : null,
         ]);
-
         // Chamada HTTP para Brevo
         $response = Http::withHeaders([
                 'api-key' => $apiKey,

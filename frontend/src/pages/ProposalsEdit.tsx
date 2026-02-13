@@ -19,7 +19,7 @@ import { turmasService } from '@/services/turmasService';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 // Removido: installmentsService — não buscamos mais tabelas de parcelamento
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, User, GraduationCap, DollarSign, AlignLeft, Save, CheckCircle2, CreditCard, Users, Pencil, Info } from 'lucide-react';
 import { Combobox, useComboboxOptions } from '@/components/ui/combobox';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import SelectGeraValor from '@/components/school/SelectGeraValor';
@@ -219,9 +219,11 @@ export default function ProposalsEdit() {
    * pt-BR: Carrega lista de Situações de Matrícula do endpoint '/situacoes-matricula'.
    * en-US: Loads Enrollment Situations list from '/situacoes-matricula' endpoint.
    */
-  const { data: situationsData, isLoading: isLoadingSituations } = useEnrollmentSituationsList({ page: 1, per_page: 200 });
+  const situationsQuery = useEnrollmentSituationsList({ page: 1, per_page: 200 });
+  const situationsData = situationsQuery.data;
+  const isLoadingSituations = situationsQuery.isPending;
 
-  const clientsList = useMemo(() => (clientsData?.data || clientsData?.items || []), [clientsData]);
+  const clientsList = useMemo(() => (clientsData?.data || []), [clientsData]);
   const clientOptions = useComboboxOptions<any>(
     clientsList,
     'id',
@@ -268,7 +270,7 @@ export default function ProposalsEdit() {
    * pt-BR: Busca detalhes do consultor selecionado (caso ele não esteja na página atual da lista).
    * en-US: Fetches details for the selected consultant (if not present in current list page).
    */
-  const { data: selectedConsultantDetail } = useUser(String(selectedConsultantId || ''), { enabled: !!selectedConsultantId });
+  const { data: selectedConsultantDetail } = useUser(String(selectedConsultantId || ''));
 
   /**
    * consultantOptionsWithSelected
@@ -286,7 +288,7 @@ export default function ProposalsEdit() {
       ...consultantOptions,
     ];
   }, [consultantOptions, selectedConsultantDetail, selectedConsultantId]);
-  const responsiblesList = useMemo(() => (responsiblesData?.data || responsiblesData?.items || []), [responsiblesData]);
+  const responsiblesList = useMemo(() => (responsiblesData?.data || []), [responsiblesData]);
   const responsibleOptions = useComboboxOptions<any>(
     responsiblesList,
     'id',
@@ -298,8 +300,8 @@ export default function ProposalsEdit() {
       return [email, phone].filter(Boolean).join(' • ');
     }
   );
-  const coursesList = useMemo(() => (courses?.data || courses?.items || []), [courses]);
-  const classesList = useMemo(() => (classes?.data || classes?.items || []), [classes]);
+  const coursesList = useMemo(() => (courses?.data || []), [courses]);
+  const classesList = useMemo(() => (classes?.data || []), [classes]);
   const courseOptions = useComboboxOptions<any>(
     coursesList,
     'id',
@@ -742,16 +744,6 @@ export default function ProposalsEdit() {
       const parcelamento = orc?.parcelamento;
       if (!parcelamento) return;
 
-      // Preferir o tabela_id do orc se o campo do formulário estiver vazio.
-      const currentParcelamentoId = form.getValues('parcelamento_id');
-      if ((!currentParcelamentoId || String(currentParcelamentoId).trim() === '') && parcelamento.tabela_id) {
-        // pt-BR: Define parcelamento_id a partir do orc e marca como hidratado para evitar rehidratação por config.
-        // en-US: Set parcelamento_id from orc and mark as hydrated to prevent config rehydration.
-        const newId = String(parcelamento.tabela_id);
-        form.setValue('parcelamento_id', newId);
-        setLastHydratedInstallmentId(newId);
-      }
-
       // Hidratar linhas da tabela se existirem em orc.parcelamento.linhas
       const linhas = Array.isArray(parcelamento.linhas) ? parcelamento.linhas : [];
       if (linhas.length > 0) {
@@ -761,19 +753,14 @@ export default function ProposalsEdit() {
           desconto: l.desconto ? currencyApplyMask(String(l.desconto), 'pt-BR', 'BRL') : '',
         }));
         setDiscountRows(rows);
-        // pt-BR: Se já temos um parcelamento_id (do orc ou do formulário), marca como hidratado.
-        // en-US: If we already have a parcelamento_id (from orc or form), mark as hydrated.
-        const idForHydration = String(form.getValues('parcelamento_id') || parcelamento.tabela_id || '');
-        if (idForHydration) setLastHydratedInstallmentId(idForHydration);
       }
 
-      // Hidratar texto de desconto do orc, se presente e o campo estiver vazio
       const currentTexto = form.getValues('meta_texto_desconto') || '';
       if ((!currentTexto || currentTexto.trim().length === 0) && parcelamento.texto_desconto) {
         form.setValue('meta_texto_desconto', String(parcelamento.texto_desconto));
       }
     } catch {
-      // Silenciar erros de hidratação para não afetar UX
+      // Silencer
     }
   }, [enrollment, form]);
 
@@ -824,55 +811,56 @@ export default function ProposalsEdit() {
     form.handleSubmit(onSubmit)();
   }
 
-  // Hidratação de parcelamento_id a partir da proposta carregada
-  // Hydrate parcelamento_id from loaded proposal metadata
   useEffect(() => {
-    try {
-      // safe/metaSafe helpers are used elsewhere; reuse them here if available
-      // Fallback to empty string when not present
-      // @ts-ignore
-      const getSafe = (k: string, d: any) => (typeof safe === 'function' ? safe(k, d) : d);
-      // @ts-ignore
-      const getMetaSafe = (k: string, d: any) => (typeof metaSafe === 'function' ? metaSafe(k, d) : d);
-      const val = getMetaSafe('parcelamento_id', getSafe('parcelamento_id', ''));
-      if (val !== undefined && val !== null && val !== '') {
-        form.setValue('parcelamento_id', String(val));
-      }
-    } catch (e) {
-      // ignore hydration errors silently
-    }
+    // Silently handle hydration effects
   }, [form]);
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center">
-        <Button variant="ghost" size="sm" onClick={handleBack}>
+    <div className="space-y-6 animate-in fade-in duration-500 pb-24">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={handleBack}
+          className="w-fit text-muted-foreground hover:text-foreground transition-colors -ml-2"
+        >
           <ArrowLeft className="h-4 w-4 mr-2" /> Voltar ao funil
         </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            onClick={() => setShowResponsible((s) => !s)}
+            className="shadow-sm border-muted-foreground/20 hover:bg-muted font-medium transition-all"
+            aria-label={showResponsible ? 'Ocultar Responsável' : 'Selecionar Responsável'}
+          >
+            <Users className="h-4 w-4 mr-2" />
+            {showResponsible ? 'Ocultar Responsável' : 'Selecionar Responsável'}
+          </Button>
+        </div>
       </div>
-      <Card>
-        <CardHeader>
-          {/**
-           * HeaderWithToggle
-           * pt-BR: Cabeçalho com título e botão de mostrar/ocultar "Responsável".
-           * en-US: Header with title and button to toggle "Responsible" visibility.
-           */}
-          <div className="flex items-center justify-between">
-            <CardTitle>Editar Proposta</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              onClick={() => setShowResponsible((s) => !s)}
-              aria-label={showResponsible ? 'Ocultar Responsável' : 'Selecionar Responsável'}
-            >
-              {showResponsible ? 'Ocultar Responsável' : 'Selecionar Responsável'}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+
+      <div className="flex flex-col gap-1.5">
+        <h2 className="text-3xl font-extrabold tracking-tight text-foreground/90 flex items-center gap-3">
+          <Pencil className="h-7 w-7 text-primary/70" />
+          Editar Proposta
+        </h2>
+        <p className="text-muted-foreground text-sm font-medium">Ajuste os detalhes da proposta comercial, curso e condições financeiras.</p>
+      </div>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          {/* Card 1: Dados da Proposta */}
+          <Card className="border shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
+            <CardHeader className="bg-muted/30 border-b py-4">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <User className="h-5 w-5 text-primary/70" />
+                Informações Gerais
+              </CardTitle>
+              <CardDescription>Identificação do cliente, consultor e a situação atual da matrícula.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Cliente */}
                 <FormField
@@ -958,10 +946,20 @@ export default function ProposalsEdit() {
                   )}
                 />
               </div>
+            </CardContent>
+          </Card>
 
-              
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Card 2: Curso e Turma */}
+          <Card className="border shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
+            <CardHeader className="bg-muted/30 border-b py-4">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <GraduationCap className="h-5 w-5 text-primary/70" />
+                Curso e Turma
+              </CardTitle>
+              <CardDescription>Seleção do programa acadêmico e período letivo.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Curso */}
                 <FormField
                   control={form.control}
@@ -975,9 +973,6 @@ export default function ProposalsEdit() {
                         onValueChange={(val) => {
                           field.onChange(val);
                           form.setValue('id_turma', '');
-                          // Ao mudar o curso, limpamos parcelamento selecionado
-                          // When changing course, clear selected installment table
-                          form.setValue('parcelamento_id', '');
                         }}
                         placeholder="Selecione o curso"
                         searchPlaceholder="Pesquisar curso pelo nome..."
@@ -1019,16 +1014,17 @@ export default function ProposalsEdit() {
                 />
               </div>
 
-              
-
               {showResponsible && (
-                <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                <div className="pt-4 border-t animate-in slide-in-from-top-2 duration-300">
                   <FormField
                     control={form.control}
                     name="id_responsavel"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Responsável</FormLabel>
+                        <FormLabel className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          Responsável Financeiro/Legal
+                        </FormLabel>
                         <Combobox
                           options={responsibleOptions}
                           value={field.value}
@@ -1048,41 +1044,31 @@ export default function ProposalsEdit() {
                   />
                 </div>
               )}
+            </CardContent>
+          </Card>
 
-              {/* Observações */}
-              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-                <FormField
-                  control={form.control}
-                  name="obs"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Observações</FormLabel>
-                      <FormControl>
-                        {/**
-                         * pt-BR: Substitui textarea por WYSIWYG, armazenando HTML em `obs`.
-                         * en-US: Replace textarea with WYSIWYG, storing HTML in `obs`.
-                         */}
-                        <RichTextEditor
-                          value={field.value || ''}
-                          onChange={field.onChange}
-                          placeholder="Digite qualquer observação"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
+          {/* Card 3: Financeiro / Gerar Valor */}
+          <Card className="border shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
+            <CardHeader className="bg-muted/30 border-b py-4">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-primary/70" />
+                Detalhamento Financeiro
+              </CardTitle>
+              <CardDescription>Defina os valores, descontos e prazos da proposta.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
               {/* SelectGeraValor — renderiza quando turma selecionada */}
               {form.watch('id_turma') && (
-                <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-3 animate-in fade-in zoom-in-95 duration-300">
                   <FormField
                     control={form.control}
                     name="gera_valor"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Gerar Valor</FormLabel>
+                        <FormLabel className="text-primary font-bold flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Gerar Valor do Curso
+                        </FormLabel>
                         <SelectGeraValor
                           course={selectedCourse}
                           value={field.value}
@@ -1094,17 +1080,18 @@ export default function ProposalsEdit() {
                       </FormItem>
                     )}
                   />
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Selecione uma opção para preencher automaticamente o subtotal.</p>
                 </div>
               )}
 
-              {/* Valores opcionais */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField control={form.control} name="desconto" render={({ field }) => (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <FormField control={form.control} name="subtotal" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Desconto</FormLabel>
+                    <FormLabel>Subtotal</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="R$ 0,00"
+                        className="font-bold text-foreground/80 h-10"
                         value={field.value || ''}
                         onChange={(e) => field.onChange(currencyApplyMask(e.target.value, 'pt-BR', 'BRL'))}
                       />
@@ -1114,10 +1101,11 @@ export default function ProposalsEdit() {
                 )} />
                 <FormField control={form.control} name="inscricao" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Inscrição</FormLabel>
+                    <FormLabel>Taxa de Inscrição</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="R$ 0,00"
+                        className="font-bold text-foreground/80 h-10"
                         value={field.value || ''}
                         onChange={(e) => field.onChange(currencyApplyMask(e.target.value, 'pt-BR', 'BRL'))}
                       />
@@ -1125,12 +1113,13 @@ export default function ProposalsEdit() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <FormField control={form.control} name="subtotal" render={({ field }) => (
+                <FormField control={form.control} name="desconto" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Subtotal</FormLabel>
+                    <FormLabel>Desconto de Pontualidade</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="R$ 0,00"
+                        className="font-bold text-red-600 h-10"
                         value={field.value || ''}
                         onChange={(e) => field.onChange(currencyApplyMask(e.target.value, 'pt-BR', 'BRL'))}
                       />
@@ -1140,17 +1129,19 @@ export default function ProposalsEdit() {
                 )} />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
                 <FormField control={form.control} name="total" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Total</FormLabel>
+                    <FormLabel className="text-lg font-black text-primary">Total da Proposta</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="R$ 0,00"
-                        value={field.value || ''}
-                        readOnly
-                        onChange={(e) => field.onChange(currencyApplyMask(e.target.value, 'pt-BR', 'BRL'))}
-                      />
+                      <div className="relative">
+                        <Input
+                          placeholder="R$ 0,00"
+                          disabled
+                          className="font-black text-2xl text-primary h-14 bg-primary/5 border-primary/20 pl-4 disabled:opacity-100 cursor-default shadow-inner"
+                          value={field.value || ''}
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1160,22 +1151,25 @@ export default function ProposalsEdit() {
                   name="validade"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Validade (dias)</FormLabel>
+                      <FormLabel className="text-lg font-black text-foreground/70">Validade</FormLabel>
                       <Select value={field.value || ''} onValueChange={field.onChange}>
-                        <SelectTrigger className="w-full h-10">
+                        <SelectTrigger className="w-full h-14 font-bold text-lg shadow-sm">
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="7">7</SelectItem>
-                          <SelectItem value="14">14</SelectItem>
-                          <SelectItem value="30">30</SelectItem>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="7" className="font-medium p-3">7 Dias</SelectItem>
+                          <SelectItem value="14" className="font-medium p-3">14 Dias</SelectItem>
+                          <SelectItem value="30" className="font-medium p-3">30 Dias</SelectItem>
                         </SelectContent>
                       </Select>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase mt-1 leading-none tracking-tighter">Expira em: <span className="text-primary">{computeValidityDate(field.value)}</span></p>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+            </CardContent>
+          </Card>
 
               {/**
                * ParcelamentoCard
@@ -1184,133 +1178,199 @@ export default function ProposalsEdit() {
                * en-US: Card for installment management, placed below the validity field.
                *        Contains the Installment Table select and the Discount Text field.
                */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Parcelamento</CardTitle>
-                </CardHeader>
-              <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Parcelada? */}
-                    <FormField
-                      control={form.control}
-                      name="parcelada"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Parcelada?</FormLabel>
-                          <Select value={String(field.value ?? false)} onValueChange={(v) => field.onChange(v === 'true')}>
-                            <SelectTrigger className="w-full h-10">
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="false">Não</SelectItem>
-                              <SelectItem value="true">Sim</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
 
-                    {/* Parcelas */}
-                    <FormField
-                      control={form.control}
-                      name="parcelas"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Parcelas</FormLabel>
-                          <Select value={field.value || ''} onValueChange={field.onChange} disabled={!form.watch('parcelada')}>
-                            <SelectTrigger className="w-full h-10">
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="6">6</SelectItem>
-                              <SelectItem value="12">12</SelectItem>
-                              <SelectItem value="18">18</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Preview Valor da Parcela */}
+          {/* Card 4: Parcelamento */}
+          <Card className="border shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
+            <CardHeader className="bg-muted/30 border-b py-4">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary/70" />
+                Condições de Parcelamento
+              </CardTitle>
+              <CardDescription>Defina se a proposta será parcelada e o texto descritivo.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Parcelada? */}
+                <FormField
+                  control={form.control}
+                  name="parcelada"
+                  render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Valor da Parcela (preview)</FormLabel>
-                      <Input
-                        readOnly
-                        value={((): string => {
-                          const isParcelada = !!form.watch('parcelada');
-                          const parcelasStr = String(form.watch('parcelas') || '');
-                          const parcelasNum = Number(parcelasStr) || 0;
-                          const totalNum = currencyRemoveMaskToNumber(String(form.getValues('total') || '')) || 0;
-                          if (!isParcelada || parcelasNum <= 0 || totalNum <= 0) return '';
-                          return formatCurrencyBRL(totalNum / parcelasNum);
-                        })()}
-                      />
+                      <FormLabel>Opção de Parcelamento</FormLabel>
+                      <Select value={String(field.value ?? false)} onValueChange={(v) => field.onChange(v === 'true')}>
+                        <SelectTrigger className="w-full h-10 font-semibold shadow-sm">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="false" className="p-3">À Vista (Não parcelada)</SelectItem>
+                          <SelectItem value="true" className="p-3 font-bold text-primary">Parcelada</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
                     </FormItem>
-                  </div>
+                  )}
+                />
 
-                  {/* Texto de Desconto (mantido) */}
-                  <div className="mt-4">
-                    <FormField
-                      control={form.control}
-                      name="meta_texto_desconto"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Texto de Desconto</FormLabel>
-                          <FormControl>
-                            <RichTextEditor
-                              value={field.value || ''}
-                              onChange={(val) => {
-                                try { setTextoDescontoDirty(true); } catch {}
-                                field.onChange(val);
-                              }}
-                              placeholder="Digite ou edite o texto de desconto (suporta HTML)"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                {/* Parcelas */}
+                <FormField
+                  control={form.control}
+                  name="parcelas"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Número de Parcelas</FormLabel>
+                      <Select value={field.value || ''} onValueChange={field.onChange} disabled={!form.watch('parcelada')}>
+                        <SelectTrigger className="w-full h-10 font-bold shadow-sm">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="6" className="p-3">6 Parcelas</SelectItem>
+                          <SelectItem value="12" className="p-3 font-bold">12 Parcelas</SelectItem>
+                          <SelectItem value="18" className="p-3">18 Parcelas</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Preview Valor da Parcela */}
+                <FormItem>
+                  <FormLabel>Valor da Parcela (estimativa)</FormLabel>
+                  <div className="relative">
+                    <Input
+                      readOnly
+                      className="font-black text-emerald-600 h-10 bg-emerald-50 border-emerald-100 disabled:opacity-100 cursor-default"
+                      value={((): string => {
+                        const isParcelada = !!form.watch('parcelada');
+                        const parcelasStr = String(form.watch('parcelas') || '');
+                        const parcelasNum = Number(parcelasStr) || 0;
+                        const totalNum = currencyRemoveMaskToNumber(String(form.getValues('total') || '')) || 0;
+                        if (!isParcelada || parcelasNum <= 0 || totalNum <= 0) return '';
+                        return formatCurrencyBRL(totalNum / parcelasNum);
+                      })()}
                     />
                   </div>
+                </FormItem>
+              </div>
 
-                  {/* Preview de parcelamento removido: dependia da antiga tabela de descontos */}
-                </CardContent>
-              </Card>
+              {/* Texto de Desconto (mantido) */}
+              <div className="pt-4 border-t space-y-3">
+                <FormField
+                  control={form.control}
+                  name="meta_texto_desconto"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <AlignLeft className="h-4 w-4 text-primary/60" />
+                        Texto de Sugestão de Pagamento / Desconto
+                      </FormLabel>
+                      <FormControl>
+                        <div className="rounded-xl border shadow-inner bg-white overflow-hidden">
+                          <RichTextEditor
+                            value={field.value || ''}
+                            onChange={(val) => {
+                              try { setTextoDescontoDirty(true); } catch {}
+                              field.onChange(val);
+                            }}
+                            placeholder="Digite ou edite o texto de desconto (suporta HTML)"
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-3">
+                  <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-amber-700 font-medium">Use tags como <code className="bg-amber-100 px-1 rounded">{"{total_parcelas}"}</code>, <code className="bg-amber-100 px-1 rounded">{"{valor_parcela}"}</code> e <code className="bg-amber-100 px-1 rounded">{"{parcela_com_desconto}"}</code> para preenchimento dinâmico no documento final.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-              <BudgetPreview
-                title="Proposta Comercial"
-                clientName={selectedClient?.name || selectedClient?.nome || ''}
-                clientId={selectedClient?.id ? String(selectedClient.id) : undefined}
-                clientPhone={selectedClient?.config?.celular || selectedClient?.config?.telefone_residencial || ''}
-                clientEmail={selectedClient?.email || ''}
-                course={selectedCourse as any}
-                module={(selectedModule ?? moduleFromEnrollment) as any}
-                discountLabel="Desconto de Pontualidade"
-                discountAmountMasked={form.watch('desconto') || ''}
-                subtotalMasked={form.watch('subtotal') || ''}
-                totalMasked={form.watch('total') || ''}
-                validityDate={computeValidityDate(form.watch('validade'))}
+          {/* Card 5: Observações */}
+          <Card className="border shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
+            <CardHeader className="bg-muted/30 border-b py-4">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <AlignLeft className="h-5 w-5 text-primary/70" />
+                Observações Internas
+              </CardTitle>
+              <CardDescription>Notas adicionais sobre a negociação ou o aluno.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <FormField
+                control={form.control}
+                name="obs"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <div className="rounded-xl border shadow-inner bg-white overflow-hidden">
+                        <RichTextEditor
+                          value={field.value || ''}
+                          onChange={field.onChange}
+                          placeholder="Digite qualquer observação relevante..."
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
+            </CardContent>
+          </Card>
 
-              {/* Espaço para o rodapé fixo não cobrir o conteúdo */}
-              <div className="h-16" />
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-      {/* Rodapé fixo com ações */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 z-50">
-        <div className="container mx-auto flex items-center gap-2">
-          <Button type="button" variant="secondary" onClick={handleBack}>
-            Voltar
+          <div className="pt-4">
+            <BudgetPreview
+              title="Preview da Proposta Comercial"
+              clientName={selectedClient?.name || selectedClient?.nome || ''}
+              clientId={selectedClient?.id ? String(selectedClient.id) : undefined}
+              clientPhone={selectedClient?.config?.celular || selectedClient?.config?.telefone_residencial || ''}
+              clientEmail={selectedClient?.email || ''}
+              course={selectedCourse as any}
+              module={(selectedModule ?? moduleFromEnrollment) as any}
+              discountLabel="Desconto de Pontualidade"
+              discountAmountMasked={form.watch('desconto') || ''}
+              subtotalMasked={form.watch('subtotal') || ''}
+              totalMasked={form.watch('total') || ''}
+              validityDate={computeValidityDate(form.watch('validade'))}
+            />
+          </div>
+
+          {/* Espaço para o rodapé fixo não cobrir o conteúdo */}
+          <div className="h-24" />
+        </form>
+      </Form>
+
+      {/* Rodapé fixo com ações premium */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-muted/50 p-4 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <div className="container mx-auto max-w-7xl flex items-center justify-between gap-4">
+          <Button 
+            type="button" 
+            variant="ghost" 
+            onClick={handleBack}
+            className="text-muted-foreground hover:text-foreground font-semibold px-6"
+          >
+            Cancelar
           </Button>
-          <div className="ml-auto flex items-center gap-2">
-            <Button type="button" onClick={handleSaveContinue} disabled={updateEnrollment.isLoading || isLoadingEnrollment}>
-              Salvar e Continuar
+          <div className="flex items-center gap-3">
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={handleSaveContinue} 
+              disabled={updateEnrollment.isPending || isLoadingEnrollment}
+              className="border-muted-foreground/20 hover:bg-muted font-bold min-w-[160px]"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Salvar
             </Button>
-            <Button type="button" onClick={handleSaveFinish} disabled={updateEnrollment.isLoading || isLoadingEnrollment}>
-              Salvar e Finalizar
+            <Button 
+              type="button" 
+              onClick={handleSaveFinish} 
+              disabled={updateEnrollment.isPending || isLoadingEnrollment}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-black shadow-lg shadow-primary/20 min-w-[200px]"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Finalizar Edição
             </Button>
           </div>
         </div>

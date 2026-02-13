@@ -109,6 +109,13 @@ class PublicEnrollmentController extends Controller
         $institution = $request->input('institution');
         $situacao_id = Qlib::buscaValorDb('posts', 'post_name', 'mat','ID');
         
+        /**
+         * authUser
+         * pt-BR: Tenta obter usuário logado (opcional). Se presente, não exige senha.
+         * en-US: Tries to get logged-in user (optional). If present, doesn't require password.
+         */
+        $authUser = auth('sanctum')->user();
+
         // Sanitização simples antes da validação
         $email = trim($email);
         $name = trim($name);
@@ -116,6 +123,16 @@ class PublicEnrollmentController extends Controller
 
         // Validação básica do payload público
         //personalizar mensagens de erro de email
+        $rules = [
+            'email' => ['required','email', $authUser ? Rule::unique('users', 'email')->ignore($authUser->id) : 'unique:users,email'],
+            'name' => ['required','string','max:255'],
+            'password' => [$authUser ? 'nullable' : 'required','string','min:6'],
+            'phone' => ['nullable','string','max:32', $authUser ? Rule::unique('users', 'celular')->ignore($authUser->id) : 'unique:users,celular'],
+            'privacyAccepted' => ['required','boolean', Rule::in([true])],
+            'termsAccepted' => ['required','boolean', Rule::in([true])],
+            'institution' => ['required','string','max:255'],
+        ];
+
         $validator = Validator::make([
             'email' => $email,
             'name' => $name,
@@ -124,15 +141,7 @@ class PublicEnrollmentController extends Controller
             'privacyAccepted' => $privacyAccepted,
             'termsAccepted' => $termsAccepted,
             'institution' => $institution,
-        ], [
-            'email' => ['required','email', 'unique:users,email'],
-            'name' => ['required','string','max:255'],
-            'password' => ['required','string','min:6'],
-            'phone' => ['nullable','string','max:32', 'unique:users,celular'],
-            'privacyAccepted' => ['required','boolean', Rule::in([true])],
-            'termsAccepted' => ['required','boolean', Rule::in([true])],
-            'institution' => ['required','string','max:255'],
-        ], [
+        ], $rules, [
             'email.unique' => 'Este e-mail já está em uso. Por favor, use outro. ou faça login.',
             'phone.unique' => 'Este número de celular já está em uso.',
             'privacyAccepted.in' => 'É necessário aceitar a política de privacidade.',
@@ -234,26 +243,83 @@ class PublicEnrollmentController extends Controller
                 }
                 // Se o convite possui curso associado, usar como fonte da matrícula
                 $courseId = (int) ($invite->post_parent ?? $courseId);
+
+                /**
+                 * pt-BR: Verifica se o usuário logado já utilizou ESTE link de convite específico.
+                 * en-US: Checks if the logged-in user has already used THIS specific invite link.
+                 */
+                if ($authUser) {
+                    $alreadyUsed = InviteUsage::where('invite_post_id', $invite->ID)
+                        ->where('client_id', $authUser->id)
+                        ->where('status', 'success')
+                        ->exists();
+
+                    if ($alreadyUsed) {
+                        DB::rollBack();
+                        return response()->json([
+                            'message' => 'Você já utilizou este link de convite.',
+                            'code' => 'INVITE_ALREADY_USED',
+                        ], 422);
+                    }
+                }
             }
 
-            // Criar cliente somente após validação do convite
-            $client = new Client();
-            $client->tipo_pessoa = 'pf';
-            $client->name = $name;
-            $client->email = $email;
-            $client->password = Hash::make($password);
-            $client->status = 'actived';
-            $client->genero = 'ni';
-            $client->ativo = 's';
-            $client->config = [
-                'privacyAccepted' => true,
-                'termsAccepted' => true,
-            ];
-            if ($phone) {
-                // Campo é 'celular' na tabela users; não está em fillable, atribuir direto
-                $client->setAttribute('celular', $phone);
+            /**
+             * pt-BR: Verifica se o usuário (logado ou recém-identificado por e-mail) já possui matrícula válida.
+             * en-US: Checks if the user (logged-in or identified by email) already has a valid enrollment.
+             */
+            $targetUserId = $authUser ? $authUser->id : null;
+            if (!$targetUserId && $email) {
+                $targetUserId = DB::table('users')->where('email', $email)->value('id');
             }
-            $client->save();
+
+            if ($targetUserId) {
+                $existingEnrollment = Matricula::where('id_cliente', $targetUserId)
+                    ->where('id_curso', $courseId)
+                    ->where(function ($q) {
+                        $q->whereNull('status')->orWhere('status', '!=', 'c'); // 'c' costuma ser cancelado no sistema
+                    })
+                    ->first();
+
+                if ($existingEnrollment) {
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => 'Você já possui uma matrícula válida para este curso.',
+                        'code' => 'ALREADY_ENROLLED',
+                        'course_id' => $courseId,
+                    ], 422);
+                }
+            }
+
+            // Se o usuário já está logado, usamos ele em vez de criar novo.
+            if ($authUser) {
+                $client = $authUser;
+                // Atualizar dados se necessário
+                $client->name = $name;
+                if ($phone) {
+                    $client->setAttribute('celular', $phone);
+                }
+                $client->save();
+            } else {
+                // Criar cliente somente após validação do convite
+                $client = new Client();
+                $client->tipo_pessoa = 'pf';
+                $client->name = $name;
+                $client->email = $email;
+                $client->password = Hash::make($password);
+                $client->status = 'actived';
+                $client->genero = 'ni';
+                $client->ativo = 's';
+                $client->config = [
+                    'privacyAccepted' => true,
+                    'termsAccepted' => true,
+                ];
+                if ($phone) {
+                    // Campo é 'celular' na tabela users; não está em fillable, atribuir direto
+                    $client->setAttribute('celular', $phone);
+                }
+                $client->save();
+            }
             Qlib::update_usermeta($client->id, 'institution', $institution);
 
             // Add id_turma com padrão 0 para atender ao schema que exige valor (sem default)
@@ -346,7 +412,7 @@ class PublicEnrollmentController extends Controller
         }
 
         // Disparar e-mail de boas vindas (após commit da transação)
-        $client->notify(new WelcomeNotification($courseId, $course->slug, $course->nome));
+        $client->notify(new WelcomeNotification($courseId, $course->slug, $course->nome, $matricula->id));
 
         return response()->json([
             'message' => 'Cliente cadastrado e matrícula criada com sucesso',

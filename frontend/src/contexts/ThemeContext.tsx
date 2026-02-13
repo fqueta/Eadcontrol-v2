@@ -97,6 +97,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           const hslAccent = hexToHsl(appearanceSettings.accentColor);
           document.documentElement.style.setProperty('--accent', hslAccent);
         }
+
+        // Aplica cor de hover personalizada
+        if (appearanceSettings.hoverColor) {
+          const hslHover = hexToHsl(appearanceSettings.hoverColor);
+          document.documentElement.style.setProperty('--primary-hover', hslHover);
+        }
         
         // Aplica configurações de sidebar
         if (appearanceSettings.sidebarCollapsed !== undefined) {

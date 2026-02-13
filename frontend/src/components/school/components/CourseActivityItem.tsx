@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useFormContext, useWatch, useFieldArray } from 'react-hook-form';
-import { GripVertical, ChevronDown, ChevronUp, ChevronLeft, X, Plus, Loader2 } from 'lucide-react';
+import { GripVertical, ChevronDown, ChevronUp, ChevronLeft, X, Plus, Loader2, PlayCircle, FileText, Layout, Download, CheckSquare, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -128,41 +128,53 @@ export function CourseActivityItem({
           }}
         >
            {/* Activity Header */}
-           <div className="flex items-center gap-2 p-2 pr-3 cursor-pointer hover:bg-muted/30 transition-colors rounded-t-md" onClick={(e) => {
+           <div className="flex items-center gap-3 p-2.5 pr-4 cursor-pointer hover:bg-muted/40 transition-all rounded-t-md group/activity" onClick={(e) => {
               if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('input') || (e.target as HTMLElement).closest('.stop-propagation')) return;
               toggleActivityCollapse(index, aIdx);
            }}>
-                <div className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1">
+                <div className="cursor-grab active:cursor-grabbing text-muted-foreground/40 group-hover/activity:text-primary transition-colors p-1">
                     <GripVertical className="h-4 w-4" />
                 </div>
                 
-                <div className="flex flex-col flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium truncate stop-propagation">
-                            {collapsed ? (a.titulo || `Atividade ${aIdx + 1}`) : 
-                                <Input 
-                                    value={a.titulo || ''} 
-                                    onChange={(e) => onFieldChange('titulo', e.target.value)}
-                                    className="h-7 py-0 px-2 text-sm font-medium border-transparent bg-transparent hover:border-input focus:bg-background focus:border-input transition-all w-full max-w-[400px]"
-                                    placeholder="Título da atividade"
-                                    onClick={(e) => e.stopPropagation()}
-                                />
-                            }
-                        </span>
-                        {collapsed && (
-                             <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal uppercase tracking-wider">{a.tipo}</Badge>
-                        )}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-muted text-muted-foreground">
+                        {a.tipo === 'video' && <PlayCircle className="h-4 w-4" />}
+                        {a.tipo === 'leitura' && <FileText className="h-4 w-4" />}
+                        {a.tipo === 'quiz' && <CheckSquare className="h-4 w-4" />}
+                        {a.tipo === 'arquivo' && <Download className="h-4 w-4" />}
+                        {a.tipo === 'tarefa' && <Layout className="h-4 w-4" />}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      {collapsed ? (
+                          <div className="flex items-baseline gap-2">
+                             <span className="text-sm font-bold text-foreground/80 truncate block">{a.titulo || `Atividade ${aIdx + 1}`}</span>
+                             {a.duracao && (
+                               <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                                 <Clock className="h-3 w-3" /> {a.duracao}{a.unidade_duracao}
+                               </span>
+                             )}
+                          </div>
+                      ) : (
+                          <Input 
+                              value={a.titulo || ''} 
+                              onChange={(e) => onFieldChange('titulo', e.target.value)}
+                              className="h-8 py-0 px-2 text-sm font-bold border-transparent bg-transparent hover:border-input focus:bg-background focus:border-input transition-all w-full max-w-[500px] placeholder:text-muted-foreground/40"
+                              placeholder="Título da aula..."
+                              onClick={(e) => e.stopPropagation()}
+                          />
+                      )}
                     </div>
                 </div>
 
-                <div className="flex items-center gap-1">
-                    {!collapsed && (
-                      <Badge variant="outline" className="text-[10px] h-5 px-1.5 uppercase mr-2">{a.tipo}</Badge>
+                <div className="flex items-center gap-1.5 pl-2 border-l border-muted/50">
+                    {collapsed && (
+                        <Badge variant="outline" className="text-[9px] h-5 px-1.5 font-bold uppercase tracking-tight bg-muted/20 border-transparent text-muted-foreground">{a.tipo}</Badge>
                     )}
-                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={(e) => { e.stopPropagation(); toggleActivityCollapse(index, aIdx); }}>
-                       {collapsed ? <ChevronLeft className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-muted" onClick={(e) => { e.stopPropagation(); toggleActivityCollapse(index, aIdx); }}>
+                       {collapsed ? <ChevronLeft className="h-4 w-4 text-muted-foreground/60" /> : <ChevronDown className="h-4 w-4 text-primary" />}
                     </Button>
-                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); removeActivity(index, aIdx); }}>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive/40 hover:text-destructive hover:bg-destructive/10 transition-all" onClick={(e) => { e.stopPropagation(); removeActivity(index, aIdx); }}>
                        <X className="h-4 w-4" />
                     </Button>
                 </div>
@@ -170,33 +182,33 @@ export function CourseActivityItem({
 
            {/* Activity Body */}
            {!collapsed && (
-             <div className="p-3 border-t bg-muted/5">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+             <div className="p-4 border-t bg-muted/10">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                     {/* Left Column: Type & Config */}
-                    <div className="md:col-span-3 space-y-3 pt-1">
-                         <div className="space-y-1">
-                            <Label className="text-xs">Tipo de Conteúdo</Label>
+                    <div className="md:col-span-3 space-y-4 pt-1">
+                         <div className="space-y-1.5">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Tipo de Conteúdo</Label>
                             <Select value={a.tipo || 'video'} onValueChange={(v) => onFieldChange('tipo', v)}>
-                              <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                              <SelectTrigger className="h-9 bg-background font-medium"><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="video">Vídeo</SelectItem>
-                                <SelectItem value="leitura">Texto/Leitura</SelectItem>
-                                <SelectItem value="quiz">Quiz/Avaliação</SelectItem>
-                                <SelectItem value="arquivo">Arquivo para baixar</SelectItem>
-                                <SelectItem value="tarefa">Tarefa Prática</SelectItem>
+                                <SelectItem value="video" className="p-2.5"><div className="flex items-center gap-2"><PlayCircle className="h-4 w-4" /> Vídeo</div></SelectItem>
+                                <SelectItem value="leitura" className="p-2.5"><div className="flex items-center gap-2"><FileText className="h-4 w-4" /> Texto/Leitura</div></SelectItem>
+                                <SelectItem value="quiz" className="p-2.5"><div className="flex items-center gap-2"><CheckSquare className="h-4 w-4" /> Quiz/Avaliação</div></SelectItem>
+                                <SelectItem value="arquivo" className="p-2.5"><div className="flex items-center gap-2"><Download className="h-4 w-4" /> Arquivo</div></SelectItem>
+                                <SelectItem value="tarefa" className="p-2.5"><div className="flex items-center gap-2"><Layout className="h-4 w-4" /> Tarefa</div></SelectItem>
                               </SelectContent>
                             </Select>
                          </div>
 
-                         <div className="grid grid-cols-2 gap-2">
-                             <div className="space-y-1">
-                                <Label className="text-xs">Duração</Label>
-                                <Input className="h-8" value={a.duracao || ''} onChange={(e) => onFieldChange('duracao', e.target.value)} />
+                         <div className="grid grid-cols-2 gap-3">
+                             <div className="space-y-1.5">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Duração</Label>
+                                <Input className="h-9 bg-background text-center font-bold" value={a.duracao || ''} onChange={(e) => onFieldChange('duracao', e.target.value)} placeholder="0" />
                              </div>
-                             <div className="space-y-1">
-                                <Label className="text-xs">Unidade</Label>
+                             <div className="space-y-1.5">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Unidade</Label>
                                 <Select value={a.unidade_duracao || 'seg'} onValueChange={(v) => onFieldChange('unidade_duracao', v)}>
-                                  <SelectTrigger className="h-8 p-1"><SelectValue /></SelectTrigger>
+                                  <SelectTrigger className="h-9 bg-background"><SelectValue /></SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="seg">Seg</SelectItem>
                                     <SelectItem value="min">Min</SelectItem>
@@ -205,22 +217,25 @@ export function CourseActivityItem({
                                 </Select>
                              </div>
                          </div>
-                         
-                          <div className="flex items-center justify-between border rounded p-2 bg-background">
-                              <span className="text-xs font-medium">Ativo</span>
-                              <Switch checked={((a as any).active || 's') === 's'} onCheckedChange={(c) => onFieldChange('active', c ? 's' : 'n')} className="scale-75" />
+
+                          <div className="flex items-center justify-between border-2 border-dashed rounded-lg p-3 bg-white/50 backdrop-blur-sm transition-all hover:bg-white hover:border-primary/30">
+                              <div className="flex flex-col">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Status</span>
+                                <span className="text-xs font-bold text-foreground">Aula Ativa</span>
+                              </div>
+                              <Switch checked={((a as any).active || 's') === 's'} onCheckedChange={(c) => onFieldChange('active', c ? 's' : 'n')} className="scale-90" />
                           </div>
                     </div>
 
                     {/* Right Column: Content specific fields */}
-                    <div className="md:col-span-9 space-y-3 border-l pl-4 border-dashed">
+                    <div className="md:col-span-9 space-y-5 border-l-2 pl-6 border-dashed border-muted">
                          {a.tipo === 'video' && (
-                             <div className="space-y-3">
-                                <div className="flex gap-3">
-                                    <div className="w-[120px]">
-                                        <Label className="text-xs">Plataforma</Label>
+                             <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                    <div className="w-full sm:w-[150px]">
+                                        <Label className="text-[10px] font-bold uppercase text-muted-foreground mb-1.5 block">Plataforma</Label>
                                         <Select value={(a as any).video_source || 'youtube'} onValueChange={(v) => { onFieldChange('video_source', v); }}>
-                                            <SelectTrigger className="h-8 mt-1"><SelectValue /></SelectTrigger>
+                                            <SelectTrigger className="h-10 bg-background"><SelectValue /></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="youtube">YouTube</SelectItem>
                                                 <SelectItem value="vimeo">Vimeo</SelectItem>
@@ -228,135 +243,144 @@ export function CourseActivityItem({
                                         </Select>
                                     </div>
                                     <div className="flex-1">
-                                        <Label className="text-xs">Link do Vídeo</Label>
-                                         <div className="flex gap-2 mt-1">
+                                        <Label className="text-[10px] font-bold uppercase text-muted-foreground mb-1.5 block">URL do Vídeo</Label>
+                                         <div className="flex gap-2">
                                             <Input 
-                                                className="h-8 font-mono text-sm" 
-                                                placeholder="https://..." 
+                                                className="h-10 font-mono text-sm bg-background border-2 focus-visible:ring-primary/20" 
+                                                placeholder="https://www.youtube.com/watch?v=..." 
                                                 value={(a as any).video_url || ''}
                                                 onChange={(e) => onFieldChange('video_url', e.target.value)}
                                                 onBlur={() => importVideoDuration(index, aIdx)} 
                                             />
                                             {(a as any).video_url && (
-                                                 <Button type="button" size="sm" variant="outline" className="h-8" onClick={() => importVideoDuration(index, aIdx)} title="Importar duração">
-                                                    <Loader2 className="h-3 w-3" />
+                                                 <Button type="button" size="icon" variant="outline" className="h-10 w-10 shrink-0 border-2 hover:bg-primary/5 hover:text-primary transition-all shadow-sm" onClick={() => importVideoDuration(index, aIdx)} title="Sincronizar dados">
+                                                    <Loader2 className="h-4 w-4" />
                                                  </Button>
                                             )}
                                          </div>
                                     </div>
                                 </div>
                                 {!import.meta.env.VITE_YOUTUBE_API_KEY && ((a as any).video_source === 'youtube') && (
-                                    <p className="text-[10px] text-orange-600 bg-orange-50 p-1 rounded inline-block">
-                                       Atenção: Configure VITE_YOUTUBE_API_KEY para importar dados automaticamente.
-                                    </p>
+                                    <div className="flex items-center gap-2 text-[10px] text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-200/50 italic font-medium">
+                                       Tip: Configure VITE_YOUTUBE_API_KEY para importar a duração automaticamente.
+                                    </div>
                                 )}
                              </div>
                          )}
                          
                           {a.tipo === 'arquivo' && (
-                              <div className="space-y-3">
-                                  <div className="border border-dashed rounded-md p-4 flex flex-col items-center justify-center text-center bg-muted/20">
-                                      <p className="text-xs text-muted-foreground mb-2">Arraste um arquivo ou clique para selecionar</p>
-                                      <Input type="file" className="max-w-[250px] text-xs" onChange={(e) => handleActivityFileUpload(index, aIdx, e.target.files?.[0] || null)} />
+                              <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
+                                  <div className="border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center bg-white/40 backdrop-blur-sm group/upload hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer">
+                                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 group-hover/upload:scale-110 transition-transform">
+                                         <Download className="h-6 w-6 text-primary" />
+                                      </div>
+                                      <p className="text-sm font-bold text-foreground/80 mb-1">Upload de Material</p>
+                                      <p className="text-xs text-muted-foreground mb-4">Arquivos PDF, DOCX ou ZIP até 50MB</p>
+                                      <Input type="file" className="max-w-[280px] text-xs h-9 bg-background border-2 cursor-pointer" onChange={(e) => handleActivityFileUpload(index, aIdx, e.target.files?.[0] || null)} />
                                   </div>
-                                  <div>
-                                      <Label className="text-xs">Ou link direto</Label>
-                                      <Input className="h-8 mt-1" value={(a as any).arquivo_url || ''} onChange={(e) => onFieldChange('arquivo_url', e.target.value)} placeholder="https://..." />
+                                  <div className="space-y-1.5">
+                                      <Label className="text-[10px] font-bold uppercase text-muted-foreground">Ou link externo para download</Label>
+                                      <Input className="h-9 bg-background border-2" value={(a as any).arquivo_url || ''} onChange={(e) => onFieldChange('arquivo_url', e.target.value)} placeholder="https://..." />
                                   </div>
                               </div>
                           )}
 
                           {/* Quiz Builder */}
                           {a.tipo === 'quiz' && (
-                              <div className="space-y-4">
+                              <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
                                 {/* Quiz Config */}
-                                <div className="bg-muted/30 rounded-lg p-3 border">
-                                  <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Configurações do Quiz</h5>
-                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    <div className="space-y-1">
-                                      <Label className="text-xs">Nota mínima (%)</Label>
+                                <div className="bg-primary/5 rounded-2xl p-5 border-2 border-primary/10 shadow-sm overflow-hidden relative">
+                                  <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                                     <CheckSquare className="h-16 w-16" />
+                                  </div>
+                                  <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70 mb-5 flex items-center gap-2">
+                                     <Layout className="h-3.5 w-3.5" />
+                                     Configurações do Quiz
+                                  </h5>
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-5 relative z-10">
+                                    <div className="space-y-1.5">
+                                      <Label className="text-[10px] font-bold text-muted-foreground uppercase">Nota mínima (%)</Label>
                                       <Input 
                                         type="number" 
-                                        className="h-8" 
+                                        className="h-9 bg-background font-bold text-center border-2" 
                                         placeholder="70"
                                         value={(a as any).quiz_config?.nota_minima ?? ''}
                                         onChange={(e) => localUpdateQuizConfig('nota_minima', Number(e.target.value) || 0)}
                                       />
                                     </div>
-                                    <div className="space-y-1">
-                                      <Label className="text-xs">Tentativas</Label>
+                                    <div className="space-y-1.5">
+                                      <Label className="text-[10px] font-bold text-muted-foreground uppercase">Tentativas</Label>
                                       <Input 
                                         type="number" 
-                                        className="h-8" 
+                                        className="h-9 bg-background font-bold text-center border-2" 
                                         placeholder="3"
                                         value={(a as any).quiz_config?.tentativas ?? ''}
                                         onChange={(e) => localUpdateQuizConfig('tentativas', Number(e.target.value) || 0)}
                                       />
                                     </div>
-                                    <div className="space-y-1">
-                                      <Label className="text-xs">Tempo Limite (min)</Label>
+                                    <div className="space-y-1.5">
+                                      <Label className="text-[10px] font-bold text-muted-foreground uppercase">Tempo Limite (min)</Label>
                                       <Input 
                                         type="number" 
-                                        className="h-8" 
-                                        placeholder="0 (sem limite)"
+                                        className="h-9 bg-background font-bold text-center border-2" 
+                                        placeholder="0"
                                         value={(a as any).quiz_config?.time_limit ?? ''}
                                         onChange={(e) => localUpdateQuizConfig('time_limit', Number(e.target.value) || 0)}
                                       />
                                     </div>
-                                    <div className="flex items-center gap-2 pt-5">
-                                      <Switch 
-                                        checked={(a as any).quiz_config?.mostrar_respostas ?? false}
-                                        onCheckedChange={(c) => localUpdateQuizConfig('mostrar_respostas', c)}
-                                        className="scale-75"
-                                      />
-                                      <Label className="text-xs">Mostrar respostas</Label>
-                                    </div>
-                                    <div className="flex items-center gap-2 pt-5">
-                                      <Switch 
-                                        checked={(a as any).quiz_config?.mostrar_correcao ?? false}
-                                        onCheckedChange={(c) => localUpdateQuizConfig('mostrar_correcao', c)}
-                                        className="scale-75"
-                                      />
-                                      <Label className="text-xs">Correção</Label>
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex items-center justify-between bg-background/50 p-1.5 px-2 rounded-lg border">
+                                          <Label className="text-[10px] font-bold text-muted-foreground uppercase">Gabarito</Label>
+                                          <Switch 
+                                            checked={(a as any).quiz_config?.mostrar_respostas ?? false}
+                                            onCheckedChange={(c) => localUpdateQuizConfig('mostrar_respostas', c)}
+                                            className="scale-75"
+                                          />
+                                        </div>
+                                        <div className="flex items-center justify-between bg-background/50 p-1.5 px-2 rounded-lg border">
+                                          <Label className="text-[10px] font-bold text-muted-foreground uppercase">Correção</Label>
+                                          <Switch 
+                                            checked={(a as any).quiz_config?.mostrar_correcao ?? false}
+                                            onCheckedChange={(c) => localUpdateQuizConfig('mostrar_correcao', c)}
+                                            className="scale-75"
+                                          />
+                                        </div>
                                     </div>
                                   </div>
                                 </div>
 
                                 {/* Questions Header */}
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <h5 className="text-sm font-semibold">Perguntas</h5>
-                                    <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-[10px]">
-                                      {questionFields.length}
+                                <div className="flex items-center justify-between border-b pb-4 mt-6">
+                                  <div className="flex items-center gap-3">
+                                    <div className="h-8 w-1 bg-primary rounded-full" />
+                                    <h5 className="text-base font-black tracking-tight text-foreground">Banco de Questões</h5>
+                                    <Badge variant="secondary" className="rounded-lg px-2 py-0.5 text-[10px] font-black bg-primary/10 text-primary border-primary/10">
+                                      {questionFields.length} {questionFields.length === 1 ? 'QUESTÃO' : 'QUESTÕES'}
                                     </Badge>
                                   </div>
                                   <div className="flex gap-2">
-                                    <Button type="button" size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => localAddQuizQuestion('multipla_escolha')}>
-                                      <Plus className="h-3 w-3" /> Múltipla Escolha
+                                    <Button type="button" size="sm" variant="outline" className="h-9 font-bold bg-background hover:bg-primary/5 hover:text-primary border-2 border-primary/20 transition-all gap-2" onClick={() => localAddQuizQuestion('multipla_escolha')}>
+                                      <Plus className="h-4 w-4" /> Múltipla Escolha
                                     </Button>
-                                    <Button type="button" size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => localAddQuizQuestion('verdadeiro_falso')}>
-                                      <Plus className="h-3 w-3" /> V ou F
+                                    <Button type="button" size="sm" variant="outline" className="h-9 font-bold bg-background hover:bg-primary/5 hover:text-primary border-2 border-primary/20 transition-all gap-2" onClick={() => localAddQuizQuestion('verdadeiro_falso')}>
+                                      <Plus className="h-4 w-4" /> V ou F
                                     </Button>
                                   </div>
                                 </div>
 
                                 {/* Questions List */}
                                 {questionFields.length === 0 && (
-                                  <div className="text-center py-8 border border-dashed rounded-lg bg-muted/5">
-                                    <p className="text-sm text-muted-foreground mb-2">Nenhuma pergunta adicionada.</p>
-                                    <p className="text-xs text-muted-foreground">Clique acima para adicionar.</p>
+                                  <div className="text-center py-12 border-2 border-dashed rounded-2xl bg-muted/5 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-500">
+                                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                                       <FileText className="h-6 w-6 text-muted-foreground/40" />
+                                    </div>
+                                    <p className="text-sm font-bold text-foreground/60 mb-1">Nenhuma pergunta adicionada.</p>
+                                    <p className="text-xs text-muted-foreground">Adicione sua primeira questão clicando nos botões acima.</p>
                                   </div>
                                 )}
 
-                                <div className="space-y-3">
+                                <div className="space-y-4">
                                   {questionFields.map((q: any, qIdx: number) => {
-                                     // We use 'q' for id, but we should use watched value for content if we want responsive typing? 
-                                     // Actually with useFieldArray, 'q' IS the item from the array state, but usually we register inputs.
-                                     // However, for complex nested objects, useWatch or controlled is safer.
-                                     // Since we use setValue in 'localUpdateQuizQuestion', the 'field' in useFieldArray might NOT update on every keystroke unless we watch.
-                                     // Let's watch the specific question to be safe, or just use `a.quiz_questions[qIdx]` since we watch `a` (activity).
-                                     
-                                     // `a` is the whole activity watched. So `a.quiz_questions` has the current values.
                                      const qValue = (a.quiz_questions && a.quiz_questions[qIdx]) ? a.quiz_questions[qIdx] : q;
 
                                      return (

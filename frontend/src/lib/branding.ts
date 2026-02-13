@@ -200,9 +200,10 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
       try {
         const primary = String(dataObj['app_primary_color'] || '').trim();
         const secondary = String(dataObj['app_secondary_color'] || '').trim();
+        const hover = String(dataObj['app_hover_color'] || '').trim();
         // const darkModeDefault = String(dataObj['app_dark_mode_default'] || '').trim(); // Optional: Enforce default dark mode
 
-        if (primary || secondary) {
+        if (primary || secondary || hover) {
           const stored = localStorage.getItem('appearanceSettings');
           let settings = stored ? JSON.parse(stored) : {};
           
@@ -213,6 +214,10 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
           }
           if (secondary && settings.secondaryColor !== secondary) {
             settings.secondaryColor = secondary;
+            changed = true;
+          }
+          if (hover && settings.hoverColor !== hover) {
+            settings.hoverColor = hover;
             changed = true;
           }
 

@@ -12,30 +12,52 @@ class TesteController extends Controller
 {
     public function index(Request $request){
         $d = $request->all();
+        $ret = "";
+        //someten em produção ou local que deve funcionar
+        if(app()->environment('production')){
+            return "Não pode ser executado em produção";
+        }
 
-        $helper = new StringHelper();
-        // $ret = $helper->formatarCpf('12345678900');
-        // $ret = $helper->formatarCpf('12345678900');
-        // $ret = Escola::campo_emissiao_certificado();
-        // $ret = Escola::dadosMatricula('6875579b0c808');
-        // $ret = Qlib::dataLocal();
-        // $ret = Qlib::add_user_tenant('demo2','cliente1.localhost');
-        // $id_turma = $request->get('id_turma');
-        // $ret = [];
-        // if($id_turma){
-        //     // $ret = Escola::adiciona_presenca_atividades_cronograma($id_turma);
-        //     // dd($ret);
-        // }
-        $ret = Qlib::qoption('url_api_aeroclube');
-        // dd($ret);
-        // $pid = $request->get('id');
-        // if($pid){
-        //     $ret = (new MenuController)->getMenus($pid);
-        //     // dd($ret);
-        //     return response()->json($ret);
-        // }
-        // $ret = (new MenuController)->getMenus(1);
-        // $ret = Qlib::token();
+        // $ret = $this->teste_email();
+
         return $ret;
+    }
+    public function teste_email(){
+        $tenant = \App\Models\Tenant::first(); 
+        tenancy()->initialize($tenant);
+
+        // 2. Buscar ou Criar o Cliente
+        $email = 'quetafernando1@gmail.com';
+        $client = \App\Models\Client::where('email', $email)->first();
+
+        if (!$client) {
+            $client = new \App\Models\Client();
+            $client->name = 'Fernando Queta';
+            $client->email = $email;
+            $client->password = \Hash::make('12345678');
+            $client->save();
+        }
+
+        // 3. Buscar um Curso e criar Matrícula Fictícia
+        $course = \App\Models\Curso::first();
+        if (!$course) {
+            $course = \App\Models\Curso::create(['nome' => 'Curso Teste', 'slug' => 'curso-teste', 'valor' => 100]);
+        }
+
+        // Criar matrícula se não existir (para ter o ID)
+        $matricula = \App\Models\Matricula::firstOrCreate(
+            ['id_cliente' => $client->id, 'id_curso' => $course->id],
+            ['status' => 'a', 'id_turma' => 0]
+        );
+
+        // 4. Enviar a Notificação Realmente
+        $client->notify(new \App\Notifications\WelcomeNotification(
+            $course->id, 
+            $course->slug, 
+            $course->nome,
+            $matricula->id
+        ));
+
+        return "Notificação enviada para {$client->email}!";
     }
 }

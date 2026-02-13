@@ -1,10 +1,11 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CourseForm } from '@/components/school/CourseForm';
 import { coursesService } from '@/services/coursesService';
 import { CoursePayload, CourseRecord } from '@/types/courses';
+import { ChevronLeft, Loader2 } from 'lucide-react';
 
 /**
  * CourseEdit
@@ -18,13 +19,6 @@ export default function CourseEdit() {
 
   const { data: course, isLoading } = useQuery<CourseRecord | null>({
     queryKey: ['courses', 'detail', id],
-    /**
-     * queryFn
-     * pt-BR: Garante retorno não-`undefined`. Caso API não encontre o registro,
-     *        retorna `null` para evitar erro do React Query.
-     * en-US: Ensures non-`undefined` return. If API doesn't find the record,
-     *        returns `null` to avoid React Query error.
-     */
     queryFn: async () => {
       const res = await coursesService.getById(String(id));
       return res ?? null;
@@ -41,31 +35,31 @@ export default function CourseEdit() {
     },
   });
 
-  /**
-   * handleSubmit
-   * pt-BR: Submete atualização do curso e volta à listagem.
-   * en-US: Submits course update and navigates back to listing.
-   */
   const handleSubmit = async (data: CoursePayload) => {
     await updateMutation.mutateAsync(data);
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Editar Curso</h1>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground/90">Editar Curso</h1>
+          <p className="text-sm text-muted-foreground font-medium">Gerencie o conteúdo, configurações e alunos matriculados.</p>
+        </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate('/admin/school/courses')}>Voltar</Button>
+          <Button variant="outline" className="shadow-sm border-muted-foreground/20 hover:bg-muted font-semibold transition-all" onClick={() => navigate('/admin/school/courses')}>
+            <ChevronLeft className="mr-2 h-4 w-4" /> Voltar
+          </Button>
         </div>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Atualização de Curso</CardTitle>
-          <CardDescription>Edite as informações nas abas abaixo.</CardDescription>
-        </CardHeader>
-        <CardContent>
+
+      <Card className="border-none shadow-none bg-transparent">
+        <CardContent className="p-0">
           {isLoading ? (
-            <p>Carregando...</p>
+            <div className="flex flex-col items-center justify-center h-96 border rounded-2xl bg-white shadow-sm gap-4">
+              <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
+              <p className="text-sm font-medium text-muted-foreground animate-pulse">Carregando dados do curso...</p>
+            </div>
           ) : (
             <CourseForm initialData={course} onSubmit={handleSubmit} isSubmitting={updateMutation.isPending} />
           )}

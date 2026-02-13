@@ -8,6 +8,7 @@ export interface User {
   avatar?: string;
   avatar_url?: string;
   phone?: string;
+  celular?: string;
   bio?: string;
   role?: string;
   points?:number | string 

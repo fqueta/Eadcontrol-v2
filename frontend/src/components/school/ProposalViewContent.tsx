@@ -114,57 +114,61 @@ export default function ProposalViewContent({ id }: ProposalViewContentProps) {
   }, [enrollment]);
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          {/**
-           * Header
-           * pt-BR: Cabeçalho simples para a visualização da proposta.
-           * en-US: Simple header for proposal view.
-           */}
-          <CardTitle>Visualizar Proposta</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <div className="font-medium">Cliente</div>
-                <div>{clientName || '—'}</div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      {/* Hero Summary Section */}
+      <div className="bg-white rounded-3xl border shadow-sm overflow-hidden">
+        <div className="p-8 md:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8 bg-gradient-to-br from-primary/5 via-transparent to-transparent">
+          <div className="space-y-4 max-w-2xl">
+            <div className="space-y-1">
+              <h2 className="text-3xl font-extrabold tracking-tight text-foreground/90">{clientName || 'Cliente não identificado'}</h2>
+              <p className="text-lg font-medium text-muted-foreground">{(course as any)?.titulo || (course as any)?.nome || 'Curso não identificado'}</p>
+            </div>
+            
+            <div className="flex flex-wrap gap-3">
+              <div className="px-4 py-2 rounded-2xl bg-primary/10 border border-primary/10 flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-primary/70">Total da Proposta</span>
+                <span className="text-xl font-black text-primary">{totalMasked || 'R$ 0,00'}</span>
               </div>
-              <div>
-                <div className="font-medium">Curso</div>
-                <div>{(course as any)?.titulo || (course as any)?.nome || '—'}</div>
-              </div>
-              <div>
-                <div className="font-medium">Subtotal</div>
-                <div>{subtotalMasked || '—'}</div>
-              </div>
-              <div>
-                <div className="font-medium">Total</div>
-                <div>{totalMasked || '—'}</div>
+              <div className="px-4 py-2 rounded-2xl bg-muted/50 border border-muted/10 flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">ID da Matrícula</span>
+                <span className="text-xl font-black text-foreground/70">{id}</span>
               </div>
             </div>
-
-            <BudgetPreview
-              title="Proposta Comercial"
-              clientName={clientName}
-              clientId={client?.id ? String(client.id) : undefined}
-              clientPhone={clientPhone}
-              clientEmail={clientEmail}
-              course={course as any}
-              module={modulo}
-              discountLabel="Desconto de Pontualidade"
-              discountAmountMasked={descontoMasked}
-              subtotalMasked={subtotalMasked}
-              totalMasked={totalMasked}
-              validityDate={computeValidityDate(validadeDias)}
-            />
-
-            {/* Card de Parcelamento abaixo do card de Proposta Comercial */}
-            <InstallmentPreviewCard title="Parcelamento" parcelamento={parcelamento} />
           </div>
-        </CardContent>
-      </Card>
+          
+          <div className="grid grid-cols-1 gap-4 text-sm w-full md:w-auto">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-white border shadow-sm">
+              <div className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                {clientName?.[0]?.toUpperCase() || '?'}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold uppercase text-muted-foreground leading-none mb-1">Status</span>
+                <span className="font-bold text-emerald-700">Ativa</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <BudgetPreview
+          title="Itens da Proposta"
+          clientName={clientName}
+          clientId={client?.id ? String(client.id) : undefined}
+          clientPhone={clientPhone}
+          clientEmail={clientEmail}
+          course={course as any}
+          module={modulo}
+          discountLabel="Desconto de Pontualidade"
+          discountAmountMasked={descontoMasked}
+          subtotalMasked={subtotalMasked}
+          totalMasked={totalMasked}
+          validityDate={computeValidityDate(validadeDias)}
+        />
+
+        {/* Card de Parcelamento abaixo do card de Proposta Comercial */}
+        <InstallmentPreviewCard title="Condições de Pagamento" parcelamento={parcelamento} />
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { currencyRemoveMaskToNumber, currencyApplyMask } from '@/lib/masks/currency';
+import { CreditCard, Info } from 'lucide-react';
 
 export type InstallmentLine = { parcela?: string; parcelas?: string; valor?: string | number; desconto?: string | number };
 export type ParcelamentoData = { linhas?: InstallmentLine[]; texto_desconto?: string };
@@ -94,29 +95,43 @@ export default function InstallmentPreviewCard({ title = 'Parcelamento', parcela
   }, [parcelamento, activeRow]);
 
   return (
-    <Card className="mt-4">
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
+    <Card className="border shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
+      <CardHeader className="bg-muted/30 border-b py-4">
+        <CardTitle className="text-lg font-bold flex items-center gap-2">
+          <CreditCard className="h-5 w-5 text-primary/70" />
+          {title}
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="p-6 md:p-8 space-y-6">
         {/* Chips resumindo os valores da linha ativa */}
-        <div className="flex flex-wrap gap-2">
-          <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs">
-            Total de Parcelas: {activeRow?.parcela || '-'}
-          </span>
-          <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs">
-            Valor da Parcela: {activeRow?.valor || '-'}
-          </span>
-          <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs">
-            Desconto Pontualidade: {activeRow?.desconto || '-'}
-          </span>
-          <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs">
-            Parcela c/ Desconto: {activeRow?.parcelaComDesconto || '-'}
-          </span>
+        <div className="flex flex-wrap gap-3">
+          <div className="flex flex-col px-4 py-2 rounded-2xl bg-muted/40 border border-muted/20">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Parcelas</span>
+            <span className="text-base font-black text-foreground/70">{activeRow?.parcela || '-'}</span>
+          </div>
+          <div className="flex flex-col px-4 py-2 rounded-2xl bg-muted/40 border border-muted/20">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Valor/Parc</span>
+            <span className="text-base font-black text-foreground/70">{activeRow?.valor || '-'}</span>
+          </div>
+          <div className="flex flex-col px-4 py-2 rounded-2xl bg-red-50/50 border border-red-100/50">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-red-600/70">Desconto</span>
+            <span className="text-base font-black text-red-600/80">{activeRow?.desconto || '-'}</span>
+          </div>
+          <div className="flex flex-col px-4 py-2 rounded-2xl bg-emerald-50/50 border border-emerald-100/50">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/70">C/ Desconto</span>
+            <span className="text-base font-black text-emerald-700">{activeRow?.parcelaComDesconto || '-'}</span>
+          </div>
         </div>
 
         {/* Render do texto com shortcodes aplicados */}
-        <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: discountPreviewHtml }} />
+        <div className="p-6 rounded-2xl bg-white border shadow-inner">
+          <div className="flex items-start gap-4">
+            <div className="mt-1 h-8 w-8 rounded-full bg-primary/5 flex items-center justify-center shrink-0">
+              <Info className="h-4 w-4 text-primary/40" />
+            </div>
+            <div className="prose prose-sm max-w-none text-foreground/80 leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: discountPreviewHtml }} />
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

@@ -24,15 +24,19 @@ class WelcomeNotification extends Notification
     /** @var string */
     protected $courseName;
 
+    /** @var int|null */
+    public $enrollmentId;
+
     /**
      * Construtor.
      * @param int $courseId ID do curso para a matrícula.
      */
-    public function __construct(int $courseId, string $courseSlug='',string $courseName='')
+    public function __construct(int $courseId, string $courseSlug='',string $courseName='', ?int $enrollmentId = null)
     {
         $this->courseId = $courseId;
         $this->courseSlug = $courseSlug;
         $this->courseName = $courseName;
+        $this->enrollmentId = $enrollmentId;
     }
 
     /**
@@ -51,17 +55,21 @@ class WelcomeNotification extends Notification
     {
         $frontendUrl = Qlib::get_frontend_url();
         $loginUrl = $frontendUrl ? $frontendUrl . '/login' : null;
-
+        $companyName = Qlib::get_company_name() ?: config('app.name');
         return (new MailMessage)
-            ->subject('Boas-vindas ao ' . config('app.name'))
+            ->subject('Boas-vindas ao ' . $companyName)
             ->view('emails.welcome', [
                 'loginUrl' => $loginUrl,
                 'courseId' => $this->courseId,
                 'courseSlug' => $this->courseSlug,
                 'logoDataUri' => $this->getLogoDataUri(),
                 'logoSrc' => Qlib::get_logo_url(),
-                'companyName' => Qlib::get_company_name(),
+                'companyName' => $companyName,
                 'courseName' => $this->courseName,
+                'primaryColor' => Qlib::get_primary_color(),
+                'primaryTextColor' => Qlib::get_primary_text_color(),
+                'secondaryColor' => Qlib::get_secondary_color(),
+                'secondaryTextColor' => Qlib::get_secondary_text_color(),
             ]);
     }
 
@@ -74,15 +82,20 @@ class WelcomeNotification extends Notification
         $frontendUrl = Qlib::get_frontend_url();
         $loginUrl = $frontendUrl ? $frontendUrl . '/login' : null;
 
+        $companyName = Qlib::get_company_name() ?: config('app.name');
         $html = View::make('emails.welcome', [
             'loginUrl' => $loginUrl,
             'courseId' => $this->courseId,
-            'logoDataUri' => $this->getLogoDataUri(),
+            'courseSlug' => $this->courseSlug,
             'logoSrc' => Qlib::get_logo_url(),
+            'companyName' => $companyName,
+            'courseName' => $this->courseName,
+            'primaryColor' => Qlib::get_primary_color(),
+            'secondaryColor' => Qlib::get_secondary_color(),
         ])->render();
 
         return [
-            'subject' => 'Boas-vindas ao ' . config('app.name'),
+            'subject' => 'Boas-vindas ao ' . $companyName,
             'htmlContent' => $html,
         ];
     }

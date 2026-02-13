@@ -16,9 +16,9 @@ export default function CoursesPublicList() {
        * pt-BR: Aplica container com margens laterais para conteúdo da página.
        * en-US: Applies container with lateral margins for page content.
        */}
-      <div className="space-y-8">
+      <div className="space-y-0">
         <CoursesHero />
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 -mt-4">
           <CoursesGrid />
         </div>
       </div>

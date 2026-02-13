@@ -284,6 +284,27 @@ export const defaultMenu: MenuItemDTO[] = [
       }
     ]
   }
+  ,
+  {
+    title: "Site",
+    icon: "FileText",
+    permission: "site.view",
+    can_view: true,
+    items: [
+      {
+        title: "Páginas do Site",
+        url: "/admin/site/menus-site",
+        permission: "site.pages.view",
+        can_view: true
+      },
+      {
+        title: "Componentes",
+        url: "/admin/site/components",
+        permission: "site.components.view",
+        can_view: true
+      }
+    ]
+  }
 ];
 
 // Filter menu based on can_view access (can_view undefined = invisible by default)

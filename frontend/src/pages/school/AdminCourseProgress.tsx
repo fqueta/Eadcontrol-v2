@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search, Users, GraduationCap, ChevronRight, BookOpen, CheckCircle2, Clock } from 'lucide-react';
 import { useEnrollmentsList } from '@/hooks/enrollments';
 import { progressService } from '@/services/progressService';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,8 @@ import { coursesService } from '@/services/coursesService';
 import { useTurmasList } from '@/hooks/turmas';
 import { Combobox, useComboboxOptions } from '@/components/ui/combobox';
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
+import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 /**
  * AdminCourseProgress
@@ -65,10 +67,13 @@ export default function AdminCourseProgress() {
    * en-US: Lists enrollments for the selected course/class. Limits per-page to
    *         avoid request overload (adjust as needed).
    */
-  const { data: enrollmentsResp, isLoading, isFetching } = useEnrollmentsList(
+  const enrollmentsQuery = useEnrollmentsList(
     { page: 1, per_page: 100, id_curso: idCurso ? Number(idCurso) : undefined, id_turma: idTurma ? Number(idTurma) : undefined, search, situacao: 'mat' } as any,
     { enabled: !!idCurso }
   );
+  const enrollmentsResp = enrollmentsQuery.data;
+  const isLoading = enrollmentsQuery.isPending;
+  const isFetching = enrollmentsQuery.isFetching;
 
   /**
    * coursesQuery/classesQuery
@@ -80,13 +85,13 @@ export default function AdminCourseProgress() {
     queryFn: async () => coursesService.listCourses({ page: 1, per_page: 200 }),
     staleTime: 5 * 60 * 1000,
   });
-  const courseItems = (coursesQuery.data?.data || coursesQuery.data?.items || []) as any[];
+  const courseItems = (coursesQuery.data?.data || []) as any[];
   const courseOptions = useComboboxOptions(courseItems, 'id', 'nome', undefined, (c: any) => String(c?.titulo || ''));
 
   const classesQuery = useTurmasList({ page: 1, per_page: 200, id_curso: selectedCourseId ? Number(selectedCourseId) : undefined } as any, {
     staleTime: 5 * 60 * 1000,
   });
-  const classItems = (classesQuery.data?.data || classesQuery.data?.items || []) as any[];
+  const classItems = (classesQuery.data?.data || []) as any[];
   const classOptions = useComboboxOptions(classItems, 'id', 'nome', undefined, (t: any) => String(t?.token || ''));
 
   /**
@@ -95,7 +100,7 @@ export default function AdminCourseProgress() {
    * en-US: Normalizes paginated response (data/items) into a simple array.
    */
   const enrollments = useMemo(() => {
-    const arr = (enrollmentsResp as any)?.data || (enrollmentsResp as any)?.items || [];
+    const arr = (enrollmentsResp as any)?.data || [];
     return Array.isArray(arr) ? arr : [];
   }, [enrollmentsResp]);
 
@@ -167,40 +172,69 @@ export default function AdminCourseProgress() {
     }, [curriculum]);
 
     return (
-      <div className="grid grid-cols-12 gap-3 py-2 border-b">
-        <div className="col-span-4">
-          <div className="font-medium truncate">{studentName}</div>
-          <div className="text-xs text-muted-foreground truncate">{courseName}{className ? ` • ${className}` : ''}</div>
+      <div className="group flex flex-col md:flex-row md:items-center gap-4 py-4 px-4 hover:bg-muted/30 transition-all border-b last:border-0">
+        <div className="flex-1 flex items-center gap-4 min-w-0">
+          <Avatar className="h-10 w-10 border shadow-sm shrink-0">
+            <AvatarFallback className="bg-primary/5 text-primary font-bold">
+              {studentName.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <div className="font-bold text-foreground/90 truncate flex items-center gap-2">
+              {studentName}
+              {enroll?.id && (
+                <span className="text-[10px] bg-muted/50 px-1.5 py-0.5 rounded font-mono text-muted-foreground">ID: {enroll.id}</span>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground truncate flex items-center gap-1.5">
+              <GraduationCap className="h-3 w-3" />
+              {courseName}{className ? ` • ${className}` : ''}
+            </div>
+          </div>
         </div>
-        <div className="col-span-3 flex items-center gap-2">
+
+        <div className="w-full md:w-64 space-y-2">
           {loadingCurr ? (
-            <span className="text-muted-foreground flex items-center gap-1"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</span>
+            <div className="space-y-2">
+              <div className="flex justify-between text-[10px] font-medium text-muted-foreground animate-pulse">
+                <span>Calculando progresso...</span>
+              </div>
+              <Progress value={0} className="h-2" />
+            </div>
           ) : (
             <>
-              <Badge variant="outline">Atividades: {totals.total}</Badge>
-              <Badge variant="default">Concluídas: {totals.completed}</Badge>
-              <Badge variant="secondary">{totals.percent}%</Badge>
+              <div className="flex justify-between items-end text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> {totals.completed}/{totals.total} atividades</span>
+                <span className={totals.percent === 100 ? "text-emerald-600" : "text-primary"}>{totals.percent}%</span>
+              </div>
+              <Progress 
+                value={totals.percent} 
+                className="h-2 shadow-sm"
+                indicatorClassName={totals.percent === 100 ? "bg-emerald-500" : "bg-primary"}
+              />
             </>
           )}
         </div>
-        <div className="col-span-4 text-sm text-muted-foreground truncate">
-          {nextActivityTitle || ''}
+
+        <div className="flex-1 hidden lg:block min-w-0">
+          {nextActivityTitle && (
+            <div className="space-y-1">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3 font-black" /> Próxima
+              </div>
+              <div className="text-xs text-muted-foreground truncate font-medium max-w-[200px]" title={nextActivityTitle}>
+                {nextActivityTitle}
+              </div>
+            </div>
+          )}
         </div>
-        <div className="col-span-1 text-right">
-          {/*
-           * handleOpenEnrollment
-           * pt-BR: Abre a nova página de detalhamento de progresso da matrícula.
-           * en-US: Opens the new enrollment progress detail page in admin.
-           */}
+        
+        <div className="shrink-0 flex justify-end">
           <Button
             variant="ghost"
             size="sm"
+            className="text-primary hover:text-primary hover:bg-primary/5 font-bold group"
             onClick={() => {
-              /**
-               * navigate with state
-               * pt-BR: Passa estado com rota de retorno preservando curso/turma/busca.
-               * en-US: Passes state with a return route preserving course/class/search.
-               */
               const cid = String(selectedCourseId || '');
               const tid = String(selectedClassId || '');
               const q = String(searchTerm || '');
@@ -208,13 +242,12 @@ export default function AdminCourseProgress() {
               if (cid) params.set('id_curso', cid);
               if (tid) params.set('id_turma', tid);
               if (q.trim()) params.set('search', q.trim());
-              const returnTo = `/admin/school/courses/${cid || 'curso'}/progress?${params.toString()}`;
-              // Include filters in detail page URL for shareability
               const detailUrl = `/admin/school/enrollments/${String(enrollmentId)}/progress?${params.toString()}`;
+              const returnTo = `/admin/school/courses/${cid || 'curso'}/progress?${params.toString()}`;
               navigate(detailUrl, { state: { returnTo } });
             }}
           >
-            Abrir matrícula
+            Detalhes <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-0.5 transition-transform" />
           </Button>
         </div>
       </div>
@@ -222,86 +255,129 @@ export default function AdminCourseProgress() {
   }
 
   return (
-      <div className="container mx-auto p-4 space-y-6">
-        {/*
-         * Breadcrumbs
-         * pt-BR: Trilhas de navegação para clareza, com curso atual.
-         * en-US: Breadcrumbs for clarity, with current course.
-         */}
+    <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink href="/admin/school/courses">Escola</BreadcrumbLink>
+              <BreadcrumbLink href="/admin/school/courses" className="text-muted-foreground hover:text-foreground transition-colors">Escola</BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>Progresso do curso</BreadcrumbPage>
+              <BreadcrumbPage className="font-medium">Progresso do Curso</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Acompanhamento de Progresso (Admin)</h1>
-          <p className="text-muted-foreground">Curso: {idCurso || '-'} {idTurma ? `• Turma: ${idTurma}` : ''}</p>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Resumo</CardTitle>
-            <CardDescription>Lista de matrículas com seus percentuais de conclusão</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Filtros visuais */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
-              <Combobox
-                options={courseOptions}
-                value={selectedCourseId}
-                onValueChange={(val) => { setSelectedCourseId(val); setSelectedClassId(''); syncToUrl(val, '', searchTerm); }}
-                placeholder="Curso"
-                emptyText={courseItems.length === 0 ? 'Nenhum curso encontrado' : 'Selecione um curso'}
-                loading={coursesQuery.isLoading || coursesQuery.isFetching}
-              />
-              <Combobox
-                options={classOptions}
-                value={selectedClassId}
-                onValueChange={(val) => { setSelectedClassId(val); syncToUrl(selectedCourseId, val, searchTerm); }}
-                placeholder={selectedCourseId ? 'Turma (do curso selecionado)' : 'Turma'}
-                emptyText={classItems.length === 0 ? 'Nenhuma turma encontrada' : 'Selecione uma turma'}
-                loading={classesQuery.isLoading || classesQuery.isFetching}
-              />
-              <div className="relative">
-                <Input placeholder="Buscar aluno" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} onBlur={() => syncToUrl(selectedCourseId, selectedClassId, searchTerm)} />
-              </div>
-            </div>
-            {(isLoading || isFetching) && (
-              <div className="text-muted-foreground flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando matrículas…</div>
-            )}
-            {!isLoading && !isFetching && enrollments.length === 0 && (
-              <div className="text-muted-foreground">Nenhuma matrícula encontrada para os filtros informados.</div>
-            )}
-            {!isLoading && !isFetching && enrollments.length > 0 && (
-              <div className="border rounded-md">
-                <div className="grid grid-cols-12 gap-3 px-3 py-2 bg-muted/50 text-xs font-semibold">
-                  <div className="col-span-4">Aluno</div>
-                  <div className="col-span-3">Progresso</div>
-                  <div className="col-span-4">Próxima atividade</div>
-                  <div className="col-span-1 text-right">Ações</div>
-                </div>
-                {enrollments.map((enroll: any) => (
-                  <div key={String(enroll?.id)} className="px-3">
-                    <EnrollmentRow enroll={enroll} />
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">Filtros ativos via URL • id_curso={idCurso || '-'} {idTurma ? `• id_turma=${idTurma}` : ''} {search ? `• search=${search}` : ''}</div>
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={() => navigate(-1)}>Voltar</Button>
-          </div>
+        <div className="flex items-center gap-2">
+          {isFetching && (
+            <Badge variant="outline" className="animate-pulse bg-primary/5 border-primary/20 text-primary px-3 py-1">
+              <Loader2 className="h-3 w-3 mr-2 animate-spin" /> Sincronizando...
+            </Badge>
+          )}
         </div>
       </div>
+
+      <div className="flex flex-col gap-1.5">
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground/90 flex items-center gap-3">
+          <GraduationCap className="h-8 w-8 text-primary/70" />
+          Acompanhamento de Progresso
+        </h1>
+        <p className="text-muted-foreground text-sm font-medium">Visualize e monitore o desempenho acadêmico de todos os alunos matriculados.</p>
+      </div>
+
+      <Card className="border shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
+        <CardHeader className="bg-muted/30 border-b py-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary/70" />
+                Listagem de Alunos
+              </CardTitle>
+              <CardDescription>Gerencie o engajamento através dos percentuais de conclusão.</CardDescription>
+            </div>
+            {/* Filtros visuais integrados no header do card */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="w-full md:w-[240px]">
+                <Combobox
+                  options={courseOptions}
+                  value={selectedCourseId}
+                  onValueChange={(val) => { setSelectedCourseId(val); setSelectedClassId(''); syncToUrl(val, '', searchTerm); }}
+                  placeholder="Selecionar Curso"
+                  emptyText={courseItems.length === 0 ? 'Nenhum curso encontrado' : 'Digite para buscar'}
+                  loading={coursesQuery.isLoading || coursesQuery.isFetching}
+                />
+              </div>
+              <div className="w-full md:w-[240px]">
+                <Combobox
+                  options={classOptions}
+                  value={selectedClassId}
+                  onValueChange={(val) => { setSelectedClassId(val); syncToUrl(selectedCourseId, val, searchTerm); }}
+                  placeholder={selectedCourseId ? 'Filtrar por Turma' : 'Selecione um curso'}
+                  emptyText={classItems.length === 0 ? 'Nenhuma turma encontrada' : 'Digite para buscar'}
+                  loading={classesQuery.isLoading || classesQuery.isFetching}
+                  disabled={!selectedCourseId}
+                />
+              </div>
+              <div className="relative w-full md:w-[240px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Buscar por aluno..." 
+                  className="pl-9 h-10 shadow-sm"
+                  value={searchTerm} 
+                  onChange={(e) => setSearchTerm(e.target.value)} 
+                  onBlur={() => syncToUrl(selectedCourseId, selectedClassId, searchTerm)} 
+                  onKeyDown={(e) => e.key === 'Enter' && syncToUrl(selectedCourseId, selectedClassId, searchTerm)}
+                />
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {(isLoading) ? (
+            <div className="py-20 flex flex-col items-center justify-center gap-4 text-muted-foreground italic">
+              <Loader2 className="h-8 w-8 animate-spin text-primary/40" />
+              Obtendo dados das matrículas...
+            </div>
+          ) : enrollments.length === 0 ? (
+            <div className="py-20 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+              <Users className="h-10 w-10 text-muted-foreground/30 mb-2" />
+              <p className="font-medium text-lg italic">Nenhuma matrícula encontrada</p>
+              <p className="text-sm">Tente ajustar seus filtros ou pesquisar por outro termo.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {/* Table Header for Desktop */}
+              <div className="hidden md:flex items-center gap-4 px-4 py-3 bg-muted/20 text-[10px] uppercase font-black tracking-widest text-muted-foreground border-b shadow-sm">
+                <div className="flex-1">Informações do Aluno</div>
+                <div className="w-64">Progresso Acadêmico</div>
+                <div className="flex-1 hidden lg:block">Atividade Atual / Próxima</div>
+                <div className="shrink-0 w-[100px] text-right">Opções</div>
+              </div>
+              {enrollments.map((enroll: any) => (
+                <EnrollmentRow key={String(enroll?.id)} enroll={enroll} />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Footer Fixo (Estilo SaaS Premium) */}
+      <div className="fixed bottom-0 left-0 right-0 py-4 px-6 bg-white/80 backdrop-blur-md border-t border-muted/50 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <div className="container mx-auto max-w-7xl flex items-center justify-between">
+          <div className="flex items-center gap-4 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+            <span className="flex items-center gap-1.5"><Badge variant="outline" className="h-5 min-w-[20px] justify-center p-0 rounded-full">{enrollments.length}</Badge> Resultados</span>
+            {selectedCourseId && <span className="hidden sm:inline border-l pl-4 truncate max-w-[200px]">Curso selecionado: {selectedCourseId}</span>}
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigate(-1)}
+            className="border-muted-foreground/20 hover:bg-muted font-bold px-6 shadow-sm transition-all"
+          >
+            Voltar
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }

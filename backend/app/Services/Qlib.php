@@ -2912,5 +2912,23 @@ class Qlib
         $companyName = self::qoption('app_institution_name');
         return $companyName;
     }
+    /**
+     * Cor primária cadastrada na tabela opcoes
+     */
+    static function get_primary_color(){
+        return self::qoption('app_primary_color') ? self::qoption('app_primary_color') : '#007bff';
+    }
+    static function get_primary_text_color(){
+        return self::qoption('app_primary_text_color') ? self::qoption('app_primary_text_color') : '#ffffff';
+    }
+    /**
+     * Cor secundária cadastrada na tabela opcoes
+     */
+    static function get_secondary_color(){
+        return self::qoption('app_secondary_color') ? self::qoption('app_secondary_color') : '#6c757d';
+    }
+    static function get_secondary_text_color(){
+        return self::qoption('app_secondary_text_color') ? self::qoption('app_secondary_text_color') : '#ffffff';
+    }
 
 }

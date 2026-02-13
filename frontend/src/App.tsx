@@ -116,6 +116,11 @@ const CertificateView = lazy(() => import("./pages/school/CertificateView"));
 const CertificateValidate = lazy(() => import("./pages/school/CertificateValidate"));
 const AdminCourseGrades = lazy(() => import("./pages/school/AdminCourseGrades"));
 const ContentAccessReport = lazy(() => import("./pages/reports/ContentAccessReport"));
+const MenusSite = lazy(() => import("./pages/site/MenusSite"));
+const PageCreate = lazy(() => import("./pages/site/PageCreate"));
+const PageEdit = lazy(() => import("./pages/site/PageEdit"));
+const PublicPage = lazy(() => import("./pages/site/PublicPage"));
+const SiteComponents = lazy(() => import("./pages/site/Components"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -491,6 +496,8 @@ const App = () => {
               <Route path="/cursos" element={<CoursesPublicList />} />
               <Route path="/cursos/:id" element={<CourseLanding />} />
               <Route path="/cursos/:id/detalhes" element={<CourseDetails />} />
+              {/* Página pública publicada por slug */}
+              <Route path="/pagina/:slug" element={<PublicPage />} />
               {/**
                * pt-BR: Página pública de convite de matrícula via link do curso.
                * en-US: Public invitation enrollment page via course link.
@@ -712,6 +719,38 @@ const App = () => {
                 <AdminProtectedRoute>
                   <AppLayout>
                     <Categories />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/site/menus-site" element={<Navigate to="/admin/site/menus-site" replace />} />
+              <Route path="/admin/site/menus-site" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <MenusSite />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/site/components" element={<Navigate to="/admin/site/components" replace />} />
+              <Route path="/admin/site/components" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <SiteComponents />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/site/pages/create" element={<Navigate to="/admin/site/pages/create" replace />} />
+              <Route path="/site/pages/:id/edit" element={<Navigate to="/admin/site/pages/:id/edit" replace />} />
+              <Route path="/admin/site/pages/create" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <PageCreate />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/site/pages/:id/edit" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <PageEdit />
                   </AppLayout>
                 </AdminProtectedRoute>
               } />

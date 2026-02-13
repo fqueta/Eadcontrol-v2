@@ -101,7 +101,10 @@ export default function SystemSettings() {
     return saved ? JSON.parse(saved) : {
       darkMode: false,
       primaryColor: "#0b217b",
+      primaryTextColor: "#ffffff",
       secondaryColor: "#4b89cd",
+      secondaryTextColor: "#ffffff",
+      hoverColor: "#0056b3",
       fontSize: "medium",
       theme: "default",
       compactMode: true,
@@ -229,6 +232,13 @@ export default function SystemSettings() {
         }
         return null;
       };
+
+      const optHover = getOpt('app_hover_color');
+      const valHover = (optHover && (optHover.value ?? '')) || '';
+      if (valHover && valHover !== appearanceSettings.hoverColor) {
+        setAppearanceSettings((prev: any) => ({ ...prev, hoverColor: valHover }));
+        localStorage.setItem('appearanceSettings', JSON.stringify({ ...appearanceSettings, hoverColor: valHover }));
+      }
 
       const optLogo = getOpt('app_logo_url');
       const valLogo = (optLogo && (optLogo.value ?? '')) || '';
@@ -461,7 +471,9 @@ export default function SystemSettings() {
     
     // Aplicar cores personalizadas
     root.style.setProperty('--primary-color', settings.primaryColor);
+    root.style.setProperty('--primary-text-color', settings.primaryTextColor || '#ffffff');
     root.style.setProperty('--secondary-color', settings.secondaryColor);
+    root.style.setProperty('--secondary-text-color', settings.secondaryTextColor || '#ffffff');
     
     // Aplicar tamanho da fonte
     const fontSizes = {
@@ -501,7 +513,10 @@ export default function SystemSettings() {
         ...advancedSwitchSettings, // Mantém outros settings se necessário, mas o endpoint /options/all aceita parcial
         // Mapeia para as chaves esperadas no backend (prefixo app_)
         app_primary_color: appearanceSettings.primaryColor,
+        app_primary_text_color: appearanceSettings.primaryTextColor,
         app_secondary_color: appearanceSettings.secondaryColor,
+        app_secondary_text_color: appearanceSettings.secondaryTextColor,
+        app_hover_color: appearanceSettings.hoverColor,
         app_dark_mode_default: appearanceSettings.darkMode ? 'true' : 'false',
       } as any);
       
@@ -850,22 +865,36 @@ export default function SystemSettings() {
               </div>
 
               {/* Configurações de Cores e Tema */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="primaryColor">Cor Primária</Label>
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      id="primaryColor"
-                      type="color"
-                      value={appearanceSettings.primaryColor}
-                      onChange={(e) => handleAppearanceChange('primaryColor', e.target.value)}
-                      className="w-16 h-10 p-1 border rounded"
+                  <div className="flex space-x-2">
+                    <div 
+                      className="w-10 h-10 rounded border shadow-sm"
+                      style={{ backgroundColor: appearanceSettings.primaryColor }}
                     />
-                    <Input
-                      type="text"
+                    <Input 
+                      id="primaryColor" 
                       value={appearanceSettings.primaryColor}
                       onChange={(e) => handleAppearanceChange('primaryColor', e.target.value)}
-                      placeholder="#3b82f6"
+                      placeholder="#000000"
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="primaryTextColor">Cor Texto Primário</Label>
+                  <div className="flex space-x-2">
+                    <div 
+                      className="w-10 h-10 rounded border shadow-sm"
+                      style={{ backgroundColor: appearanceSettings.primaryTextColor || '#ffffff' }}
+                    />
+                    <Input 
+                      id="primaryTextColor" 
+                      value={appearanceSettings.primaryTextColor || '#ffffff'}
+                      onChange={(e) => handleAppearanceChange('primaryTextColor', e.target.value)}
+                      placeholder="#ffffff"
                       className="flex-1"
                     />
                   </div>
@@ -873,19 +902,53 @@ export default function SystemSettings() {
 
                 <div className="space-y-2">
                   <Label htmlFor="secondaryColor">Cor Secundária</Label>
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      id="secondaryColor"
-                      type="color"
+                  <div className="flex space-x-2">
+                    <div 
+                      className="w-10 h-10 rounded border shadow-sm"
+                      style={{ backgroundColor: appearanceSettings.secondaryColor }}
+                    />
+                    <Input 
+                      id="secondaryColor" 
                       value={appearanceSettings.secondaryColor}
                       onChange={(e) => handleAppearanceChange('secondaryColor', e.target.value)}
+                      placeholder="#000000"
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="secondaryTextColor">Cor Texto Secundário</Label>
+                  <div className="flex space-x-2">
+                    <div 
+                      className="w-10 h-10 rounded border shadow-sm"
+                      style={{ backgroundColor: appearanceSettings.secondaryTextColor || '#ffffff' }}
+                    />
+                    <Input 
+                      id="secondaryTextColor" 
+                      value={appearanceSettings.secondaryTextColor || '#ffffff'}
+                      onChange={(e) => handleAppearanceChange('secondaryTextColor', e.target.value)}
+                      placeholder="#ffffff"
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="hoverColor">Cor de Hover</Label>
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      id="hoverColor"
+                      type="color"
+                      value={appearanceSettings.hoverColor}
+                      onChange={(e) => handleAppearanceChange('hoverColor', e.target.value)}
                       className="w-16 h-10 p-1 border rounded"
                     />
                     <Input
                       type="text"
-                      value={appearanceSettings.secondaryColor}
-                      onChange={(e) => handleAppearanceChange('secondaryColor', e.target.value)}
-                      placeholder="#64748b"
+                      value={appearanceSettings.hoverColor}
+                      onChange={(e) => handleAppearanceChange('hoverColor', e.target.value)}
+                      placeholder="#0056b3"
                       className="flex-1"
                     />
                   </div>

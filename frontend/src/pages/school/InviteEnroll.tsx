@@ -14,6 +14,7 @@ import { publicEnrollmentService } from '@/services/publicEnrollmentService';
 import { useToast } from '@/hooks/use-toast';
 import { phoneApplyMask, phoneRemoveMask } from '@/lib/masks/phone-apply-mask';
 import { Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 import { MathCaptchaWidget, MathCaptchaRef } from '@/components/ui/MathCaptchaWidget';
 
@@ -49,6 +50,7 @@ export default function InviteEnroll() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
 
   /**
    * courseQuery
@@ -109,6 +111,22 @@ export default function InviteEnroll() {
   const [submitting, setSubmitting] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [conflictModalOpen, setConflictModalOpen] = useState(false);
+  const [conflictType, setConflictType] = useState<'email' | 'phone' | null>(null);
+  const [alreadyEnrolledModalOpen, setAlreadyEnrolledModalOpen] = useState(false);
+  const [inviteUsedModalOpen, setInviteUsedModalOpen] = useState(false);
+
+  // Prefill user data if authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.name) setName(user.name);
+      if (user.email) setEmail(user.email);
+      if (user.celular) {
+        setPhone(phoneApplyMask(user.celular));
+      }
+    }
+  }, [isAuthenticated, user]);
+
   // Field-level errors from API validation
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   // Security helpers: honeypot & time-trap
@@ -160,17 +178,16 @@ export default function InviteEnroll() {
 
   /**
    * parseApiError
-   * pt-BR: Extrai `message` e `errors` de uma resposta de erro da API (BaseApiService),
-   *        normalizando para um objeto simples com mapa de erros por campo.
-   * en-US: Extracts `message` and `errors` from an API error response (BaseApiService),
-   *        normalizing into a simple object with a field error map.
+   * pt-BR: Extrai `message`, `code` e `errors` de uma resposta de erro da API.
+   * en-US: Extracts `message`, `code` and `errors` from an API error response.
    */
-  const parseApiError = (err: any): { message: string; fieldErrors: Record<string, string>; details: string[] } => {
+  const parseApiError = (err: any): { message: string; code?: string; fieldErrors: Record<string, string>; details: string[] } => {
     let body = (err && (err.body || err.response?.data)) || {};
     if (typeof body === 'string') {
       try { body = JSON.parse(body); } catch { /* noop */ }
     }
     const msg = String(body?.message || err?.message || 'Erro de validação');
+    const code = body?.code;
     const errorsObj: Record<string, string[] | string> = body?.errors || {};
     const fErrors: Record<string, string> = {};
     const details: string[] = [];
@@ -183,7 +200,7 @@ export default function InviteEnroll() {
         }
       });
     }
-    return { message: msg, fieldErrors: fErrors, details };
+    return { message: msg, code, fieldErrors: fErrors, details };
   };
 
   /**
@@ -244,10 +261,9 @@ export default function InviteEnroll() {
   const canSubmit = useMemo(() => {
     // pt-BR: Permite enviar mesmo se o curso não carregar; cai em fallback de "registrar interesse".
     // en-US: Allows submit even if course fails to load; falls back to "register interest".
-    const base = !!name && !!email && !!password && !!confirmPassword && !!institution && privacyAccepted && termsAccepted;
+    const hasPassword = isAuthenticated || (!!password && !!confirmPassword && !isPasswordTooWeak && !passwordsMismatch);
+    const base = !!name && !!email && hasPassword && !!institution && privacyAccepted && termsAccepted;
     if (!base) return false;
-    if (isPasswordTooWeak) return false;
-    if (passwordsMismatch) return false;
     if (phone && isPhoneInvalid) return false;
     // pt-BR: Exige curso válido para liberar envio.
     // en-US: Requires valid course to enable submission.
@@ -257,7 +273,7 @@ export default function InviteEnroll() {
     if (!challenge.answer) return false;
     
     return true;
-  }, [name, email, password, confirmPassword, institution, privacyAccepted, termsAccepted, phone, isPhoneInvalid, isPasswordTooWeak, passwordsMismatch, courseId, challenge.answer]);
+  }, [name, email, password, confirmPassword, institution, privacyAccepted, termsAccepted, phone, isPhoneInvalid, isPasswordTooWeak, passwordsMismatch, courseId, challenge.answer, isAuthenticated]);
 
   /**
    * handleSubmit
@@ -316,7 +332,38 @@ export default function InviteEnroll() {
       // Opcional: navegar para a página do aluno (exige login)
       // navigate(`/aluno/cursos/${courseSlug}`);
     } catch (err: any) {
-      const { message, fieldErrors: fErrors, details } = parseApiError(err);
+      const { message, code, fieldErrors: fErrors, details } = parseApiError(err);
+      
+      // pt-BR: Detecta conflitos de matrícula duplicada ou convite já usado.
+      // en-US: Detects duplicate enrollment or invite already used conflicts.
+      if (code === 'ALREADY_ENROLLED') {
+        setAlreadyEnrolledModalOpen(true);
+        setSubmitting(false);
+        return;
+      }
+      if (code === 'INVITE_ALREADY_USED') {
+        setInviteUsedModalOpen(true);
+        setSubmitting(false);
+        return;
+      }
+
+      // pt-BR: Detecta conflitos de e-mail ou telefone para mostrar modal personalizado.
+      // en-US: Detects email or phone conflicts to show custom modal.
+      if (err.status === 422) {
+        if (fErrors.email && (fErrors.email.includes('já está em uso') || fErrors.email.includes('faça login'))) {
+           setConflictType('email');
+           setConflictModalOpen(true);
+           setSubmitting(false);
+           return;
+        }
+        if (fErrors.phone && fErrors.phone.includes('já está em uso')) {
+           setConflictType('phone');
+           setConflictModalOpen(true);
+           setSubmitting(false);
+           return;
+        }
+      }
+
       setFieldErrors(fErrors);
       setTimeout(() => focusFirstError(fErrors), 0);
       toast({ title: 'Erro de validação', description: details.length ? details.join('; ') : message, variant: 'destructive' });
@@ -382,76 +429,80 @@ export default function InviteEnroll() {
                   <p className="text-sm text-destructive">{fieldErrors.institution}</p>
                 )}
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label>Senha</Label>
-                {/* pt-BR: Campo de senha com alternância de visibilidade (olho). */}
-                {/* en-US: Password field with visibility toggle (eye). */}
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Crie uma senha"
-                    required
-                    aria-invalid={!!fieldErrors.password || isPasswordTooWeak}
-                    className={(fieldErrors.password || isPasswordTooWeak) ? 'border-red-500 focus-visible:ring-red-500 pr-10' : 'pr-10'}
-                  />
-                  <button
-                    type="button"
-                    aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowPassword((v) => !v)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
+              {!isAuthenticated && (
+                <>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Senha</Label>
+                    {/* pt-BR: Campo de senha com alternância de visibilidade (olho). */}
+                    {/* en-US: Password field with visibility toggle (eye). */}
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Crie uma senha"
+                        required={!isAuthenticated}
+                        aria-invalid={!!fieldErrors.password || isPasswordTooWeak}
+                        className={(fieldErrors.password || isPasswordTooWeak) ? 'border-red-500 focus-visible:ring-red-500 pr-10' : 'pr-10'}
+                      />
+                      <button
+                        type="button"
+                        aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowPassword((v) => !v)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {fieldErrors.password && (
+                      <p className="text-sm text-destructive">{fieldErrors.password}</p>
                     )}
-                  </button>
-                </div>
-                {fieldErrors.password && (
-                  <p className="text-sm text-destructive">{fieldErrors.password}</p>
-                )}
-                {!fieldErrors.password && (
-                  <p className={`text-sm ${isPasswordTooWeak ? 'text-destructive' : 'text-muted-foreground'}`}>
-                    {isPasswordTooWeak ? 'Senha muito curta (mínimo 6 caracteres).' : `Força da senha: ${(['Muito fraca','Fraca','Média','Forte','Muito forte'])[passwordStrength - 1] || 'Muito fraca'}`}
-                  </p>
-                )}
-              </div>
+                    {!fieldErrors.password && (
+                      <p className={`text-sm ${isPasswordTooWeak ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        {isPasswordTooWeak ? 'Senha muito curta (mínimo 6 caracteres).' : `Força da senha: ${(['Muito fraca','Fraca','Média','Forte','Muito forte'])[passwordStrength - 1] || 'Muito fraca'}`}
+                      </p>
+                    )}
+                  </div>
 
-              {/* pt-BR: Campo de confirmação de senha com alternância de visibilidade (olho). */}
-              {/* en-US: Confirm password field with visibility toggle (eye). */}
-              <div className="space-y-2 md:col-span-2">
-                <Label>Confirmar senha</Label>
-                <div className="relative">
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repita a senha"
-                    required
-                    aria-invalid={passwordsMismatch}
-                    className={passwordsMismatch ? 'border-red-500 focus-visible:ring-red-500 pr-10' : 'pr-10'}
-                  />
-                  <button
-                    type="button"
-                    aria-label={showConfirmPassword ? 'Ocultar confirmação' : 'Mostrar confirmação'}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowConfirmPassword((v) => !v)}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
+                  {/* pt-BR: Campo de confirmação de senha com alternância de visibilidade (olho). */}
+                  {/* en-US: Confirm password field with visibility toggle (eye). */}
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Confirmar senha</Label>
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Repita a senha"
+                        required={!isAuthenticated}
+                        aria-invalid={passwordsMismatch}
+                        className={passwordsMismatch ? 'border-red-500 focus-visible:ring-red-500 pr-10' : 'pr-10'}
+                      />
+                      <button
+                        type="button"
+                        aria-label={showConfirmPassword ? 'Ocultar confirmação' : 'Mostrar confirmação'}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowConfirmPassword((v) => !v)}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {passwordsMismatch && (
+                      <p className="text-sm text-destructive">As senhas não coincidem.</p>
                     )}
-                  </button>
-                </div>
-                {passwordsMismatch && (
-                  <p className="text-sm text-destructive">As senhas não coincidem.</p>
-                )}
-              </div>
+                  </div>
+                </>
+              )}
               <div className="flex items-center space-x-2 md:col-span-2">
                 <Checkbox id="privacy" checked={privacyAccepted} onCheckedChange={(v) => setPrivacyAccepted(!!v)} />
                 <Label htmlFor="privacy">Aceito a política de privacidade</Label>
@@ -522,6 +573,95 @@ export default function InviteEnroll() {
                 title="Abrir consumo do curso"
               >
                 Ir para o curso
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        {/**
+         * ValidationConflictModal
+         * pt-BR: Modal exibido quando o e-mail ou telefone já estão cadastrados. 
+         *        Oferece opção de login ou correção.
+         * en-US: Modal shown when email or phone is already registered.
+         *        Offers login or correction options.
+         */}
+        <AlertDialog open={conflictModalOpen} onOpenChange={setConflictModalOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {conflictType === 'email' ? 'E-mail em uso' : 'Telefone em uso'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Este {conflictType === 'email' ? 'e-mail' : 'número de telefone'} já está cadastrado em nosso sistema.
+                Deseja fazer login na sua conta para continuar a matrícula ou usar outro dado?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setConflictModalOpen(false);
+                  const order = ['email', 'phone'];
+                  const targetId = conflictType === 'email' ? 'email' : 'phone';
+                  const el = document.getElementById(targetId);
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.focus();
+                  }
+                }}
+              >
+                Tentar outro
+              </Button>
+              <AlertDialogAction
+                onClick={() => {
+                  // Redireciona para login enviando a URL atual como retorno
+                  const currentPath = encodeURIComponent(window.location.pathname + window.location.search);
+                  navigate(`/login?redirect=${currentPath}`);
+                }}
+              >
+                Fazer login
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        {/**
+         * AlreadyEnrolledModal
+         * pt-BR: Modal exibido quando o usuário já possui uma matrícula ativa no curso.
+         */}
+        <AlertDialog open={alreadyEnrolledModalOpen} onOpenChange={setAlreadyEnrolledModalOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Você já está matriculado</AlertDialogTitle>
+              <AlertDialogDescription>
+                Identificamos que você já possui uma matrícula válida para o curso <span className="font-semibold">{courseTitle}</span>.
+                Deseja acessar o conteúdo agora?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <Button variant="outline" onClick={() => setAlreadyEnrolledModalOpen(false)}>
+                Fechar
+              </Button>
+              <AlertDialogAction onClick={() => navigate(`/aluno/cursos/${courseSlug}`)}>
+                Ir para o curso
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        {/**
+         * InviteUsedModal
+         * pt-BR: Modal exibido quando o usuário já utilizou o link de convite.
+         */}
+        <AlertDialog open={inviteUsedModalOpen} onOpenChange={setInviteUsedModalOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Convite já utilizado</AlertDialogTitle>
+              <AlertDialogDescription>
+                Você já utilizou este link de convite para se matricular anteriormente. 
+                Cada link de convite pode ser usado apenas uma vez por conta.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => setInviteUsedModalOpen(false)}>
+                Entendi
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

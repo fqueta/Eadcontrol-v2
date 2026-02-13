@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/button';
  import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock, Star, ChevronDown, ChevronUp, GraduationCap, ChevronLeft, ChevronRight, Search, Circle, CircleCheck, AlertCircle, XCircle } from 'lucide-react';
 import { progressService } from '@/services/progressService';
 import { useToast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import commentsService from '@/services/commentsService';
+import { Separator } from '@/components/ui/separator';
 import { certificatesService } from '@/services/certificatesService';
 import { QuizGradeDetail } from './components/QuizGradeDetail';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -583,18 +585,6 @@ function QuizViewer({
 
 /**
  * CourseContentViewer
- * pt-BR: Componente de visualização de conteúdo do curso com barra de busca,
- *        sidebar de atividades e área principal para player/leitura/link.
- * en-US: Course content viewer component with search bar, activities sidebar,
- *        and main area for player/reader/link rendering.
- */
-/**
- * CourseContentViewer
- * pt-BR: Visualiza conteúdos do curso. Agora emite callback ao alterar atividade atual.
- * en-US: Renders course contents. Now emits a callback when current activity changes.
- */
-/**
- * CourseContentViewer
  * pt-BR: Visualizador de conteúdo do curso; agora aceita `enrollmentId` para envio em progresso.
  * en-US: Course content viewer; now accepts `enrollmentId` to send with progress payloads.
  */
@@ -729,7 +719,7 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
    */
   const courseId = course?.id ?? course?.course_id ?? course?.token ?? 'course';
   const storageKey = `course_completed_${courseId}`;
-  const [completedIds, setCompletedIds] = useState<Set<string | number>>(new Set());
+  const [completedIds, setCompletedIds] = useState<Set<string | number>>(new Set<string | number>());
   /**
    * progressLoading
    * pt-BR: Indica se o progresso está sendo sincronizado com o servidor.
@@ -1079,88 +1069,112 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
 
   /**
    * renderCommentItem
-   * pt-BR: Renderiza um comentário aprovado com autor, data e avaliação, e exibe suas
-   *        respostas aprovadas indentadas em forma de thread.
-   * en-US: Renders an approved comment with author, date and rating, and shows its
-   *        approved replies indented as a threaded conversation.
+   * pt-BR: Renderiza um comentário aprovado com avatar, autor, data e avaliação.
+   *        Respostas são indentadas e exibidas em threads limpas.
+   * en-US: Renders an approved comment with avatar, author, date and rating.
+   *        Replies are indented and shown in clean threads.
    */
   const renderCommentItem = (c: any, depth: number = 0) => {
     const author = String(c?.user_name ?? c?.user?.name ?? c?.user?.nome ?? c?.author ?? 'Aluno').trim();
-    const created = c?.created_at ? new Date(String(c.created_at)).toLocaleString() : '';
+    const avatarUrl = c?.user_avatar ?? c?.user?.avatar ?? c?.avatar ?? '';
+    const initials = author.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'A';
+    const created = c?.created_at ? new Date(String(c.created_at)).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
     const ratingVal = Number(c?.rating ?? 0);
     const replies: any[] = Array.isArray(c?.replies) ? c.replies : [];
     const idStr = String(c?.id ?? '');
     const canReplyHere = depth < MAX_REPLY_DEPTH;
     const replyText = (replyDrafts[idStr] ?? '').slice(0, COMMENT_MAX);
+    const isVisible = replyVisible[idStr];
 
     return (
-      <div>
-        <div className="rounded border p-3">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-medium">{author}{created ? ` • ${created}` : ''}</div>
-            {ratingVal > 0 && (
-              <div className="flex items-center gap-1">
-                {[1,2,3,4,5].map((n) => (
-                  <Star key={n} className={`h-3.5 w-3.5 ${n <= ratingVal ? 'text-amber-500 fill-amber-500' : 'text-muted-foreground'}`} />
+      <div className={`${depth > 0 ? 'mt-4' : 'mt-6'}`}>
+        <div className="flex gap-4 group">
+          <Avatar className="h-10 w-10 shrink-0 border shadow-sm">
+            <AvatarImage src={avatarUrl} alt={author} />
+            <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold">{initials}</AvatarFallback>
+          </Avatar>
+          
+          <div className="flex-1 min-w-0">
+            <div className="bg-muted/30 hover:bg-muted/50 transition-colors border rounded-2xl p-4 shadow-sm relative">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-foreground leading-none">{author}</span>
+                  {created && <span className="text-[10px] text-muted-foreground mt-1">{created}</span>}
+                </div>
+                
+                {ratingVal > 0 && (
+                  <div className="flex items-center gap-0.5 bg-background/50 px-2 py-1 rounded-full border shadow-xs">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Star key={n} className={`h-3 w-3 ${n <= ratingVal ? 'text-amber-500 fill-amber-500' : 'text-muted-foreground/30'}`} />
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <div className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                {String(c?.body ?? '')}
+              </div>
+
+              {canReplyHere && !isVisible && (
+                <button
+                  onClick={() => setReplyVisible((prev) => ({ ...prev, [idStr]: true }))}
+                  className="mt-3 text-xs font-semibold text-primary hover:underline flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  Responder este comentário
+                </button>
+              )}
+            </div>
+
+            {canReplyHere && isVisible && (
+              <div className="mt-3 ml-2 border-l-2 border-primary/20 pl-4 py-2 bg-primary/5 rounded-r-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-wider text-primary">Sua resposta</Label>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="h-6 text-[10px] hover:text-destructive"
+                    onClick={() => setReplyVisible((prev) => ({ ...prev, [idStr]: false }))}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+                <Textarea
+                  value={replyText}
+                  onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [idStr]: e.target.value.slice(0, COMMENT_MAX) }))}
+                  placeholder="Escreva sua resposta..."
+                  className="min-h-[80px] bg-background border-primary/20 focus-visible:ring-primary shadow-inner"
+                />
+                <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span className={replyText.trim().length >= COMMENT_MIN ? 'text-green-600' : ''}>
+                    {replyText.trim().length} / {COMMENT_MAX} (mín {COMMENT_MIN})
+                  </span>
+                  <Button
+                    size="xs"
+                    className="h-7 px-4 shadow-sm"
+                    onClick={() => {
+                      const text = replyText.trim();
+                      if (!text || text.length < COMMENT_MIN || text.length > COMMENT_MAX) return;
+                      replyMutation.mutate({ parentId: idStr, body: text });
+                    }}
+                    disabled={replyMutation.isPending || replyText.trim().length < COMMENT_MIN}
+                  >
+                    {replyMutation.isPending ? 'Enviando...' : 'Responder'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {Array.isArray(replies) && replies.length > 0 && (
+              <div className="mt-2 space-y-2">
+                {replies.map((r) => (
+                  <div key={String(r?.id ?? Math.random())}>
+                    {renderCommentItem(r, depth + 1)}
+                  </div>
                 ))}
               </div>
             )}
           </div>
-          <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">{String(c?.body ?? '')}</div>
-          {canReplyHere && (
-            <div className="mt-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs">Responder</Label>
-                <Button
-                  variant="outline"
-                  size="xs"
-                  onClick={() => setReplyVisible((prev) => ({ ...prev, [idStr]: !prev[idStr] }))}
-                >
-                  {replyVisible[idStr] ? 'Ocultar' : 'Responder'}
-                </Button>
-              </div>
-              {replyVisible[idStr] && (
-                <div className="mt-2">
-                  <Textarea
-                    value={replyText}
-                    onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [idStr]: e.target.value.slice(0, COMMENT_MAX) }))}
-                    placeholder="Escreva sua resposta... / Write your reply..."
-                    rows={2}
-                  />
-                  <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{Math.max(0, replyText.trim().length)} / {COMMENT_MAX}</span>
-                    <span>mín {COMMENT_MIN}</span>
-                  </div>
-                  <div className="mt-2 flex justify-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const text = replyText.trim();
-                        if (!text) return;
-                        if (text.length < COMMENT_MIN || text.length > COMMENT_MAX) return;
-                        replyMutation.mutate({ parentId: idStr, body: text });
-                      }}
-                      disabled={replyMutation.isPending || replyText.trim().length < COMMENT_MIN}
-                    >
-                      {replyMutation.isPending ? 'Respondendo...' : 'Enviar resposta'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
-
-        {Array.isArray(replies) && replies.length > 0 && (
-          <div className="mt-2 ml-4 pl-3 border-l">
-            {replies.map((r) => (
-              <div key={String(r?.id ?? Math.random())} className="mt-2">
-                {renderCommentItem(r, depth + 1)}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     );
   };
@@ -1481,7 +1495,7 @@ function htmlEquals(a: string, b: string): boolean {
       const configPayload = score !== undefined ? { score } : {};
       
       setCompletedIds((prev) => {
-        const next = new Set(prev as any);
+        const next = new Set<string | number>(prev);
         const sid = String(id);
         if (!next.has(sid)) {
           next.add(sid);
@@ -1671,7 +1685,7 @@ function htmlEquals(a: string, b: string): boolean {
       try {
         const id = aid;
         setCompletedIds((prev) => {
-          const next = new Set(prev as any);
+          const next = new Set<string | number>(prev);
           const sid = String(id);
           if (!next.has(sid)) {
             next.add(sid);
@@ -1850,7 +1864,7 @@ function htmlEquals(a: string, b: string): boolean {
             try {
               const id = aid;
               setCompletedIds((prev) => {
-                const next = new Set(prev as any);
+                const next = new Set<string | number>(prev);
                 const sid = String(id);
                 if (!next.has(sid)) {
                   next.add(sid);
@@ -1935,7 +1949,7 @@ function htmlEquals(a: string, b: string): boolean {
                   try {
                     const id = aid;
                     setCompletedIds((prev) => {
-                      const next = new Set(prev as any);
+                      const next = new Set<string | number>(prev);
                       const sid = String(id);
                       if (!next.has(sid)) {
                         next.add(sid);
@@ -2082,7 +2096,7 @@ function htmlEquals(a: string, b: string): boolean {
             try {
               const id = aid;
               setCompletedIds((prev) => {
-                const next = new Set(prev as any);
+                const next = new Set<string | number>(prev);
                 const sid = String(id);
                 if (!next.has(sid)) {
                   next.add(sid);
@@ -2360,7 +2374,7 @@ function htmlEquals(a: string, b: string): boolean {
     const id = a?.id ?? a?.activity_id ?? `${mi}-${ai}`;
     let nowCompleted = false;
     setCompletedIds((prev) => {
-      const next = new Set(prev);
+      const next = new Set<string | number>(prev);
       const sid = String(id);
       nowCompleted = !next.has(sid);
       if (nowCompleted) next.add(sid); else next.delete(sid);
@@ -2562,82 +2576,117 @@ function htmlEquals(a: string, b: string): boolean {
 
       {/* Mobile Drawer: activities list */}
       <Drawer open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Atividades</DrawerTitle>
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader className="border-b pb-4">
+            <DrawerTitle className="text-center flex items-center justify-center gap-2">
+              <Folder className="h-5 w-5 text-primary" />
+              Atividades do Curso
+            </DrawerTitle>
           </DrawerHeader>
-          <div className="p-2 max-h-[60vh] overflow-y-auto">
+          <div className="p-4 overflow-y-auto">
             {modules.map((m: any, mi: number) => {
               const title = m?.titulo || m?.title || m?.name || `Módulo ${mi + 1}`;
               const activities: any[] = Array.isArray(m?.atividades || m?.activities) ? (m?.atividades || m?.activities) : [];
               const isCollapsed = Boolean(collapsedModules[mi]);
-              const isCurrent = Boolean(currentActivity && mi === (currentActivity as any)._moduleIndex);
-              const showActivities = !isCollapsed && (!collapseInactiveModules || isCurrent);
+              const isCurrentModule = Boolean(currentActivity && mi === (currentActivity as any)._moduleIndex);
+              const showActivities = !isCollapsed && (!collapseInactiveModules || isCurrentModule);
+              
               return (
-                <div key={`mobile-sidebar-mod-${mi}`} className="mb-3">
+                <div key={`mobile-sidebar-mod-${mi}`} className="mb-4">
                   <button
-                    className="w-full font-semibold text-sm mb-2 flex items-center gap-2 px-2 py-1 rounded hover:bg-muted"
-                    title={isCollapsed ? 'Mostrar atividades do módulo' : 'Recolher atividades do módulo'}
+                    className={`w-full font-bold text-sm mb-2 flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isCurrentModule ? 'bg-primary/10 text-primary border border-primary/20' : 'hover:bg-muted bg-muted/30'}`}
                     onClick={() => setCollapsedModules(prev => ({ ...prev, [mi]: !Boolean(prev[mi]) }))}
                   >
-                    {isCollapsed ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronUp className="h-4 w-4" />
-                    )}
-                    <Folder className="h-4 w-4" />
-                    <span className="line-clamp-1 break-words flex-1 text-left">{title}</span>
-                    {(() => {
-                      /**
-                       * pt-BR: Badge com total de atividades do módulo. O tempo total
-                       *        aparece como tooltip (title) ao passar o mouse no badge.
-                       * en-US: Badge with module activity count. Total time appears as
-                       *        tooltip (title) when hovering over the badge.
-                       */
-                      const totalSecs = getModuleTotalSeconds(m);
-                      const label = totalSecs ? formatDuration(totalSecs) : '';
-                      const totalCount = activities.length;
-                      return (
-                        <Badge variant="outline" className="shrink-0" title={label || undefined}>{totalCount}</Badge>
-                      );
-                    })()}
+                    {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                    <Folder className="h-4 w-4 shrink-0" />
+                    <span className="line-clamp-1 flex-1 text-left">{title}</span>
+                    <Badge variant={isCurrentModule ? "default" : "outline"} className="shrink-0">{activities.length}</Badge>
                   </button>
+                  
                   {showActivities && (
-                  <ul className="space-y-2">
-                    {activities.map((a: any, ai: number) => {
-                      const atitle = a?.titulo || a?.title || a?.name || `Atividade ${ai + 1}`;
-                      const durationLabel = getDurationLabel(a);
-                      const term = searchTerm.trim().toLowerCase();
-                      const matches = (() => {
-                        if (!term) return true;
-                        const t = String(atitle).toLowerCase();
-                        const d = String(a?.descricao || a?.description || '').toLowerCase();
-                        const ty = String(getType(a)).toLowerCase();
-                        return t.includes(term) || d.includes(term) || ty.includes(term);
-                      })();
-                      if (!matches) return null;
-                      const typeIcon = isVideo(a) ? <Play className="h-4 w-4 text-muted-foreground" /> : isDocument(a) ? <FileText className="h-4 w-4 text-muted-foreground" /> : isLink(a) ? <LinkIcon className="h-4 w-4 text-muted-foreground" /> : <FileText className="h-4 w-4 text-muted-foreground" />;
-                      return (
-                        <li key={`mobile-sidebar-${mi}-${ai}`} className="flex items-center gap-2">
-                          <button
-                            className="flex-1 grid grid-cols-[20px_1fr] items-center gap-2 rounded px-2 py-1 hover:bg-muted"
-                            onClick={() => {
-                              const globalIdx = flatActivities.findIndex((fa: any) => fa?._moduleIndex === mi && fa?._activityIndex === ai);
-                              selectionIntentRef.current = 'user';
-                              setCurrentIndex(globalIdx >= 0 ? globalIdx : 0);
-                              setMobileSidebarOpen(false);
-                            }}
-                          >
-                            {typeIcon}
-                            <div className="text-sm font-normal line-clamp-2 break-words leading-tight">{atitle}</div>
-                            {durationLabel && (
-                              <div className="col-span-2 text-xs text-muted-foreground">{durationLabel}</div>
-                            )}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                    <ul className="space-y-2 ml-2 border-l-2 border-muted pl-3">
+                      {activities.map((a: any, ai: number) => {
+                        const atitle = a?.titulo || a?.title || a?.name || `Atividade ${ai + 1}`;
+                        const durationLabel = getDurationLabel(a);
+                        
+                        // pt-BR: Determina se a atividade corresponde ao filtro de busca atual.
+                        const term = searchTerm.trim().toLowerCase();
+                        if (term) {
+                          const t = String(atitle).toLowerCase();
+                          const d = String(a?.descricao || a?.description || '').toLowerCase();
+                          if (!t.includes(term) && !d.includes(term)) return null;
+                        }
+
+                        const idVal = a?.id ?? a?.activity_id ?? `${mi}-${ai}`;
+                        const sid = String(idVal);
+                        const isCompleted = completedIds.has(sid);
+                        
+                        // Check if active
+                        const currentSid = currentActivity ? String(currentActivity?.id ?? currentActivity?.activity_id ?? `${currentActivity?._moduleIndex}-${currentActivity?._activityIndex}`) : '';
+                        const isActive = sid === currentSid;
+
+                        const typeIcon = isVideo(a) ? <Play className="h-4 w-4" /> : isDocument(a) ? <FileText className="h-4 w-4" /> : isLink(a) ? <LinkIcon className="h-4 w-4" /> : <FileText className="h-4 w-4" />;
+
+                        const pm = progressMap[sid];
+                        const resumeSecs = !isCompleted && pm && pm.seconds > 0 ? pm.seconds : 0;
+
+                        return (
+                          <li key={`mobile-sidebar-${mi}-${ai}`} className={`rounded-xl border transition-all ${isActive ? 'bg-primary/5 border-primary shadow-sm ring-1 ring-primary/20' : 'bg-background hover:border-muted-foreground/30'}`}>
+                            <div className="flex items-center justify-between p-3 gap-2">
+                              <button
+                                className="flex-1 text-left flex items-start gap-3"
+                                onClick={() => {
+                                  // pt-BR: Encontra o índice global para navegação correta.
+                                  const globalIdx = flatActivities.findIndex((fa: any) => {
+                                    const faId = String(fa?.id ?? fa?.activity_id ?? `${fa?._moduleIndex}-${fa?._activityIndex}`);
+                                    return faId === sid;
+                                  });
+                                  selectionIntentRef.current = 'user';
+                                  setCurrentIndex(globalIdx >= 0 ? globalIdx : 0);
+                                  setMobileSidebarOpen(false);
+                                }}
+                              >
+                                <div className={`mt-0.5 shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
+                                  {typeIcon}
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                  <div className={`text-sm leading-tight break-words line-clamp-2 ${isActive ? 'font-bold text-primary' : 'font-medium'}`}>
+                                    {atitle}
+                                  </div>
+                                  <div className="flex items-center flex-wrap gap-2 mt-1">
+                                    {durationLabel && (
+                                      <span className="text-[10px] text-muted-foreground flex items-center gap-1 bg-muted/50 px-1.5 py-0.5 rounded">
+                                        <Clock className="h-2.5 w-2.5" /> {durationLabel}
+                                      </span>
+                                    )}
+                                    {isCompleted && (
+                                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-[9px] px-1.5 py-0 border-0">Concluído</Badge>
+                                    )}
+                                    {!isCompleted && resumeSecs > 0 && (
+                                      <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[9px] px-1.5 py-0 border-0">Retomar {formatDuration(resumeSecs)}</Badge>
+                                    )}
+                                    {String(nextActivityId ?? '') === sid && (
+                                      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[9px] px-1.5 py-0 border-0">Próxima</Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </button>
+                              
+                              <button
+                                className={`p-2 rounded-full transition-colors ${isCompleted ? 'bg-green-50 text-green-600' : 'hover:bg-muted text-muted-foreground'}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleCompleted(a, mi, ai);
+                                }}
+                                title={isCompleted ? 'Marcar como não concluída' : 'Marcar como concluída'}
+                              >
+                                {isCompleted ? <CircleCheck className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   )}
                 </div>
               );
@@ -3177,55 +3226,90 @@ function htmlEquals(a: string, b: string): boolean {
           
           {/* pt-BR: Card de comentários da atividade atual */}
           {/* en-US: Comments card for current activity */}
-          <Card className="mt-4">
-            <CardContent className="pt-4">
-              <div className="mb-3 flex items-start justify-between gap-3">
+          <Card className="mt-8 border-t-4 border-t-primary shadow-lg overflow-hidden">
+            <CardHeader className="bg-muted/30 pb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Star className="h-5 w-5 text-primary" />
+                </div>
                 <div>
-                  <h3 className="text-lg font-semibold">Comentários da atividade</h3>
-                  <p className="text-sm text-muted-foreground">Somente comentários aprovados são exibidos. Comentários publicados entram em moderação.</p>
+                  <CardTitle className="text-xl">Comentários da atividade</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Mostramos apenas comentários aprovados. O seu passará por moderação antes de aparecer.
+                  </p>
                 </div>
               </div>
-
-              <div>
-                <Label>Novo comentário</Label>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="bg-muted/20 border rounded-2xl p-5 mb-8">
+                <Label className="text-sm font-bold flex items-center gap-2 mb-3">
+                  <Play className="h-4 w-4 text-primary" />
+                  O que você achou desta aula?
+                </Label>
                 <Textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value.slice(0, COMMENT_MAX))}
-                  placeholder="Escreva seu comentário... / Write your comment..."
-                  rows={3}
+                  placeholder="Seu comentário ou dúvida..."
+                  className="min-h-[120px] bg-background border-muted-foreground/20 focus-visible:ring-primary shadow-inner text-sm"
                 />
-                <div className="mt-2">
-                  <Label className="text-xs">Avaliação (obrigatória)</Label>
-                  <div className="mt-1">
+                
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-4 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Sua nota</Label>
                     <StarRating value={rating} onChange={setRating} />
                   </div>
-                </div>
-                <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{Math.max(0, draft.trim().length)} / {COMMENT_MAX}</span>
-                  <span>mín {COMMENT_MIN}</span>
-                </div>
-                <div className="mt-2 flex justify-end">
-                  <Button
-                    size="sm"
-                    onClick={() => createMutation.mutate(draft.trim())}
-                    disabled={createMutation.isPending || !draft.trim() || !currentActivityKeyForComments || draft.trim().length < COMMENT_MIN || rating < 1}
-                  >
-                    {createMutation.isPending ? 'Publicando...' : 'Publicar'}
-                  </Button>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="text-[10px] text-muted-foreground text-right">
+                      <div className={draft.trim().length >= COMMENT_MIN ? 'text-green-600 font-bold' : ''}>
+                        {draft.trim().length} / {COMMENT_MAX} caracteres
+                      </div>
+                      <div>Mínimo de {COMMENT_MIN}</div>
+                    </div>
+                    
+                    <Button
+                      size="lg"
+                      className="px-8 shadow-md hover:shadow-lg transition-all"
+                      onClick={() => createMutation.mutate(draft.trim())}
+                      disabled={createMutation.isPending || !draft.trim() || !currentActivityKeyForComments || draft.trim().length < COMMENT_MIN || rating < 1}
+                    >
+                      {createMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Publicando...
+                        </>
+                      ) : 'Publicar Comentário'}
+                    </Button>
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-6 space-y-3">
+              <Separator className="mb-8" />
+
+              <div className="space-y-4">
                 {commentsQuery.isLoading ? (
-                  <div className="text-sm text-muted-foreground">Carregando comentários...</div>
+                  <div className="flex flex-col items-center py-10 gap-3 text-muted-foreground">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                    <span className="text-sm">Carregando comentários...</span>
+                  </div>
                 ) : (Array.isArray(commentsQuery.data) && commentsQuery.data.length > 0 ? (
-                  (commentsQuery.data as any[]).map((c: any) => (
-                    <div key={String(c?.id ?? Math.random())}>
-                      {renderCommentItem(c)}
-                    </div>
-                  ))
+                  <div className="divide-y divide-muted/50">
+                    {(commentsQuery.data as any[]).map((c: any) => (
+                      <div key={String(c?.id ?? Math.random())} className="py-2">
+                        {renderCommentItem(c)}
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  <div className="text-sm text-muted-foreground">Nenhum comentário para esta atividade.</div>
+                  <div className="text-center py-12 px-4 rounded-3xl border-2 border-dashed border-muted">
+                    <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                      <Star className="h-6 w-6 text-muted-foreground/40" />
+                    </div>
+                    <h4 className="text-base font-semibold text-muted-foreground">Ainda não há comentários</h4>
+                    <p className="text-sm text-muted-foreground/60 mt-1 max-w-xs mx-auto text-balance">
+                      Seja o primeiro a compartilhar sua opinião sobre esta atividade!
+                    </p>
+                  </div>
                 ))}
               </div>
             </CardContent>

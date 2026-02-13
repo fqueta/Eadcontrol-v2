@@ -11,9 +11,9 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Plus, X, GripVertical, ChevronDown, ChevronUp, ChevronLeft, Save, Loader2, Eye, ExternalLink, Copy } from 'lucide-react';
+import { Plus, X, GripVertical, ChevronDown, ChevronUp, ChevronLeft, Save, Loader2, Eye, ExternalLink, Copy, BookOpen, Users, Clock, PlayCircle, CheckCircle2 } from 'lucide-react';
 import { ImageUpload } from '@/components/lib/ImageUpload';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { coursesService } from '@/services/coursesService';
 import { fileStorageService, type FileStorageItem } from '@/services/fileStorageService';
 import MediaLibraryModal from '@/components/media/MediaLibraryModal';
@@ -23,7 +23,7 @@ import { CoursePayload, CourseRecord, CourseModule, CourseActivity } from '@/typ
 import { modulesService } from '@/services/modulesService';
 import { activitiesService } from '@/services/activitiesService';
 import EnrollmentTable from '@/components/enrollments/EnrollmentTable';
-import { useEnrollmentsList } from '@/hooks/enrollments';
+import { useEnrollmentsList, useDeleteEnrollment } from '@/hooks/enrollments';
 import { usersService } from '@/services/usersService';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -2325,45 +2325,93 @@ export function CourseForm({
    * en-US: Tab that lists course enrollments, including the Situation column.
    */
   function CourseEnrollmentsTab({ courseId }: { courseId?: number }) {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { toast } = useToast();
+    const returnTo = `${location.pathname}${location.search || ''}`;
+
     const { data: enrollmentsResp, isLoading } = useEnrollmentsList(
       { page: 1, per_page: 50, id_curso: courseId },
       { enabled: !!courseId, staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false, refetchOnReconnect: false }
     );
     const items = useMemo(() => ((enrollmentsResp as any)?.data || (enrollmentsResp as any)?.items || []) as any[], [enrollmentsResp]);
 
+    const deleteMutation = useDeleteEnrollment({
+      onSuccess: () => {
+        toast({ title: 'Matrícula excluída', description: 'A matrícula foi removida com sucesso.' });
+        queryClient.invalidateQueries({ queryKey: ['enrollments'] });
+      },
+      onError: (err: any) => {
+        toast({ title: 'Erro ao excluir matrícula', description: err?.message || 'Tente novamente mais tarde.', variant: 'destructive' });
+      },
+    });
+
     if (!courseId) {
       return (
-        <div className="border rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">Salve o curso para visualizar as matrículas.</p>
-        </div>
+        <Card className="border-dashed shadow-none bg-muted/20">
+          <CardContent className="pt-8 pb-8 text-center">
+            <p className="text-sm text-muted-foreground font-medium">Salve o curso para visualizar e gerenciar as matrículas.</p>
+          </CardContent>
+        </Card>
       );
     }
 
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold">Matrículas do curso</h3>
-          <p className="text-xs text-muted-foreground">Listagem de alunos matriculados e sua situação.</p>
+      <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="flex flex-col gap-1.5">
+          <h3 className="text-lg font-bold tracking-tight text-foreground/90 leading-none">Matrículas do curso</h3>
+          <p className="text-sm text-muted-foreground max-w-2xl">Acompanhe todos os alunos inscritos, verifique pagamentos e o progresso acadêmico individual.</p>
         </div>
-        <EnrollmentTable items={items} isLoading={isLoading} />
+        <EnrollmentTable 
+          items={items} 
+          isLoading={isLoading} 
+          onView={(enroll: any) => {
+            navigate(`/admin/sales/proposals/view/${String(enroll.id)}`, { state: { returnTo } });
+          }}
+          onEdit={(enroll: any) => {
+            navigate(`/admin/sales/proposals/edit/${String(enroll.id)}`, { state: { returnTo } });
+          }}
+          onProgress={(enroll: any) => {
+            const cid = String(courseId || enroll?.id_curso || enroll?.course_id || '');
+            navigate(`/admin/school/courses/${cid}/progress`);
+          }}
+          onGenerateCertificate={(enroll: any) => {
+            const id = String(enroll?.id ?? '').trim();
+            navigate(`/admin/school/certificados/gerar?id=${encodeURIComponent(id)}`);
+          }}
+          onDelete={(enroll: any) => {
+            if (window.confirm(`Confirma a exclusão da matrícula ID ${enroll.id}?`)) {
+              deleteMutation.mutate(String(enroll.id));
+            }
+          }}
+        />
       </div>
     );
   }
 
   return (
     <FormProvider {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit, onInvalid)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleSubmit, onInvalid)} className="space-y-8">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)} className="w-full">
-          <TabsList>
-            <TabsTrigger value="info">Informações</TabsTrigger>
-            <TabsTrigger value="image">Imagem</TabsTrigger>
-            <TabsTrigger value="pricing">Valores/Parcelas</TabsTrigger>
-            <TabsTrigger value="content">Conteúdo</TabsTrigger>
-            <TabsTrigger value="config">Configurações</TabsTrigger>
-            <TabsTrigger value="questions">Perguntas</TabsTrigger>
-            <TabsTrigger value="enrollments">Matrículas</TabsTrigger>
+          <TabsList className="bg-muted/40 p-1 mb-4 h-auto flex-wrap justify-start gap-1 border border-muted-foreground/10 rounded-xl shadow-inner">
+            <TabsTrigger value="info" className="rounded-lg py-2.5 px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground transition-all duration-200">Informações</TabsTrigger>
+            <TabsTrigger value="image" className="rounded-lg py-2.5 px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground transition-all duration-200">Imagem</TabsTrigger>
+            <TabsTrigger value="pricing" className="rounded-lg py-2.5 px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground transition-all duration-200">Valores/Parcelas</TabsTrigger>
+            <TabsTrigger value="content" className="rounded-lg py-2.5 px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground transition-all duration-200">Conteúdo</TabsTrigger>
+            <TabsTrigger value="config" className="rounded-lg py-2.5 px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground transition-all duration-200">Configurações</TabsTrigger>
+            <TabsTrigger value="questions" className="rounded-lg py-2.5 px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground transition-all duration-200">Perguntas</TabsTrigger>
+            <TabsTrigger value="enrollments" className="rounded-lg py-2.5 px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground transition-all duration-200 flex items-center gap-2">
+              Matrículas
+              <Badge variant="outline" className="h-[18px] px-1 bg-muted/60 text-[10px] font-bold border-none text-muted-foreground/70 tracking-tighter">DATA</Badge>
+            </TabsTrigger>
           </TabsList>
-          <p className="text-xs text-muted-foreground mt-2">Campos marcados com <span className="text-red-600">*</span> são obrigatórios.</p>
+          
+          <div className="flex items-center gap-2 px-1 mb-6">
+            <div className="h-1 w-1 rounded-full bg-red-500 animate-pulse" />
+            <p className="text-[11px] text-muted-foreground/80 font-medium">
+              Campos marcados com <span className="text-red-500 font-bold">*</span> são obrigatórios.
+            </p>
+          </div>
 
           {/* Informações */}
           <TabsContent value="info" className="space-y-4 pt-4">
@@ -2666,31 +2714,42 @@ export function CourseForm({
           {/* Conteúdo (Currículo em seções) */}
           <TabsContent value="content" className="space-y-6 pt-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">Currículo do Curso</h3>
-                <p className="text-sm text-muted-foreground">
-                  {(form.watch('modulos') ?? []).length} Módulos
+              <div className="space-y-1.5">
+                <h3 className="text-xl font-black tracking-tight text-foreground flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-primary/70" />
+                  Currículo do Curso
+                </h3>
+                <div className="flex items-center gap-3 text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80">
+                  <span className="flex items-center gap-1.5 bg-muted/50 px-2 py-0.5 rounded">
+                    <Users className="h-3 w-3" />
+                    {(form.watch('modulos') ?? []).length} Módulos
+                  </span>
                   {(() => {
                     const mods = (form.watch('modulos') ?? []) as any[];
                     const totalSecs = mods.reduce((acc, m) => acc + getModuleTotalSeconds(m), 0);
-                    const label = totalSecs ? ` • Tempo total: ${formatDuration(totalSecs)}` : '';
-                    return label;
+                    if (!totalSecs) return null;
+                    return (
+                      <span className="flex items-center gap-1.5 bg-primary/5 text-primary px-2 py-0.5 rounded border border-primary/10">
+                        <Clock className="h-3 w-3" />
+                        Tempo total: {formatDuration(totalSecs)}
+                      </span>
+                    );
                   })()}
-                </p>
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                 <Button type="button" variant="default" onClick={addModule} className="bg-primary hover:bg-primary/90">
+                 <Button type="button" variant="default" onClick={addModule} className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 font-bold">
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Módulo
                 </Button>
                 
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button type="button" variant="outline" className="border-dashed">
+                    <Button type="button" variant="outline" className="border-dashed font-semibold hover:border-primary/50 transition-all">
                       Banco de Módulos
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-3" align="end">
+                  <PopoverContent className="w-[300px] p-4 rounded-xl shadow-xl border-muted/40" align="end">
                     <div className="space-y-2">
                        <h4 className="font-medium leading-none mb-2">Importar módulo</h4>
                       <Combobox
@@ -2855,78 +2914,68 @@ export function CourseForm({
           </TabsContent>
         </Tabs>
 
-        <Separator />
-        {/* Barra fixa de ações no rodapé (layout atualizado) */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-          <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-2">
-            {/* Lado esquerdo: Cancelar */}
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => navigate('/admin/school/courses')}>
-                <ChevronLeft className="h-4 w-4 mr-2" />Cancelar
+        {/* Barra fixa de ações no rodapé (Estilo SaaS Premium) */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white/80 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+          <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
+            {/* Lado esquerdo: Cancelar e Link do Aluno */}
+            <div className="flex items-center gap-3">
+              <Button type="button" variant="ghost" size="sm" onClick={() => navigate('/admin/school/courses')} className="text-muted-foreground hover:text-foreground font-semibold">
+                Cancelar
               </Button>
+              <div className="h-4 w-px bg-muted/60 mx-1 hidden min-[900px]:block" />
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={goToPreview}
-            disabled={!Boolean((initialData as any)?.slug || (initialData as any)?.token)}
-            title={!Boolean((initialData as any)?.slug || (initialData as any)?.token) ? 'Informe o slug e salve para habilitar o preview público' : undefined}
+                disabled={!Boolean((initialData as any)?.slug || (initialData as any)?.token)}
+                className="border-muted-foreground/20 font-semibold px-4"
               >
-                <Eye className="h-4 w-4 mr-2" />Preview do curso
+                <Eye className="h-4 w-4 mr-2 text-primary/70" />Preview do curso
               </Button>
               {(() => {
                 const { href, absolute } = buildStudentPreviewUrl();
                 return href ? (
-                  <div className="flex items-center gap-2 ml-2">
-                    <a href={href} target="_blank" rel="noreferrer" className="text-sm text-violet-700 underline flex items-center">
-                      <ExternalLink className="h-4 w-4 mr-1" /> Visualização do aluno
+                  <div className="flex items-center gap-2 ml-2 group">
+                    <a href={href} target="_blank" rel="noreferrer" className="text-xs font-bold text-primary/80 hover:text-primary underline flex items-center transition-colors">
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Link do Aluno
                     </a>
-                    <Button type="button" variant="outline" size="sm" onClick={() => copyText(absolute)} title="Copiar link da visualização do aluno">
-                      <Copy className="h-4 w-4" />
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-primary/5 text-primary/60 hover:text-primary transition-all" onClick={() => copyText(absolute)} title="Copiar link da visualização do aluno">
+                      <Copy className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                ) : (
-                  <span className="text-xs text-muted-foreground ml-2">Defina o slug/token e salve para gerar link do aluno</span>
-                );
+                ) : null;
               })()}
             </div>
-            {/* Lado direito: ações de salvar + novo cadastro */}
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/admin/school/courses/create')}>
+            {/* Lado direito: ações principais */}
+            <div className="flex items-center gap-3">
+              <Button type="button" variant="ghost" className="text-primary hover:bg-primary/5 font-bold hidden sm:flex" onClick={() => navigate('/admin/school/courses/create')}>
                 <Plus className="h-4 w-4 mr-2" />Novo cadastro
               </Button>
               <Button
                 type="button"
-                variant="default"
-                size="sm"
+                variant="outline"
                 onClick={saveAndStay}
                 disabled={Boolean(saving)}
+                className="border-muted-foreground/20 hover:bg-muted font-bold min-w-[150px] hidden md:flex"
               >
                 {saving === 'stay' ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...
-                  </>
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...</>
                 ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />Salvar e Continuar
-                  </>
+                  <><Save className="h-4 w-4 mr-2" />Salvar</>
                 )}
               </Button>
               <Button
                 type="button"
-                variant="secondary"
-                size="sm"
+                variant="default"
                 onClick={saveAndExit}
                 disabled={Boolean(saving)}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-black shadow-lg shadow-primary/20 min-w-[180px]"
               >
                 {saving === 'exit' ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...
-                  </>
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Finalizando...</>
                 ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />Salvar e Finalizar
-                  </>
+                  <><CheckCircle2 className="h-4 w-4 mr-2" />Salvar e Finalizar</>
                 )}
               </Button>
             </div>
@@ -3086,9 +3135,11 @@ export function CourseForm({
    // I'll check if `setActivityField` exists in CourseForm.
    return (
               <Card
-                className={`border transition-all duration-200 ${
-                  dragModuleIdx === index ? 'opacity-50 border-primary border-dashed' : 'hover:border-primary/50'
-                }`}
+                className={`border-2 transition-all duration-300 shadow-sm overflow-hidden ${
+                  dragModuleIdx === index 
+                    ? 'opacity-50 ring-2 ring-primary ring-offset-2 border-dashed' 
+                    : 'hover:border-primary/40 hover:shadow-md bg-white/40 backdrop-blur-sm'
+                } ${((m as any).active || 's') === 'n' ? 'opacity-75 grayscale-[0.3]' : ''}`}
                 draggable
                 onDragStart={() => setDragModuleIdx(index)}
                 onDragOver={(e) => e.preventDefault()}
@@ -3097,8 +3148,8 @@ export function CourseForm({
                   setDragModuleIdx(null);
                 }}
               >
-                <div className="flex items-center gap-2 px-4 py-3 bg-muted/40 border-b rounded-t-lg select-none group">
-                    <div className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted text-muted-foreground group-hover:text-foreground transition-colors">
+                <div className="flex items-center gap-3 px-4 py-4 bg-muted/30 border-b rounded-t-lg select-none group/module">
+                    <div className="cursor-grab active:cursor-grabbing p-1.5 rounded-lg bg-background border shadow-sm text-primary/40 group-hover/module:text-primary transition-all group-hover/module:scale-110">
                       <GripVertical className="h-5 w-5" />
                     </div>
                     
@@ -3112,27 +3163,31 @@ export function CourseForm({
                              setValue('modulos', curr);
                           }
                         }}
-                        placeholder="Título do módulo (ex: Introdução)"
-                        className="font-medium bg-transparent border-transparent hover:border-input focus:bg-background focus:border-input h-9 px-2 transition-all max-w-md text-base"
+                        placeholder="Título do módulo (ex: Introdução ao Curso)"
+                        className="font-black bg-transparent border-transparent hover:border-input focus:bg-background focus:border-input h-10 px-2 transition-all max-w-xl text-lg text-foreground/90 placeholder:text-muted-foreground/50"
                       />
                     </div>
 
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <Badge variant="outline" className="font-normal bg-background/50">
-                         {(m.atividades ?? []).length} Aulas
-                      </Badge>
-                      
-                      {(() => {
-                        const totalSecs = getModuleTotalSeconds(m);
-                        if (!totalSecs) return null;
-                         return (
-                          <Badge variant="secondary" className="font-normal">
-                             {formatDuration(totalSecs)}
+                    <div className="flex items-center gap-2">
+                       <div className="hidden sm:flex items-center gap-2 mr-2">
+                          <Badge variant="outline" className="font-bold bg-background/80 border-primary/20 text-primary/80 px-2 py-0.5 flex items-center gap-1.5">
+                             <PlayCircle className="h-3.5 w-3.5" />
+                             {(m.atividades ?? []).length} Aulas
                           </Badge>
-                         )
-                       })()}
+                          
+                          {(() => {
+                            const totalSecs = getModuleTotalSeconds(m);
+                            if (!totalSecs) return null;
+                             return (
+                              <Badge variant="secondary" className="font-medium bg-muted/60 text-muted-foreground px-2 py-0.5 flex items-center gap-1.5 border-transparent">
+                                 <Clock className="h-3.5 w-3.5" />
+                                 {formatDuration(totalSecs)}
+                              </Badge>
+                             )
+                           })()}
+                       </div>
 
-                      <div className="flex items-center gap-1 border-l pl-2 ml-1">
+                       <div className="flex items-center gap-1 border-l pl-3 border-muted/60">
                          <Switch 
                             checked={((m as any).active || 's') === 's'} 
                             onCheckedChange={(c) => {
@@ -3142,16 +3197,16 @@ export function CourseForm({
                                    setValue('modulos', curr);
                                 }
                             }}
-                            className="scale-75"
+                            className="scale-90"
                          />
                          
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => toggleModuleCollapse(index)}>
+                        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all" onClick={() => toggleModuleCollapse(index)}>
                            {collapsedModules.has(index) ? <ChevronLeft className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </Button>
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10" onClick={() => removeModule(index)}>
+                        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-all" onClick={() => removeModule(index)}>
                           <X className="h-4 w-4" />
                         </Button>
-                      </div>
+                       </div>
                     </div>
                 </div>
 

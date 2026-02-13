@@ -25,6 +25,8 @@ use App\Http\Controllers\api\SituacaoMatriculaController;
 use App\Http\Controllers\api\ServiceOrderController;
 use App\Http\Controllers\api\RegisterController;
 use App\Http\Controllers\api\ModuleController;
+use App\Http\Controllers\api\PageController;
+use App\Http\Controllers\api\ContentTypeController;
 use App\Http\Controllers\api\ActivityController;
 use App\Http\Controllers\api\CertificatesController;
 use App\Http\Controllers\api\FileStorageController;
@@ -86,6 +88,7 @@ Route::name('api.')->prefix('v1')->middleware([
     Route::fallback(function () {
         return response()->json(['message' => 'Rota não encontrada'], 404);
     });
+    Route::get('pages/public/{slug}', [PageController::class, 'publicShowBySlug'])->name('pages.public.show');
     
     // Rota de teste para API
     Route::get('/teste', [TesteController::class,'index'])->name('teste.index');
@@ -209,6 +212,22 @@ Route::name('api.')->prefix('v1')->middleware([
         Route::get('services/trash', [ServiceController::class, 'trash'])->name('services.trash');
         Route::put('services/{id}/restore', [ServiceController::class, 'restore'])->name('services.restore');
         Route::delete('services/{id}/force', [ServiceController::class, 'forceDelete'])->name('services.forceDelete');
+
+        // Rotas para pages
+        Route::apiResource('pages', PageController::class,['parameters' => [
+            'pages' => 'id'
+        ]]);
+        Route::get('pages/trash', [PageController::class, 'trash'])->name('pages.trash');
+        Route::put('pages/{id}/restore', [PageController::class, 'restore'])->name('pages.restore');
+        Route::delete('pages/{id}/force', [PageController::class, 'forceDelete'])->name('pages.forceDelete');
+
+        // Rotas para content-types (posts: tipo_conteudo)
+        Route::apiResource('content-types', ContentTypeController::class,['parameters' => [
+            'content-types' => 'id'
+        ]]);
+        Route::get('content-types/trash', [ContentTypeController::class, 'trash'])->name('content-types.trash');
+        Route::put('content-types/{id}/restore', [ContentTypeController::class, 'restore'])->name('content-types.restore');
+        Route::delete('content-types/{id}/force', [ContentTypeController::class, 'forceDelete'])->name('content-types.forceDelete');
 
          // Rotas para service-units
          Route::apiResource('service-units', ServiceUnitController::class,['parameters' => [
