@@ -58,7 +58,7 @@ class EvolutionApiService
             return false;
 
         } catch (\Throwable $e) {
-            dd($e->getMessage());
+            // dd($e->getMessage());
             Log::error('EvolutionAPI Exception: ' . $e->getMessage());
             return false;
         }
