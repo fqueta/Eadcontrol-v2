@@ -522,6 +522,8 @@ class PublicEnrollmentController extends Controller
         // Enviar notificação para o Admin
         \App\Services\EvolutionApiService::sendAdminNotificationNewInterest($client, $courseId, $matricula->id);
 
+
+
         return response()->json([
             'message' => 'Interesse registrado com sucesso',
             'client' => [
