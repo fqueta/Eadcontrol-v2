@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use App\Models\Course;
 
 /**
  * Controlador para cadastro público de cliente e matrícula automática.
@@ -564,7 +565,8 @@ class PublicEnrollmentController extends Controller
 
         // Optionally send Welcome email if course id provided
         if ($courseId > 0) {
-            $client->notify(new WelcomeNotification($courseId));
+            $course = DB::table('cursos')->where('id', $courseId)->first(); 
+            $client->notify(new WelcomeNotification($courseId, $course->slug, $course->nome, $matricula->id));
         }
 
         // Avaliar envio de notificação via EvolutionAPI para o administrador
@@ -581,6 +583,7 @@ class PublicEnrollmentController extends Controller
             $msgObj .= "📱 *Telefone:* " . ($client->getAttribute('celular') ?: 'N/D') . "\n";
             $msgObj .= "🎓 *Curso:* {$courseName}\n";
             $msgObj .= "📅 *Data:* " . date('d/m/Y H:i');
+            $msgObj .= "\n🎓 *Link:* " . Qlib::get_front_url().'/admin/sales/proposals/view/'.$matricula->id;
 
             \App\Services\EvolutionApiService::sendAdminNotification($msgObj, $courseId);
 
