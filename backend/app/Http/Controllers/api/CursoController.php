@@ -1001,24 +1001,49 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
 
         $modulos = $curso->modulos;
         $changed = false;
+        $quizActivityIds = [];
 
+        // 1. Coletar IDs de atividades do tipo quiz
+        foreach ($modulos as $mod) {
+            $atividades = isset($mod['atividades']) ? $mod['atividades'] : (isset($mod['activities']) ? $mod['activities'] : []);
+            foreach ($atividades as $act) {
+                $tipo = strtolower($act['type_activities'] ?? $act['tipo'] ?? '');
+                $actId = $act['id'] ?? $act['activity_id'] ?? null;
+                if ($tipo === 'quiz' && $actId) {
+                    $quizActivityIds[] = $actId;
+                }
+            }
+        }
+
+        // 2. Carregar todas as atividades, questões e opções em uma única query (Eager Loading)
+        $loadedActivities = collect();
+        if (!empty($quizActivityIds)) {
+            $loadedActivities = Activity::whereIn('ID', $quizActivityIds)
+                ->with(['questions' => function($q) {
+                    $q->orderBy('activity_questions.ordem');
+                }, 'questions.options'])
+                ->get()
+                ->keyBy('ID');
+        }
+
+        // 3. Mapear de volta para a estrutura JSON
         foreach ($modulos as &$mod) {
             $atividades = isset($mod['atividades']) ? $mod['atividades'] : (isset($mod['activities']) ? $mod['activities'] : []);
             foreach ($atividades as &$act) {
                 $tipo = strtolower($act['type_activities'] ?? $act['tipo'] ?? '');
                 if ($tipo === 'quiz') {
                     $activityId = $act['id'] ?? $act['activity_id'] ?? null;
-                    if ($activityId) {
-                        $activityModel = Activity::find($activityId);
-                        if ($activityModel) {
-                            $act['quiz_questions'] = $this->loadQuizQuestions($activityModel);
-                            
-                            // Sincronizar quiz_config se estiver no post config
-                            if (!isset($act['quiz_config']) && isset($activityModel->config['quiz_config'])) {
-                                $act['quiz_config'] = $activityModel->config['quiz_config'];
-                            }
-                            $changed = true;
+                    if ($activityId && $loadedActivities->has($activityId)) {
+                        $activityModel = $loadedActivities->get($activityId);
+                        
+                        // Usar método auxiliar para formatar (agora passando o model já carregado)
+                        $act['quiz_questions'] = $this->formatQuizQuestions($activityModel);
+                        
+                        // Sincronizar quiz_config
+                        if (!isset($act['quiz_config']) && isset($activityModel->config['quiz_config'])) {
+                            $act['quiz_config'] = $activityModel->config['quiz_config'];
                         }
+                        $changed = true;
                     }
                 }
             }
@@ -1032,6 +1057,34 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
 
         return $curso;
     }
+
+    /**
+     * pt-BR: Formata as perguntas carregadas (helper para enrichCourseWithQuizQuestions).
+     *        Nota: assume que $activity já tem 'questions.options' carregados.
+     */
+    private function formatQuizQuestions(Activity $activity): array
+    {
+        return $activity->questions->map(function($q) {
+            return [
+                'id' => $q->id,
+                'tipo_pergunta' => $q->tipo_pergunta,
+                'enunciado' => $q->enunciado,
+                'explicacao' => $q->explicacao,
+                'pontos' => $q->pontos,
+                'resposta_correta' => $q->tipo_pergunta === 'verdadeiro_falso' 
+                    ? ($q->options->where('correta', 's')->first()?->texto === 'verdadeiro' ? 'verdadeiro' : 'falso')
+                    : null,
+                'opcoes' => $q->options->map(function($o) {
+                    return [
+                        'id' => $o->id,
+                        'texto' => $o->texto,
+                        'correta' => $o->correta === 's'
+                    ];
+                })->toArray()
+            ];
+        })->toArray();
+    }
+
 
     /**
      * pt-BR: Carrega perguntas e opções de uma atividade de quiz.
