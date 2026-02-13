@@ -650,11 +650,13 @@ export default function Clients() {
     return effectiveClients.filter((client) => {
       const document = client.tipo_pessoa === 'pf' ? client.cpf : client.cnpj;
       
-      // Filter by search term
+      // Filter by search term (redundant check, ensures UI consistency)
       const matchesSearch = (
         client.name.toLowerCase().includes(searchTermLower) ||
         (client.email && client.email.toLowerCase().includes(searchTermLower)) ||
-        (document && document.toLowerCase().includes(searchTermLower))
+        (document && document.toLowerCase().includes(searchTermLower)) ||
+        (client.celular && client.celular.includes(searchTermLower)) ||
+        (client.config?.celular && client.config.celular.includes(searchTermLower))
       );
       
       // Filter by status

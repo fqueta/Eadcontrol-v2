@@ -133,15 +133,15 @@ const LandingPage = ({ linkLoja }: { linkLoja?: string }) => {
           <p className="text-lg text-blue-50 mb-8 max-w-2xl mx-auto">
             Cadastre-se e conheça nossas soluções inclusivas.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-white text-primary hover:bg-blue-50 rounded-md" asChild>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-md mx-auto sm:max-w-none">
+            <Button size="lg" className="w-full sm:w-auto bg-white text-primary hover:bg-blue-50 rounded-md" asChild>
               <Link to="/public-client-form">
                 Cadastrar-se
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
-            <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer">
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-primary rounded-md">
+            <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer" className="w-full sm:w-auto">
+              <Button size="lg" variant="outline" className="w-full bg-transparent border-white text-white hover:bg-white hover:text-primary rounded-md">
                 Conhecer o site
                 <ExternalLink className="ml-2 h-5 w-5" />
               </Button>
