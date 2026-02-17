@@ -168,40 +168,32 @@ export function AppSidebar() {
            * pt-BR: Força cor do rótulo para o foreground do sidebar, evitando aparência clara.
            * en-US: Force label color to sidebar foreground to avoid washed-out text.
            */}
-          <SidebarGroupLabel className="text-sidebar-foreground">Navegação Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-muted-foreground/70 uppercase tracking-wider font-bold text-[10px] mb-2 px-4">Navegação Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <TooltipProvider>
-              <SidebarMenu>
+              <SidebarMenu className="space-y-1 px-2">
                 {menuItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     {item.items ? (
                       // Menu with submenu
                       <Tooltip disableHoverableContent={!collapsed}>
                         <TooltipTrigger asChild>
-                          {/*
-                           * Submenu root button color
-                           * Usa text-sidebar-foreground para garantir contraste em temas claros/escuros.
-                           */}
-                          {/*
-                           * Evita button-aninhado: SidebarMenuButton asChild -> renderiza div.
-                           * pt-BR: Usamos asChild para que o elemento raiz seja uma div, permitindo um botão de ação dentro sem violar a semântica.
-                           * en-US: Use asChild so root becomes a div, allowing an inner action button without invalid nesting.
-                           */}
                           <SidebarMenuButton
                             asChild
                             isActive={hasActiveChild(item.items)}
-                            className="text-sidebar-foreground"
+                            className="w-full justify-start text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-200 rounded-xl"
                             aria-expanded={!isGroupCollapsed(item.title)}
                           >
-                            <div className="flex items-center gap-2 w-full">
-                              <item.icon className="h-4 w-4 text-sidebar-foreground" />
+                            <div className="flex items-center gap-3 w-full px-2 py-2">
+                              <item.icon className="h-[18px] w-[18px]" />
                               {!collapsed && <span className="flex-1 truncate">{item.title}</span>}
-                              {/* Botão de ação para recolher/expandir submenu */}
                               {!collapsed && (
                                 <SidebarMenuAction
-                                  onClick={() => toggleGroup(item.title)}
-                                  aria-label={isGroupCollapsed(item.title) ? 'Expandir' : 'Recolher'}
-                                  title={isGroupCollapsed(item.title) ? 'Expandir' : 'Recolher'}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    toggleGroup(item.title);
+                                  }}
+                                  className="hover:bg-transparent text-muted-foreground/50 hover:text-primary transition-colors"
                                 >
                                   {isGroupCollapsed(item.title) ? (
                                     <ChevronDown className="h-4 w-4" />
@@ -221,21 +213,16 @@ export function AppSidebar() {
                       // Simple menu item
                       <Tooltip disableHoverableContent={!collapsed}>
                         <TooltipTrigger asChild>
-                          {/*
-                           * Simple item active styling
-                           * pt-BR: Usa data-[active=true] para aplicar bg-primary + texto branco quando ativo.
-                           * en-US: Use data-[active=true] to apply bg-primary + white text on active.
-                           */}
                           <SidebarMenuButton 
                             asChild 
                             isActive={isActive(item.url)}
-                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+                            className="w-full justify-start text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary"
                           >
                             <NavLink 
                               to={resolveUrl(item.url)} 
-                              className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                              className="flex items-center gap-3 px-2 py-2"
                             >
-                              <item.icon className="h-4 w-4 text-sidebar-foreground" />
+                              <item.icon className={`h-[18px] w-[18px] ${isActive(item.url) ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
                               {!collapsed && <span>{item.title}</span>}
                             </NavLink>
                           </SidebarMenuButton>
@@ -246,17 +233,17 @@ export function AppSidebar() {
                       </Tooltip>
                     )}
                     {item.items && !collapsed && !isGroupCollapsed(item.title) && (
-                      <SidebarMenuSub>
+                      <SidebarMenuSub className="ml-4 border-l-2 border-primary/10 pl-2 space-y-1 my-1">
                         {item.items.map((subItem) => (
                           <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton 
                             asChild 
                             isActive={isActive(subItem.url)}
-                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+                            className="w-full justify-start text-sm transition-all duration-200 rounded-lg data-[active=true]:text-primary data-[active=true]:font-semibold data-[active=true]:bg-primary/5 hover:bg-primary/5 hover:text-primary text-muted-foreground"
                           >
                             <NavLink 
                               to={resolveUrl(subItem.url)} 
-                              className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                              className="flex items-center gap-2 px-2 py-1.5"
                             >
                               <span>{subItem.title}</span>
                             </NavLink>
@@ -273,63 +260,65 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarSeparator />
+      <SidebarSeparator className="mx-4 my-2 opacity-50" />
 
-      <SidebarFooter className="border-t border-border">
+      <SidebarFooter className="p-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton>
-                  <User className="h-4 w-4" />
-                  {!collapsed && <span>Usuário</span>}
-                  <ChevronUp className="ml-auto h-4 w-4" />
-                </SidebarMenuButton>
+                <div className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer hover:bg-accent transition-colors duration-200 ${collapsed ? 'justify-center' : ''}`}>
+                  <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-white font-bold shadow-sm ring-2 ring-white dark:ring-slate-950">
+                    <User className="h-5 w-5" />
+                  </div>
+                  {!collapsed && (
+                    <div className="flex flex-col flex-1 overflow-hidden">
+                      <span className="text-sm font-semibold truncate text-foreground">Minha Conta</span>
+                      <span className="text-[10px] text-muted-foreground truncate">Gerenciar perfil</span>
+                    </div>
+                  )}
+                  {!collapsed && <ChevronUp className="h-4 w-4 text-muted-foreground ml-auto" />}
+                </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent 
                 side="top" 
-                className="w-[--radix-popper-anchor-width]"
+                className="w-56 p-2 rounded-2xl shadow-xl border-border/50 backdrop-blur-sm bg-popover/95"
               >
-                <DropdownMenuItem asChild>
-                  <Link to="/admin/settings/user-profiles" className="flex items-center">
-                    <User className="mr-2 h-4 w-4" />
+                <DropdownMenuItem asChild className="rounded-lg cursor-pointer focus:bg-primary/5 focus:text-primary">
+                  <Link to="/admin/settings/user-profiles" className="flex items-center gap-2 py-2">
+                    <User className="h-4 w-4" />
                     <span>Perfil</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/admin/settings/system" className="flex items-center">
-                    <Wrench className="mr-2 h-4 w-4" />
+                <DropdownMenuItem asChild className="rounded-lg cursor-pointer focus:bg-primary/5 focus:text-primary">
+                  <Link to="/admin/settings/system" className="flex items-center gap-2 py-2">
+                    <Wrench className="h-4 w-4" />
                     <span>Configurações</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={logout} className="text-red-600 cursor-pointer">
-                  <ChevronUp className="mr-2 h-4 w-4" />
+                <DropdownMenuItem onClick={logout} className="rounded-lg cursor-pointer text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30 focus:text-red-700 mt-1">
+                  <ChevronUp className="h-4 w-4 mr-2 rotate-90" />
                   <span>Sair</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>
-          {/**
-           * Removido: Botão "Recolher menu" do rodapé
-           * pt-BR: O controle de colapsar a sidebar deixou de ter efeito nesta UI.
-           * en-US: The sidebar collapse control is no longer effective in this UI.
-           */}
-          {/* Controle global de submenus: recolher/expandir todos com persistência */}
+          
           <SidebarMenuItem>
             <Button
               variant="ghost"
               size="sm"
-              className="mx-2 mb-2 w-[calc(100%-1rem)]"
+              className={`w-full mt-1 text-muted-foreground hover:text-foreground ${collapsed ? 'px-0 justify-center' : 'justify-start'}`}
               onClick={() => (areAllGroupsCollapsed ? expandAllGroups() : collapseAllGroups())}
               aria-label={areAllGroupsCollapsed ? 'Expandir submenus' : 'Recolher submenus'}
             >
               {areAllGroupsCollapsed ? (
-                <ChevronDown className="mr-2 h-4 w-4" />
+                <ChevronDown className="h-4 w-4" />
               ) : (
-                <ChevronUp className="mr-2 h-4 w-4" />
+                <ChevronUp className="h-4 w-4" />
               )}
               {!collapsed && (
-                <span>{areAllGroupsCollapsed ? 'Expandir submenus' : 'Recolher submenus'}</span>
+                <span className="ml-2 text-xs">{areAllGroupsCollapsed ? 'Expandir tudo' : 'Recolher tudo'}</span>
               )}
             </Button>
           </SidebarMenuItem>
