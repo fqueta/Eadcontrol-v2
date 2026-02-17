@@ -78,6 +78,29 @@ export function useRestoreClient(mutationOptions?: any) {
 }
 
 /**
+ * Hook para promover cliente a usuário (permission_id = 3)
+ */
+export function usePromoteClient(mutationOptions?: any) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => clientsService.promoteClient(id),
+    onSuccess: (data, id) => {
+      // Invalida lista de clientes e de usuários, pois o registro mudou de categoria
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('Cliente promovido a usuário com sucesso!');
+      mutationOptions?.onSuccess?.(data, id, undefined);
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao promover cliente: ${error.message}`);
+      mutationOptions?.onError?.(error, undefined as any, undefined);
+    },
+    ...mutationOptions,
+  });
+}
+
+/**
  * Hook para excluir cliente permanentemente (force delete)
  */
 export function useForceDeleteClient(mutationOptions?: any) {

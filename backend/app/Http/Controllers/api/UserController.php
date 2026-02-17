@@ -63,7 +63,8 @@ class UserController extends Controller
         $permission_id = $request->user()->permission_id;
         // dd($permission_id);
         $query = User::query()->where('permission_id','!=',$this->cliente_permission_id)->orderBy($order_by,$order);
-
+        //listar apenas usurios da permissão dele pra cima
+        $query->where('permission_id','>=',$permission_id);
         // Não exibir registros marcados como deletados ou excluídos
         $query->where(function($q) {
             $q->whereNull('deletado')->orWhere('deletado', '!=', 's');
@@ -160,6 +161,7 @@ class UserController extends Controller
             // 'verificado'    => ['required', Rule::in(['n','s'])],
             'permission_id' => 'nullable|integer',
             'config'        => 'array',
+            'force_password_change' => 'nullable|string|in:s,n',
         ]);
 
         if ($validator->fails()) {
@@ -200,6 +202,9 @@ class UserController extends Controller
         $validated['tipo_pessoa'] = isset($validated['tipo_pessoa']) ? $validated['tipo_pessoa'] : 'pf';
         $validated['permission_id'] = isset($validated['permission_id']) ? $validated['permission_id'] : 5;
         $validated['config'] = isset($validated['config']) ? $this->sanitizeInput($validated['config']) : [];
+        if (isset($validated['force_password_change'])) {
+            $validated['config']['force_password_change'] = $validated['force_password_change'];
+        }
         if(is_array($validated['config'])){
             $validated['config'] = json_encode($validated['config']);
         }
@@ -248,17 +253,14 @@ class UserController extends Controller
         return response()->json($user);
     }
 
-    /**
-     * Get logged-in user profile.
-     *
-     * Obtém o perfil do usuário autenticado (self-service).
-     */
     public function profile(Request $request)
     {
         $user = $request->user();
         if (!$user || ($user->ativo ?? null) !== 's') {
             return response()->json(['error' => 'Usuário inativo'], 405);
         }
+        $config = is_string($user->config) ? json_decode($user->config, true) : $user->config;
+        $user->force_password_change = (isset($config['force_password_change']) && $config['force_password_change'] === 's');
         return response()->json($user);
     }
 
@@ -367,8 +369,13 @@ class UserController extends Controller
             ->where('id', $authUser->id)
             ->update($updateData);
 
+        $updatedUser = User::find($authUser->id);
+        $config = is_string($updatedUser->config) ? json_decode($updatedUser->config, true) : $updatedUser->config;
+        $updatedUser->force_password_change = (isset($config['force_password_change']) && $config['force_password_change'] === 's');
+
         return response()->json([
-            'data' => User::find($authUser->id),
+            'data' => $updatedUser,
+            'user' => $updatedUser,
             'message' => 'Perfil atualizado com sucesso!',
             'status' => 200
         ]);
@@ -532,7 +539,8 @@ class UserController extends Controller
             'verificado'    => ['sometimes', Rule::in(['n','s'])],
             'permission_id' => 'nullable|integer',
             'ativo'         => ['sometimes', Rule::in(['n','s'])],
-            'config'        => 'array'
+            'config'        => 'array',
+            'force_password_change' => 'nullable|string|in:s,n',
         ]);
         //se ativo = n status = inactived
         if ($request->ativo == 'n') {
@@ -572,6 +580,9 @@ class UserController extends Controller
         }
 
         if (isset($validated['config']) && is_array($validated['config'])) {
+            if (isset($validated['force_password_change'])) {
+                $validated['config']['force_password_change'] = $validated['force_password_change'];
+            }
             $validated['config'] = json_encode($validated['config']);
         }
         // Normalizar campos únicos opcionais: strings vazias viram null

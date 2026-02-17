@@ -19,12 +19,13 @@ import { turmasService } from '@/services/turmasService';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 // Removido: installmentsService — não buscamos mais tabelas de parcelamento
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, User, GraduationCap, DollarSign, AlignLeft, Save, CheckCircle2, CreditCard, Users, Pencil, Info } from 'lucide-react';
+import { ArrowLeft, User, GraduationCap, DollarSign, AlignLeft, Save, CheckCircle2, CreditCard, Users, Pencil, Info, Award } from 'lucide-react';
 import { Combobox, useComboboxOptions } from '@/components/ui/combobox';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import SelectGeraValor from '@/components/school/SelectGeraValor';
 import { currencyApplyMask, currencyRemoveMaskToNumber, currencyRemoveMaskToString } from '@/lib/masks/currency';
 import BudgetPreview from '@/components/school/BudgetPreview';
+import jsPDF from 'jspdf';
 
 /**
  * ProposalEditSchema
@@ -417,13 +418,19 @@ export default function ProposalsEdit() {
   }, [situationsData, selectedSituacaoId, enrollment]);
 
   const selectedClient = useMemo(() => {
+    // 1. Prioridade: Detalhe vindo da URL (se bater ID)
     if (clientDetailData && String(clientDetailData?.id || '') === String(selectedClientId || '')) {
       return clientDetailData as any;
     }
+    // 2. Prioridade: Detalhe individual fetched pelo ID do form (quando não está na lista ou na URL)
+    if (selectedClientDetail && String(selectedClientDetail?.id || '') === String(selectedClientId || '')) {
+      return selectedClientDetail as any;
+    }
+    // 3. Prioridade: Busca na lista geral carregada
     const list = clientsList || [];
     const hit = list.find((c: any) => String(c.id) === String(selectedClientId || ''));
     return hit;
-  }, [clientDetailData, clientsList, selectedClientId]);
+  }, [clientDetailData, selectedClientDetail, clientsList, selectedClientId]);
 
   /**
    * normalizeMonetaryToPlain
@@ -489,7 +496,12 @@ export default function ProposalsEdit() {
   function computeValidityDate(daysStr?: string): string {
     const days = parseInt(String(daysStr ?? ''), 10);
     if (!Number.isFinite(days) || days <= 0) return '';
-    const d = new Date();
+    
+    // pt-BR: Tenta usar data de início de acesso definida, ou data da matrícula, ou hoje.
+    // en-US: Tries to use defined access start date, or enrollment date, or today.
+    const startStr = (enrollment as any)?.config?.dt_inicio_acesso || (enrollment as any)?.data;
+    const d = startStr ? new Date(startStr) : new Date();
+    
     d.setDate(d.getDate() + days);
     const dd = String(d.getDate()).padStart(2, '0');
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -1114,7 +1126,8 @@ export default function ProposalsEdit() {
             </CardContent>
           </Card>
 
-          {/* Card 3: Financeiro / Gerar Valor */}
+          {/* Card 3: Financeiro / Gerar Valor (REMOVIDO TEMPORARIAMENTE) */}
+          {/* 
           <Card className="border shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
             <CardHeader className="bg-muted/30 border-b py-4">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
@@ -1124,7 +1137,6 @@ export default function ProposalsEdit() {
               <CardDescription>Defina os valores, descontos e prazos da proposta.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
-              {/* SelectGeraValor — renderiza quando turma selecionada */}
               {form.watch('id_turma') && (
                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-3 animate-in fade-in zoom-in-95 duration-300">
                   <FormField
@@ -1237,122 +1249,172 @@ export default function ProposalsEdit() {
               </div>
             </CardContent>
           </Card>
+           */}
 
-              {/**
-               * ParcelamentoCard
-               * pt-BR: Card para gerenciamento de parcelamento, posicionado abaixo do campo de validade.
-               *        Contém o select de Tabela de Parcelamento e o campo Texto de Desconto.
-               * en-US: Card for installment management, placed below the validity field.
-               *        Contains the Installment Table select and the Discount Text field.
-               */}
-
-          {/* Card 4: Parcelamento */}
+          {/* Card 4: Controle de Acesso e Validade */}
           <Card className="border shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
             <CardHeader className="bg-muted/30 border-b py-4">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-primary/70" />
-                Condições de Parcelamento
+                <CheckCircle2 className="h-5 w-5 text-primary/70" />
+                Controle de Acesso e Validade
               </CardTitle>
-              <CardDescription>Defina se a proposta será parcelada e o texto descritivo.</CardDescription>
+              <CardDescription>Defina o tempo de acesso ao curso para este aluno.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Parcelada? */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="parcelada"
+                  name="validade"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Opção de Parcelamento</FormLabel>
-                      <Select value={String(field.value ?? false)} onValueChange={(v) => field.onChange(v === 'true')}>
-                        <SelectTrigger className="w-full h-10 font-semibold shadow-sm">
-                          <SelectValue placeholder="Selecione" />
+                      <FormLabel className="text-lg font-black text-foreground/70">Tempo de Acesso</FormLabel>
+                      <Select value={field.value || ''} onValueChange={field.onChange}>
+                        <SelectTrigger className="w-full h-12 font-bold text-lg shadow-sm">
+                          <SelectValue placeholder="Selecione a validade" />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">
-                          <SelectItem value="false" className="p-3">À Vista (Não parcelada)</SelectItem>
-                          <SelectItem value="true" className="p-3 font-bold text-primary">Parcelada</SelectItem>
+                          <SelectItem value="no_validity" className="font-medium p-3 text-muted-foreground">Sem validade definida</SelectItem>
+                          <SelectItem value="7" className="font-medium p-3">7 Dias</SelectItem>
+                          <SelectItem value="14" className="font-medium p-3">14 Dias</SelectItem>
+                          <SelectItem value="30" className="font-medium p-3">30 Dias (1 Mês)</SelectItem>
+                          <SelectItem value="60" className="font-medium p-3">60 Dias (2 Meses)</SelectItem>
+                          <SelectItem value="90" className="font-medium p-3">90 Dias (3 Meses)</SelectItem>
+                          <SelectItem value="180" className="font-medium p-3">180 Dias (6 Meses)</SelectItem>
+                          <SelectItem value="365" className="font-medium p-3">365 Dias (1 Ano)</SelectItem>
+                          <SelectItem value="730" className="font-medium p-3">730 Dias (2 Anos)</SelectItem>
+                          <SelectItem value="9999" className="font-bold p-3 text-emerald-600">Acesso Vitalício</SelectItem>
                         </SelectContent>
                       </Select>
+                      <div className="flex items-center gap-2 mt-2">
+                         <div className={`text-xs font-bold uppercase py-1 px-3 rounded-md ${field.value && field.value !== '9999' && field.value !== 'no_validity' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                            {field.value === '9999' ? 'Acesso Permanente' : (field.value && field.value !== 'no_validity') ? `Expira em: ${computeValidityDate(field.value)}` : 'Sem Validade / Acesso Ilimitado'}
+                         </div>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
-                {/* Parcelas */}
-                <FormField
-                  control={form.control}
-                  name="parcelas"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Número de Parcelas</FormLabel>
-                      <Select value={field.value || ''} onValueChange={field.onChange} disabled={!form.watch('parcelada')}>
-                        <SelectTrigger className="w-full h-10 font-bold shadow-sm">
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl">
-                          <SelectItem value="6" className="p-3">6 Parcelas</SelectItem>
-                          <SelectItem value="12" className="p-3 font-bold">12 Parcelas</SelectItem>
-                          <SelectItem value="18" className="p-3">18 Parcelas</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Preview Valor da Parcela */}
-                <FormItem>
-                  <FormLabel>Valor da Parcela (estimativa)</FormLabel>
-                  <div className="relative">
-                    <Input
-                      readOnly
-                      className="font-black text-emerald-600 h-10 bg-emerald-50 border-emerald-100 disabled:opacity-100 cursor-default"
-                      value={((): string => {
-                        const isParcelada = !!form.watch('parcelada');
-                        const parcelasStr = String(form.watch('parcelas') || '');
-                        const parcelasNum = Number(parcelasStr) || 0;
-                        const totalNum = currencyRemoveMaskToNumber(String(form.getValues('total') || '')) || 0;
-                        if (!isParcelada || parcelasNum <= 0 || totalNum <= 0) return '';
-                        return formatCurrencyBRL(totalNum / parcelasNum);
-                      })()}
-                    />
-                  </div>
-                </FormItem>
-              </div>
-
-              {/* Texto de Desconto (mantido) */}
-              <div className="pt-4 border-t space-y-3">
-                <FormField
-                  control={form.control}
-                  name="meta_texto_desconto"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <AlignLeft className="h-4 w-4 text-primary/60" />
-                        Texto de Sugestão de Pagamento / Desconto
-                      </FormLabel>
-                      <FormControl>
-                        <div className="rounded-xl border shadow-inner bg-white overflow-hidden">
-                          <RichTextEditor
-                            value={field.value || ''}
-                            onChange={(val) => {
-                              try { setTextoDescontoDirty(true); } catch {}
-                              field.onChange(val);
-                            }}
-                            placeholder="Digite ou edite o texto de desconto (suporta HTML)"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="p-4 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-3">
-                  <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                  <p className="text-[10px] text-amber-700 font-medium">Use tags como <code className="bg-amber-100 px-1 rounded">{"{total_parcelas}"}</code>, <code className="bg-amber-100 px-1 rounded">{"{valor_parcela}"}</code> e <code className="bg-amber-100 px-1 rounded">{"{parcela_com_desconto}"}</code> para preenchimento dinâmico no documento final.</p>
+                
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-center">
+                    <p className="text-sm font-semibold text-slate-700 mb-1">Status do Acesso</p>
+                    <p className="text-xs text-muted-foreground">
+                       O aluno terá acesso ao conteúdo até a data calculada acima. Após este período, o acesso é bloqueado automaticamente, exceto se renovado.
+                    </p>
                 </div>
               </div>
             </CardContent>
+          </Card>
+
+          {/* Card: Gerenciamento de Certificado */}
+          <Card className="border shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
+             <CardHeader className="bg-muted/30 border-b py-4">
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                   <Award className="h-5 w-5 text-amber-500" />
+                   Certificação
+                </CardTitle>
+                <CardDescription>Emissão e controle de certificados de conclusão.</CardDescription>
+             </CardHeader>
+             <CardContent className="p-6">
+                <div className="flex flex-col md:flex-row items-center gap-6">
+                    <div className="flex-1 space-y-4 w-full">
+                        <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+                           <div className="flex items-center gap-2 mb-2">
+                              <GraduationCap className="h-5 w-5 text-amber-600" />
+                              <h3 className="font-bold text-amber-800">Certificado de Conclusão</h3>
+                           </div>
+                           <p className="text-xs text-amber-700/80 mb-4">
+                              O certificado é gerado com base nos dados do aluno e do curso. Certifique-se de que o nome do aluno está correto antes de emitir.
+                           </p>
+                           
+                           <div className="grid grid-cols-2 gap-2 text-xs text-amber-900/60 mb-2">
+                              <div><strong>Aluno:</strong> {selectedClient?.name || selectedClient?.nome || '---'}</div>
+                              <div><strong>Curso:</strong> {selectedCourse?.titulo || '---'}</div>
+                              <div><strong>Data:</strong> {new Date().toLocaleDateString('pt-BR')}</div>
+                              <div><strong>Carga Horária:</strong> {selectedCourse?.duracao ? `${selectedCourse.duracao} ${selectedCourse.unidade_duracao || 'horas'}` : '---'}</div>
+                           </div>
+                        </div>
+                    </div>
+                    
+                    <div className="flex flex-col gap-3 w-full md:w-auto">
+                        <Button
+                           type="button"
+                           onClick={() => {
+                              try {
+                                 const doc = new jsPDF({
+                                    orientation: 'landscape',
+                                    unit: 'mm',
+                                    format: 'a4'
+                                 });
+                                 
+                                 // Configuração visual básica (frame)
+                                 doc.setDrawColor(200, 160, 50);
+                                 doc.setLineWidth(2);
+                                 doc.rect(10, 10, 277, 190);
+                                 
+                                 doc.setDrawColor(50, 50, 50);
+                                 doc.setLineWidth(0.5);
+                                 doc.rect(15, 15, 267, 180);
+
+                                 // Título
+                                 doc.setFont('helvetica', 'bold');
+                                 doc.setFontSize(30);
+                                 doc.setTextColor(50, 50, 50);
+                                 doc.text('CERTIFICADO DE CONCLUSÃO', 148.5, 50, { align: 'center' });
+                                 
+                                 // Subtítulo
+                                 doc.setFont('helvetica', 'normal');
+                                 doc.setFontSize(14);
+                                 doc.setTextColor(100, 100, 100);
+                                 doc.text('Certificamos que', 148.5, 75, { align: 'center' });
+                                 
+                                 // Nome do Aluno
+                                 doc.setFont('times', 'bolditalic');
+                                 doc.setFontSize(28);
+                                 doc.setTextColor(30, 30, 30);
+                                 const studentName = selectedClient?.name || selectedClient?.nome || 'Nome do Aluno';
+                                 doc.text(studentName, 148.5, 95, { align: 'center' });
+                                 
+                                 // Texto Corpo
+                                 doc.setFont('helvetica', 'normal');
+                                 doc.setFontSize(14);
+                                 doc.setTextColor(80, 80, 80);
+                                 const courseName = selectedCourse?.titulo || 'Curso Online';
+                                 doc.text(`concluiu com êxito o curso de`, 148.5, 115, { align: 'center' });
+                                 
+                                 doc.setFont('times', 'bold');
+                                 doc.setFontSize(22);
+                                 doc.setTextColor(200, 160, 50); // Gold-ish
+                                 doc.text(courseName, 148.5, 130, { align: 'center' });
+                                 
+                                 // Detalhes finais
+                                 doc.setFont('helvetica', 'normal');
+                                 doc.setFontSize(12);
+                                 doc.setTextColor(100, 100, 100);
+                                 const dateStr = new Date().toLocaleDateString('pt-BR');
+                                 const hours = selectedCourse?.duracao ? `${selectedCourse.duracao} ${selectedCourse.unidade_duracao || 'horas'}` : '??';
+                                 doc.text(`realizado em ${dateStr}, com carga horária de ${hours}.`, 148.5, 150, { align: 'center' });
+                                 
+                                 // Assinatura (Simulada)
+                                 doc.setLineWidth(0.5);
+                                 doc.line(80, 175, 217, 175);
+                                 doc.setFontSize(10);
+                                 doc.text('Diretoria Acadêmica', 148.5, 182, { align: 'center' });
+                                 
+                                 doc.save(`certificado_${studentName.replace(/\s+/g, '_').toLowerCase()}.pdf`);
+                                 toast({ title: 'Sucesso', description: 'Certificado gerado com sucesso.' });
+                              } catch (err) {
+                                 console.error(err);
+                                 toast({ title: 'Erro', description: 'Falha ao gerar o PDF.', variant: 'destructive' });
+                              }
+                           }}
+                           className="bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-lg shadow-amber-500/20"
+                        >
+                           <Award className="h-4 w-4 mr-2" />
+                           Baixar Certificado PDF
+                        </Button>
+                    </div>
+                </div>
+             </CardContent>
           </Card>
 
           {/* Card 5: Observações */}

@@ -71,9 +71,7 @@ export default function BudgetPreview({
         
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="space-y-2">
-            <Badge variant="outline" className="text-white/80 border-white/20 uppercase tracking-[0.2em] font-bold text-[10px] px-3 py-1 bg-white/5 backdrop-blur-sm">
-               Documento Oficial
-            </Badge>
+
             <h2 className="text-3xl font-black tracking-tight flex items-center gap-3">
               <FileText className="h-8 w-8 text-primary-400" />
               {title}

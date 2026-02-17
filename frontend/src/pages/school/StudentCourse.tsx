@@ -17,6 +17,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { useToast } from '@/hooks/use-toast';
 import commentsService from '@/services/commentsService';
 import { Star } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 /**
  * StudentCourse
@@ -468,7 +470,7 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
        * en-US: Accepts different backend formats: `user_name`, `user.name`,
        *        or `author_name`.
        */
-      const author = String(
+      const authorRaw = String(
         c?.author_name ??
         c?.authorName ??
         c?.user_name ??
@@ -478,7 +480,24 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
         c?.user?.nome ??
         ''
       ).trim() || 'Usuário';
-      const created = c?.created_at ? new Date(String(c.created_at)).toLocaleString() : '';
+
+      /**
+       * pt-BR: Anonimiza o nome exibindo apenas o primeiro nome e a inicial do sobrenome.
+       * en-US: Anonymizes name showing only the first name and the surname's initial.
+       */
+      const anonymizeName = (fullName: string) => {
+        const parts = fullName.split(' ').filter(Boolean);
+        if (parts.length <= 1) return fullName;
+        const firstName = parts[0];
+        const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
+        return `${firstName} ${lastInitial}.`;
+      };
+
+      const author = anonymizeName(authorRaw);
+
+      const created = c?.created_at 
+        ? formatDistanceToNow(new Date(String(c.created_at)), { addSuffix: true, locale: ptBR })
+        : '';
       const ratingVal = Number(c?.rating ?? 0);
       const idStr = String(c?.id ?? '');
       const replies: any[] = Array.isArray(c?.replies) ? c.replies : [];
@@ -633,13 +652,23 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
         <div className="mt-6 space-y-3">
           {commentsQuery.isLoading ? (
             <div className="text-sm text-muted-foreground animate-pulse">Carregando comentários...</div>
-          ) : (Array.isArray(commentsQuery.data) && commentsQuery.data.length > 0 ? (
-            commentsQuery.data.map((c: any, idx: number) => (
-              <div key={`root-comment-${c?.id || idx}`}>{renderCommentItem(c)}</div>
-            ))
-          ) : (
-            <div className="text-sm text-muted-foreground italic bg-muted/20 p-4 rounded-lg border border-dashed text-center">Nenhum comentário para esta atividade.</div>
-          ))}
+          ) : (() => {
+            const items = Array.isArray(commentsQuery.data) ? [...commentsQuery.data] : [];
+            items.sort((a, b) => {
+              const dateA = a?.created_at ? new Date(String(a.created_at)).getTime() : 0;
+              const dateB = b?.created_at ? new Date(String(b.created_at)).getTime() : 0;
+              return dateB - dateA;
+            });
+
+            if (items.length > 0) {
+              return items.map((c: any, idx: number) => (
+                <div key={`root-comment-${c?.id || idx}`}>{renderCommentItem(c)}</div>
+              ));
+            }
+            return (
+              <div className="text-sm text-muted-foreground italic bg-muted/20 p-4 rounded-lg border border-dashed text-center">Nenhum comentário para esta atividade.</div>
+            );
+          })()}
         </div>
       </div>
     );

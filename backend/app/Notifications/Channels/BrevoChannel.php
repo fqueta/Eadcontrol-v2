@@ -41,9 +41,15 @@ class BrevoChannel
         }
 
         $payload = (array) $notification->toBrevo($notifiable);
-        $company = Qlib::get_company_name() ?? $config['from_name'];
+        $company = Qlib::get_company_name();
+        // Garantir que $company seja uma string não vazia
+        if (!$company || !is_string($company)) {
+            $company = (string) ($config['from_name'] ?? config('app.name'));
+        }
+
         // Garantir remetente padrão a partir das configs
-        $fromEmail = (string) ($config['from_email'] ?? '');
+        $fromEmail = (string) ($config['from_email'] ?? config('mail.from.address'));
+        
         $payload['sender'] = $payload['sender'] ?? [
             'email' => $fromEmail,
             'name' => $company,

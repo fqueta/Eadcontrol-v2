@@ -42,8 +42,12 @@ import { useToast } from "@/hooks/use-toast";
 import * as z from "zod";
 import { 
   Plus, 
-  Search
+  Search,
+  Share2,
+  Check,
+  Copy
 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { getBrazilianStates } from '@/lib/qlib';
 import { 
   useClientsList, 
@@ -228,8 +232,10 @@ const brazilianStates = getBrazilianStates();
  */
 export default function Clients() {
   // State for search, dialogs, and client operations
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
+  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get("status") || "all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [editingClient, setEditingClient] = useState<ClientRecord | null>(null);
@@ -237,11 +243,23 @@ export default function Clients() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(100);
   // Filtro de lixeira (excluido=s)
-  const [showTrash, setShowTrash] = useState(false);
+  const [showTrash, setShowTrash] = useState(searchParams.get("trash") === 's');
+  
+  const [isCopying, setIsCopying] = useState(false);
+  
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const debouncedSearchTerm = useDebounce(searchTerm, 400);
+
+  // Sync state to searchParams
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (searchTerm) params.set("search", searchTerm);
+    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (showTrash) params.set("trash", "s");
+    setSearchParams(params, { replace: true });
+  }, [searchTerm, statusFilter, showTrash, setSearchParams]);
   // React Query: fetch clients with pagination and debounced search
   /**
    * Força refetch ao alternar lixeira e evita dados frescos impedirem nova chamada.
@@ -780,6 +798,24 @@ export default function Clients() {
               />
               <span className="text-sm">Lixeira</span>
             </div>
+            
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                const url = window.location.href;
+                navigator.clipboard.writeText(url);
+                setIsCopying(true);
+                toast({
+                  title: "Link copiado!",
+                  description: "O link com os filtros atuais foi copiado para sua área de transferência.",
+                });
+                setTimeout(() => setIsCopying(false), 2000);
+              }}
+              title="Copiar link com filtros"
+            >
+              {isCopying ? <Check className="h-4 w-4 text-green-600" /> : <Share2 className="h-4 w-4" />}
+            </Button>
           </div>
         </CardHeader>
         <CardContent>

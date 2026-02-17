@@ -302,6 +302,13 @@ const App = () => {
                   </AppLayout>
                 </AdminProtectedRoute>
               } />
+              <Route path="/admin/comments" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <CommentsModeration />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
               {/* Escola / Convites de matrícula */}
               <Route path="/admin/school/invites" element={
                 <AdminProtectedRoute>

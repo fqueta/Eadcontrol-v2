@@ -3,13 +3,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, UserPlus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-// Removido uso direto de campos de telefone no cadastro
+import { Card, CardContent } from '@/components/ui/card';
 import { UserForm } from '@/components/users/UserForm';
 import { usePermissionsList } from '@/hooks/permissions';
 import { useCreateUser } from '@/hooks/users';
@@ -52,15 +49,13 @@ type UserCreateFormData = z.infer<typeof userCreateSchema>;
 
 /**
  * UserCreate Page
- * pt-BR: Página dedicada para cadastro de usuário. Mantém apenas os campos solicitados,
- *        fixa o tipo de pessoa como PF e remove o campo Telefone Residencial.
- * en-US: Dedicated page for user registration. Keeps only requested fields,
- *        defaults person type to PF and removes Residential Phone field.
+ * pt-BR: Página dedicada para cadastro de usuário. Refatorada com visual moderno.
+ * en-US: Dedicated page for user registration. Refactored with modern look.
  */
 export default function UserCreate() {
   const navigate = useNavigate();
   const createMutation = useCreateUser();
-  const { data: permissionsData, isLoading: isLoadingPermissions } = usePermissionsList();
+  const { data: permissionsData, isLoading: isLoadingPermissions } = usePermissionsList({ per_page: 100 });
   const permissions = permissionsData?.data || [];
 
   const form = useForm<UserCreateFormData>({
@@ -94,11 +89,6 @@ export default function UserCreate() {
     }
   }, [permissions]);
 
-  /**
-   * onSubmit
-   * pt-BR: Cria o usuário e redireciona para a lista de usuários em caso de sucesso.
-   * en-US: Creates the user and navigates back to the users list on success.
-   */
   const onSubmit = async (data: UserCreateFormData) => {
     const payload: CreateUserInput = {
       tipo_pessoa: 'pf',
@@ -106,13 +96,13 @@ export default function UserCreate() {
       email: data.email,
       password: data.password,
       name: data.name,
-      genero: 'ni', // não exibido no formulário, usa padrão
+      genero: 'ni',
       ativo: data.ativo,
       token: '',
       config: {
         nome_fantasia: '',
         celular: data.config.celular || '',
-        telefone_residencial: '', // removido do formulário
+        telefone_residencial: '',
         telefone_comercial: data.config.telefone_comercial || '',
         rg: '',
         nascimento: data.config.nascimento || '',
@@ -138,28 +128,33 @@ export default function UserCreate() {
     }
   };
 
-  /**
-   * onCancel
-   * pt-BR: Cancela o cadastro e volta para a lista.
-   * en-US: Cancels and returns to the list.
-   */
   const onCancel = () => navigate('/admin/settings/users');
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Novo Usuário</h1>
-          <p className="text-muted-foreground">Preencha os dados para criar um novo usuário</p>
+    <div className="container-fluid py-8 px-4 md:px-8 space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col gap-4">
+        <Button 
+          variant="ghost" 
+          onClick={onCancel} 
+          className="w-fit gap-2 -ml-2 text-muted-foreground hover:text-primary"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Voltar para lista
+        </Button>
+        
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary/10 rounded-lg text-primary">
+            <UserPlus className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Novo Usuário</h1>
+            <p className="text-muted-foreground">Preencha os dados abaixo para criar um novo acesso ao sistema.</p>
+          </div>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Cadastro de Usuário</CardTitle>
-          <CardDescription>Campos essenciais conforme solicitado</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card className="border-none shadow-xl bg-white dark:bg-zinc-900 overflow-hidden">
+        <CardContent className="p-8">
           <UserForm
             form={form}
             onSubmit={onSubmit}
@@ -169,11 +164,11 @@ export default function UserCreate() {
             isLoadingPermissions={isLoadingPermissions}
             showTipoPessoa={false}
             showGenero={false}
-            showAddressSection={false}
+            showAddressSection={true}
             showCpf={false}
-            showPhones={false}
+            showPhones={true}
             ativoAsSwitch={true}
-            showBirthDate={false}
+            showBirthDate={true}
           />
         </CardContent>
       </Card>

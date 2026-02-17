@@ -86,8 +86,12 @@ class MatriculaController extends Controller
             ->leftJoin('posts', 'matriculas.situacao_id', '=', 'posts.id')
            ->select('matriculas.*', 'cursos.nome as curso_nome','cursos.tipo as curso_tipo', 'turmas.nome as turma_nome', 'users.name as cliente_nome', 'posts.post_title as situacao','cursos.slug as curso_slug','cursos.config as curso_config')
             ->orderBy($orderByQualified, $order);
-        // se o usuario não for um cliente então filtra apenas as matriculas dele
-        if($this->isClient($user)){
+        // pt-BR: Reforça o escopo para segurança e acesso universal na área do aluno (public=1).
+        // en-US: Reinforce scope for security and universal access in the student area (public=1).
+        $isStandardClient = $this->isClient($user);
+        $isStudentArea = $request->input('public') === '1';
+
+        if ($isStandardClient || $isStudentArea) {
             $query->where('matriculas.id_cliente', $user->id);
         }
         // Mapear alias de filtro: 'etapa' -> 'stage_id'
@@ -127,11 +131,14 @@ class MatriculaController extends Controller
             $query->where('matriculas.stage_id', $stageFilter);
         }
 
-        // Filtro genérico por descrição da matrícula
+        // Filtro genérico por descrição da matrícula, nome do aluno, curso ou ID
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function($q) use ($search) {
-                $q->where('matriculas.descricao', 'like', "%$search%");
+                $q->where('matriculas.descricao', 'like', "%$search%")
+                  ->orWhere('users.name', 'like', "%$search%")
+                  ->orWhere('cursos.nome', 'like', "%$search%")
+                  ->orWhere('matriculas.id', 'like', "%$search%");
             });
         }
 
@@ -623,6 +630,16 @@ class MatriculaController extends Controller
 
         // Pós-validação removida: validação via regra exists já garante integridade
         $matricula->fill($validated);
+
+        // Verifica mudança de situação para "Matriculado" (post_name inicia com 'mat') e grava data de início da matrícula
+        if ($matricula->isDirty('situacao_id') && !empty($matricula->situacao_id)) {
+            $newSituacaoName = DB::table('posts')->where('ID', $matricula->situacao_id)->value('post_name');
+            if ($newSituacaoName && \Illuminate\Support\Str::startsWith(strtolower($newSituacaoName), 'mat')) {
+                // Grava ou atualiza a data de início da matrícula
+                Qlib::update_matriculameta($matricula->id, 'dt_inicio_matricula', now()->format('Y-m-d H:i:s'));
+            }
+        }
+
         $matricula->save();
 
         // Sincronizar parcelamentos do curso, se informados

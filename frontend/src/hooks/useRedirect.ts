@@ -57,8 +57,9 @@ export function useRedirect() {
       return;
     }
 
-    // Fallback para a página inicial
-    navigate('/', { replace: true });
+    // pt-BR: Fallback para alunos: sempre redireciona para a listagem de cursos
+    // en-US: Fallback for students: always redirect to course listing
+    navigate('/aluno/cursos', { replace: true });
   }, [navigate, getRedirectUrl]);
 
   /**

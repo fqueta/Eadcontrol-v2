@@ -11,11 +11,23 @@ import {
   Eye, 
   RotateCcw,
   Phone,
-  User 
+  User,
+  UserPlus,
+  AlertTriangle
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ClientRecord } from '@/types/clients';
 import { useUsersList } from '@/hooks/users';
-import { useRestoreClient } from '@/hooks/clients';
+import { useRestoreClient, usePromoteClient } from '@/hooks/clients';
 import { phoneApplyMask } from '@/lib/masks/phone-apply-mask';
 
 interface ClientsTableProps {
@@ -43,6 +55,11 @@ export function ClientsTable({ clients, onEdit, onDelete, onForceDelete, isLoadi
   const clientsList = Array.isArray(clients) ? clients : [];
   // Hook de restauração
   const restoreClientMutation = useRestoreClient();
+  // Hook de promoção
+  const promoteClientMutation = usePromoteClient();
+  
+  // Estado para o modal de promoção
+  const [promoteClient, setPromoteClient] = useState<ClientRecord | null>(null);
   
   // Buscar lista de usuários para identificar o proprietário
   const { data: usersData } = useUsersList();
@@ -201,9 +218,18 @@ export function ClientsTable({ clients, onEdit, onDelete, onForceDelete, isLoadi
                         </DropdownMenuItem>
                       </>
                     ) : (
-                      <DropdownMenuItem onClick={() => onDelete(client)}>
-                        <Trash2 className="mr-2 h-4 w-4" /> Excluir
-                      </DropdownMenuItem>
+                      <>
+                        <DropdownMenuItem 
+                          onClick={() => setPromoteClient(client)}
+                          disabled={promoteClientMutation.isPending}
+                          className="text-blue-600 focus:text-blue-700 focus:bg-blue-50"
+                        >
+                          <UserPlus className="mr-2 h-4 w-4" /> Promover para Usuário
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onDelete(client)}>
+                          <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                        </DropdownMenuItem>
+                      </>
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -212,6 +238,36 @@ export function ClientsTable({ clients, onEdit, onDelete, onForceDelete, isLoadi
           ))}
         </TableBody>
       </Table>
+
+      <AlertDialog open={!!promoteClient} onOpenChange={(open) => !open && setPromoteClient(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-blue-600" />
+              Confirmar Promoção
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja promover o cliente <strong>{promoteClient?.name}</strong> para usuário?
+              <br />
+              Esta ação concederá acesso ao painel administrativo com permissões de usuário regular.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (promoteClient) {
+                  promoteClientMutation.mutate(promoteClient.id);
+                  setPromoteClient(null);
+                }
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Confirmar Promoção
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

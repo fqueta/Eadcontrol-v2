@@ -23,6 +23,7 @@ export interface User {
   permission_id?: string;
   created_at: string;
   updated_at: string;
+  force_password_change?: boolean;
 }
 
 export interface AuthState {
@@ -32,6 +33,7 @@ export interface AuthState {
   menu: MenuItemDTO[];
   isLoading: boolean;
   isAuthenticated: boolean;
+  forcePasswordChange?: boolean;
 }
 
 export interface LoginCredentials {
@@ -100,6 +102,7 @@ export interface AuthResponse {
   permissions?: string[];
   menu?: MenuItemDTO[];
   message?: string;
+  force_password_change?: boolean;
 }
 
 export interface ApiError {

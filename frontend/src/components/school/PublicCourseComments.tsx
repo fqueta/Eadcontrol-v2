@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Star } from 'lucide-react';
@@ -91,8 +93,25 @@ export function PublicCourseComments({ courseId }: { courseId: string | number }
    * en-US: Renders a comment item with recursive support for replies.
    */
   const renderCommentItem = (c: any, depth: number = 0) => {
-    const author = c.user_name || 'Usuário';
-    const date = c.created_at ? new Date(c.created_at).toLocaleDateString() : '';
+    const authorRaw = c.user_name || 'Usuário';
+    
+    /**
+     * pt-BR: Anonimiza o nome exibindo apenas o primeiro nome e a inicial do sobrenome.
+     * en-US: Anonymizes name showing only the first name and the surname's initial.
+     */
+    const anonymizeName = (fullName: string) => {
+      const parts = fullName.split(' ').filter(Boolean);
+      if (parts.length <= 1) return fullName;
+      const firstName = parts[0];
+      const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
+      return `${firstName} ${lastInitial}.`;
+    };
+
+    const author = anonymizeName(authorRaw);
+    
+    const date = c.created_at 
+      ? formatDistanceToNow(new Date(c.created_at), { addSuffix: true, locale: ptBR }) 
+      : '';
     const ratingVal = Number(c.rating || 0);
 
     return (
@@ -192,13 +211,19 @@ export function PublicCourseComments({ courseId }: { courseId: string | number }
           <div className="space-y-6">
             {commentsQuery.isLoading ? (
               <div className="text-sm text-muted-foreground animate-pulse">Carregando comentários...</div>
-            ) : commentsQuery.data?.length > 0 ? (
-              commentsQuery.data.map((c: any) => renderCommentItem(c))
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-sm text-muted-foreground italic">Nenhum comentário ainda. Seja o primeiro a avaliar!</p>
-              </div>
-            )}
+            ) : (() => {
+              const items = Array.isArray(commentsQuery.data) ? [...commentsQuery.data] : [];
+              items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+              
+              if (items.length > 0) {
+                return items.map((c: any) => renderCommentItem(c));
+              }
+              return (
+                <div className="text-center py-8">
+                  <p className="text-sm text-muted-foreground italic">Nenhum comentário ainda. Seja o primeiro a avaliar!</p>
+                </div>
+              );
+            })()}
           </div>
         </CardContent>
       </Card>

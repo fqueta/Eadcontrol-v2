@@ -241,13 +241,9 @@ export default function EnrollmentTable({
                             Ver Progresso
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem onClick={() => onGenerateCertificate?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
-                          <Award className="h-3.5 w-3.5 text-amber-500" /> 
-                          Certificado
-                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => onEdit?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
                           <Edit className="h-3.5 w-3.5 text-slate-500" /> 
-                          {String(enroll?.situacao ?? '').startsWith('int') ? 'Editar Cadastro' : 'Gerenciar Matrícula'}
+                          {String(enroll?.situacao ?? '').startsWith('int') ? 'Editar Cadastro' : 'Gerenciar Acesso / Certificado'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="my-1 bg-slate-50 dark:bg-slate-800" />
                         <DropdownMenuItem className="text-red-500 cursor-pointer focus:bg-red-50 focus:text-red-600 gap-2 font-bold text-xs rounded-lg" onClick={() => onDelete?.(enroll)}>

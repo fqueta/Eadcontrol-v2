@@ -15,6 +15,7 @@ export interface UserConfig {
   bairro: string;
   cidade: string;
   uf: string;
+  force_password_change?: 's' | 'n';
 }
 
 export interface UserRecord {
@@ -31,6 +32,7 @@ export interface UserRecord {
   config: UserConfig;
   genero: "m" | "f" | "ni";
   ativo: "s" | "n";
+  force_password_change?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -48,6 +50,7 @@ export interface CreateUserInput {
   config: UserConfig;
   genero: "m" | "f" | "ni";
   ativo: "s" | "n";
+  force_password_change?: 's' | 'n';
 }
 
 export interface UpdateUserInput {
@@ -63,6 +66,7 @@ export interface UpdateUserInput {
   config?: UserConfig;
   genero?: "m" | "f" | "ni";
   ativo?: "s" | "n";
+  force_password_change?: 's' | 'n';
 }
 
 export interface UsersListParams {

@@ -31,6 +31,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import commentsService from "@/services/commentsService";
 import { useToast } from "@/components/ui/use-toast";
 import { BrandLogo } from "@/components/branding/BrandLogo";
+import { ForceChangePasswordModal } from "@/components/auth/ForceChangePasswordModal";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -147,6 +148,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     >
       <div className="min-h-screen flex w-full">
         <AppSidebar />
+        <ForceChangePasswordModal />
         
         <div className="flex-1 flex flex-col">
           {/* Header */}
@@ -217,13 +219,13 @@ export function AppLayout({ children }: AppLayoutProps) {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => bellApproveMutation.mutate(c?.id ?? "")}
-                                  disabled={bellApproveMutation.isLoading}
+                                  disabled={bellApproveMutation.isPending}
                                 >Aprovar</Button>
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => bellRejectMutation.mutate(c?.id ?? "")}
-                                  disabled={bellRejectMutation.isLoading}
+                                  disabled={bellRejectMutation.isPending}
                                 >Rejeitar</Button>
                               </div>
                             </div>

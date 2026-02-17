@@ -1123,4 +1123,34 @@ class ClientController extends Controller
             'status' => 200
         ]);
     }
+
+    /**
+     * Promove um cliente para usuário (permission_id = 3).
+     * EN: Promotes a client to user (permission_id = 3).
+     */
+    public function promote(Request $request, string $id)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+        if (!$this->permissionService->isHasPermission('edit')) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+
+        // Tenta encontrar o cliente (pode estar na lixeira ou não, melhor usar sem escopo global se quisermos promover mesmo os inativos/excluidos, 
+        // mas o pedido parece ser para clientes ativos na listagem principal)
+        $client = User::findOrFail($id);
+
+        $client->update([
+            'permission_id' => 3
+        ]);
+
+        return response()->json([
+            'exec' => true,
+            'message' => 'Cliente promovido a usuário com sucesso',
+            'status' => 200,
+            'data' => $client
+        ]);
+    }
 }

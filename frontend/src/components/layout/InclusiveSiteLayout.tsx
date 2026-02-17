@@ -17,6 +17,7 @@ import { User, LogOut, ChevronDown, Monitor, ExternalLink, Moon, Sun, Menu, Home
 import { BrandLogo } from "@/components/branding/BrandLogo";
 import { useEffect as useEffectReact } from "react";
 import { applyBrandingFavicon, hydrateBrandingFromPublicApi } from "@/lib/branding";
+import { ForceChangePasswordModal } from "@/components/auth/ForceChangePasswordModal";
 
 type InclusiveSiteLayoutProps = {
   children: ReactNode;
@@ -132,6 +133,8 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
         <div className="absolute -top-[10%] -right-[10%] w-[40%] h-[40%] bg-blue-400/10 dark:bg-blue-600/5 blur-[120px] rounded-full" />
         <div className="absolute top-[20%] -left-[10%] w-[35%] h-[35%] bg-indigo-400/10 dark:bg-indigo-600/5 blur-[100px] rounded-full" />
       </div>
+
+      <ForceChangePasswordModal />
 
       {/* Header */}
       <header className="bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-white/20 dark:border-slate-800/50 relative md:sticky md:top-0 z-50 shadow-[0_2px_20px_-2px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_30px_-5px_rgba(0,0,0,0.3)] transition-all duration-300">

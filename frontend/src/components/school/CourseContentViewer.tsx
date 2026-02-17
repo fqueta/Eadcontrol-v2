@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
- import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock, Star, ChevronDown, ChevronUp, GraduationCap, ChevronLeft, ChevronRight, Search, Circle, CircleCheck, AlertCircle, XCircle } from 'lucide-react';
+ import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock, Star, ChevronDown, ChevronUp, GraduationCap, ChevronLeft, ChevronRight, Search, Circle, CircleCheck, AlertCircle, XCircle, Plus } from 'lucide-react';
 import { progressService } from '@/services/progressService';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,6 +13,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import commentsService from '@/services/commentsService';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Separator } from '@/components/ui/separator';
 import { certificatesService } from '@/services/certificatesService';
 import { QuizGradeDetail } from './components/QuizGradeDetail';
@@ -1075,10 +1077,27 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
    *        Replies are indented and shown in clean threads.
    */
   const renderCommentItem = (c: any, depth: number = 0) => {
-    const author = String(c?.user_name ?? c?.user?.name ?? c?.user?.nome ?? c?.author ?? 'Aluno').trim();
+    const authorRaw = String(c?.user_name ?? c?.user?.name ?? c?.user?.nome ?? c?.author ?? 'Aluno').trim();
+    
+    /**
+     * pt-BR: Anonimiza o nome exibindo apenas o primeiro nome e a inicial do sobrenome.
+     * en-US: Anonymizes name showing only the first name and the surname's initial.
+     */
+    const anonymizeName = (fullName: string) => {
+      const parts = fullName.split(' ').filter(Boolean);
+      if (parts.length <= 1) return fullName;
+      const firstName = parts[0];
+      const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
+      return `${firstName} ${lastInitial}.`;
+    };
+
+    const author = anonymizeName(authorRaw);
+
     const avatarUrl = c?.user_avatar ?? c?.user?.avatar ?? c?.avatar ?? '';
-    const initials = author.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'A';
-    const created = c?.created_at ? new Date(String(c.created_at)).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+    const initials = authorRaw.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'A';
+    const created = c?.created_at 
+      ? formatDistanceToNow(new Date(String(c.created_at)), { addSuffix: true, locale: ptBR })
+      : '';
     const ratingVal = Number(c?.rating ?? 0);
     const replies: any[] = Array.isArray(c?.replies) ? c.replies : [];
     const idStr = String(c?.id ?? '');
@@ -1087,52 +1106,57 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
     const isVisible = replyVisible[idStr];
 
     return (
-      <div className={`${depth > 0 ? 'mt-4' : 'mt-6'}`}>
+      <div className={`${depth > 0 ? 'mt-4 ml-6 md:ml-10 border-l-2 border-muted/50 pl-4 md:pl-6' : 'mt-8'}`}>
         <div className="flex gap-4 group">
-          <Avatar className="h-10 w-10 shrink-0 border shadow-sm">
+          <Avatar className="h-10 w-10 md:h-12 md:w-12 shrink-0 border-2 border-white shadow-md ring-1 ring-slate-100">
             <AvatarImage src={avatarUrl} alt={author} />
-            <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold">{initials}</AvatarFallback>
+            <AvatarFallback className="bg-slate-50 text-slate-400 text-xs font-black">{initials}</AvatarFallback>
           </Avatar>
           
           <div className="flex-1 min-w-0">
-            <div className="bg-muted/30 hover:bg-muted/50 transition-colors border rounded-2xl p-4 shadow-sm relative">
-              <div className="flex items-center justify-between mb-2">
+            <div className="bg-white dark:bg-slate-900 hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-none transition-all duration-300 border border-slate-100 dark:border-slate-800 rounded-3xl p-5 shadow-sm relative">
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex flex-col">
-                  <span className="text-sm font-bold text-foreground leading-none">{author}</span>
-                  {created && <span className="text-[10px] text-muted-foreground mt-1">{created}</span>}
+                  <span className="text-sm font-black text-slate-900 dark:text-slate-100 leading-none tracking-tight">{author}</span>
+                  {created && <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mt-1.5 leading-none">{created}</span>}
                 </div>
                 
                 {ratingVal > 0 && (
-                  <div className="flex items-center gap-0.5 bg-background/50 px-2 py-1 rounded-full border shadow-xs">
+                  <div className="flex items-center gap-0.5 bg-slate-50 dark:bg-slate-800/50 px-2.5 py-1 rounded-full border border-slate-100 dark:border-slate-700 shadow-sm">
                     {[1, 2, 3, 4, 5].map((n) => (
-                      <Star key={n} className={`h-3 w-3 ${n <= ratingVal ? 'text-amber-500 fill-amber-500' : 'text-muted-foreground/30'}`} />
+                      <Star key={n} className={`h-3 w-3 ${n <= ratingVal ? 'text-amber-400 fill-amber-400' : 'text-slate-200 dark:text-slate-700'}`} />
                     ))}
                   </div>
                 )}
               </div>
               
-              <div className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+              <div className="text-[14px] text-slate-600 dark:text-slate-300 whitespace-pre-wrap font-medium leading-relaxed">
                 {String(c?.body ?? '')}
               </div>
 
-              {canReplyHere && !isVisible && (
-                <button
-                  onClick={() => setReplyVisible((prev) => ({ ...prev, [idStr]: true }))}
-                  className="mt-3 text-xs font-semibold text-primary hover:underline flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  Responder este comentário
-                </button>
+              {canReplyHere && (
+                <div className="mt-4 flex items-center justify-between border-t border-slate-50 dark:border-slate-800 pt-3">
+                   {!isVisible ? (
+                    <button
+                      onClick={() => setReplyVisible((prev) => ({ ...prev, [idStr]: true }))}
+                      className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary/80 flex items-center gap-2 transition-colors"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Responder
+                    </button>
+                  ) : <div></div>}
+                </div>
               )}
             </div>
 
             {canReplyHere && isVisible && (
-              <div className="mt-3 ml-2 border-l-2 border-primary/20 pl-4 py-2 bg-primary/5 rounded-r-xl">
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-[10px] font-bold uppercase tracking-wider text-primary">Sua resposta</Label>
+              <div className="mt-4 bg-slate-50 dark:bg-slate-800/30 rounded-3xl p-5 border border-slate-100 dark:border-slate-700 animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center justify-between mb-4">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Sua resposta</Label>
                   <Button
                     variant="ghost"
-                    size="xs"
-                    className="h-6 text-[10px] hover:text-destructive"
+                    size="sm"
+                    className="h-8 text-[10px] font-black uppercase tracking-widest hover:text-rose-500"
                     onClick={() => setReplyVisible((prev) => ({ ...prev, [idStr]: false }))}
                   >
                     Cancelar
@@ -1141,16 +1165,16 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
                 <Textarea
                   value={replyText}
                   onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [idStr]: e.target.value.slice(0, COMMENT_MAX) }))}
-                  placeholder="Escreva sua resposta..."
-                  className="min-h-[80px] bg-background border-primary/20 focus-visible:ring-primary shadow-inner"
+                  placeholder="Seu comentário ou dúvida..."
+                  className="min-h-[100px] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-2xl focus-visible:ring-primary shadow-inner text-sm font-medium"
                 />
-                <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span className={replyText.trim().length >= COMMENT_MIN ? 'text-green-600' : ''}>
-                    {replyText.trim().length} / {COMMENT_MAX} (mín {COMMENT_MIN})
+                <div className="mt-4 flex items-center justify-between">
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${replyText.trim().length >= COMMENT_MIN ? 'text-emerald-500' : 'text-muted-foreground/40'}`}>
+                    {replyText.trim().length} / {COMMENT_MAX}
                   </span>
                   <Button
-                    size="xs"
-                    className="h-7 px-4 shadow-sm"
+                    size="sm"
+                    className="h-9 px-6 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-md hover:shadow-lg transition-all"
                     onClick={() => {
                       const text = replyText.trim();
                       if (!text || text.length < COMMENT_MIN || text.length > COMMENT_MAX) return;
@@ -1158,16 +1182,18 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
                     }}
                     disabled={replyMutation.isPending || replyText.trim().length < COMMENT_MIN}
                   >
-                    {replyMutation.isPending ? 'Enviando...' : 'Responder'}
+                    {replyMutation.isPending ? (
+                      <><Loader2 className="mr-2 h-3 w-3 animate-spin" /> Enviando...</>
+                    ) : 'Enviar Resposta'}
                   </Button>
                 </div>
               </div>
             )}
 
             {Array.isArray(replies) && replies.length > 0 && (
-              <div className="mt-2 space-y-2">
+              <div className="mt-4 space-y-4">
                 {replies.map((r) => (
-                  <div key={String(r?.id ?? Math.random())}>
+                  <div key={String(r?.id ?? Math.random())} className="animate-in fade-in slide-in-from-left-2 duration-500">
                     {renderCommentItem(r, depth + 1)}
                   </div>
                 ))}
@@ -2631,10 +2657,10 @@ function htmlEquals(a: string, b: string): boolean {
                         const resumeSecs = !isCompleted && pm && pm.seconds > 0 ? pm.seconds : 0;
 
                         return (
-                          <li key={`mobile-sidebar-${mi}-${ai}`} className={`rounded-xl border transition-all ${isActive ? 'bg-primary/5 border-primary shadow-sm ring-1 ring-primary/20' : 'bg-background hover:border-muted-foreground/30'}`}>
-                            <div className="flex items-center justify-between p-3 gap-2">
+                          <li key={`mobile-sidebar-${mi}-${ai}`} className={`group rounded-2xl border transition-all duration-300 ${isActive ? 'bg-primary/5 border-primary shadow-sm ring-1 ring-primary/20' : 'bg-background hover:border-muted-foreground/30 hover:shadow-md'}`}>
+                            <div className="flex items-center justify-between p-4 gap-3">
                               <button
-                                className="flex-1 text-left flex items-start gap-3"
+                                className="flex-1 text-left flex items-start gap-4"
                                 onClick={() => {
                                   // pt-BR: Encontra o índice global para navegação correta.
                                   const globalIdx = flatActivities.findIndex((fa: any) => {
@@ -2646,34 +2672,41 @@ function htmlEquals(a: string, b: string): boolean {
                                   setMobileSidebarOpen(false);
                                 }}
                               >
-                                <div className={`mt-0.5 shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
+                                <div className={`mt-1 shrink-0 h-10 w-10 rounded-xl flex items-center justify-center transition-colors ${isActive ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}>
                                   {typeIcon}
                                 </div>
-                                <div className="flex flex-col min-w-0">
-                                  <div className={`text-sm leading-tight break-words line-clamp-2 ${isActive ? 'font-bold text-primary' : 'font-medium'}`}>
+                                <div className="flex flex-col min-w-0 py-0.5">
+                                  <div className={`text-[15px] leading-tight break-words font-black tracking-tight transition-colors ${isActive ? 'text-primary' : 'text-foreground group-hover:text-primary'}`}>
                                     {atitle}
                                   </div>
-                                  <div className="flex items-center flex-wrap gap-2 mt-1">
+                                  <div className="flex items-center flex-wrap gap-2 mt-1.5">
                                     {durationLabel && (
-                                      <span className="text-[10px] text-muted-foreground flex items-center gap-1 bg-muted/50 px-1.5 py-0.5 rounded">
-                                        <Clock className="h-2.5 w-2.5" /> {durationLabel}
+                                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded-full">
+                                        <Clock className="h-3 w-3" /> {durationLabel}
                                       </span>
                                     )}
                                     {isCompleted && (
-                                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-[9px] px-1.5 py-0 border-0">Concluído</Badge>
+                                      <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 text-[9px] font-black uppercase tracking-widest px-2 py-0 border-none shadow-sm shadow-emerald-500/10 gap-1">
+                                        <Check className="h-2.5 w-2.5" />
+                                        Concluído
+                                      </Badge>
                                     )}
                                     {!isCompleted && resumeSecs > 0 && (
-                                      <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[9px] px-1.5 py-0 border-0">Retomar {formatDuration(resumeSecs)}</Badge>
+                                      <Badge className="bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/10 text-[9px] font-black uppercase tracking-widest px-2 py-0 border-none shadow-sm shadow-indigo-500/10">
+                                        Retomar {formatDuration(resumeSecs)}
+                                      </Badge>
                                     )}
                                     {String(nextActivityId ?? '') === sid && (
-                                      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[9px] px-1.5 py-0 border-0">Próxima</Badge>
+                                      <Badge className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/10 text-[9px] font-black uppercase tracking-widest px-2 py-0 border-none shadow-sm shadow-amber-500/10">
+                                        Próxima
+                                      </Badge>
                                     )}
                                   </div>
                                 </div>
                               </button>
                               
                               <button
-                                className={`p-2 rounded-full transition-colors ${isCompleted ? 'bg-green-50 text-green-600' : 'hover:bg-muted text-muted-foreground'}`}
+                                className={`h-10 w-10 shrink-0 flex items-center justify-center rounded-xl transition-all ${isCompleted ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'hover:bg-muted bg-muted/30 text-muted-foreground'}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   toggleCompleted(a, mi, ai);
@@ -2762,10 +2795,10 @@ function htmlEquals(a: string, b: string): boolean {
                     return (
                       <li
                         key={`sidebar-act-${mi}-${ai}`}
-                        className={`flex items-center justify-between p-2 rounded border ${isActive ? 'bg-muted' : 'bg-background'}`}
+                        className={`group flex items-center justify-between p-3 rounded-2xl border transition-all duration-300 ${isActive ? 'bg-primary/5 border-primary shadow-sm ring-1 ring-primary/20' : 'bg-background hover:border-muted-foreground/30 hover:shadow-md'}`}
                       >
                         <button
-                          className="text-left flex-1 flex items-center gap-2"
+                          className="text-left flex-1 flex items-center gap-3"
                           onClick={() => {
                             // pt-BR: Clique direto do usuário — manter revisão sem auto-skip.
                             // en-US: Direct user click — keep review without auto-skip.
@@ -2773,11 +2806,18 @@ function htmlEquals(a: string, b: string): boolean {
                             setCurrentIndex(globalIdx >= 0 ? globalIdx : 0);
                           }}
                         >
-                          {typeIcon}
-                          <div className="text-sm font-normal line-clamp-2 break-words leading-tight">{atitle}</div>
-                          {durationLabel && (
-                            <div className="text-xs text-muted-foreground">{durationLabel}</div>
-                          )}
+                          <div className={`shrink-0 h-8 w-8 rounded-lg flex items-center justify-center transition-colors ${isActive ? 'bg-primary text-white' : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'}`}>
+                            {typeIcon}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <div className={`text-[13px] leading-tight break-words font-black tracking-tight transition-colors ${isActive ? 'text-primary' : 'text-slate-600 dark:text-slate-400 group-hover:text-primary'}`}>{atitle}</div>
+                            {durationLabel && (
+                              <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 mt-1 flex items-center gap-1">
+                                <Clock className="h-2.5 w-2.5" />
+                                {durationLabel}
+                              </div>
+                            )}
+                          </div>
                         </button>
                         {(() => {
                           // console.log('a', a);
@@ -3292,25 +3332,37 @@ function htmlEquals(a: string, b: string): boolean {
                     <Loader2 className="h-8 w-8 animate-spin" />
                     <span className="text-sm">Carregando comentários...</span>
                   </div>
-                ) : (Array.isArray(commentsQuery.data) && commentsQuery.data.length > 0 ? (
-                  <div className="divide-y divide-muted/50">
-                    {(commentsQuery.data as any[]).map((c: any) => (
-                      <div key={String(c?.id ?? Math.random())} className="py-2">
-                        {renderCommentItem(c)}
+                ) : (() => {
+                  const items = Array.isArray(commentsQuery.data) ? [...commentsQuery.data] : [];
+                  items.sort((a, b) => {
+                    const dateA = a?.created_at ? new Date(String(a.created_at)).getTime() : 0;
+                    const dateB = b?.created_at ? new Date(String(b.created_at)).getTime() : 0;
+                    return dateB - dateA;
+                  });
+
+                  if (items.length > 0) {
+                    return (
+                      <div className="divide-y divide-muted/50">
+                        {items.map((c: any) => (
+                          <div key={String(c?.id ?? Math.random())} className="py-2">
+                            {renderCommentItem(c)}
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12 px-4 rounded-3xl border-2 border-dashed border-muted">
-                    <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                      <Star className="h-6 w-6 text-muted-foreground/40" />
+                    );
+                  }
+                  return (
+                    <div className="text-center py-12 px-4 rounded-3xl border-2 border-dashed border-muted">
+                      <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                        <Star className="h-6 w-6 text-muted-foreground/40" />
+                      </div>
+                      <h4 className="text-base font-semibold text-muted-foreground">Ainda não há comentários</h4>
+                      <p className="text-sm text-muted-foreground/60 mt-1 max-w-xs mx-auto text-balance">
+                        Seja o primeiro a compartilhar sua opinião sobre esta atividade!
+                      </p>
                     </div>
-                    <h4 className="text-base font-semibold text-muted-foreground">Ainda não há comentários</h4>
-                    <p className="text-sm text-muted-foreground/60 mt-1 max-w-xs mx-auto text-balance">
-                      Seja o primeiro a compartilhar sua opinião sobre esta atividade!
-                    </p>
-                  </div>
-                ))}
+                  );
+                })()}
               </div>
             </CardContent>
           </Card>

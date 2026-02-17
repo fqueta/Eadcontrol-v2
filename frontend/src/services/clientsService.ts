@@ -61,7 +61,8 @@ class ClientsService extends BaseApiService {
    * @param id - ID do cliente
    */
   async deleteClient(id: string): Promise<ApiDeleteResponse> {
-    return super.delete<ApiDeleteResponse>(`/clients/${id}`);
+    const response = await super.delete<ApiDeleteResponse>(`/clients/${id}`);
+    return response;
   }
 
   /**
@@ -92,8 +93,8 @@ class ClientsService extends BaseApiService {
     return this.updateClient(id, data);
   }
 
-  async delete(id: string): Promise<ApiDeleteResponse> {
-    return this.deleteClient(id);
+  async deleteById(id: string): Promise<void> {
+    await this.deleteClient(id);
   }
   
   /**
@@ -119,6 +120,14 @@ class ClientsService extends BaseApiService {
    */
   async forceDeleteClient(id: string): Promise<ApiDeleteResponse> {
     return super.delete<ApiDeleteResponse>(`/clients/${id}/force`);
+  }
+
+  /**
+   * Promove um cliente para usuário regular (permission_id = 3)
+   * @param id - ID do cliente
+   */
+  async promoteClient(id: string): Promise<ApiResponse<ClientRecord>> {
+    return this.post<ApiResponse<ClientRecord>>(`/clients/${id}/promote`, {});
   }
 }
 

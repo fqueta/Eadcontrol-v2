@@ -10,6 +10,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Option;
+use App\Models\User;
+use App\Notifications\NewCommentNotification;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Log;
 // Removido import duplicado de Curso para evitar FatalError
 
 class CommentController extends Controller
@@ -205,6 +209,22 @@ class CommentController extends Controller
             // PT/EN: Se houver parent_id, persistir como resposta.
             'parent_id' => $parentId ?? null,
         ]);
+
+        try {
+            // Notificar administradores (permission_id < 3)
+            $admins = User::where('permission_id', '<', 3)->get();
+            Log::info('Tentando notificar administradores de novo comentário.', [
+                'count' => $admins->count(),
+                'emails' => $admins->pluck('email')->toArray(),
+                'comment_id' => $comment->id
+            ]);
+            if ($admins->isNotEmpty()) {
+                Notification::send($admins, new NewCommentNotification($comment));
+                Log::info('Notificações de novo comentário enviadas para a fila.');
+            }
+        } catch (\Exception $e) {
+            Log::error('Erro ao enviar notificações de novo comentário: ' . $e->getMessage());
+        }
 
         return response()->json([
             'message' => 'Comentário enviado para moderação',

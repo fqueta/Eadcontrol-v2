@@ -82,12 +82,20 @@ class AuthController extends Controller
         // $filteredMenu = $this->filterMenuByPermissions($menu, $allowedPermissions);
         $filteredMenu = (new MenuController)->getMenus($pid);
         $token = $user->createToken('developer')->plainTextToken;
+
+        // Verificar se deve forçar a troca de senha
+        // pt-BR: Força se a senha atual for a padrão ou se houver flag no config
+        // en-US: Force if current password is the default one or there's a flag in config
+        $config = is_string($user->config) ? json_decode($user->config, true) : $user->config;
+        $forcePasswordChange = ($request->password === 'mudar12@3') || 
+                               (isset($config['force_password_change']) && $config['force_password_change'] === 's');
+
         return response()->json([
             'user' => $user,
-            // 'permissions' => $allowedPermissions,
             'token' => $token,
             'menu' => $filteredMenu,
             'redirect' => $group->redirect_login ?? '/home',
+            'force_password_change' => $forcePasswordChange,
         ]);
     }
 

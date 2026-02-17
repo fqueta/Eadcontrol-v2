@@ -26,25 +26,10 @@ export default function StudentCourses() {
 
   /**
    * clientId
-   * pt-BR: Extrai id do cliente a partir de chaves comuns do usuário (id, id_cliente,
-   *        client_id, cliente_id) e normaliza para número.
-   * en-US: Extract client id from common user keys (id, id_cliente, client_id,
-   *        cliente_id) and normalize to number.
+   * pt-BR: ID do usuário logado para filtrar as matrículas.
+   * en-US: Logged user ID to filter enrollments.
    */
-  const clientId = useMemo(() => {
-    // Prefer explicit client fields; do not coerce generic `user.id` which can be UUID
-    const candidates = [
-      (user as any)?.id_cliente,
-      (user as any)?.client_id,
-      (user as any)?.cliente_id,
-    ];
-    for (const v of candidates) {
-      if (v === null || v === undefined) continue;
-      const s = String(v).trim();
-      if (s) return s; // keep as string to accommodate numeric or UUID-like ids
-    }
-    return undefined;
-  }, [user]);
+  const clientId = user?.id;
 
   /**
    * Page state

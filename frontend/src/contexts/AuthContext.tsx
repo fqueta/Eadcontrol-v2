@@ -34,6 +34,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     menu: [],
     isLoading: true,
     isAuthenticated: false,
+    forcePasswordChange: false,
   });
 
   const [userPointsBalance, setUserPointsBalance] = useState<UserPointsBalance | null>(null);
@@ -42,7 +43,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user: User | null, 
     token: string | null, 
     permissions: string[] = [], 
-    menu: MenuItemDTO[] = []
+    menu: MenuItemDTO[] = [],
+    forcePasswordChange: boolean = false
   ) => {
     setState({
       user,
@@ -51,6 +53,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       menu,
       isLoading: false,
       isAuthenticated: !!user && !!token,
+      forcePasswordChange,
     });
   };
 
@@ -63,7 +66,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         response.user, 
         response.token, 
         response.permissions || [], 
-        response.menu || []
+        response.menu || [],
+        response.force_password_change || false
       );
       
       // Sincronizar dados após login bem-sucedido
@@ -97,7 +101,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         response.user, 
         response.token, 
         response.permissions || [], 
-        response.menu || []
+        response.menu || [],
+        response.force_password_change || false
       );
       
       // Sincronizar dados após registro bem-sucedido
@@ -268,13 +273,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const storedMenu = authService.getStoredMenu() || [];
 
       if (storedToken && storedUser) {
+        const storedForce = localStorage.getItem('auth_force_password_change') === 'true';
         // Hidratação otimista: considera autenticado imediatamente
-        updateAuthState(storedUser, storedToken, storedPermissions, storedMenu);
+        updateAuthState(storedUser, storedToken, storedPermissions, storedMenu, storedForce);
 
         // Validação e sincronização em segundo plano
         try {
           const freshUser = await authService.getCurrentUser();
-          updateAuthState(freshUser, storedToken, storedPermissions, storedMenu);
+          const freshForce = freshUser?.force_password_change ?? storedForce;
+          updateAuthState(freshUser, storedToken, storedPermissions, storedMenu, freshForce);
           
           // Sincronizar dados após validação bem-sucedida da sessão
           await syncUserData();

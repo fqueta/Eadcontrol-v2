@@ -13,6 +13,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use App\Services\Qlib;
 
 class ActivitiesProgressController extends Controller
 {
@@ -35,6 +37,25 @@ class ActivitiesProgressController extends Controller
                 'code' => 'access_expired',
                 'validade_acesso' => $matricula->validade_acesso->toDateString()
             ], 403);
+        }
+
+        // Verifica e registra a data do primeiro acesso, se ainda não existir
+        // EN: Check and register the first access date, if not exists
+        if (!DB::table('matriculameta')->where('matricula_id', $matricula->id)->where('meta_key', 'dt_inicio_acesso')->exists()) {
+            Qlib::update_matriculameta($matricula->id, 'dt_inicio_acesso', now()->format('Y-m-d H:i:s'));
+            
+            // Se a situação for "Matriculado" (slug começa com 'mat'), mudar para "Cursando" (19)
+            // EN: If status is "Matriculado" (slug starts with 'mat'), change to "Cursando" (19)
+            if ($matricula->situacao_id) {
+                // Tenta carregar slug da situação atual
+                $currentStatusSlug = DB::table('posts')->where('ID', $matricula->situacao_id)->value('post_name');
+                if ($currentStatusSlug && Str::startsWith(strtolower($currentStatusSlug), 'mat')) {
+                    // Update direto no DB para evitar loop de eventos ou validações pesadas do model se não necessário
+                    // Mas idealmente via model. Aqui faremos update simples.
+                    $matricula->situacao_id = 19; // ID 19 = Cursando
+                    $matricula->save();
+                }
+            }
         }
 
         return null;
@@ -316,6 +337,19 @@ class ActivitiesProgressController extends Controller
         // EN: Update completion status on the dedicated column
         $progress->completed = true;
 
+        // Atualiza segundos apenas se informado, não vazio e maior que zero.
+        // EN: Update seconds only if provided, non-empty, and greater than zero.
+        if (array_key_exists('seconds', $data) && $data['seconds'] !== null && $data['seconds'] !== '') {
+            $providedSeconds = (int) $data['seconds'];
+            if ($providedSeconds > 0) {
+                $progress->seconds = $providedSeconds;
+            }
+        }
+
+        // Atualiza o status de conclusão na coluna dedicada
+        // EN: Update completion status on the dedicated column
+        $progress->completed = true;
+
         // Remove qualquer sinalizador 'completed' prévio da config e mantém completed_at
         // EN: Remove any prior 'completed' flag from config and keep completed_at
         $existingConfig = is_array($progress->config) ? $progress->config : [];
@@ -327,10 +361,83 @@ class ActivitiesProgressController extends Controller
 
         $progress->save();
 
+        // Verificar conclusão do curso (100% das atividades)
+        // Check course completion (100% of activities)
+        if ($courseId = $progress->course_id) {
+            $this->checkAndCompleteCourse($matricula, (int)$courseId);
+        }
+
         return response()->json([
             'message' => 'Atividade marcada como concluída',
             'progress' => $progress,
         ], 200);
+    }
+    
+    /**
+     * Verifica se todas as atividades do curso foram concluídas e atualiza status da matrícula.
+     * Check if all course activities are completed and update enrollment status.
+     */
+    private function checkAndCompleteCourse(Matricula $matricula, int $courseId)
+    {
+        // Se já estiver concluído (20) ou cancelado/outro final, talvez não deva alterar?
+        // Mas a regra é: terminou ultima atividade -> marca concluido (20).
+        if ($matricula->situacao_id == 20) {
+            return;
+        }
+
+        $course = Curso::select('id', 'modulos')->find($courseId);
+        if (!$course || !is_array($course->modulos)) {
+            return;
+        }
+
+        // 1. Coletar todos os IDs de atividades ativas do curso
+        $allActivityIds = [];
+        foreach ($course->modulos as $module) {
+            if (!is_array($module)) continue;
+            
+            // Atividades no formato objeto
+            if (isset($module['atividades']) && is_array($module['atividades'])) {
+                foreach ($module['atividades'] as $act) {
+                    $aid = isset($act['activity_id']) ? $act['activity_id'] : ($act['id'] ?? null);
+                    if ($aid && is_numeric($aid)) {
+                         // Verifica se estava ativa na configuração do curso (opcional, assumindo todas listadas contam)
+                        $allActivityIds[] = (int)$aid;
+                    }
+                }
+            }
+            // Suporte legacy aviao
+            if (isset($module['aviao']) && is_array($module['aviao'])) {
+                foreach ($module['aviao'] as $aid) {
+                    if (is_numeric($aid)) $allActivityIds[] = (int)$aid;
+                }
+            }
+             // Suporte legacy idItem -> post_parent
+            if (isset($module['idItem']) && is_numeric($module['idItem'])) {
+                // Esse path é caro, evitar se possível ou aceitar custo
+                $children = Activity::where('post_parent', $module['idItem'])->pluck('ID')->all();
+                foreach($children as $cid) $allActivityIds[] = (int)$cid;
+            }
+        }
+        $allActivityIds = array_unique($allActivityIds);
+        
+        if (empty($allActivityIds)) {
+            return;
+        }
+
+        // 2. Contar quantas estão concluídas para esta matrícula
+        $completedCount = ActivityProgress::where('id_matricula', $matricula->id)
+            ->whereIn('activity_id', $allActivityIds)
+            ->where('completed', true)
+            ->count();
+        
+        // 3. Se total concluído >= total do curso, marcar como Concluído (20)
+        if ($completedCount >= count($allActivityIds)) {
+            // Atualiza status e data de conclusão
+            $matricula->situacao_id = 20; // Concluído
+            $matricula->save();
+             // Opcional: gravar data de conclusão em meta
+            Qlib::update_matriculameta($matricula->id, 'dt_conclusao_matricula', now()->format('Y-m-d H:i:s'));
+        }
     }
 
     /**

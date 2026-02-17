@@ -1,12 +1,22 @@
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-import { ArrowLeft, Mail, Phone, MapPin, User, Building, Calendar, GraduationCap, Briefcase, FileText, DollarSign, Edit, Plus } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, User, Building, Calendar, GraduationCap, Briefcase, FileText, DollarSign, Edit, Plus, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useClientById } from '@/hooks/clients';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useClientById, usePromoteClient } from '@/hooks/clients';
 import { getMockClientById } from '@/mocks/clients';
 import { ClientRecord } from '@/types/clients';
 import { useFunnel, useStagesList } from '@/hooks/funnels';
@@ -35,6 +45,8 @@ export default function ClientView() {
   const useMock = import.meta.env.VITE_USE_MOCK_CLIENTS === 'true';
   // Hooks para buscar e atualizar cliente
   const { data: clientResponse, isLoading: isLoadingClient, error, isError, isSuccess } = useClientById(id!);
+  const promoteClientMutation = usePromoteClient();
+  const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
   /**
    * Normaliza o formato da resposta do cliente
    * pt-BR: A API pode retornar o cliente direto ou dentro de `data`.
@@ -546,6 +558,16 @@ export default function ClientView() {
              client.status === 'inactived' ? 'Inativo' : 
              'Pré-cadastro'}
           </Badge>
+          <Button 
+            onClick={() => setIsPromoteModalOpen(true)} 
+            variant="outline" 
+            size="sm"
+            disabled={promoteClientMutation.isPending}
+            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Promover
+          </Button>
           <Button onClick={handleEdit} variant="default" size="sm">
             <Edit className="mr-2 h-4 w-4" />
             Editar
@@ -1013,6 +1035,39 @@ export default function ClientView() {
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog open={isPromoteModalOpen} onOpenChange={setIsPromoteModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-blue-600" />
+              Confirmar Promoção
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja promover o cliente <strong>{client.name}</strong> para usuário?
+              <br />
+              Esta ação concederá acesso ao painel administrativo com permissões de usuário regular.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                promoteClientMutation.mutate(client.id, {
+                  onSuccess: () => {
+                    navigate("/admin/users");
+                  }
+                });
+                setIsPromoteModalOpen(false);
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Confirmar Promoção
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+

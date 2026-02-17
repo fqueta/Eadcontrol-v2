@@ -39,9 +39,9 @@ class SituacaoMatriculaController extends Controller
         if (!$user) {
             return response()->json(['error' => 'Acesso negado'], 403);
         }
-        if (!$this->permissionService->isHasPermission('view')) {
-            return response()->json(['error' => 'Acesso negado'], 403);
-        }
+        // if (!$this->permissionService->isHasPermission('view')) {
+        //     return response()->json(['error' => 'Acesso negado'], 403);
+        // }
 
         $perPage = (int)($request->input('per_page', 10));
         $orderBy = $request->input('order_by', 'created_at');

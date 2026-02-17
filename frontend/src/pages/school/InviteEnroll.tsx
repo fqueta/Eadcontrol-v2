@@ -437,7 +437,7 @@ export default function InviteEnroll() {
               <div className="space-y-2 md:col-span-2">
                 <Label>Instituição</Label>
                 <Select value={institution} onValueChange={(val) => setInstitution(val)} required>
-                  <SelectTrigger id="institution" className={fieldErrors.institution ? 'border-red-500 focus:ring-red-500' : ''}>
+                  <SelectTrigger id="institution" className={(fieldErrors.institution || isAuthenticated) ? 'border-red-500 focus:ring-red-500' : ''}>
                     <SelectValue placeholder="Selecione o tipo de instituição" />
                   </SelectTrigger>
                   <SelectContent>

@@ -50,8 +50,9 @@ export function AdminProtectedRoute({ children, linkLoja = '' }: AdminProtectedR
   // Verifica se o usuário tem permissão para acessar o admin
   // Usuários com permission_id >= 5 são redirecionados para a área do cliente
   if (user?.permission_id && parseInt(user.permission_id) > 5) {
-    const clientAreaUrl = linkLoja ? `${linkLoja}/area-cliente` : '/lojaderesgatesantenamais/area-cliente';
-    return <Navigate to={clientAreaUrl} replace />;
+    // const clientAreaUrl = linkLoja ? `${linkLoja}/area-cliente` : '/loja/area-cliente';
+    // Redireciona para listagem de cursos do aluno conforme solicitado
+    return <Navigate to="/aluno/cursos" replace />;
   }
 
   // Se chegou até aqui, o usuário tem permissão para acessar o admin

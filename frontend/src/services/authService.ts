@@ -104,6 +104,11 @@ class AuthService {
       if (data.menu) {
         localStorage.setItem('auth_menu', JSON.stringify(data.menu));
       }
+      if (data.force_password_change) {
+        localStorage.setItem('auth_force_password_change', 'true');
+      } else {
+        localStorage.removeItem('auth_force_password_change');
+      }
     }
 
     return data;
@@ -128,6 +133,11 @@ class AuthService {
       }
       if (data.menu) {
         localStorage.setItem('auth_menu', JSON.stringify(data.menu));
+      }
+      if (data.force_password_change) {
+        localStorage.setItem('auth_force_password_change', 'true');
+      } else {
+        localStorage.removeItem('auth_force_password_change');
       }
     }
 
@@ -333,6 +343,7 @@ class AuthService {
     localStorage.removeItem('auth_user');
     localStorage.removeItem('auth_permissions');
     localStorage.removeItem('auth_menu');
+    localStorage.removeItem('auth_force_password_change');
   }
 }
 

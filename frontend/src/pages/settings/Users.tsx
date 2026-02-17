@@ -1,15 +1,28 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Pencil, Trash2, CalendarIcon, RotateCcw, AlertTriangle } from 'lucide-react';
+import { 
+  Plus, 
+  Search, 
+  Pencil, 
+  Trash2, 
+  RotateCcw, 
+  Users as UsersIcon,
+  Trash as TrashIcon,
+  Filter,
+  MoreVertical,
+  ChevronLeft,
+  ChevronRight,
+  Shield,
+  Mail,
+  CheckCircle2,
+  XCircle
+} from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format } from 'date-fns';
-import { MaskedInputField } from '@/components/lib/MaskedInputField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AddressAccordion } from "@/components/lib/AddressAccordion";
 import { UserForm } from '@/components/users/UserForm';
 import { Switch } from '@/components/ui/switch';
 import { 
@@ -24,7 +37,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -46,29 +58,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -83,6 +72,7 @@ import {
 import { usePermissionsList } from '@/hooks/permissions';
 import { UserRecord, CreateUserInput } from '@/types/users';
 import { toast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const userSchema = z.object({
   tipo_pessoa: z.enum(["pf", "pj"]).optional(),
@@ -94,10 +84,10 @@ const userSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   cpf: z.string().optional(),
   cnpj: z.string().optional(),
-  // status: z.enum(["actived", "disabled"]),
   razao: z.string().optional(),
   genero: z.enum(["m", "f", "ni"]).optional(),
   ativo: z.enum(["s", "n"]).optional(),
+  force_password_change: z.enum(["s", "n"]).optional(),
   config: z.object({
     nome_fantasia: z.string().nullable().optional(),
     celular: z.string().nullable().optional(),
@@ -115,6 +105,7 @@ const userSchema = z.object({
     bairro: z.string().nullable().optional(),
     cidade: z.string().nullable().optional(),
     uf: z.string().nullable().optional(),
+    force_password_change: z.enum(["s", "n"]).nullable().optional(),
   }).optional(),
 });
 
@@ -129,7 +120,6 @@ export default function Users() {
   const [deletingUser, setDeletingUser] = useState<UserRecord | null>(null);
   const [showTrash, setShowTrash] = useState(false);
 
-  // When showTrash changes, reset page to 1
   useEffect(() => {
     setPage(1);
   }, [showTrash]);
@@ -140,7 +130,7 @@ export default function Users() {
     excluido: showTrash ? 's' : undefined
   });
 
-  const { data: permissionsData, isLoading: isLoadingPermissions } = usePermissionsList();
+  const { data: permissionsData, isLoading: isLoadingPermissions } = usePermissionsList({ per_page: 100 });
   const permissions = permissionsData?.data || [];
 
   const createMutation = useCreateUser();
@@ -157,7 +147,6 @@ export default function Users() {
       email: '',
       name: '',
       password: '',
-      // status: 'actived',
       genero: 'ni',
       ativo: 's',
       config: {
@@ -184,19 +173,15 @@ export default function Users() {
   const users = usersData?.data || [];
   const totalPages = usersData?.last_page || 1;
 
-  // Auto-fill permission_id when permissions load and field is empty
   useEffect(() => {
     const currentPermissionId = form.getValues('permission_id');
-    
     if (!currentPermissionId && permissions.length > 0 && !editingUser) {
       form.setValue('permission_id', String(permissions[0].id));
     }
   }, [permissions, form, editingUser]);
 
-  // Client-side filtering
   const filteredUsers = useMemo(() => {
     if (!search.trim()) return users;
-    
     const searchLower = search.toLowerCase();
     return users.filter(user => 
       user.name.toLowerCase().includes(searchLower) ||
@@ -206,8 +191,6 @@ export default function Users() {
 
   const handleOpenModal = (user?: UserRecord) => {
     if (user) {
-      // console.log(user);
-      
       setEditingUser(user);
       form.reset({
         tipo_pessoa: user.tipo_pessoa,
@@ -216,35 +199,42 @@ export default function Users() {
         name: user.name,
         cpf: user.cpf || '',
         cnpj: user.cnpj || '',
-        // status: user.status,
         razao: user.razao || '',
         genero: user.genero,
         ativo: user.ativo,
+        force_password_change: user.force_password_change ? 's' : (user.config?.force_password_change === 's' ? 's' : 'n'),
         config: typeof user.config === 'object' && !Array.isArray(user.config)
         ? user.config
         : {
-          nome_fantasia: user.config.nome_fantasia ?? '',
-          celular: user.config.celular ?? '',
-          telefone_residencial: user.config.telefone_residencial ?? '',
-          telefone_comercial: user.config.telefone_comercial ?? '',
-          rg: user.config.rg ?? '',
-          nascimento: user.config.nascimento ?? '',
-          escolaridade: user.config.escolaridade ?? '',
-          profissao: user.config.profissao ?? '',
-          tipo_pj: user.config.tipo_pj ?? '',
-          cep: user.config.cep ?? '',
-          endereco: user.config.endereco ?? '',
-          numero: user.config.numero ?? '',
-          complemento: user.config.complemento ?? '',
-          bairro: user.config.bairro ?? '',
-          cidade: user.config.cidade ?? '',
-          uf: user.config.uf ?? '',
+          nome_fantasia: user.config?.nome_fantasia ?? '',
+          celular: user.config?.celular ?? '',
+          telefone_residencial: user.config?.telefone_residencial ?? '',
+          telefone_comercial: user.config?.telefone_comercial ?? '',
+          rg: user.config?.rg ?? '',
+          nascimento: user.config?.nascimento ?? '',
+          escolaridade: user.config?.escolaridade ?? '',
+          profissao: user.config?.profissao ?? '',
+          tipo_pj: user.config?.tipo_pj ?? '',
+          cep: user.config?.cep ?? '',
+          endereco: user.config?.endereco ?? '',
+          numero: user.config?.numero ?? '',
+          complemento: user.config?.complemento ?? '',
+          bairro: user.config?.bairro ?? '',
+          cidade: user.config?.cidade ?? '',
+          uf: user.config?.uf ?? '',
+          force_password_change: user.config?.force_password_change ?? 'n',
         },
       });
     } else {
       setEditingUser(null);
       form.reset({
+        tipo_pessoa: 'pf',
         permission_id: permissions.length > 0 ? String(permissions[0].id) : "",
+        email: '',
+        name: '',
+        password: '',
+        genero: 'ni',
+        ativo: 's',
       });
     }
     setIsModalOpen(true);
@@ -257,14 +247,13 @@ export default function Users() {
   };
 
   const onSubmit = async (data: UserFormData) => {
-    console.log('Valores submetidos:', data); 
     try {
       const payload: CreateUserInput = {
-        tipo_pessoa: data.tipo_pessoa,
-        token: '', // Empty token as per schema
+        tipo_pessoa: data.tipo_pessoa || 'pf',
+        token: '',
         permission_id: data.permission_id,
         email: data.email,
-        password: data.password || 'mudar123', // Default password if not provided
+        password: data.password || (editingUser ? '' : 'mudar123'),
         name: data.name,
         cpf: data.cpf || '',
         cnpj: data.cnpj || '',
@@ -287,8 +276,9 @@ export default function Users() {
           cidade: data.config?.cidade || '',
           uf: data.config?.uf || '',
         },
-        genero: data.genero,
-        ativo: data.ativo,
+        genero: data.genero || 'ni',
+        ativo: data.ativo || 's',
+        force_password_change: data.force_password_change || 'n',
       };
 
       if (editingUser) {
@@ -301,305 +291,355 @@ export default function Users() {
       }
       handleCloseModal();
     } catch (error) {
-      // Error is handled by the mutation hooks
+      // Handled by mutations
     }
   };
 
-  const handleDelete = async () => {
-    if (deletingUser) {
-      try {
-        await deleteMutation.mutateAsync(deletingUser.id);
-        setDeletingUser(null);
-      } catch (error) {
-        // Error is handled by the mutation hook
-      }
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'actived':
-        return <Badge className="bg-success text-success-foreground">Ativo</Badge>;
-      case 'disabled':
-        return <Badge variant="secondary">Desabilitado</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const getAtivoBadge = (ativo: string) => {
-    return ativo === 's' ? 
-      <Badge className="bg-success text-success-foreground">Sim</Badge> : 
-      <Badge variant="secondary">Não</Badge>;
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="min-h-[400px] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground animate-pulse">Carregando usuários...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
-    const errorMessage = (error as Error).message;
-    if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center p-6 max-w-md">
-            <h2 className="text-2xl font-semibold text-destructive mb-2">Acesso Negado</h2>
-            <p className="text-muted-foreground">
-              Você não tem permissão para acessar a gestão de usuários.
-            </p>
-          </div>
-        </div>
-      );
-    }
-    
+    const isForbidden = (error as any).status === 403;
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center p-6 max-w-md">
-          <h2 className="text-2xl font-semibold text-destructive mb-2">Erro</h2>
-          <p className="text-muted-foreground">
-            Erro ao carregar usuários: {errorMessage}
-          </p>
-          <Button onClick={() => window.location.reload()} className="mt-4">
-            Tentar Novamente
-          </Button>
-        </div>
+      <div className="min-h-[400px] flex items-center justify-center">
+        <Card className="max-w-md w-full border-destructive/20 bg-destructive/5">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+              <XCircle className="h-6 w-6 text-destructive" />
+            </div>
+            <CardTitle className="text-destructive">
+              {isForbidden ? "Acesso Negado" : "Erro ao Carregar"}
+            </CardTitle>
+            <CardDescription>
+              {isForbidden 
+                ? "Você não tem as permissões necessárias para visualizar os usuários." 
+                : (error as Error).message}
+            </CardDescription>
+          </CardHeader>
+          {!isForbidden && (
+            <CardContent className="flex justify-center">
+              <Button onClick={() => window.location.reload()}>Tentar Novamente</Button>
+            </CardContent>
+          )}
+        </Card>
       </div>
     );
   }
-  const handleOnclick = ()=>{
-    const rowData = form.getValues();
-    console.log('Dados do Formulario',rowData);
-    
-  }
+
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Usuários</h1>
+    <div className="container-fluid py-8 px-4 md:px-8 space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="p-2 bg-primary/10 rounded-lg text-primary">
+              <UsersIcon className="h-6 w-6" />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Usuários</h1>
+          </div>
           <p className="text-muted-foreground">
-            Gerencie os usuários do sistema
+            Gerencie o acesso e permissões das pessoas que utilizam a plataforma.
           </p>
         </div>
-        {/* Navega para a página dedicada de criação de usuário */}
-        <Button onClick={() => navigate('/admin/settings/users/create')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Usuário
-        </Button>
+        
+        <div className="flex items-center gap-3">
+          <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg">
+            <Button 
+              variant={!showTrash ? "secondary" : "ghost"} 
+              size="sm" 
+              onClick={() => setShowTrash(false)}
+              className={cn("gap-2", !showTrash && "bg-white dark:bg-zinc-700 shadow-sm")}
+            >
+              <UsersIcon className="h-4 w-4" />
+              <span>Ativos</span>
+            </Button>
+            <Button 
+              variant={showTrash ? "secondary" : "ghost"} 
+              size="sm" 
+              onClick={() => setShowTrash(true)}
+              className={cn("gap-2", showTrash && "bg-white dark:bg-zinc-700 shadow-sm")}
+            >
+              <TrashIcon className="h-4 w-4" />
+              <span>Lixeira</span>
+            </Button>
+          </div>
+          <Button 
+            onClick={() => navigate('/admin/settings/users/create')}
+            className="bg-primary hover:bg-primary/90 shadow-md gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Novo Usuário</span>
+          </Button>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Usuários</CardTitle>
-          <CardDescription>
-            Configure os usuários do sistema
-          </CardDescription>
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-2 mr-4">
-              <Switch
-                checked={showTrash}
-                onCheckedChange={setShowTrash}
-                aria-label="Mostrar registros na lixeira"
-              />
-              <span className="text-sm text-muted-foreground w-max">
-                {showTrash ? 'Ocultar Lixeira' : 'Mostrar Lixeira'}
-              </span>
-            </div>
-            <div className="relative flex-1 max-w-sm">
+      <Card className="border-none shadow-xl bg-white/50 backdrop-blur-sm dark:bg-zinc-900/50">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder="Buscar usuários..."
+                placeholder="Buscar por nome ou e-mail..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-10 bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700"
               />
             </div>
+            <Button variant="outline" size="icon" className="md:hidden">
+              <Filter className="h-4 w-4" />
+            </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          {filteredUsers.length === 0 ? (
-            <div className="text-center py-6">
-              {search.trim() ? (
-                <p className="text-muted-foreground">
-                  Nenhum usuário encontrado para "{search}".
-                </p>
-              ) : (
-                <>
-                  <p className="text-muted-foreground">Nenhum usuário encontrado{showTrash ? ' na lixeira' : ''}.</p>
-                  {!showTrash && (
-                    <Button 
-                      onClick={() => handleOpenModal()} 
-                      className="mt-4"
-                      variant="outline"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Criar primeiro usuário
-                    </Button>
-                  )}
-                </>
-              )}
-            </div>
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-zinc-50 dark:bg-zinc-800/50">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[300px] pl-6 py-4">Usuário</TableHead>
+                  <TableHead className="py-4">Nível / Permissão</TableHead>
+                  <TableHead className="py-4 text-center">Status</TableHead>
+                  <TableHead className="pr-6 text-right py-4">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Permissão</TableHead>
-                    {/* <TableHead>Status</TableHead> */}
-                    <TableHead>Ativo</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableCell colSpan={4} className="h-64 text-center">
+                      <div className="flex flex-col items-center justify-center text-muted-foreground gap-2">
+                        <UsersIcon className="h-12 w-12 opacity-20" />
+                        <p className="text-lg font-medium">Nenhum usuário encontrado</p>
+                        {search && <p className="text-sm">Tente mudar os termos da busca.</p>}
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">
-                        {user.name}
+                ) : (
+                  filteredUsers.map((user) => (
+                    <TableRow key={user.id} className="group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors">
+                      <TableCell className="pl-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 border-2 border-white dark:border-zinc-800 shadow-sm">
+                            <AvatarImage src={`https://avatar.vercel.sh/${user.email}.png`} />
+                            <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold">
+                              {getInitials(user.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-primary transition-colors">
+                              {user.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              {user.email}
+                            </span>
+                          </div>
+                        </div>
                       </TableCell>
-                      <TableCell>
-                        {user.email}
+                      <TableCell className="py-4">
+                        <Badge variant="outline" className="bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-700 font-medium py-0.5 px-2 flex items-center gap-1.5 w-fit">
+                          <Shield className="h-3.5 w-3.5 text-zinc-500" />
+                          {permissions.find(p => String(p.id) === String(user.permission_id))?.name || `Nível ${user.permission_id}`}
+                        </Badge>
                       </TableCell>
-                      <TableCell>
-                        {permissions.find(p => String(p.id) === String(user.permission_id))?.name || user.permission_id}
+                      <TableCell className="py-4 text-center">
+                        <div className="flex justify-center">
+                          {user.ativo === 's' ? (
+                            <Badge className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-50 gap-1 px-2.5 py-0.5">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Ativo
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-transparent gap-1 px-2.5 py-0.5">
+                              <XCircle className="h-3.5 w-3.5" />
+                              Inativo
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
-                      {/* <TableCell>
-                        {getStatusBadge(user.status)}
-                      </TableCell> */}
-                      <TableCell>
-                        {getAtivoBadge(user.ativo)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-2">
-                        {showTrash ? (
+                      <TableCell className="text-right pr-6 py-4">
+                        <div className="flex justify-end items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                          {showTrash ? (
                             <>
                               <Button
-                                variant="outline"
-                                size="sm"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                                 onClick={() => restoreMutation.mutate(user.id)}
                                 title="Restaurar"
                               >
-                                <RotateCcw className="h-4 w-4 text-green-600" />
+                                <RotateCcw className="h-4 w-4" />
                               </Button>
                               <Button
-                                variant="outline"
-                                size="sm"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
                                 onClick={() => setDeletingUser(user)}
                                 title="Excluir Permanentemente"
                               >
-                                <Trash2 className="h-4 w-4 text-red-600" />
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </>
                           ) : (
                             <>
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
+                                className="h-8 w-8 text-zinc-500 hover:text-primary hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                 onClick={() => handleOpenModal(user)}
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setDeletingUser(user)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                  <DropdownMenuLabel>Opções</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => handleOpenModal(user)} className="gap-2 cursor-pointer">
+                                    <Pencil className="h-4 w-4" /> Editar usuário
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => setDeletingUser(user)} 
+                                    className="gap-2 text-destructive focus:text-destructive cursor-pointer"
+                                  >
+                                    <Trash2 className="h-4 w-4" /> Excluir acesso
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </>
                           )}
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-muted-foreground">
-                    Página {page} de {totalPages}
-                  </p>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage(Math.max(1, page - 1))}
-                      disabled={page === 1}
-                    >
-                      Anterior
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage(Math.min(totalPages, page + 1))}
-                      disabled={page === totalPages}
-                    >
-                      Próxima
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
+          {totalPages > 1 && (
+            <div className="px-6 py-4 flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/30">
+              <span className="text-sm text-muted-foreground font-medium">
+                Página <span className="text-zinc-900 dark:text-zinc-100">{page}</span> de {totalPages}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                  className="h-8 gap-1 pr-3"
+                >
+                  <ChevronLeft className="h-4 w-4" /> Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
+                  disabled={page === totalPages}
+                  className="h-8 gap-1 pl-3"
+                >
+                  Próxima <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
       
-      {/* Create/Edit Modal */}
+      {/* Create/Edit Modal - Enhanced with modern styling matching the table */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingUser ? 'Editar Usuário' : 'Novo Usuário'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingUser ? 'Altere os dados do usuário' : 'Preencha os dados para criar um novo usuário'}
-            </DialogDescription>
-          </DialogHeader>
-          <UserForm
-            form={form}
-            onSubmit={onSubmit}
-            onCancel={handleCloseModal}
-            editingUser={editingUser ?? null}
-            permissions={permissions}
-            isLoadingPermissions={isLoadingPermissions}
-            handleOnclick={handleOnclick}
-            showTipoPessoa={false}
-            showGenero={false}
-            showAddressSection={false}
-            showCpf={false}
-            showPhones={false}
-            ativoAsSwitch={true}
-            showBirthDate={false}
-          />
-          </DialogContent>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 border-none shadow-2xl">
+          <div className="bg-zinc-900 p-8 text-white relative">
+            <div className="absolute right-0 bottom-0 opacity-10">
+              <UsersIcon className="h-32 w-32 translate-x-12 translate-y-12" />
+            </div>
+            <DialogHeader className="space-y-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-white/10 rounded-lg">
+                  <Plus className="h-5 w-5 text-white" />
+                </div>
+                <DialogTitle className="text-2xl font-bold tracking-tight">
+                  {editingUser ? 'Atualizar Usuário' : 'Novo Cadastro'}
+                </DialogTitle>
+              </div>
+              <DialogDescription className="text-zinc-400 text-base">
+                {editingUser 
+                  ? `Editando as informações de ${editingUser.name}` 
+                  : 'Preencha os campos abaixo para criar um novo acesso ao sistema.'}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          
+          <div className="p-8 overflow-y-auto bg-white dark:bg-zinc-950 min-h-[500px]">
+            <UserForm
+              form={form}
+              onSubmit={onSubmit}
+              onCancel={handleCloseModal}
+              editingUser={editingUser ?? null}
+              permissions={permissions}
+              isLoadingPermissions={isLoadingPermissions}
+              showTipoPessoa={true}
+              showGenero={true}
+              showAddressSection={true}
+              showCpf={true}
+              showPhones={true}
+              ativoAsSwitch={true}
+              showBirthDate={true}
+            />
+          </div>
+        </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete/ForceDelete Dialog - Enhanced with modern look */}
       <AlertDialog open={!!deletingUser} onOpenChange={() => setDeletingUser(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md border-none shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {showTrash ? 'Excluir Permanentemente' : 'Confirmar exclusão'}
+            <div className="mx-auto w-14 h-14 rounded-full bg-red-50 dark:bg-red-950/30 flex items-center justify-center mb-4">
+              <Trash2 className="h-7 w-7 text-red-600" />
+            </div>
+            <AlertDialogTitle className="text-xl font-bold text-center">
+              {showTrash ? 'Exclusão Permanente' : 'Confirmar Remoção'}
             </AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription className="text-center text-base py-2">
               {showTrash ? (
                 <>
-                  Tem certeza de que deseja excluir permanentemente o usuário "{deletingUser?.name}"?
+                  Você está prestes a apagar definitivamente o usuário <span className="font-bold text-zinc-900 dark:text-zinc-100">{deletingUser?.name}</span>.
                   <br />
-                  <span className="font-bold text-destructive">Esta ação NÃO pode ser desfeita.</span>
+                  <span className="mt-2 block font-medium text-red-600 bg-red-50 dark:bg-red-900/10 p-2 rounded">
+                    Esta ação é irreversível e todos os logs vinculados podem ser afetados.
+                  </span>
                 </>
               ) : (
-                `Tem certeza de que deseja mover o usuário "${deletingUser?.name}" para a lixeira?`
+                <>
+                  Deseja mover <span className="font-bold text-zinc-900 dark:text-zinc-100">{deletingUser?.name}</span> para a lixeira?
+                  <br />
+                  O acesso será bloqueado imediatamente.
+                </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="sm:justify-center gap-3 mt-4">
+            <AlertDialogCancel className="px-6 h-11 border-zinc-200">Não, manter</AlertDialogCancel>
             <AlertDialogAction 
               onClick={() => {
                 if (deletingUser) {
@@ -612,9 +652,12 @@ export default function Users() {
                 }
               }} 
               disabled={deleteMutation.isPending || forceDeleteMutation.isPending}
-              className={showTrash ? "bg-destructive hover:bg-destructive/90" : ""}
+              className={cn(
+                "px-8 h-11 h hover:scale-[1.02] transition-transform",
+                showTrash ? "bg-red-600 hover:bg-red-700" : "bg-zinc-900 hover:bg-zinc-800"
+              )}
             >
-              {showTrash ? 'Excluir Permanentemente' : 'Excluir'}
+              {showTrash ? 'Sim, excluir para sempre' : 'Sim, remover acesso'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

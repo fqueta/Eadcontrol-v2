@@ -29,6 +29,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { buildMenuFromDTO, filterMenuByViewAccess, defaultMenu } from "@/lib/menu";
 import { BrandLogo } from "@/components/branding/BrandLogo";
@@ -175,40 +177,75 @@ export function AppSidebar() {
                 {menuItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     {item.items ? (
-                      // Menu with submenu
-                      <Tooltip disableHoverableContent={!collapsed}>
-                        <TooltipTrigger asChild>
+                      collapsed ? (
+                        // Collapsed: Dropdown Menu
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <SidebarMenuButton
+                              className="w-full justify-center text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-200 rounded-xl"
+                            >
+                              <item.icon className="h-[18px] w-[18px]" />
+                              <span className="sr-only">{item.title}</span>
+                            </SidebarMenuButton>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent side="right" align="start" className="w-48 ml-2">
+                             <DropdownMenuLabel>{item.title}</DropdownMenuLabel>
+                             <DropdownMenuSeparator />
+                             {item.items.map((subItem) => (
+                               <DropdownMenuItem key={subItem.title} asChild>
+                                 <Link to={resolveUrl(subItem.url)} className="cursor-pointer">
+                                   {subItem.title}
+                                 </Link>
+                               </DropdownMenuItem>
+                             ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        // Expanded: Collapsible
+                        <>
                           <SidebarMenuButton
                             asChild
                             isActive={hasActiveChild(item.items)}
-                            className="w-full justify-start text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-200 rounded-xl"
+                            className="w-full justify-start text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-200 rounded-xl cursor-pointer"
                             aria-expanded={!isGroupCollapsed(item.title)}
+                            onClick={() => toggleGroup(item.title)}
                           >
                             <div className="flex items-center gap-3 w-full px-2 py-2">
                               <item.icon className="h-[18px] w-[18px]" />
-                              {!collapsed && <span className="flex-1 truncate">{item.title}</span>}
-                              {!collapsed && (
-                                <SidebarMenuAction
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    toggleGroup(item.title);
-                                  }}
-                                  className="hover:bg-transparent text-muted-foreground/50 hover:text-primary transition-colors"
-                                >
-                                  {isGroupCollapsed(item.title) ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronUp className="h-4 w-4" />
-                                  )}
-                                </SidebarMenuAction>
-                              )}
+                              <span className="flex-1 truncate">{item.title}</span>
+                              <SidebarMenuAction
+                                className="hover:bg-transparent text-muted-foreground/50 hover:text-primary transition-colors bg-transparent active:bg-transparent focus:bg-transparent"
+                              >
+                                {isGroupCollapsed(item.title) ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronUp className="h-4 w-4" />
+                                )}
+                              </SidebarMenuAction>
                             </div>
                           </SidebarMenuButton>
-                        </TooltipTrigger>
-                        {collapsed && (
-                          <TooltipContent side="right">{item.title}</TooltipContent>
-                        )}
-                      </Tooltip>
+                          {!isGroupCollapsed(item.title) && (
+                            <SidebarMenuSub className="ml-4 border-l-2 border-primary/10 pl-2 space-y-1 my-1">
+                              {item.items.map((subItem) => (
+                                <SidebarMenuSubItem key={subItem.title}>
+                                <SidebarMenuSubButton 
+                                  asChild 
+                                  isActive={isActive(subItem.url)}
+                                  className="w-full justify-start text-sm transition-all duration-200 rounded-lg data-[active=true]:text-primary data-[active=true]:font-semibold data-[active=true]:bg-primary/5 hover:bg-primary/5 hover:text-primary text-muted-foreground"
+                                >
+                                  <NavLink 
+                                    to={resolveUrl(subItem.url)} 
+                                    className="flex items-center gap-2 px-2 py-1.5"
+                                  >
+                                    <span>{subItem.title}</span>
+                                  </NavLink>
+                                </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              ))}
+                            </SidebarMenuSub>
+                          )}
+                        </>
+                      )
                     ) : (
                       // Simple menu item
                       <Tooltip disableHoverableContent={!collapsed}>
@@ -216,11 +253,11 @@ export function AppSidebar() {
                           <SidebarMenuButton 
                             asChild 
                             isActive={isActive(item.url)}
-                            className="w-full justify-start text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary"
+                            className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${collapsed ? 'justify-center' : 'justify-start'}`}
                           >
                             <NavLink 
                               to={resolveUrl(item.url)} 
-                              className="flex items-center gap-3 px-2 py-2"
+                              className={`flex items-center gap-3 py-2 ${collapsed ? 'px-0 justify-center' : 'px-2'}`}
                             >
                               <item.icon className={`h-[18px] w-[18px] ${isActive(item.url) ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
                               {!collapsed && <span>{item.title}</span>}
@@ -231,26 +268,6 @@ export function AppSidebar() {
                           <TooltipContent side="right">{item.title}</TooltipContent>
                         )}
                       </Tooltip>
-                    )}
-                    {item.items && !collapsed && !isGroupCollapsed(item.title) && (
-                      <SidebarMenuSub className="ml-4 border-l-2 border-primary/10 pl-2 space-y-1 my-1">
-                        {item.items.map((subItem) => (
-                          <SidebarMenuSubItem key={subItem.title}>
-                          <SidebarMenuSubButton 
-                            asChild 
-                            isActive={isActive(subItem.url)}
-                            className="w-full justify-start text-sm transition-all duration-200 rounded-lg data-[active=true]:text-primary data-[active=true]:font-semibold data-[active=true]:bg-primary/5 hover:bg-primary/5 hover:text-primary text-muted-foreground"
-                          >
-                            <NavLink 
-                              to={resolveUrl(subItem.url)} 
-                              className="flex items-center gap-2 px-2 py-1.5"
-                            >
-                              <span>{subItem.title}</span>
-                            </NavLink>
-                          </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
                     )}
                   </SidebarMenuItem>
                 ))}
