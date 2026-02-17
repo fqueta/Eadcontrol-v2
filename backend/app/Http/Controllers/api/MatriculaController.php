@@ -567,8 +567,19 @@ class MatriculaController extends Controller
             // LEFT JOIN permite incluir registros com id_turma = 0 (sem turma associada)
             ->leftJoin('turmas', 'matriculas.id_turma', '=', 'turmas.id')
             ->leftJoin('users', 'matriculas.id_cliente', '=', 'users.id')
-            ->select('matriculas.*', 'cursos.nome as curso_nome','cursos.tipo as curso_tipo', 'turmas.nome as turma_nome', 'users.name as cliente_nome')
+            ->leftJoin('users as consultores', 'matriculas.id_consultor', '=', 'consultores.id')
+            ->leftJoin('posts', 'matriculas.situacao_id', '=', 'posts.id')
+            ->select(
+                'matriculas.*', 
+                'cursos.nome as curso_nome',
+                'cursos.tipo as curso_tipo', 
+                'turmas.nome as turma_nome', 
+                'users.name as cliente_nome',
+                'consultores.name as consultor_nome',
+                'posts.post_title as situacao'
+            )
             ->findOrFail($id);
+
         $data = $matricula->toArray();
         $data['meta'] = $this->getAllMatriculaMeta($matricula->id);
         // Expor parcelamentos vinculados via pivot

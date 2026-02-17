@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\User;
 use App\Models\Curso;
+use App\Models\Activity;
+use App\Models\Comment;
 use App\Services\Qlib;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -14,9 +16,12 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class UserImportController extends Controller
 {
+    private array $pendingParentLinks = [];
+    private ?string $defaultPasswordHash = null;
     /**
      * Import users or courses from JSON payload/URL.
      */
@@ -24,6 +29,7 @@ class UserImportController extends Controller
     {
         ini_set('memory_limit', '512M');
         set_time_limit(300);
+        try {
 
         $data = $request->input('data');
         $url = $request->input('url');
@@ -91,6 +97,10 @@ class UserImportController extends Controller
                 $result = false;
                 if ($type == 'courses') {
                     $result = $this->importCourse($row);
+                } elseif ($type == 'comments') {
+                    $result = $this->importComment($row);
+                } elseif ($type == 'enrollments') {
+                    $result = $this->importEnrollment($row);
                 } else {
                     $result = $this->importUser($row);
                 }
@@ -111,16 +121,317 @@ class UserImportController extends Controller
             }
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => "Import process finished for $type.",
-            'details' => $stats
-        ]);
+            if ($type === 'comments' && !empty($this->pendingParentLinks)) {
+                $this->reconcilePendingParentLinks();
+            }
+            return response()->json([
+                'success' => true,
+                'message' => "Import process finished for $type.",
+                'details' => $stats
+            ], 200, ['Content-Type' => 'application/json']);
+        } catch (\Throwable $e) {
+            \Log::error('Import fatal error: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro inesperado na importação: '.$e->getMessage(),
+            ], 500);
+        }
     }
 
-    /**
-     * Import a single User/Client
-     */
+    private function importEnrollment($row)
+    {
+        $row = $this->sanitizeInput($row);
+        $legacyId = $row['id_antigo'] ?? null;
+        $userEmail = $row['user_email'] ?? null;
+        $courseIdWp = $row['course_id_wp'] ?? null;
+        $statusRaw = strtolower(trim((string)($row['status'] ?? '')));
+        $startAtRaw = $row['start_at'] ?? null;
+        $endAtRaw = $row['end_at'] ?? null;
+        if (!$userEmail || !$courseIdWp) {
+            return 'skipped';
+        }
+        $user = User::where('email', $userEmail)->first();
+        if (!$user) {
+            return 'skipped';
+        }
+        $course = $this->findCourseByExternalId($courseIdWp);
+        if (!$course) {
+            return 'skipped';
+        }
+        $statusAndSit = $this->mapEnrollmentStatusAndSituation($statusRaw, $startAtRaw);
+        $status = $statusAndSit[0];
+        $situacaoId = $statusAndSit[1];
+        $existing = null;
+        if ($legacyId) {
+            $existing = \App\Models\Matricula::where('id_cliente', (string)$user->id)
+                ->where('id_curso', (int)$course->id)
+                ->where('config->ID_antigo', (string)$legacyId)
+                ->first();
+        } else {
+            $existing = \App\Models\Matricula::where('id_cliente', (string)$user->id)
+                ->where('id_curso', (int)$course->id)
+                ->first();
+        }
+        $config = [
+            'ID_antigo' => $legacyId ? (string)$legacyId : null,
+            'order_id_wp' => $row['order_id_wp'] ?? null,
+            'course_id_wp' => (string)$courseIdWp,
+            'source' => 'eduma',
+        ];
+        $coursePriceRaw = $course->valor ?? null;
+        if ($coursePriceRaw === null || $coursePriceRaw === '' || !is_numeric(str_replace(',', '.', (string)$coursePriceRaw))) {
+            $coursePriceRaw = $course->inscricao ?? null;
+        }
+        $coursePrice = null;
+        if ($coursePriceRaw !== null && $coursePriceRaw !== '') {
+            $coursePrice = (float) str_replace(',', '.', (string)$coursePriceRaw);
+        }
+        $attributes = [
+            'id_cliente' => (string)$user->id,
+            'id_curso' => (int)$course->id,
+            'id_turma' => 0,
+            'status' => $status,
+            'ativo' => $status === 'p' ? 'n' : 's',
+            'situacao_id' => $situacaoId,
+            'config' => $config,
+            'subtotal' => $coursePrice,
+            'total' => $coursePrice,
+        ];
+        $startAt = null;
+        $endAt = null;
+        try { if (is_string($startAtRaw)) $startAt = \Carbon\Carbon::parse($startAtRaw); } catch (\Throwable $e) {}
+        try { if (is_string($endAtRaw)) $endAt = \Carbon\Carbon::parse($endAtRaw); } catch (\Throwable $e) {}
+        if ($existing) {
+            $existing->fill($attributes);
+            if ($startAt) $existing->data = $startAt;
+            if ($endAt) $existing->validade_acesso = $endAt;
+            $existing->save();
+            return 'updated';
+        } else {
+            $mat = new \App\Models\Matricula($attributes);
+            if ($startAt) $mat->data = $startAt;
+            if ($endAt) $mat->validade_acesso = $endAt;
+            $mat->save();
+            return 'created';
+        }
+    }
+
+    private function importComment($row)
+    {
+        $row = $this->sanitizeInput($row);
+        $postType = $row['post_type'] ?? null;
+        $legacyId = $row['id_antigo'] ?? null;
+        $postIdWp = $row['post_id_wp'] ?? null;
+        $authorEmail = $row['author_email'] ?? null;
+        $authorName = $row['author_name'] ?? null;
+        $content = $row['content'] ?? '';
+        $parentLegacyId = $row['parent_id_wp'] ?? null;
+        $createdAtRaw = $row['created_at'] ?? null;
+        $createdAt = null;
+        if (is_string($createdAtRaw)) {
+            try { $createdAt = Carbon::parse($createdAtRaw); } catch (\Throwable $e) {}
+        }
+        if (!$postType || !$postIdWp || !$authorEmail || !$content) {
+            return 'skipped';
+        }
+        
+        $typeClass = null;
+        $targetId = null;
+        if ($postType === 'lp_lesson') {
+            $activity = $this->findActivityByExternalId($postIdWp);
+            if (!$activity) { return 'skipped'; }
+            $typeClass = Activity::class;
+            $targetId = (int)$activity->ID;
+        } elseif ($postType === 'lp_course') {
+            $course = $this->findCourseByExternalId($postIdWp);
+            if (!$course) { return 'skipped'; }
+            $typeClass = Curso::class;
+            $targetId = (int)$course->id;
+        } else {
+            return 'skipped';
+        }
+        $user = User::where('email', $authorEmail)->first();
+        if (!$user) {
+            return 'skipped';
+        }
+        $existing = null;
+        if ($legacyId) {
+            $existing = Comment::where('commentable_type', $typeClass)
+                ->where('commentable_id', $targetId)
+                ->where('meta->id_antigo', (string)$legacyId)
+                ->first();
+        }
+        $parent = null;
+        if ($parentLegacyId) {
+            $parent = Comment::where('meta->id_antigo', (string)$parentLegacyId)->first();
+        }
+        $meta = [
+            'id_antigo' => $legacyId ? (string)$legacyId : null,
+            'post_id_wp' => (string)$postIdWp,
+            'post_type' => (string)$postType,
+            'parent_id_wp' => $parentLegacyId ? (string)$parentLegacyId : null,
+            'author_email' => $authorEmail,
+            'author_name' => $authorName,
+            'source' => 'eduma',
+        ];
+        $attributes = [
+            'commentable_type' => $typeClass,
+            'commentable_id' => $targetId,
+            'user_id' => (string)$user->id,
+            'body' => $content,
+            'status' => 'approved',
+            'parent_id' => $parent?->id,
+            'rating' => $this->inferRating($content, (bool)$parentLegacyId),
+            'meta' => $meta,
+        ];
+        if ($existing) {
+            $existing->update($attributes);
+            if ($createdAt) {
+                $existing->created_at = $createdAt;
+                $existing->save();
+            }
+            if (!$parent && $parentLegacyId) {
+                $this->pendingParentLinks[] = [
+                    'comment_id' => $existing->id,
+                    'type_class' => $typeClass,
+                    'target_id' => $targetId,
+                    'parent_legacy_id' => (string)$parentLegacyId,
+                ];
+            }
+            return 'updated';
+        } else {
+            $comment = new Comment($attributes);
+            if ($createdAt) {
+                $comment->created_at = $createdAt;
+            }
+            $comment->save();
+            if (!$parent && $parentLegacyId) {
+                $this->pendingParentLinks[] = [
+                    'comment_id' => $comment->id,
+                    'type_class' => $typeClass,
+                    'target_id' => $targetId,
+                    'parent_legacy_id' => (string)$parentLegacyId,
+                ];
+            }
+            return 'created';
+        }
+    }
+
+    private function findActivityByExternalId($externalId)
+    {
+        if (!$externalId) return null;
+        $externalId = (string)$externalId;
+        $byConfig = Activity::where('post_type', 'activities')
+            ->where('config->ID_antigo', $externalId)
+            ->first();
+        if ($byConfig) return $byConfig;
+        $byGuid = Activity::where('post_type', 'activities')
+            ->where('guid', $externalId)
+            ->first();
+        return $byGuid;
+    }
+    
+    private function findCourseByExternalId($externalId)
+    {
+        if (!$externalId) return null;
+        $externalId = (string)$externalId;
+        $byConfig = Curso::where('config->ID_antigo', $externalId)->first();
+        if ($byConfig) return $byConfig;
+        $bySlug = Curso::where('slug', $externalId)->first();
+        return $bySlug;
+    }
+    
+    private function inferRating(string $text, bool $isReply): ?int
+    {
+        if ($isReply) return null;
+        $t = mb_strtolower($text ?? '');
+        $negStrong = ['ruim','péssim','péssimo','pessim','pessimo','horrív','horrivel','terrív','terrivel','odiei','reclama','erro grave','falha grave'];
+        foreach ($negStrong as $k) { if (str_contains($t, $k)) return 2; }
+        $negModerate = ['porém','porem','perem','mas ','mas,','não gostei','nao gostei','infelizmente','problema','falha','bug','duvida','dúvida','nao '];
+        foreach ($negModerate as $k) { if (str_contains($t, $k)) return 4; }
+        return 5;
+    }
+    
+    private function mapEnrollmentStatusAndSituation(string $statusRaw, $startAtRaw): array
+    {
+        $statusRaw = strtolower(trim($statusRaw));
+        $idMap = [
+            'interessado' => 16,
+            'interested' => 16,
+            'enrolled' => 17,
+            'active' => 19,
+            'in_progress' => 19,
+            'completed' => 20,
+            'complete' => 20,
+            'cancelled' => 24,
+            'canceled' => 24,
+            'rescinded' => 23,
+            'rescisao' => 23,
+            'blacklist' => 21,
+            'black_list' => 21,
+            'realocar' => 18,
+            'sequence' => 22,
+        ];
+        if ($statusRaw === 'enrolled' && is_string($startAtRaw) && trim($startAtRaw) !== '') {
+            $idMap['enrolled'] = 19;
+        }
+        $situacaoId = $idMap[$statusRaw] ?? null;
+        if ($situacaoId === null) {
+            $titleFallback = [
+                'interessado' => 'Interessado',
+                'interested' => 'Interessado',
+                'enrolled' => 'Matriculado',
+                'active' => 'Cursando',
+                'in_progress' => 'Cursando',
+                'completed' => 'Cursos Concluído',
+                'complete' => 'Cursos Concluído',
+                'cancelled' => 'Contrato cancelado',
+                'canceled' => 'Contrato cancelado',
+                'rescinded' => 'Rescisão de contrato',
+                'rescisao' => 'Rescisão de contrato',
+                'blacklist' => 'Black List',
+                'black_list' => 'Black List',
+                'realocar' => 'Realocar',
+                'sequence' => 'Sequencia LTVL',
+            ][$statusRaw] ?? null;
+            $situacaoId = $this->getSituacaoIdByTitle($titleFallback);
+        }
+        $status = 'a';
+        if ($statusRaw === 'completed' || $statusRaw === 'complete') $status = 'g';
+        elseif ($statusRaw === 'cancelled' || $statusRaw === 'canceled') $status = 'p';
+        else $status = 'a';
+        return [$status, $situacaoId];
+    }
+    
+    private function getSituacaoIdByTitle(?string $title): ?int
+    {
+        if (!$title) {
+            $default = (int) (Qlib::qoption('default_proposal_situacao_id') ?? 0);
+            return $default > 0 ? $default : null;
+        }
+        $row = \App\Models\EnrollmentSituation::whereRaw('LOWER(post_title) = ?', [mb_strtolower($title)])
+            ->select('ID')
+            ->first();
+        if ($row) return (int) $row->ID;
+        $default = (int) (Qlib::qoption('default_proposal_situacao_id') ?? 0);
+        return $default > 0 ? $default : null;
+    }
+    
+    private function reconcilePendingParentLinks()
+    {
+        foreach ($this->pendingParentLinks as $link) {
+            $parent = Comment::where('commentable_type', $link['type_class'])
+                ->where('commentable_id', $link['target_id'])
+                ->where('meta->id_antigo', $link['parent_legacy_id'])
+                ->first();
+            if ($parent) {
+                Comment::where('id', $link['comment_id'])
+                    ->update(['parent_id' => $parent->id]);
+            }
+        }
+        $this->pendingParentLinks = [];
+    }
+
     private function importUser($row)
     {
         $row = $this->sanitizeInput($row);
@@ -161,18 +472,17 @@ class UserImportController extends Controller
             $attributes['config'] = json_encode($attributes['config']);
         }
 
-        if (!empty($row['password'])) {
-            $attributes['password'] = $row['password'];
+        if ($this->defaultPasswordHash === null) {
+            $this->defaultPass16rdHash = Hash::make('mudar12@3');
         }
+        $attributes['password'] = $this->defaultPasswordHash;
 
         if ($existingUser) {
-            if (empty($attributes['password'])) {
-                unset($attributes['password']);
-            }
             $existingUser->update($attributes);
             return 'updated';
         } else {
             $attributes['token'] = Qlib::token();
+            // password já definido com hash padrão
             Client::create($attributes);
             return 'created';
         }

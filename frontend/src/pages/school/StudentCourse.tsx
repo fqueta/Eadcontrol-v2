@@ -310,7 +310,8 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
       queryFn: async () => {
         if (!selectedActivityKey) return [];
         const res = await commentsService.listForActivity(selectedActivityKey);
-        return Array.isArray(res) ? res : (res?.data ?? []);
+        const rawItems = Array.isArray(res) ? res : (res?.data ?? []);
+        return rawItems;
       },
       staleTime: 30 * 1000,
       refetchOnWindowFocus: false,
@@ -423,7 +424,7 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
      * pt-BR: Profundidade máxima de encadeamento de respostas (estilo WordPress).
      * en-US: Maximum nested reply depth (WordPress-like).
      */
-    const MAX_REPLY_DEPTH = 3;
+    const MAX_REPLY_DEPTH = 4;
 
     /**
      * submitReply
@@ -467,7 +468,16 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
        * en-US: Accepts different backend formats: `user_name`, `user.name`,
        *        or `author_name`.
        */
-      const author = String(c?.user_name ?? c?.user?.name ?? c?.user?.nome ?? c?.author_name ?? '').trim();
+      const author = String(
+        c?.author_name ??
+        c?.authorName ??
+        c?.user_name ??
+        c?.user_full_name ??
+        c?.user?.full_name ??
+        c?.user?.name ??
+        c?.user?.nome ??
+        ''
+      ).trim() || 'Usuário';
       const created = c?.created_at ? new Date(String(c.created_at)).toLocaleString() : '';
       const ratingVal = Number(c?.rating ?? 0);
       const idStr = String(c?.id ?? '');
@@ -551,9 +561,9 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
           </Card>
 
           {Array.isArray(replies) && replies.length > 0 && (
-            <div className="mt-2 ml-4 pl-3 border-l">
-              {replies.map((r) => (
-                <div key={String(r?.id ?? Math.random())} className="mt-2">
+            <div className="mt-3 ml-4 md:ml-8 pl-3 border-l-2 border-primary/10 space-y-3">
+              {replies.map((r, idx) => (
+                <div key={`reply-${r?.id || idx}`}>
                   {renderCommentItem(r, depth + 1)}
                 </div>
               ))}
@@ -622,13 +632,13 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
 
         <div className="mt-6 space-y-3">
           {commentsQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground">Carregando comentários...</div>
+            <div className="text-sm text-muted-foreground animate-pulse">Carregando comentários...</div>
           ) : (Array.isArray(commentsQuery.data) && commentsQuery.data.length > 0 ? (
-            commentsQuery.data.map((c: any) => (
-              <div key={String(c?.id ?? Math.random())}>{renderCommentItem(c)}</div>
+            commentsQuery.data.map((c: any, idx: number) => (
+              <div key={`root-comment-${c?.id || idx}`}>{renderCommentItem(c)}</div>
             ))
           ) : (
-            <div className="text-sm text-muted-foreground">Nenhum comentário para esta atividade.</div>
+            <div className="text-sm text-muted-foreground italic bg-muted/20 p-4 rounded-lg border border-dashed text-center">Nenhum comentário para esta atividade.</div>
           ))}
         </div>
       </div>

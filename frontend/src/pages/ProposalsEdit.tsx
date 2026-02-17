@@ -160,9 +160,23 @@ export default function ProposalsEdit() {
   });
   const selectedCourseId = form.watch('id_curso');
   const selectedClientId = form.watch('id_cliente');
+
+  /**
+   * selectedClientDetail / selectedCourseDetail
+   * pt-BR: Busca detalhes do cliente e curso selecionados para garantir persistência no Combobox.
+   * en-US: Fetches details for selected client and course to ensure persistence in the Combobox.
+   */
+  const { data: selectedClientDetail } = useClientById(String(selectedClientId || ''), { enabled: !!selectedClientId });
+  const { data: selectedCourseDetail } = useQuery({
+    queryKey: ['courses', 'byId', selectedCourseId],
+    queryFn: async () => (selectedCourseId ? coursesService.getById(selectedCourseId) : null),
+    enabled: !!selectedCourseId,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { data: classes, isLoading: isLoadingClasses } = useQuery({
     queryKey: ['classes', 'list', selectedCourseId, classSearch],
-    queryFn: async () => turmasService.listTurmas({ page: 1, per_page: 200, search: classSearch || undefined, id_curso: selectedCourseId ? Number(selectedCourseId) : undefined } as any),
+    queryFn: async () => turmasService.listTurmas({ page: 1, per_page: 200, search: classSearch || undefined, id_curso: selectedCourseId || undefined } as any),
     enabled: !!selectedCourseId,
     staleTime: 5 * 60 * 1000,
   });
@@ -235,6 +249,23 @@ export default function ProposalsEdit() {
       return [email, phone].filter(Boolean).join(' • ');
     }
   );
+
+  /**
+   * clientOptionsWithSelected
+   * pt-BR: Garante que o cliente selecionado apareça nas opções, mesmo fora da paginação.
+   * en-US: Ensures the selected client appears in options even if outside current pagination.
+   */
+  const clientOptionsWithSelected = useMemo(() => {
+    const exists = clientOptions.some((o) => o.value === String(selectedClientId || ''));
+    if (exists || !selectedClientDetail) return clientOptions;
+    const email = selectedClientDetail.email || '';
+    const phone = selectedClientDetail?.config?.celular || selectedClientDetail?.config?.telefone_residencial || '';
+    const desc = [email, phone].filter(Boolean).join(' • ');
+    return [
+      { value: String(selectedClientDetail.id), label: String(selectedClientDetail.name || (selectedClientDetail as any).nome), description: desc },
+      ...clientOptions,
+    ];
+  }, [clientOptions, selectedClientDetail, selectedClientId]);
   /**
    * consultantsList
    * pt-BR: Lista de consultores vinda da API (paginada).
@@ -325,6 +356,23 @@ export default function ProposalsEdit() {
     }
   );
 
+  /**
+   * courseOptionsWithSelected
+   * pt-BR: Garante que o curso selecionado apareça nas opções.
+   * en-US: Ensures the selected course appears in options.
+   */
+  const courseOptionsWithSelected = useMemo(() => {
+    const exists = courseOptions.some((o) => o.value === String(selectedCourseId || ''));
+    if (exists || !selectedCourseDetail) return courseOptions;
+    const nome = selectedCourseDetail.nome || '';
+    const valor = selectedCourseDetail.valor ? `R$ ${selectedCourseDetail.valor}` : '';
+    const desc = [nome, valor].filter(Boolean).join(' • ');
+    return [
+      { value: String(selectedCourseDetail.id), label: String(selectedCourseDetail.titulo), description: desc },
+      ...courseOptions,
+    ];
+  }, [courseOptions, selectedCourseDetail, selectedCourseId]);
+
   // Removido: Opções do Combobox para tabelas de parcelamento (instalments) — UI simplificada não usa mais.
 
   /**
@@ -348,6 +396,25 @@ export default function ProposalsEdit() {
   // Módulo derivado da matrícula carregada (fallback quando não há seleção atual)
   const cursoTipoFromEnrollment = String((enrollment as any)?.curso_tipo || '');
   const moduleFromEnrollment = useMemo(() => computeModulo(enrollment as any, cursoTipoFromEnrollment), [enrollment, cursoTipoFromEnrollment]);
+
+  /**
+   * isCurrentlyInterested
+   * pt-BR: Determina se a situação atual (no form ou carregada) é "Interessado".
+   * en-US: Determines if current situation (in form or loaded) is "Interested".
+   */
+  const selectedSituacaoId = form.watch('situacao_id');
+  const isCurrentlyInterested = useMemo(() => {
+    const list = Array.isArray((situationsData as any)?.data || (situationsData as any)?.items)
+      ? ((situationsData as any).data || (situationsData as any).items)
+      : [];
+    const current = list.find((s: any) => String(s.id) === String(selectedSituacaoId || ''));
+    if (current) {
+      return String(current.name || current.nome || '').toLowerCase().startsWith('int');
+    }
+    // Fallback para matrícula carregada se ainda não carregou a lista ou selecionou algo novo
+    const enrSitu = String((enrollment as any)?.situacao || '').toLowerCase();
+    return enrSitu.startsWith('int');
+  }, [situationsData, selectedSituacaoId, enrollment]);
 
   const selectedClient = useMemo(() => {
     if (clientDetailData && String(clientDetailData?.id || '') === String(selectedClientId || '')) {
@@ -875,12 +942,12 @@ export default function ProposalsEdit() {
                         </div>
                       ) : (
                         <Combobox
-                          options={clientOptions}
+                          options={clientOptionsWithSelected}
                           value={field.value}
                           onValueChange={field.onChange}
                           placeholder="Selecione o cliente"
                           searchPlaceholder="Pesquisar cliente pelo nome..."
-                          emptyText={clientOptions.length === 0 ? 'Nenhum cliente encontrado' : 'Digite para filtrar'}
+                          emptyText={clientOptionsWithSelected.length === 0 ? 'Nenhum cliente encontrado' : 'Digite para filtrar'}
                           disabled={isLoadingClients || isLoadingEnrollment}
                           loading={isLoadingClients || isLoadingEnrollment}
                           onSearch={setClientSearch}
@@ -968,7 +1035,7 @@ export default function ProposalsEdit() {
                     <FormItem>
                       <FormLabel>Curso *</FormLabel>
                       <Combobox
-                        options={courseOptions}
+                        options={courseOptionsWithSelected}
                         value={field.value}
                         onValueChange={(val) => {
                           field.onChange(val);
@@ -976,8 +1043,8 @@ export default function ProposalsEdit() {
                         }}
                         placeholder="Selecione o curso"
                         searchPlaceholder="Pesquisar curso pelo nome..."
-                        emptyText={courseOptions.length === 0 ? 'Nenhum curso encontrado' : 'Digite para filtrar'}
-                        disabled={isLoadingCourses}
+                        emptyText={courseOptionsWithSelected.length === 0 ? 'Nenhum curso encontrado' : 'Digite para filtrar'}
+                        disabled={isLoadingCourses || !isCurrentlyInterested}
                         loading={isLoadingCourses}
                         onSearch={setCourseSearch}
                         searchTerm={courseSearch}
@@ -1001,8 +1068,8 @@ export default function ProposalsEdit() {
                         onValueChange={field.onChange}
                         placeholder="Selecione a turma"
                         searchPlaceholder="Pesquisar turma pelo nome..."
-                        emptyText={!selectedCourseId ? 'Selecione um curso primeiro' : classOptionsWithFallback.length === 0 ? 'Nenhuma turma encontrada' : 'Digite para filtrar'}
-                        disabled={!selectedCourseId || isLoadingClasses}
+                        emptyText={!selectedCourseId ? 'Selecione um curso first' : classOptionsWithFallback.length === 0 ? 'Nenhuma turma encontrada' : 'Digite para filtrar'}
+                        disabled={!selectedCourseId || isLoadingClasses || !isCurrentlyInterested}
                         loading={isLoadingClasses}
                         onSearch={setClassSearch}
                         searchTerm={classSearch}

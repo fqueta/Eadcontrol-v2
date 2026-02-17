@@ -27,8 +27,8 @@ class CommentController extends Controller
         if (is_string($raw)) {
             $raw = trim($raw);
         }
-        $n = is_numeric($raw) ? (int) $raw : 3;
-        return $n > 0 ? $n : 3;
+        $n = is_numeric($raw) ? (int) $raw : 4;
+        return $n > 0 ? $n : 4;
     }
 
     /**
@@ -80,41 +80,41 @@ class CommentController extends Controller
      * PT: Lista comentários aprovados para um curso.
      * EN: List approved comments for a course.
      */
+    /**
+     * buildTree
+     * PT: Constrói uma árvore hierárquica a partir de uma lista plana de comentários.
+     * EN: Builds a hierarchical tree from a flat list of comments.
+     */
+    protected function buildTree($comments, $parentId = null)
+    {
+        $branch = [];
+        foreach ($comments as $comment) {
+            if ($comment->parent_id == $parentId) {
+                $children = $this->buildTree($comments, $comment->id);
+                $branch[] = [
+                    'id' => $comment->id,
+                    'parent_id' => $comment->parent_id,
+                    'user_id' => $comment->user_id,
+                    'user_name' => optional($comment->user)->name,
+                    'body' => $comment->body,
+                    'rating' => $comment->rating,
+                    'created_at' => optional($comment->created_at)->toISOString(),
+                    'replies' => $children,
+                ];
+            }
+        }
+        return $branch;
+    }
+
     public function indexForCourse(int $courseId)
     {
         $comments = Comment::where('commentable_type', Curso::class)
             ->where('commentable_id', $courseId)
             ->where('status', 'approved')
-            ->whereNull('parent_id')
-            ->orderByDesc('created_at')
+            ->orderBy('created_at', 'asc')
             ->get();
 
-        $data = $comments->map(function (Comment $c) {
-            // PT: Carrega respostas aprovadas do moderador/usuários.
-            // EN: Load approved replies from moderator/users.
-            $replies = $c->replies()
-                ->where('status', 'approved')
-                ->orderBy('created_at', 'asc')
-                ->get()
-                ->map(function (Comment $r) {
-                    return [
-                        'id' => $r->id,
-                        'user_id' => $r->user_id,
-                        'user_name' => optional($r->user)->name,
-                        'body' => $r->body,
-                        'created_at' => optional($r->created_at)->toISOString(),
-                    ];
-                });
-            return [
-                'id' => $c->id,
-                'user_id' => $c->user_id,
-                'user_name' => optional($c->user)->name,
-                'body' => $c->body,
-                'rating' => $c->rating,
-                'created_at' => optional($c->created_at)->toISOString(),
-                'replies' => $replies,
-            ];
-        });
+        $data = $this->buildTree($comments);
 
         return response()->json(['data' => $data], 200);
     }
@@ -129,36 +129,10 @@ class CommentController extends Controller
         $comments = Comment::where('commentable_type', Activity::class)
             ->where('commentable_id', $activityId)
             ->where('status', 'approved')
-            ->whereNull('parent_id')
-            ->orderByDesc('created_at')
+            ->orderBy('created_at', 'asc')
             ->get();
 
-        $data = $comments->map(function (Comment $c) {
-            // PT: Carrega respostas aprovadas.
-            // EN: Load approved replies.
-            $replies = $c->replies()
-                ->where('status', 'approved')
-                ->orderBy('created_at', 'asc')
-                ->get()
-                ->map(function (Comment $r) {
-                    return [
-                        'id' => $r->id,
-                        'user_id' => $r->user_id,
-                        'user_name' => optional($r->user)->name,
-                        'body' => $r->body,
-                        'created_at' => optional($r->created_at)->toISOString(),
-                    ];
-                });
-            return [
-                'id' => $c->id,
-                'user_id' => $c->user_id,
-                'user_name' => optional($c->user)->name,
-                'body' => $c->body,
-                'rating' => $c->rating,
-                'created_at' => optional($c->created_at)->toISOString(),
-                'replies' => $replies,
-            ];
-        });
+        $data = $this->buildTree($comments);
 
         return response()->json(['data' => $data], 200);
     }
@@ -321,6 +295,7 @@ class CommentController extends Controller
         $comments->getCollection()->transform(function (Comment $c) {
             return [
                 'id' => $c->id,
+                'parent_id' => $c->parent_id,
                 'commentable_type' => $c->commentable_type,
                 'commentable_id' => $c->commentable_id,
                 'user_id' => $c->user_id,

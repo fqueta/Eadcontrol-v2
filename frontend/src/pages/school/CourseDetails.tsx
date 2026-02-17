@@ -22,6 +22,7 @@ import { MathCaptchaWidget, MathCaptchaRef } from '@/components/ui/MathCaptchaWi
 
 
 import { ValidationConflictModal } from '@/components/modals/ValidationConflictModal';
+import { PublicCourseComments } from '@/components/school/PublicCourseComments';
 
 /**
  * CourseDetails
@@ -686,6 +687,12 @@ export default function CourseDetails() {
              if(emailInput) setTimeout(() => emailInput.focus(), 150);
           }}
         />
+
+        {courseNumericId && (
+          <div className="container mx-auto px-4 mt-12 mb-12">
+            <PublicCourseComments courseId={courseNumericId} />
+          </div>
+        )}
       </section>
     </InclusiveSiteLayout>
   );

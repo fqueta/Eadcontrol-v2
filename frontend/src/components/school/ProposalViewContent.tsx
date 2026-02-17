@@ -7,6 +7,7 @@ import { coursesService } from '@/services/coursesService';
 import { currencyRemoveMaskToNumber } from '@/lib/masks/currency';
 import BudgetPreview from '@/components/school/BudgetPreview';
 import InstallmentPreviewCard from '@/components/school/InstallmentPreviewCard';
+import AccessManagementCard from '@/components/school/AccessManagementCard';
 
 interface ProposalViewContentProps {
   /**
@@ -151,6 +152,8 @@ export default function ProposalViewContent({ id }: ProposalViewContentProps) {
       </div>
 
       <div className="space-y-6">
+        <AccessManagementCard enrollment={enrollment} />
+        
         <BudgetPreview
           title="Itens da Proposta"
           clientName={clientName}

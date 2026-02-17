@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { publicCoursesService } from '@/services/publicCoursesService';
 import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
+import { PublicCourseComments } from '@/components/school/PublicCourseComments';
 
 /**
  * CourseLanding
@@ -180,6 +181,12 @@ export default function CourseLanding() {
             </div>
           </CardContent>
         </Card>
+
+        {(course as any)?.id && (
+          <div className="mt-8">
+            <PublicCourseComments courseId={(course as any).id} />
+          </div>
+        )}
       </div>
     </InclusiveSiteLayout>
   );

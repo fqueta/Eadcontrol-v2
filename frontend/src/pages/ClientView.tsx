@@ -81,8 +81,8 @@ export default function ClientView() {
   const funnelName = (useMock ? 'Funil de Leads (mock)' : (funnelQuery.data?.name || funnelId || 'Não informado'));
   const stageName = (() => {
     if (useMock) return stageId ? `Etapa ${stageId}` : 'Não informado';
-    const list = stagesQuery.data?.data || [];
-    const found = list.find((s) => s.id === stageId);
+    const list = (stagesQuery.data as any)?.data || [];
+    const found = list.find((s: any) => s.id === stageId);
     return found?.name || (stageId || 'Não informado');
   })();
 
@@ -91,10 +91,7 @@ export default function ClientView() {
    * pt-BR: Carrega matrículas vinculadas ao cliente atual, filtrando por `id_cliente`.
    * en-US: Loads enrollments linked to the current client, filtering by `id_cliente`.
    */
-  const clientNumericId = (() => {
-    const n = Number((client as any)?.id ?? '');
-    return Number.isFinite(n) ? n : undefined;
-  })();
+  const clientId = (client as any)?.id;
   // Paginação e filtros
   const [pageEnroll, setPageEnroll] = useState<number>(1);
   const [perPageEnroll, setPerPageEnroll] = useState<number>(10);
@@ -104,12 +101,27 @@ export default function ClientView() {
   const enrollmentListParams = {
     page: pageEnroll,
     per_page: perPageEnroll,
-    id_cliente: clientNumericId,
-    id_curso: selectedCourseId !== 'all' && selectedCourseId ? Number(selectedCourseId) : undefined,
-    id_turma: selectedClassId !== 'all' && selectedClassId ? Number(selectedClassId) : undefined,
+    id_cliente: clientId,
+    id_curso: selectedCourseId !== 'all' && selectedCourseId ? selectedCourseId : undefined,
+    id_turma: selectedClassId !== 'all' && selectedClassId ? selectedClassId : undefined,
   } as any;
-  const { data: enrollmentsResp, isLoading: isEnrollmentsLoading, isFetching: isEnrollmentsFetching } = useEnrollmentsList(enrollmentListParams, { enabled: !!clientNumericId });
+  const { data: enrollmentsResp, isLoading: isEnrollmentsLoading, isFetching: isEnrollmentsFetching } = useEnrollmentsList(enrollmentListParams, { enabled: !!clientId });
   const enrollments = Array.isArray(enrollmentsResp?.data) ? (enrollmentsResp!.data as any[]) : [];
+
+  /**
+   * interestedList (client scope)
+   * pt-BR: Carrega matrículas com situacao='int' (interessados).
+   */
+  const [pageInterest, setPageInterest] = useState<number>(1);
+  const [perPageInterest, setPerPageInterest] = useState<number>(10);
+  const interestListParams = {
+    situacao: 'int',
+    page: pageInterest,
+    per_page: perPageInterest,
+    id_cliente: clientId,
+  } as any;
+  const { data: interestResp, isLoading: isInterestLoading, isFetching: isInterestFetching } = useEnrollmentsList(interestListParams, { enabled: !!clientId });
+  const interestedCourses = Array.isArray(interestResp?.data) ? (interestResp!.data as any[]) : [];
 
   /**
    * resolveEnrollmentAmountBRL
@@ -185,7 +197,7 @@ export default function ClientView() {
   });
   const courseItems = (coursesResp?.data || []) as any[];
 
-  const { data: classesResp } = useTurmasList({ page: 1, per_page: 200, id_curso: selectedCourseId !== 'all' && selectedCourseId ? Number(selectedCourseId) : undefined }, {
+  const { data: classesResp } = useTurmasList({ page: 1, per_page: 200, id_curso: selectedCourseId !== 'all' && selectedCourseId ? selectedCourseId : undefined }, {
     enabled: selectedCourseId !== 'all' && !!selectedCourseId,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -511,24 +523,20 @@ export default function ClientView() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center space-x-4">
-          <Button onClick={handleBack} variant="outline" size="sm">
+          <Button onClick={handleBack} variant="outline" size="sm" className="shrink-0">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{client.name}</h1>
-            <p className="text-muted-foreground">
-              {client.tipo_pessoa === 'pf' ? 'Pessoa Física' : 'Pessoa Jurídica'}
+          <div className="overflow-hidden">
+            <h1 className="text-2xl font-bold truncate">{client.name}</h1>
+            <p className="text-muted-foreground text-sm">
+              {client.tipo_pessoa === 'pf' ? 'Pessoa Física' : 'Pessoa Jurídica'} • ID: {client.id}
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
-          <Button onClick={handleEdit} variant="default" size="sm">
-            <Edit className="mr-2 h-4 w-4" />
-            Editar
-          </Button>
+        <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
           <Badge variant={
             client.status === 'actived' ? 'default' : 
             client.status === 'inactived' ? 'destructive' : 
@@ -538,41 +546,46 @@ export default function ClientView() {
              client.status === 'inactived' ? 'Inativo' : 
              'Pré-cadastro'}
           </Badge>
+          <Button onClick={handleEdit} variant="default" size="sm">
+            <Edit className="mr-2 h-4 w-4" />
+            Editar
+          </Button>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      {/* Top Grid: Info, Atendimento e Contato */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Informações Básicas */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
+        <Card className="h-full">
+          <CardHeader className="pb-2 text-primary">
+            <CardTitle className="flex items-center text-lg">
               <User className="mr-2 h-5 w-5" />
               Informações Básicas
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Nome</label>
-              <p className="text-sm">{client.name || 'Não informado'}</p>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
+            <div className="sm:col-span-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nome</label>
+              <p className="text-sm font-medium">{client.name || 'Não informado'}</p>
             </div>
             
-            {client.tipo_pessoa === 'pj' && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Razão Social</label>
-                <p className="text-sm">{client.razao || 'Não informado'}</p>
+            {client.tipo_pessoa === 'pj' && client.razao && (
+              <div className="sm:col-span-2">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Razão Social</label>
+                <p className="text-sm">{client.razao}</p>
               </div>
             )}
             
             {client.config?.nome_fantasia && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Nome Fantasia</label>
+              <div className="sm:col-span-2">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nome Fantasia</label>
                 <p className="text-sm">{client.config.nome_fantasia}</p>
               </div>
             )}
 
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Documento</label>
-              <p className="text-sm">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Documento</label>
+              <p className="text-sm font-mono tracking-tight">
                 {client.tipo_pessoa === 'pf' 
                   ? formatCPF(client.cpf) 
                   : formatCNPJ(client.cnpj)
@@ -582,14 +595,14 @@ export default function ClientView() {
 
             {client.config?.rg && client.tipo_pessoa === 'pf' && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">RG</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">RG</label>
                 <p className="text-sm">{client.config.rg}</p>
               </div>
             )}
 
             {client.tipo_pessoa === 'pf' && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Gênero</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Gênero</label>
                 <p className="text-sm">
                   {client.genero === 'm' ? 'Masculino' : 
                    client.genero === 'f' ? 'Feminino' : 'Não informado'}
@@ -599,86 +612,121 @@ export default function ClientView() {
 
             {client.config?.nascimento && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Data de Nascimento</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nascimento</label>
                 <p className="text-sm">{formatDate(client.config.nascimento)}</p>
-              </div>
-            )}
-
-            {client.config?.tipo_pj && client.tipo_pessoa === 'pj' && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Tipo de Pessoa Jurídica</label>
-                <p className="text-sm">{client.config.tipo_pj}</p>
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* Atendimento (Funil e Etapa) */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
+        <Card className="h-full">
+          <CardHeader className="pb-2 text-primary">
+            <CardTitle className="flex items-center text-lg">
               <Briefcase className="mr-2 h-5 w-5" />
               Atendimento
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Funil</label>
-              <p className="text-sm">{funnelName}</p>
+            <div className="bg-muted/30 p-3 rounded-lg border">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Funil</label>
+              <p className="text-sm font-medium">{funnelName}</p>
             </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Etapa</label>
-              <p className="text-sm">{stageName}</p>
+            <div className="bg-muted/30 p-3 rounded-lg border">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Etapa</label>
+              <p className="text-sm font-medium">{stageName}</p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Matrículas */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center">
-              <GraduationCap className="mr-2 h-5 w-5" />
-              Matrículas
+        {/* Contato */}
+        <Card className="h-full">
+          <CardHeader className="pb-2 text-primary">
+            <CardTitle className="flex items-center text-lg">
+              <Phone className="mr-2 h-5 w-5" />
+              Contato
             </CardTitle>
-            <Button size="sm" onClick={handleAddEnrollmentClick} title="Adicionar uma nova matrícula para este cliente">
-              <Plus className="mr-2 h-4 w-4" /> Nova matrícula
-            </Button>
           </CardHeader>
-          <CardContent>
-            {/* Filtros de curso e turma */}
-            <div className="grid gap-3 md:grid-cols-3 mb-4">
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email Principal</label>
+              <p className="text-sm flex items-center mt-0.5">
+                <Mail className="mr-2 h-4 w-4 text-muted-foreground" />
+                <span className="truncate">{client.email || 'Não informado'}</span>
+              </p>
+            </div>
+
+            {client.config?.celular && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Curso</label>
-                <Select value={selectedCourseId} onValueChange={(val) => { setSelectedCourseId(val); setSelectedClassId('all'); setPageEnroll(1); }}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione um curso" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    {courseItems.map((c: any) => (
-                      <SelectItem key={String(c.id)} value={String(c.id)}>{String(c?.titulo || c?.nome || c?.name || c.id)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Celular / WhatsApp</label>
+                <p className="text-sm flex items-center mt-0.5">
+                  <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
+                  {formatPhone(client.config.celular)}
+                </p>
               </div>
+            )}
+
+            {client.config?.telefone_residencial && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Turma</label>
-                <Select value={selectedClassId} onValueChange={(val) => { setSelectedClassId(val); setPageEnroll(1); }}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione a turma" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {classItems.map((t: any) => (
-                      <SelectItem key={String(t.id)} value={String(t.id)}>{String(t?.nome || t?.name || t.id)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fixo</label>
+                <p className="text-sm flex items-center mt-0.5">
+                  <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
+                  {formatPhone(client.config.telefone_residencial)}
+                </p>
               </div>
-              <div className="flex items-end justify-end gap-2">
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Matrículas - LARGURA TOTAL */}
+      <Card className="border-primary/20 shadow-md overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/20">
+          <CardTitle className="flex items-center text-xl font-bold">
+            <GraduationCap className="mr-3 h-6 w-6 text-primary" />
+            Matrículas
+          </CardTitle>
+          <Button size="sm" onClick={handleAddEnrollmentClick} className="shadow-sm">
+            <Plus className="mr-2 h-4 w-4" /> Nova matrícula
+          </Button>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {/* Filtros de curso e turma */}
+          <div className="flex flex-col md:flex-row gap-4 mb-6 items-end bg-muted/30 p-4 rounded-lg border">
+            <div className="w-full md:w-auto flex-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Curso</label>
+              <Select value={selectedCourseId} onValueChange={(val) => { setSelectedCourseId(val); setSelectedClassId('all'); setPageEnroll(1); }}>
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue placeholder="Selecione um curso" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Cursos</SelectItem>
+                  {courseItems.map((c: any) => (
+                    <SelectItem key={String(c.id)} value={String(c.id)}>{String(c?.titulo || c?.nome || c?.name || c.id)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full md:w-auto flex-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Turma</label>
+              <Select value={selectedClassId} onValueChange={(val) => { setSelectedClassId(val); setPageEnroll(1); }}>
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue placeholder="Selecione a turma" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Turmas</SelectItem>
+                  {classItems.map((t: any) => (
+                    <SelectItem key={String(t.id)} value={String(t.id)}>{String(t?.nome || t?.name || t.id)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full md:w-auto flex flex-row items-center gap-3">
+              <div className="w-24">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Por página</label>
                 <Select value={String(perPageEnroll)} onValueChange={(val) => { setPerPageEnroll(Number(val)); setPageEnroll(1); }}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="Itens/página" />
+                  <SelectTrigger className="w-full bg-background">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="5">5</SelectItem>
@@ -686,14 +734,20 @@ export default function ClientView() {
                     <SelectItem value="20">20</SelectItem>
                   </SelectContent>
                 </Select>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setPageEnroll((p) => Math.max(1, p - 1))} disabled={pageEnroll <= 1}>Anterior</Button>
-                  <span className="text-sm text-muted-foreground">Página {pageEnroll}</span>
-                  <Button variant="outline" size="sm" onClick={() => setPageEnroll((p) => p + 1)}>Próxima</Button>
-                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-auto">
+                <Button variant="outline" size="sm" onClick={() => setPageEnroll((p) => Math.max(1, p - 1))} disabled={pageEnroll <= 1}>
+                  Anterior
+                </Button>
+                <span className="text-xs font-medium min-w-[60px] text-center">Pág. {pageEnroll}</span>
+                <Button variant="outline" size="sm" onClick={() => setPageEnroll((p) => p + 1)}>
+                  Próxima
+                </Button>
               </div>
             </div>
+          </div>
 
+          <div className="rounded-md border bg-background">
             <EnrollmentTable
               items={enrollments}
               isLoading={isEnrollmentsLoading}
@@ -703,69 +757,93 @@ export default function ClientView() {
               onDelete={handleDeleteEnrollment}
               resolveAmountBRL={resolveEnrollmentAmountBRL}
             />
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Contato */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Phone className="mr-2 h-5 w-5" />
-              Contato
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Email</label>
-              <p className="text-sm flex items-center">
-                <Mail className="mr-2 h-4 w-4" />
-                {client.email || 'Não informado'}
-              </p>
+      {/* Cursos de Interesse */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/20">
+          <CardTitle className="flex items-center text-xl font-bold text-orange-700">
+            <GraduationCap className="mr-3 h-6 w-6 text-orange-500" />
+            Cursos de Interesse
+          </CardTitle>
+          <Button size="sm" variant="outline" onClick={handleAddEnrollmentClick} className="border-orange-200 hover:bg-orange-50 text-orange-700">
+            <Plus className="mr-2 h-4 w-4" /> Novo interesse
+          </Button>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="rounded-md border bg-background">
+            <EnrollmentTable
+              items={interestedCourses}
+              isLoading={isInterestLoading}
+              isFetching={isInterestFetching}
+              resolveAmountBRL={resolveEnrollmentAmountBRL}
+              onView={handleViewEnrollment}
+              onEdit={handleEditEnrollment}
+              onDelete={() => {}}
+            />
+          </div>
+          
+          {/* Paginação do card de interesses */}
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setPageInterest(p => Math.max(1, p - 1))} 
+                disabled={pageInterest <= 1 || isInterestFetching}
+              >
+                Anterior
+              </Button>
+              <span className="text-xs font-medium min-w-[60px] text-center">Pág. {pageInterest}</span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setPageInterest(p => Math.min(interestResp?.last_page || 1, p + 1))} 
+                disabled={pageInterest >= (interestResp?.last_page || 1) || isInterestFetching}
+              >
+                Próxima
+              </Button>
             </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase">Por página</span>
+              <Select value={String(perPageInterest)} onValueChange={(v) => { setPerPageInterest(Number(v)); setPageInterest(1); }}>
+                <SelectTrigger className="h-8 w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-muted-foreground ml-2">Total: {interestResp?.total || 0}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-            {client.config?.celular && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Celular</label>
-                <p className="text-sm flex items-center">
-                  <Phone className="mr-2 h-4 w-4" />
-                  {formatPhone(client.config.celular)}
-                </p>
-              </div>
-            )}
-
-            {client.config?.telefone_residencial && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Telefone Residencial</label>
-                <p className="text-sm flex items-center">
-                  <Phone className="mr-2 h-4 w-4" />
-                  {formatPhone(client.config.telefone_residencial)}
-                </p>
-              </div>
-            )}
-
-
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Endereço */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
+        <Card className="h-full">
+          <CardHeader className="pb-2 text-primary">
+            <CardTitle className="flex items-center text-lg">
               <MapPin className="mr-2 h-5 w-5" />
               Endereço
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 pt-2">
             {client.config?.cep && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">CEP</label>
-                <p className="text-sm">{formatCEP(client.config.cep)}</p>
+              <div className="flex justify-between items-start border-b border-muted pb-2">
+                <label className="text-xs font-semibold text-muted-foreground uppercase">CEP</label>
+                <p className="text-sm font-medium">{formatCEP(client.config.cep)}</p>
               </div>
             )}
 
             {client.config?.endereco && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Endereço</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase mb-0.5 block">Logradouro / Número</label>
                 <p className="text-sm">
                   {client.config.endereco}
                   {client.config?.numero && `, ${client.config.numero}`}
@@ -775,224 +853,166 @@ export default function ClientView() {
 
             {client.config?.complemento && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Complemento</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase mb-0.5 block">Complemento</label>
                 <p className="text-sm">{client.config.complemento}</p>
               </div>
             )}
 
-            {client.config?.bairro && (
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Bairro</label>
-                <p className="text-sm">{client.config.bairro}</p>
+                <label className="text-xs font-semibold text-muted-foreground uppercase mb-0.5 block">Bairro</label>
+                <p className="text-sm">{client.config?.bairro || '-'}</p>
               </div>
-            )}
-
-            {(client.config?.cidade || client.config?.uf) && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Cidade/UF</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase mb-0.5 block">Cidade/UF</label>
                 <p className="text-sm">
                   {client.config?.cidade && client.config?.uf 
-                    ? `${client.config.cidade}, ${client.config.uf}`
-                    : client.config?.cidade || client.config?.uf || 'Não informado'
+                    ? `${client.config.cidade}/${client.config.uf}`
+                    : client.config?.cidade || client.config?.uf || '-'
                   }
                 </p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Informações Profissionais/Acadêmicas E Integrations */}
+        <div className="space-y-6 lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 space-y-0">
+          <Card className="h-full">
+            <CardHeader className="pb-2 text-primary">
+              <CardTitle className="flex items-center text-lg">
+                <FileText className="mr-2 h-5 w-5" />
+                Dados Adicionais
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-2">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase mb-1 block">Escolaridade</label>
+                <p className="text-sm flex items-center">
+                  <GraduationCap className="mr-2 h-4 w-4 text-muted-foreground" />
+                  {client.config?.escolaridade || 'Não informada'}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase mb-1 block">Profissão</label>
+                <p className="text-sm flex items-center">
+                  <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
+                  {client.config?.profissao || 'Não informada'}
+                </p>
+              </div>
+              
+              <Separator />
+              
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase mb-2 block">Destaques</label>
+                <div className="flex flex-wrap gap-2">
+                  {client.is_alloyal && <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">Clube Alloyal</Badge>}
+                  {client.status === 'actived' && <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">Ativo</Badge>}
+                  {client.tipo_pessoa === 'pj' && <Badge variant="outline">PJ</Badge>}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Alloyal / Ativação (Inline column) */}
+          <div className="space-y-6">
+            {client.is_alloyal && (
+              <Card className="border-blue-100 bg-blue-50/10">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center text-blue-700 text-lg font-bold">
+                    <Building className="mr-2 h-5 w-5" />
+                    Integração Clube
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 gap-y-3 text-sm">
+                  <div>
+                    <label className="text-[10px] font-bold text-blue-800/60 uppercase">Login Club</label>
+                    <p className="truncate font-medium">{client.is_alloyal.email || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-blue-800/60 uppercase">Ativado em</label>
+                    <p className="font-medium">{formatDate(client.is_alloyal.activated_at)}</p>
+                  </div>
+                  {client.points !== undefined && (
+                    <div className="col-span-2 flex items-center justify-between border-t border-blue-100 pt-2 mt-1">
+                      <span className="text-blue-800 font-bold">Pontos Acumulados</span>
+                      <Badge className="bg-blue-600 font-bold">{client.points}</Badge>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {(client.status as any) === 'pre_registred' && (client as any).link_active_cad && (
+              <Card className="border-orange-100 bg-orange-50/10">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center text-orange-700 text-lg">
+                    <FileText className="mr-2 h-5 w-5" />
+                    Ativação
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => window.open((client as any).link_active_cad, '_blank')}
+                    className="w-full border-orange-200 hover:bg-orange-100 hover:text-orange-800 text-orange-700 shadow-sm"
+                  >
+                    Acessar Link de Ativação
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer: Observações e Sistema */}
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* Observações */}
+        <Card className="md:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center text-lg">
+              <FileText className="mr-2 h-5 w-5" />
+              Observações Internas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {client.config?.observacoes ? (
+              <p className="text-sm whitespace-pre-wrap text-muted-foreground bg-muted/20 p-4 rounded-md border italic">
+                "{client.config.observacoes}"
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">Nenhuma observação registrada.</p>
             )}
           </CardContent>
         </Card>
 
-        {/* Link de Ativação - Para clientes pré-registrados */}
-        {client.status === 'pre_registred' && client.link_active_cad && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <FileText className="mr-2 h-5 w-5" />
-                Ativação de Cadastro
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Status</label>
-                <p className="text-sm">
-                  <Badge variant="secondary">
-                    Aguardando Ativação
-                  </Badge>
-                </p>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Link de Ativação</label>
-                <div className="mt-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => window.open(client.link_active_cad, '_blank')}
-                    className="w-full"
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    Acessar Link de Ativação
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Clique para abrir o link de ativação do cadastro
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Integração Alloyal */}
-        {client.is_alloyal && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Building className="mr-2 h-5 w-5" />
-                Integração Clube
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">ID</label>
-                <p className="text-sm">{client.is_alloyal.id}</p>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Situação</label>
-                <p className="text-sm">
-                  <Badge variant={client.is_alloyal.active ? 'default' : 'destructive'}>
-                    {client.is_alloyal.active ? 'Ativado' : 'Desativado'}
-                  </Badge>
-                </p>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">ID da Empresa</label>
-                <p className="text-sm">{client.is_alloyal.business_id}</p>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Data de Ativação</label>
-                <p className="text-sm">{formatDate(client.is_alloyal.activated_at)}</p>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Email</label>
-                <p className="text-sm flex items-center">
-                  <Mail className="mr-2 h-4 w-4" />
-                  {client.is_alloyal.email}
-                </p>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">CPF</label>
-                <p className="text-sm">{formatCPF(client.is_alloyal.cpf)}</p>
-              </div>
-              {client.points !== undefined && (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Pontos</label>
-                  <p className="text-sm flex items-center">
-                    <DollarSign className="mr-2 h-4 w-4" />
-                    {client.points}
-                  </p>
-                </div>
-              )}
-
-              {client.is_alloyal?.wallet && (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Saldo da Carteira</label>
-                  <p className="text-sm flex items-center">
-                    <DollarSign className="mr-2 h-4 w-4" />
-                    R$ {client.is_alloyal.wallet.balance.toFixed(2)}
-                  </p>
-                </div>
-              )}
-              {/* <div className="pt-3 border-t border-gray-200">
-                <Button className="w-full" variant="outline">
-                  Gerenciar Integração
-                </Button>
-              </div> */}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Informações Profissionais/Acadêmicas */}
-        {(client.config?.escolaridade || client.config?.profissao) && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Briefcase className="mr-2 h-5 w-5" />
-                Informações Profissionais
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {client.config?.escolaridade && (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Escolaridade</label>
-                  <p className="text-sm flex items-center">
-                    <GraduationCap className="mr-2 h-4 w-4" />
-                    {client.config.escolaridade}
-                  </p>
-                </div>
-              )}
-
-              {client.config?.profissao && (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Profissão</label>
-                  <p className="text-sm flex items-center">
-                    <Briefcase className="mr-2 h-4 w-4" />
-                    {client.config.profissao}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Observações */}
-      {client.config?.observacoes && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <FileText className="mr-2 h-5 w-5" />
-              Observações
+        {/* Informações do Sistema */}
+        <Card className="bg-muted/10 h-full">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center text-lg text-muted-foreground">
+              <Calendar className="mr-2 h-5 w-5" />
+              Sistema
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm whitespace-pre-wrap">{client.config.observacoes}</p>
+          <CardContent className="space-y-3 pt-2">
+            <div className="flex justify-between items-center text-xs">
+              <span className="font-semibold text-muted-foreground uppercase">Data de Cadastro</span>
+              <span>{formatDate(client.created_at)}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="font-semibold text-muted-foreground uppercase">Última Atualização</span>
+              <span>{formatDate(client.updated_at)}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs border-t pt-2">
+              <span className="font-semibold text-muted-foreground uppercase">Referência Técnica</span>
+              <span className="font-mono bg-muted/50 px-1.5 py-0.5 rounded">{client.id}</span>
+            </div>
           </CardContent>
         </Card>
-      )}
-
-      {/* Informações do Sistema */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Calendar className="mr-2 h-5 w-5" />
-            Informações do Sistema
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {client.created_at && (
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Data de Cadastro</label>
-              <p className="text-sm">{formatDate(client.created_at)}</p>
-            </div>
-          )}
-
-          {client.updated_at && (
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Última Atualização</label>
-              <p className="text-sm">{formatDate(client.updated_at)}</p>
-            </div>
-          )}
-
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">ID do Cliente</label>
-            <p className="text-sm font-mono">{client.id}</p>
-          </div>
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }

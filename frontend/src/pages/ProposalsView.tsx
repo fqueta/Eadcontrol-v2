@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Pencil } from 'lucide-react';
+import { useEnrollment } from '@/hooks/enrollments';
+import { ArrowLeft, Pencil, Settings } from 'lucide-react';
 import ProposalViewContent from '@/components/school/ProposalViewContent';
 
 /**
@@ -15,6 +16,13 @@ export default function ProposalsView() {
   // navState
   const navState = (location?.state || {}) as { returnTo?: string; funnelId?: string; stageId?: string };
   const { id } = useParams<{ id: string }>();
+  const { data: enrollment } = useEnrollment(String(id || ''));
+
+  const isInterested = useMemo(() => {
+    const s = String(enrollment?.situacao ?? enrollment?.status ?? (enrollment as any)?.config?.situacao ?? '').toLowerCase();
+    return s.startsWith('int');
+  }, [enrollment]);
+
   /**
    * handleBack
    * pt-BR: Retorna à página de origem, se disponível; senão, vai para vendas.
@@ -57,7 +65,15 @@ export default function ProposalsView() {
           onClick={handleEdit}
           className="shadow-sm border-muted-foreground/20 hover:bg-muted font-semibold transition-all"
         >
-          <Pencil className="h-4 w-4 mr-2" /> Editar Proposta
+          {isInterested ? (
+            <>
+              <Pencil className="h-4 w-4 mr-2" /> Editar Proposta
+            </>
+          ) : (
+            <>
+              <Settings className="h-4 w-4 mr-2" /> Gerenciar Matrícula
+            </>
+          )}
         </Button>
       </div>
       {id ? <ProposalViewContent id={String(id)} /> : null}

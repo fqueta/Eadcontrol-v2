@@ -11,7 +11,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { Star, MoreHorizontal, Eye, Trash2, CheckCircle2, XCircle, Reply } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import commentsService, { CommentStatus } from '@/services/commentsService';
+
 
 /**
  * CommentsModeration
@@ -129,9 +133,7 @@ export default function CommentsModeration() {
       ''
     ).trim();
 
-    // Preferimos não exibir user_id; se não houver nome, mostra "-".
-    // We prefer not to show user_id; if no name, show "-".
-    return name || '-';
+    return name || 'Usuário';
   }
 
   /**
@@ -226,20 +228,47 @@ export default function CommentsModeration() {
     queryFn: async () => {
       const s = status === 'all' ? undefined : status;
       const res = await commentsService.adminList(s, page, perPage);
-      // Normaliza saída para { items, page, lastPage, total }
+      
+      let rawItems: any[] = [];
+      let current = 1;
+      let last = 1;
+      let total = 0;
+
       if (Array.isArray(res)) {
-        return { items: res, page: 1, lastPage: 1, total: res.length };
+        rawItems = res;
+        total = res.length;
+      } else {
+        rawItems = Array.isArray(res?.data) ? res.data : [];
+        current = Number(res?.current_page ?? res?.page ?? 1);
+        last = Number(res?.last_page ?? res?.total_pages ?? 1);
+        total = Number(res?.total ?? rawItems.length);
       }
-      const items = Array.isArray(res?.data) ? res.data : [];
-      const current = Number(res?.current_page ?? res?.page ?? 1);
-      const last = Number(res?.last_page ?? res?.total_pages ?? 1);
-      const total = Number(res?.total ?? items.length);
-      return { items, page: current, lastPage: last, total };
+
+      const items = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      // pt-BR: O backend agora envia a estrutura aninhada no campo 'replies'.
+      // en-US: Backend now sends the nested structure in the 'replies' field.
+      return { items, page: current, lastPage: last, total, rawItems };
     },
     staleTime: 30 * 1000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+
+  /**
+   * filtered
+   * pt-BR: Aplica filtro de busca local sobre os comentários carregados.
+   * en-US: Applies local search filter over loaded comments.
+   */
+  const filtered = useMemo(() => {
+    const rootItems = Array.isArray(commentsQuery.data?.items) ? commentsQuery.data.items : [];
+    const q = search.trim().toLowerCase();
+    if (!q) return rootItems;
+    return rootItems.filter((c: any) => {
+      const body = String(c?.body ?? '').toLowerCase();
+      const author = formatAuthor(c).toLowerCase();
+      return body.includes(q) || author.includes(q);
+    });
+  }, [commentsQuery.data?.items, search]);
 
   /**
    * getRepliesCount
@@ -250,7 +279,8 @@ export default function CommentsModeration() {
    */
   function getRepliesCount(comment: any): number {
     const total = Number(comment?.total_replies ?? comment?.replies_count ?? 0);
-    return Number.isFinite(total) ? total : 0;
+    const nestedCount = Array.isArray(comment?.replies) ? comment.replies.length : 0;
+    return Math.max(total, nestedCount);
   }
 
   /**
@@ -285,9 +315,9 @@ export default function CommentsModeration() {
    * en-US: Filters replies present only in current page by parent_id reference.
    */
   function getRepliesInCurrentPage(parentId: number | string) {
-    const list = Array.isArray(filtered) ? (filtered as any[]) : [];
+    const rawList = Array.isArray((commentsQuery.data as any)?.rawItems) ? (commentsQuery.data as any).rawItems : [];
     const pid = String(parentId);
-    return list.filter((it) => String(it?.parent_id ?? it?.parentId ?? '') === pid);
+    return rawList.filter((it: any) => String(it?.parent_id ?? it?.parentId ?? '') === pid);
   }
 
   /**
@@ -350,24 +380,6 @@ export default function CommentsModeration() {
     }
   }
 
-  /**
-   * filtered
-   * pt-BR: Aplica filtro de busca local sobre os comentários carregados.
-   * en-US: Applies local search filter over loaded comments.
-   */
-  const filtered = useMemo(() => {
-    const allItems = Array.isArray(commentsQuery.data?.items) ? commentsQuery.data.items : [];
-    // pt-BR: Limita a tabela aos comentários raiz (parent_id nulo) para exibir respostas indentadas abaixo.
-    // en-US: Restrict table to root comments (null parent_id) to show nested replies below.
-    const rootItems = allItems.filter((c: any) => !c?.parent_id && !c?.parentId);
-    const q = search.trim().toLowerCase();
-    if (!q) return rootItems;
-    return rootItems.filter((c: any) => {
-      const body = String(c?.body ?? '').toLowerCase();
-      const author = formatAuthor(c).toLowerCase();
-      return body.includes(q) || author.includes(q);
-    });
-  }, [commentsQuery.data?.items, search]);
 
   /**
    * autoExpandRows
@@ -531,13 +543,13 @@ export default function CommentsModeration() {
           >
             <Eye className="mr-2 h-4 w-4" /> Ver
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => approveMutation.mutate(id)} disabled={approveMutation.isLoading}>
+          <DropdownMenuItem onClick={() => approveMutation.mutate(id)} disabled={approveMutation.isPending}>
             <CheckCircle2 className="mr-2 h-4 w-4" /> Aprovar
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => rejectMutation.mutate(id)} disabled={rejectMutation.isLoading}>
+          <DropdownMenuItem onClick={() => rejectMutation.mutate(id)} disabled={rejectMutation.isPending}>
             <XCircle className="mr-2 h-4 w-4" /> Rejeitar
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => deleteMutation.mutate(id)} className="text-destructive focus:text-destructive" disabled={deleteMutation.isLoading}>
+          <DropdownMenuItem onClick={() => deleteMutation.mutate(id)} className="text-destructive focus:text-destructive" disabled={deleteMutation.isPending}>
             <Trash2 className="mr-2 h-4 w-4" /> Excluir
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -566,15 +578,28 @@ export default function CommentsModeration() {
    */
   function renderRating(c: any) {
     const ratingVal = Number(c?.rating ?? 0);
-    if (!ratingVal || ratingVal < 1) return <span className="text-xs text-muted-foreground">Sem avaliação</span>;
+    if (!ratingVal || ratingVal < 1) return null;
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5" title={`${ratingVal} / 5`}>
         {Array.from({ length: 5 }).map((_, i) => (
-          <Star key={i} size={14} className={(ratingVal >= i + 1) ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'} />
+          <Star key={`star-${i}`} size={12} className={(ratingVal >= i + 1) ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground/30'} />
         ))}
-        <span className="ml-1 text-[10px] text-muted-foreground">{ratingVal} / 5</span>
       </div>
     );
+  }
+
+  function renderStatusBadge(status: string) {
+    const key = String(status || '').toLowerCase();
+    switch (key) {
+      case 'pending':
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-50">Pendente</Badge>;
+      case 'approved':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 hover:bg-green-50">Aprovado</Badge>;
+      case 'rejected':
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 hover:bg-red-50">Rejeitado</Badge>;
+      default:
+        return <Badge variant="secondary">{key || 'Pendente'}</Badge>;
+    }
   }
 
   /**
@@ -671,9 +696,9 @@ export default function CommentsModeration() {
       const children = repliesByParent(parentId);
       if (!children || children.length === 0) return null;
       return (
-        <div className="mt-2">
-          {children.map((r) => (
-            <div key={String(r?.id ?? Math.random())}>
+        <div className="mt-2 space-y-3">
+          {children.map((r, idx) => (
+            <div key={`reply-tree-${r?.id || idx}`}>
               {renderReplyItem(r, depth)}
               {renderRepliesTree(r?.id ?? '', depth + 1)}
             </div>
@@ -732,19 +757,19 @@ export default function CommentsModeration() {
               </div>
             </div>
             {Array.isArray(fullThread[String(current?.id ?? '')]) && fullThread[String(current?.id ?? '')].length > 0 ? (
-              <div className="mt-2">
-                {fullThread[String(current?.id ?? '')].map((r: any) => (
-                  <div key={String(r?.id ?? Math.random())} className={`mt-2 ${r?._depth > 0 ? 'ml-4 pl-3 border-l' : ''}`}>
-                    <div className="text-[12px] text-muted-foreground flex items-center justify-between">
-                      <span>{formatAuthor(r)}{r?.created_at ? ` • ${new Date(String(r.created_at)).toLocaleString()}` : ''}</span>
-                      <span className="capitalize">{String(r?.status ?? '').toLowerCase() || 'pending'}</span>
+              <div className="mt-2 space-y-3">
+                {fullThread[String(current?.id ?? '')].map((r: any, idx: number) => (
+                  <div key={`full-thread-${r?.id || idx}`} className={`mt-2 ${r?._depth > 0 ? 'ml-4 pl-3 border-l-2 border-muted/50' : 'bg-muted/30 p-2 rounded-md'}`}>
+                    <div className="text-[12px] text-muted-foreground flex items-center justify-between mb-1">
+                      <span className="font-medium text-foreground">{formatAuthor(r)} <span className="font-normal text-muted-foreground">{r?.created_at ? ` • ${new Date(String(r.created_at)).toLocaleString()}` : ''}</span></span>
+                      {renderStatusBadge(r?.status)}
                     </div>
                     <div className="text-sm whitespace-pre-wrap break-words">{String(r?.body ?? '')}</div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-xs text-muted-foreground mt-1">Nenhuma resposta carregada. Clique em "Carregar todas".</div>
+              <div className="text-xs text-muted-foreground mt-2 italic bg-muted/20 p-3 rounded-md border border-dashed text-center">Nenhuma resposta carregada. Clique em "Carregar todas".</div>
             )}
           </div>
             <div className="flex items-center justify-between">
@@ -799,7 +824,7 @@ export default function CommentsModeration() {
                       }
                       replyMutation.mutate({ id: replyTargetId, body });
                     }}
-                    disabled={replyMutation.isLoading}
+                    disabled={replyMutation.isPending}
                   >Publicar</Button>
                 </div>
               </div>
@@ -807,57 +832,69 @@ export default function CommentsModeration() {
           </Dialog>
           {/* pt-BR: Barra de ações e filtros (estilo semelhante ao WordPress) */}
           {/* en-US: Actions and filters bar (WordPress-like style) */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-4 items-end">
-            <div className="lg:col-span-2 flex gap-2 items-end">
-              <div className="w-48">
-                <label className="text-sm font-medium">Ações em massa</label>
+          <div className="flex flex-col md:flex-row gap-4 mb-6 items-end bg-muted/30 p-4 rounded-lg border">
+            <div className="flex-1 w-full space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ações em massa</label>
+              <div className="flex gap-2">
                 <Select value={bulkAction || ''} onValueChange={(v) => setBulkAction((v as any) || '')}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full md:w-[200px] h-10 bg-background">
                     <SelectValue placeholder="Selecionar ação" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="approve">Aprovar</SelectItem>
-                    <SelectItem value="reject">Rejeitar</SelectItem>
-                    <SelectItem value="delete">Excluir</SelectItem>
+                    <SelectItem value="approve">Aprovar selecionados</SelectItem>
+                    <SelectItem value="reject">Rejeitar selecionados</SelectItem>
+                    <SelectItem value="delete">Excluir selecionados</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="secondary" onClick={applyBulkAction} className="h-10">Aplicar</Button>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap gap-4 w-full md:w-auto items-end">
+              <div className="space-y-1.5 min-w-[140px]">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Filtrar Status</label>
+                <Select value={status} onValueChange={(v) => setStatus(v as CommentStatus | 'all')}>
+                  <SelectTrigger className="w-full h-10 bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pendentes</SelectItem>
+                    <SelectItem value="approved">Aprovados</SelectItem>
+                    <SelectItem value="rejected">Rejeitados</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <Button variant="outline" onClick={applyBulkAction}>Aplicar</Button>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Todos os tipos de comentário</label>
-              <Select value={status} onValueChange={(v) => setStatus(v as CommentStatus | 'all')}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">Pendente</SelectItem>
-                  <SelectItem value="approved">Aprovado</SelectItem>
-                  <SelectItem value="rejected">Rejeitado</SelectItem>
-                  <SelectItem value="all">Todos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Itens por página</label>
-              <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[10, 20, 50].map((n) => (
-                    <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="lg:col-span-1">
-              <label className="text-sm font-medium">Pesquisar comentários</label>
-              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Digite para buscar..." />
+
+              <div className="space-y-1.5 min-w-[100px]">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Exibir</label>
+                <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
+                  <SelectTrigger className="w-full h-10 bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 20, 50].map((n) => (
+                      <SelectItem key={`per-page-${n}`} value={String(n)}>{n}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex-1 md:w-[250px] space-y-1.5 min-w-[200px]">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pesquisar</label>
+                <div className="relative">
+                  <Input 
+                    value={search} 
+                    onChange={(e) => setSearch(e.target.value)} 
+                    placeholder="Nome ou conteúdo..." 
+                    className="h-10 pl-3 bg-background"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          {commentsQuery.isLoading ? (
+          {commentsQuery.isPending ? (
             <div className="text-sm text-muted-foreground">Carregando comentários...</div>
           ) : (
             <Table>
@@ -883,14 +920,15 @@ export default function CommentsModeration() {
                   const body = String(c?.body ?? '').slice(0, 160);
                   const st = String(c?.status ?? '').toLowerCase();
                   const sentAt = c?.created_at ? new Date(String(c.created_at)).toLocaleString() : '';
-                  const replyCount = (Array.isArray(filtered) ? (filtered as any[]) : []).filter(
+                  const rawList = Array.isArray(commentsQuery.data?.items) ? (commentsQuery.data.items as any[]) : [];
+                  const replyCount = rawList.filter(
                     (it) => String(it?.parent_id ?? it?.parentId ?? '') === String(c?.id ?? '')
                   ).length;
                   const hasLocalNote = Boolean(getNoteForId(c?.id ?? ''));
                   const idStr = String(c?.id ?? '');
                   return (
                     <>
-                      <TableRow key={String(c?.id ?? Math.random())}>
+                      <TableRow key={`comment-row-${idStr}`} className={selectedRows[idStr] ? 'bg-primary/5 hover:bg-primary/10 transition-colors' : 'hover:bg-muted/50 transition-colors'}>
                         <TableCell>
                           <Checkbox
                             checked={Boolean(selectedRows[idStr])}
@@ -898,77 +936,143 @@ export default function CommentsModeration() {
                             aria-label={`Selecionar comentário ${idStr}`}
                           />
                         </TableCell>
-                        <TableCell className="text-xs">{author}</TableCell>
-                        <TableCell className="text-xs">{body}</TableCell>
-                        <TableCell className="text-xs">{sentAt}</TableCell>
-                        <TableCell className="text-xs capitalize">{translateStatus(st)}{(() => { const backendCount = getRepliesCount(c); return backendCount ? ` • ${backendCount} resposta${backendCount>1?'s':''}` : (replyCount ? ` • ${replyCount} resposta${replyCount>1?'s':''}` : ''); })()}{hasLocalNote ? ' • observação' : ''}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                {author.slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col">
+                              <span className="font-medium text-sm line-clamp-1">{author}</span>
+                              <span className="text-[10px] text-muted-foreground">{formatTarget(c)}</span>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <p className="text-xs text-foreground/80 line-clamp-2 leading-relaxed">
+                              {body}{String(c?.body ?? '').length > 160 ? '...' : ''}
+                            </p>
+                            {renderRating(c)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col text-[11px] text-muted-foreground">
+                            <span className="whitespace-nowrap">{sentAt.split(',')[0]}</span>
+                            <span className="opacity-70">{sentAt.split(',')[1]}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1.5 items-start">
+                            {renderStatusBadge(st)}
+                            {(getRepliesCount(c) > 0 || replyCount > 0) && (
+                              <span className="text-[10px] text-primary font-medium bg-primary/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                <Reply size={10} /> {(getRepliesCount(c) || replyCount)}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           {renderActionDropdown(c)}
                         </TableCell>
                     </TableRow>
                     {expandedRows[idStr] && (
-                      <TableRow>
-                        <TableCell colSpan={6}>
-                          <div className="text-sm font-medium mb-1">Respostas (página atual)</div>
+                      <TableRow className="bg-muted/20 border-t-0 shadow-inner">
+                        <TableCell colSpan={6} className="py-4">
+                          <div className="max-w-4xl mx-auto space-y-4">
+                            <div className="flex items-center justify-between border-b pb-2">
+                              <h4 className="text-sm font-semibold flex items-center gap-2">
+                                <Reply size={14} className="text-primary" />
+                                Respostas Interativas
+                              </h4>
+                              <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                                {getRepliesInCurrentPage(c?.id ?? '').length} na página
+                              </span>
+                            </div>
+
                             {getRepliesInCurrentPage(c?.id ?? '').length > 0 ? (
-                              <div>
-                                {getRepliesInCurrentPage(c?.id ?? '').map((r) => (
-                                  <div key={String(r?.id ?? Math.random())} className="mt-2 ml-4 pl-3 border-l">
-                                    <div className="text-[12px] text-muted-foreground flex items-center justify-between">
-                                      <span>{formatAuthor(r)}{r?.created_at ? ` • ${new Date(String(r.created_at)).toLocaleString()}` : ''}</span>
-                                      <span className="capitalize">{translateStatus(String(r?.status ?? 'pending'))}</span>
+                              <div className="space-y-4">
+                                {getRepliesInCurrentPage(idStr).map((r, rIdx) => (
+                                  <div key={`expanded-reply-${r?.id || rIdx}`} className="bg-background rounded-lg border p-3 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                                          {(formatAuthor(r) || 'U').slice(0,1).toUpperCase()}
+                                        </div>
+                                        <span className="text-xs font-bold">{formatAuthor(r)}</span>
+                                        <span className="text-[10px] text-muted-foreground">{r?.created_at ? new Date(String(r.created_at)).toLocaleString() : ''}</span>
+                                      </div>
+                                      {renderStatusBadge(String(r?.status ?? 'pending'))}
                                     </div>
-                                    <div className="text-sm whitespace-pre-wrap break-words">{String(r?.body ?? '')}</div>
+                                    <div className="text-sm text-foreground/90 pl-8 border-l-2 border-primary/20">{String(r?.body ?? '')}</div>
                                   </div>
                                 ))}
                               </div>
                             ) : (
-                              <div className="text-xs text-muted-foreground">Nenhuma resposta nesta página.</div>
+                              <div className="text-xs text-muted-foreground italic text-center py-4 bg-background/50 rounded-lg border border-dashed">
+                                Nenhuma resposta carregada nesta página.
+                              </div>
                             )}
-                            <div className="mt-2">
-                              <Button size="sm" variant="outline" onClick={() => loadFullThreadFor(c?.id ?? '')} disabled={loadingFullThread}>
-                                {loadingFullThread ? 'Carregando...' : 'Carregar todas as respostas'}
-                              </Button>
+
+                            <div className="flex flex-col gap-4">
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <Button size="sm" variant="default" onClick={() => loadFullThreadFor(c?.id ?? '')} disabled={loadingFullThread} className="shadow-sm">
+                                  {loadingFullThread ? (
+                                    <span className="flex items-center gap-2"><span className="h-3 w-3 animate-spin border-2 border-white border-t-transparent rounded-full" /> Carregando...</span>
+                                  ) : 'Carregar todas as respostas'}
+                                </Button>
+                                
+                                <Button size="sm" variant="outline" onClick={() => toggleInlineReply(c?.id ?? '')} className={`shadow-sm ${inlineReplyVisible[idStr] ? 'bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20' : ''}`}>
+                                  {inlineReplyVisible[idStr] ? 'Cancelar' : 'Escrever Resposta'}
+                                </Button>
+                              </div>
+
                               {Array.isArray(fullThread[idStr]) && fullThread[idStr].length > 0 && (
-                                <div className="mt-2">
-                                  <div className="text-sm font-medium mb-1">Respostas (completas)</div>
-                                  {fullThread[idStr].map((r: any) => (
-                                    <div key={String(r?.id ?? Math.random())} className={`mt-2 ${r?._depth > 0 ? 'ml-4 pl-3 border-l' : ''}`}>
-                                      <div className="text-[12px] text-muted-foreground flex items-center justify-between">
-                                        <span>{formatAuthor(r)}{r?.created_at ? ` • ${new Date(String(r.created_at)).toLocaleString()}` : ''}</span>
-                                        <span className="capitalize">{translateStatus(String(r?.status ?? 'pending'))}</span>
+                                <div className="mt-2 space-y-3 pt-4 border-t border-dashed">
+                                  <h5 className="text-xs font-bold uppercase text-muted-foreground tracking-tighter">Histórico Completo</h5>
+                                  {fullThread[idStr].map((r: any, rIdx: number) => (
+                                    <div key={`full-thread-expanded-${r?.id || rIdx}`} className={`group relative ${r?._depth > 0 ? 'ml-6 pl-4' : 'bg-background/50 p-3 rounded-md border shadow-sm'}`}>
+                                      {r?._depth > 0 && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary/20 group-hover:bg-primary transition-colors" />}
+                                      <div className="text-[11px] flex items-center justify-between mb-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-bold">{formatAuthor(r)}</span>
+                                          <span className="text-muted-foreground opacity-60">{r?.created_at ? new Date(String(r.created_at)).toLocaleString() : ''}</span>
+                                        </div>
+                                        {renderStatusBadge(String(r?.status ?? 'pending'))}
                                       </div>
-                                      <div className="text-sm whitespace-pre-wrap break-words">{String(r?.body ?? '')}</div>
+                                      <div className="text-sm opacity-90">{String(r?.body ?? '')}</div>
                                     </div>
                                   ))}
                                 </div>
                               )}
-                              {/* pt-BR: Formulário de resposta inline do moderador */}
-                              {/* en-US: Inline moderator reply form */}
-                              <div className="mt-4">
-                                <Button size="sm" variant="outline" onClick={() => toggleInlineReply(c?.id ?? '')}>
-                                  {inlineReplyVisible[idStr] ? 'Cancelar resposta' : 'Responder aqui'}
-                                </Button>
-                                {inlineReplyVisible[idStr] && (
-                                  <div className="mt-2 space-y-2">
-                                    <label className="text-sm font-medium">Resposta</label>
-                                    <Textarea
-                                      value={inlineReplyValue[idStr] ?? ''}
-                                      onChange={(e) => setInlineReplyValue((prev) => ({ ...prev, [idStr]: e.target.value }))}
-                                      placeholder="Digite sua resposta..."
-                                      maxLength={500}
-                                    />
-                                    <div className="flex justify-end gap-2">
-                                      <Button variant="outline" onClick={() => setInlineReplyVisible((prev) => ({ ...prev, [idStr]: false }))}>Cancelar</Button>
-                                      <Button onClick={() => publishInlineReply(c?.id ?? '')} disabled={replyMutation.isLoading}>Publicar</Button>
-                                    </div>
+
+                              {inlineReplyVisible[idStr] && (
+                                <div className="bg-background rounded-xl border-2 border-primary/20 p-4 shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <Reply size={16} className="text-primary" />
+                                    <span className="text-sm font-bold">Sua resposta como Moderador</span>
                                   </div>
-                                )}
-                              </div>
+                                  <Textarea
+                                    value={inlineReplyValue[idStr] ?? ''}
+                                    onChange={(e) => setInlineReplyValue((prev) => ({ ...prev, [idStr]: e.target.value }))}
+                                    placeholder="Escreva algo gentil e útil..."
+                                    className="min-h-[100px] bg-muted/10 border-none focus-visible:ring-1 focus-visible:ring-primary mb-4"
+                                    maxLength={500}
+                                  />
+                                  <div className="flex justify-end gap-2">
+                                    <Button variant="ghost" size="sm" onClick={() => setInlineReplyVisible((prev) => ({ ...prev, [idStr]: false }))}>Descartar</Button>
+                                    <Button size="sm" onClick={() => publishInlineReply(c?.id ?? '')} disabled={replyMutation.isPending} className="px-6">
+                                      {replyMutation.isPending ? 'Enviando...' : 'Publicar'}
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
                     </>
                   );
                 })}
@@ -984,7 +1088,7 @@ export default function CommentsModeration() {
           )}
 
           {/* Pagination Controls */}
-          {!commentsQuery.isLoading && commentsQuery.data && commentsQuery.data.lastPage > 1 && (
+          {!commentsQuery.isPending && commentsQuery.data && commentsQuery.data.lastPage > 1 && (
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-muted-foreground">Página {page} de {commentsQuery.data.lastPage}</p>
               <div className="flex gap-2">

@@ -2,8 +2,28 @@ import React from 'react';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Loader2, MoreHorizontal, Eye, Edit, Trash2, BarChart3, Award } from 'lucide-react';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator 
+} from '@/components/ui/dropdown-menu';
+import { 
+  Loader2, 
+  MoreHorizontal, 
+  Eye, 
+  Edit, 
+  Trash2, 
+  BarChart3, 
+  Award,
+  User,
+  BookOpen,
+  CalendarDays,
+  DollarSign
+} from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 export interface EnrollmentTableProps {
   items: any[];
@@ -30,12 +50,19 @@ export interface EnrollmentTableProps {
 
 /**
  * EnrollmentTable
- * pt-BR: Componente de tabela reutilizável para listar matrículas, com ações em cada linha.
- *        Exibe colunas padrão (ID, Cliente, Curso, Turma, Status, Valor) e menu de ações.
- * en-US: Reusable table component to list enrollments, with per-row actions.
- *        Shows standard columns (ID, Client, Course, Class, Status, Amount) and actions menu.
+ * pt-BR: Componente de tabela reutilizável para listar matrículas, com visual premium e ações em cada linha.
+ * en-US: Reusable table component to list enrollments, with premium visuals and per-row actions.
  */
-export default function EnrollmentTable({ items, isLoading, onView, onEdit, onDelete, resolveAmountBRL, onProgress, onGenerateCertificate }: EnrollmentTableProps) {
+export default function EnrollmentTable({ 
+  items, 
+  isLoading, 
+  onView, 
+  onEdit, 
+  onDelete, 
+  resolveAmountBRL, 
+  onProgress, 
+  onGenerateCertificate 
+}: EnrollmentTableProps) {
   const amountFormatter = resolveAmountBRL || (() => '-');
 
   /**
@@ -50,121 +77,190 @@ export default function EnrollmentTable({ items, isLoading, onView, onEdit, onDe
 
   /**
    * resolveStatusBadge
-   * pt-BR: Retorna o componente Badge estilizado de acordo com a situação.
-   * en-US: Returns the Badge component styled according to the situation.
+   * pt-BR: Retorna o componente Badge estilizado de acordo com a situação (Premium).
+   * en-US: Returns the Badge component styled according to the situation (Premium).
    */
   function resolveStatusBadge(enroll: any) {
     const s = String(enroll?.situacao ?? enroll?.status ?? enroll?.config?.situacao ?? '').toLowerCase();
     
     if (s.startsWith('mat')) {
-      return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 transition-colors">Matriculado</Badge>;
+      return (
+        <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20 transition-all font-black text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full ring-1 ring-emerald-500/10">
+          Matriculado
+        </Badge>
+      );
     }
     if (s.startsWith('can')) {
-      return <Badge variant="destructive" className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100 transition-colors">Cancelado</Badge>;
+      return (
+        <Badge variant="destructive" className="bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20 transition-all font-black text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full ring-1 ring-red-500/10">
+          Cancelado
+        </Badge>
+      );
     }
     if (s.startsWith('pen') || s.startsWith('agu')) {
-      return <Badge className="bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 transition-colors">Pendente</Badge>;
+      return (
+        <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20 transition-all font-black text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full ring-1 ring-amber-500/10">
+          Pendente
+        </Badge>
+      );
     }
     if (s.startsWith('fin')) {
-      return <Badge className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 transition-colors">Finalizado</Badge>;
+      return (
+        <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20 transition-all font-black text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full ring-1 ring-blue-500/10">
+          Finalizado
+        </Badge>
+      );
+    }
+    if (s.startsWith('int')) {
+      return (
+        <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 transition-all font-black text-[10px] uppercase tracking-widest px-2.5 py-0.5 rounded-full ring-1 ring-primary/10">
+          Interessado
+        </Badge>
+      );
     }
     
-    return s ? <Badge variant="outline" className="font-medium">{s}</Badge> : <span className="text-muted-foreground">-</span>;
+    return s ? (
+      <Badge variant="outline" className="font-black text-[10px] uppercase tracking-widest border-slate-200 py-0.5 px-2.5 rounded-full">
+        {s}
+      </Badge>
+    ) : (
+      <span className="text-muted-foreground italic text-xs">não informado</span>
+    );
   }
 
   return (
-    <div className="rounded-md border shadow-sm overflow-hidden bg-white">
+    <div className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-500">
       <Table>
-        <TableHeader className="bg-muted/30">
-          <TableRow>
-            <TableHead className="w-[80px] font-semibold text-foreground/80">ID</TableHead>
-            <TableHead className="font-semibold text-foreground/80">Cliente</TableHead>
-            <TableHead className="font-semibold text-foreground/80">Curso</TableHead>
-            <TableHead className="font-semibold text-foreground/80">Turma</TableHead>
-            <TableHead className="font-semibold text-foreground/80">Situação</TableHead>
-            <TableHead className="font-semibold text-foreground/80">Valor (BRL)</TableHead>
-            <TableHead className="text-right font-semibold text-foreground/80">Ações</TableHead>
+        <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="w-[80px] px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground/70">ID</TableHead>
+            <TableHead className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground/70">
+              <div className="flex items-center gap-2">
+                <User className="h-3 w-3" /> Cliente
+              </div>
+            </TableHead>
+            <TableHead className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground/70">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-3 w-3" /> Curso / Turma
+              </div>
+            </TableHead>
+            <TableHead className="px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70">Situação</TableHead>
+            <TableHead className="px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-muted-foreground/70">
+              <div className="flex items-center justify-end gap-2">
+                <DollarSign className="h-3 w-3" /> Valor
+              </div>
+            </TableHead>
+            <TableHead className="px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-muted-foreground/70">Ações</TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
-          {isLoading && (
+        <TableBody className="divide-y divide-slate-100 dark:divide-slate-800">
+          {isLoading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <TableRow key={i} className="animate-pulse">
+                <TableCell colSpan={6} className="px-6 py-10">
+                   <div className="flex items-center gap-4">
+                     <div className="h-10 w-10 rounded-xl bg-slate-200 dark:bg-slate-800" />
+                     <div className="flex flex-col gap-2 flex-1">
+                        <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/4" />
+                        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-1/2 opacity-50" />
+                     </div>
+                   </div>
+                </TableCell>
+              </TableRow>
+            ))
+          ) : items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="h-24 text-center">
-                <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin" /> 
-                  <span className="text-sm font-medium">Carregando matrículas...</span>
+              <TableCell colSpan={6} className="h-40 text-center">
+                <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                  <div className="h-12 w-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 mb-2">
+                    <User className="h-6 w-6 text-slate-300" />
+                  </div>
+                  <span className="text-sm font-black uppercase tracking-tight text-foreground/60">Nenhuma matrícula encontrada</span>
+                  <p className="text-xs font-medium max-w-[200px]">Tente ajustar seus filtros ou termos de pesquisa.</p>
                 </div>
               </TableCell>
             </TableRow>
+          ) : (
+            items.map((enroll: any) => {
+              const studentName = enroll.cliente_nome || enroll.student_name || enroll.name || '-';
+              return (
+                <TableRow key={String(enroll.id)} className="group transition-all hover:bg-slate-50/80 dark:hover:bg-slate-800/80 items-center border-transparent">
+                  <TableCell className="px-6 py-4 font-mono text-[10px] font-bold text-muted-foreground/60 group-hover:text-primary transition-colors">
+                    {String(enroll.id).padStart(4, '0')}
+                  </TableCell>
+                  <TableCell className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9 rounded-xl border-2 border-white dark:border-slate-950 shadow-sm group-hover:scale-110 transition-transform">
+                        <AvatarFallback className="bg-primary/10 text-primary font-black text-xs uppercase">
+                          {studentName.substring(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-sm text-foreground/90 group-hover:text-primary transition-colors line-clamp-1">{studentName}</span>
+                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{enroll.email || 'sem email'}</span>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-6 py-4">
+                    <div className="flex flex-col gap-1.5 max-w-[280px]">
+                      <span className="font-black text-[12px] text-foreground/80 line-clamp-1 group-hover:text-foreground transition-colors">
+                        {enroll.curso_nome || enroll.course_name || '-'}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <CalendarDays className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                          {enroll.turma_nome ?? enroll?.turma?.nome ?? 'Sem turma'}
+                        </span>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-center">
+                    {resolveStatusBadge(enroll)}
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-right">
+                    <span className="font-black text-sm text-primary/90 tabular-nums">
+                      {amountFormatter(enroll)}
+                    </span>
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-9 w-9 p-0 rounded-xl hover:bg-primary/5 group/btn focus-visible:ring-0">
+                          <MoreHorizontal className="h-4 w-4 text-muted-foreground group-hover/btn:text-primary transition-colors" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-[180px] rounded-xl border-slate-100 dark:border-slate-800 shadow-xl p-1">
+                        <DropdownMenuLabel className="text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2 py-2">Gerenciamento</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => onView?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                          <Eye className="h-3.5 w-3.5 text-primary" /> 
+                          Visualizar Proposta
+                        </DropdownMenuItem>
+                        {isMatriculated(enroll) && (
+                          <DropdownMenuItem onClick={() => onProgress?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                            <BarChart3 className="h-3.5 w-3.5 text-emerald-500" /> 
+                            Ver Progresso
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={() => onGenerateCertificate?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                          <Award className="h-3.5 w-3.5 text-amber-500" /> 
+                          Certificado
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                          <Edit className="h-3.5 w-3.5 text-slate-500" /> 
+                          {String(enroll?.situacao ?? '').startsWith('int') ? 'Editar Cadastro' : 'Gerenciar Matrícula'}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="my-1 bg-slate-50 dark:bg-slate-800" />
+                        <DropdownMenuItem className="text-red-500 cursor-pointer focus:bg-red-50 focus:text-red-600 gap-2 font-bold text-xs rounded-lg" onClick={() => onDelete?.(enroll)}>
+                          <Trash2 className="h-3.5 w-3.5" /> 
+                          Excluir Registro
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              );
+            })
           )}
-
-          {!isLoading && items.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={7} className="h-24 text-center">
-                <div className="text-sm text-muted-foreground font-medium">Nenhuma matrícula encontrada</div>
-              </TableCell>
-            </TableRow>
-          )}
-
-          {!isLoading && items.map((enroll: any) => (
-            <TableRow key={String(enroll.id)} className="transition-colors hover:bg-muted/20 items-center">
-              <TableCell className="font-mono text-[11px] text-muted-foreground">{String(enroll.id)}</TableCell>
-              <TableCell className="font-medium text-foreground/90">
-                {enroll.cliente_nome || enroll.student_name || enroll.name || '-'}
-              </TableCell>
-              <TableCell className="max-w-[240px] truncate text-sm">
-                {enroll.curso_nome || enroll.course_name || '-'}
-              </TableCell>
-              <TableCell>
-                <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground font-medium">
-                  {enroll.turma_nome ?? enroll?.turma?.nome ?? '-'}
-                </span>
-              </TableCell>
-              <TableCell>
-                {resolveStatusBadge(enroll)}
-              </TableCell>
-              <TableCell className="font-medium text-sm">
-                {amountFormatter(enroll)}
-              </TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0 rounded-full hover:bg-muted focus-visible:ring-0">
-                      <span className="sr-only">Abrir menu</span>
-                      <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[180px]">
-                    <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">Ações</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => onView?.(enroll)} className="cursor-pointer">
-                      <Eye className="mr-2 h-4 w-4 text-blue-500" /> 
-                      <span className="font-medium">Visualizar</span>
-                    </DropdownMenuItem>
-                    {isMatriculated(enroll) && (
-                      <DropdownMenuItem onClick={() => onProgress?.(enroll)} className="cursor-pointer">
-                        <BarChart3 className="mr-2 h-4 w-4 text-emerald-500" /> 
-                        <span className="font-medium">Progresso</span>
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={() => onGenerateCertificate?.(enroll)} className="cursor-pointer">
-                      <Award className="mr-2 h-4 w-4 text-amber-500" /> 
-                      <span className="font-medium">Gerar certificado</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onEdit?.(enroll)} className="cursor-pointer">
-                      <Edit className="mr-2 h-4 w-4 text-slate-500" /> 
-                      <span className="font-medium">Editar</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-red-600 cursor-pointer focus:bg-red-50 focus:text-red-700" onClick={() => onDelete?.(enroll)}>
-                      <Trash2 className="mr-2 h-4 w-4" /> 
-                      <span className="font-medium">Excluir</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
         </TableBody>
       </Table>
     </div>

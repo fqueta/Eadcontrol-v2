@@ -20,6 +20,26 @@ class ActivitiesProgressController extends Controller
      * Salva a posição de vídeo de uma atividade para a matrícula do aluno.
      * EN: Save the video position (in seconds) of an activity for a student's enrollment.
      */
+    private function checkEnrollmentAccess(Matricula $matricula, $user): ?\Illuminate\Http\JsonResponse
+    {
+        // Se for admin/atendente, não bloqueia acesso por data de validade
+        // EN: If it's admin/attendant, do not block access by expiration date
+        if ((int)($user->permission_id ?? 0) !== 7) {
+            return null;
+        }
+
+        if ($matricula->validade_acesso && $matricula->validade_acesso->isPast()) {
+            return response()->json([
+                'error' => 'Acesso expirado',
+                'message' => 'O prazo de acesso para esta matrícula expirou em ' . $matricula->validade_acesso->format('d/m/Y') . '. Entre em contato com o suporte para renovar.',
+                'code' => 'access_expired',
+                'validade_acesso' => $matricula->validade_acesso->toDateString()
+            ], 403);
+        }
+
+        return null;
+    }
+
     public function saveVideoPosition(Request $request)
     {
         $user = $request->user();
@@ -63,13 +83,18 @@ class ActivitiesProgressController extends Controller
 
         // Garantir que a matrícula pertence ao usuário autenticado (proteção para clientes).
         // EN: Ensure the enrollment belongs to the authenticated user (client protection).
-        $matricula = Matricula::select('id', 'id_cliente')->find($data['id_matricula']);
+        $matricula = Matricula::select('id', 'id_cliente', 'validade_acesso')->find($data['id_matricula']);
         if (!$matricula) {
             return response()->json(['error' => 'Matrícula não encontrada'], 404);
         }
         // Se for cliente, valida vínculo; admins/atendentes passam.
         if ((int)($user->permission_id ?? 0) === 7 && (string)$matricula->id_cliente !== (string)$user->id) {
             return response()->json(['error' => 'Acesso negado: matrícula não pertence ao usuário'], 403);
+        }
+
+        // Validar validade de acesso (apenas para alunos)
+        if ($blockedResponse = $this->checkEnrollmentAccess($matricula, $user)) {
+            return $blockedResponse;
         }
 
         // Upsert por (activity_id, id_matricula) preservando o config existente.
@@ -120,12 +145,17 @@ class ActivitiesProgressController extends Controller
         $idMatricula = (int) $validator->validated()['id_matricula'];
         $activityId = (int) $activity_id;
 
-        $matricula = Matricula::select('id', 'id_cliente')->find($idMatricula);
+        $matricula = Matricula::select('id', 'id_cliente', 'validade_acesso')->find($idMatricula);
         if (!$matricula) {
             return response()->json(['error' => 'Matrícula não encontrada'], 404);
         }
         if ((int)($user->permission_id ?? 0) === 7 && (string)$matricula->id_cliente !== (string)$user->id) {
             return response()->json(['error' => 'Acesso negado: matrícula não pertence ao usuário'], 403);
+        }
+
+        // Validar validade de acesso (apenas para alunos)
+        if ($blockedResponse = $this->checkEnrollmentAccess($matricula, $user)) {
+            return $blockedResponse;
         }
 
         $progress = ActivityProgress::where('activity_id', $activityId)
@@ -170,12 +200,17 @@ class ActivitiesProgressController extends Controller
         $idMatricula = (int) $data['id_matricula'];
         $courseId = isset($data['course_id']) ? (int)$data['course_id'] : null;
 
-        $matricula = Matricula::select('id', 'id_cliente')->find($idMatricula);
+        $matricula = Matricula::select('id', 'id_cliente', 'validade_acesso')->find($idMatricula);
         if (!$matricula) {
             return response()->json(['error' => 'Matrícula não encontrada'], 404);
         }
         if ((int)($user->permission_id ?? 0) === 7 && (string)$matricula->id_cliente !== (string)$user->id) {
             return response()->json(['error' => 'Acesso negado: matrícula não pertence ao usuário'], 403);
+        }
+
+        // Validar validade de acesso (apenas para alunos)
+        if ($blockedResponse = $this->checkEnrollmentAccess($matricula, $user)) {
+            return $blockedResponse;
         }
 
         $query = ActivityProgress::where('activity_id', $activityId)
@@ -243,12 +278,17 @@ class ActivitiesProgressController extends Controller
             $data['config'] = is_array($decoded) ? $decoded : null;
         }
 
-        $matricula = Matricula::select('id', 'id_cliente')->find($data['id_matricula']);
+        $matricula = Matricula::select('id', 'id_cliente', 'validade_acesso')->find($data['id_matricula']);
         if (!$matricula) {
             return response()->json(['error' => 'Matrícula não encontrada'], 404);
         }
         if ((int)($user->permission_id ?? 0) === 7 && (string)$matricula->id_cliente !== (string)$user->id) {
             return response()->json(['error' => 'Acesso negado: matrícula não pertence ao usuário'], 403);
+        }
+
+        // Validar validade de acesso (apenas para alunos)
+        if ($blockedResponse = $this->checkEnrollmentAccess($matricula, $user)) {
+            return $blockedResponse;
         }
 
         // Upsert progresso e marca como concluído
@@ -332,12 +372,17 @@ class ActivitiesProgressController extends Controller
             $data['config'] = is_array($decoded) ? $decoded : null;
         }
 
-        $matricula = Matricula::select('id', 'id_cliente')->find($data['id_matricula']);
+        $matricula = Matricula::select('id', 'id_cliente', 'validade_acesso')->find($data['id_matricula']);
         if (!$matricula) {
             return response()->json(['error' => 'Matrícula não encontrada'], 404);
         }
         if ((int)($user->permission_id ?? 0) === 7 && (string)$matricula->id_cliente !== (string)$user->id) {
             return response()->json(['error' => 'Acesso negado: matrícula não pertence ao usuário'], 403);
+        }
+
+        // Validar validade de acesso (apenas para alunos)
+        if ($blockedResponse = $this->checkEnrollmentAccess($matricula, $user)) {
+            return $blockedResponse;
         }
 
         $progress = ActivityProgress::firstOrNew([
@@ -394,12 +439,17 @@ class ActivitiesProgressController extends Controller
         $courseId = (int) $data['course_id'];
         $idMatricula = (int) $data['id_matricula'];
 
-        $matricula = Matricula::select('id', 'id_cliente')->find($idMatricula);
+        $matricula = Matricula::select('id', 'id_cliente', 'validade_acesso')->find($idMatricula);
         if (!$matricula) {
             return response()->json(['error' => 'Matrícula não encontrada'], 404);
         }
         if ((int)($user->permission_id ?? 0) === 7 && (string)$matricula->id_cliente !== (string)$user->id) {
             return response()->json(['error' => 'Acesso negado: matrícula não pertence ao usuário'], 403);
+        }
+
+        // Validar validade de acesso (apenas para alunos)
+        if ($blockedResponse = $this->checkEnrollmentAccess($matricula, $user)) {
+            return $blockedResponse;
         }
 
         // Lista todo o progresso para o curso e matrícula (ordem por updated_at desc)
@@ -509,7 +559,7 @@ class ActivitiesProgressController extends Controller
 
         // Busca matrícula e valida acesso
         // EN: Fetch enrollment and validate access
-        $matricula = Matricula::select('id', 'id_cliente', 'id_curso')->find($idMatricula);
+        $matricula = Matricula::select('id', 'id_cliente', 'id_curso', 'validade_acesso')->find($idMatricula);
         if (!$matricula) {
             return response()->json(['error' => 'Matrícula não encontrada'], 404);
         }

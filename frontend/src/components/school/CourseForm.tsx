@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Plus, X, GripVertical, ChevronDown, ChevronUp, ChevronLeft, Save, Loader2, Eye, ExternalLink, Copy, BookOpen, Users, Clock, PlayCircle, CheckCircle2 } from 'lucide-react';
+import { Plus, X, GripVertical, ChevronDown, ChevronUp, ChevronLeft, Save, Loader2, Eye, ExternalLink, Copy, BookOpen, Users, Clock, PlayCircle, CheckCircle2, LayoutGrid, DollarSign, Settings2, HelpCircle, Image as ImageIcon, Check } from 'lucide-react';
 import { ImageUpload } from '@/components/lib/ImageUpload';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { coursesService } from '@/services/coursesService';
@@ -2393,16 +2393,28 @@ export function CourseForm({
     <FormProvider {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit, onInvalid)} className="space-y-8">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)} className="w-full">
-          <TabsList className="bg-muted/40 p-1 mb-4 h-auto flex-wrap justify-start gap-1 border border-muted-foreground/10 rounded-xl shadow-inner">
-            <TabsTrigger value="info" className="rounded-lg py-2.5 px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground transition-all duration-200">Informações</TabsTrigger>
-            <TabsTrigger value="image" className="rounded-lg py-2.5 px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground transition-all duration-200">Imagem</TabsTrigger>
-            <TabsTrigger value="pricing" className="rounded-lg py-2.5 px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground transition-all duration-200">Valores/Parcelas</TabsTrigger>
-            <TabsTrigger value="content" className="rounded-lg py-2.5 px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground transition-all duration-200">Conteúdo</TabsTrigger>
-            <TabsTrigger value="config" className="rounded-lg py-2.5 px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground transition-all duration-200">Configurações</TabsTrigger>
-            <TabsTrigger value="questions" className="rounded-lg py-2.5 px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground transition-all duration-200">Perguntas</TabsTrigger>
-            <TabsTrigger value="enrollments" className="rounded-lg py-2.5 px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground transition-all duration-200 flex items-center gap-2">
-              Matrículas
-              <Badge variant="outline" className="h-[18px] px-1 bg-muted/60 text-[10px] font-bold border-none text-muted-foreground/70 tracking-tighter">DATA</Badge>
+          <TabsList className="bg-slate-100/50 dark:bg-slate-800/50 p-1 mb-8 h-auto flex-wrap justify-start gap-1 border border-slate-200 dark:border-slate-700/50 rounded-2xl shadow-sm backdrop-blur-md sticky top-0 z-10">
+            <TabsTrigger value="info" className="rounded-xl py-2.5 px-5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-md data-[state=active]:text-primary text-muted-foreground transition-all duration-300 font-semibold flex items-center gap-2">
+              <LayoutGrid className="h-4 w-4" /> Informações
+            </TabsTrigger>
+            <TabsTrigger value="image" className="rounded-xl py-2.5 px-5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-md data-[state=active]:text-primary text-muted-foreground transition-all duration-300 font-semibold flex items-center gap-2">
+              <ImageIcon className="h-4 w-4" /> Imagem
+            </TabsTrigger>
+            <TabsTrigger value="pricing" className="rounded-xl py-2.5 px-5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-md data-[state=active]:text-primary text-muted-foreground transition-all duration-300 font-semibold flex items-center gap-2">
+              <DollarSign className="h-4 w-4" /> Valores/Parcelas
+            </TabsTrigger>
+            <TabsTrigger value="content" className="rounded-xl py-2.5 px-5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-md data-[state=active]:text-primary text-muted-foreground transition-all duration-300 font-semibold flex items-center gap-2">
+              <BookOpen className="h-4 w-4" /> Conteúdo
+            </TabsTrigger>
+            <TabsTrigger value="config" className="rounded-xl py-2.5 px-5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-md data-[state=active]:text-primary text-muted-foreground transition-all duration-300 font-semibold flex items-center gap-2">
+              <Settings2 className="h-4 w-4" /> Configurações
+            </TabsTrigger>
+            <TabsTrigger value="questions" className="rounded-xl py-2.5 px-5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-md data-[state=active]:text-primary text-muted-foreground transition-all duration-300 font-semibold flex items-center gap-2">
+              <HelpCircle className="h-4 w-4" /> Perguntas
+            </TabsTrigger>
+            <TabsTrigger value="enrollments" className="rounded-xl py-2.5 px-5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-md data-[state=active]:text-primary text-muted-foreground transition-all duration-300 font-semibold flex items-center gap-2">
+              <Users className="h-4 w-4" /> Matrículas
+              <Badge variant="outline" className="h-[18px] px-1 bg-primary/10 text-primary text-[10px] font-bold border-none tracking-tighter ml-1">DATA</Badge>
             </TabsTrigger>
           </TabsList>
           
@@ -2414,154 +2426,230 @@ export function CourseForm({
           </div>
 
           {/* Informações */}
-          <TabsContent value="info" className="space-y-4 pt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nome interno<RequiredMark /></Label>
-                <Input placeholder="Nome interno (admin)" {...form.register('nome')} className={form.formState.errors?.nome ? 'border-red-500' : ''} />
-                {form.formState.errors?.nome && (
-                  <p className="text-xs text-red-600">{String(form.formState.errors.nome.message)}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label>Slug (Gerado do Nome interno; você pode ajustar manualmente.)</Label>
-                <Input
-                  placeholder="slug-do-curso"
-                  value={form.watch('slug') || ''}
-                  onChange={(e) => {
-                    // Desativa geração automática ao editar manualmente.
-                    // Disable auto-generation when manually editing.
-                    setAutoSlugEnabled(false);
-                    form.setValue('slug', toSlug(e.target.value));
-                  }}
-                />
-                {/* <p className="text-xs text-muted-foreground">Gerado do Nome interno; você pode ajustar manualmente.</p> */}
-              </div>
-              <div className="space-y-2">
-                <Label>Título (aluno)<RequiredMark /></Label>
-                <Input placeholder="Título que aparece para o aluno" {...form.register('titulo')} className={form.formState.errors?.titulo ? 'border-red-500' : ''} />
-                {form.formState.errors?.titulo && (
-                  <p className="text-xs text-red-600">{String(form.formState.errors.titulo.message)}</p>
-                )}
-              </div>
-              {/* Instrutor como Select alimentado por GET /users */}
-              <div className="space-y-2">
-                <Label>Instrutor</Label>
-                <Select value={form.watch('instrutor') || ''} onValueChange={(v) => form.setValue('instrutor', v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione um instrutor" /></SelectTrigger>
-                  <SelectContent>
-                    {((usersQuery.data?.data ?? []) as any[]).map((u: any) => (
-                      <SelectItem key={String(u.id)} value={String(u.id)}>{u.name ?? String(u.id)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center justify-between rounded-lg border p-3">
-                  <div className="space-y-0.5">
-                    <Label>Ativar</Label>
-                    <p className="text-xs text-muted-foreground">Disponibiliza o curso</p>
+          <TabsContent value="info" className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <Card className="border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm overflow-hidden">
+              <CardHeader className="pb-4 border-b border-slate-100/50 dark:border-slate-800/50 mb-6">
+                 <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <LayoutGrid className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-foreground/90">Informações Básicas</h3>
+                      <p className="text-sm text-muted-foreground">Configure os dados principais de identificação do curso.</p>
+                    </div>
+                 </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-foreground/80">Nome interno<RequiredMark /></Label>
+                    <Input placeholder="Nome interno (admin)" {...form.register('nome')} className={`h-11 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 focus:ring-primary/20 transition-all ${form.formState.errors?.nome ? 'border-red-500' : ''}`} />
+                    {form.formState.errors?.nome && (
+                      <p className="text-xs text-red-600 font-medium">{String(form.formState.errors.nome.message)}</p>
+                    )}
                   </div>
-                  <Switch
-                    checked={form.watch('ativo') === 's'}
-                    onCheckedChange={(checked) => form.setValue('ativo', checked ? 's' : 'n')}
-                  />
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-foreground/80">Slug (Gerado do Nome interno)</Label>
+                    <Input
+                      placeholder="slug-do-curso"
+                      className="h-11 rounded-xl bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 text-muted-foreground italic"
+                      value={form.watch('slug') || ''}
+                      onChange={(e) => {
+                        setAutoSlugEnabled(false);
+                        form.setValue('slug', toSlug(e.target.value));
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-foreground/80">Título (aluno)<RequiredMark /></Label>
+                    <Input placeholder="Título que aparece para o aluno" {...form.register('titulo')} className={`h-11 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 focus:ring-primary/20 transition-all ${form.formState.errors?.titulo ? 'border-red-500' : ''}`} />
+                    {form.formState.errors?.titulo && (
+                      <p className="text-xs text-red-600 font-medium">{String(form.formState.errors.titulo.message)}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-foreground/80">Instrutor</Label>
+                    <Select value={form.watch('instrutor') || ''} onValueChange={(v) => form.setValue('instrutor', v)}>
+                      <SelectTrigger className="h-11 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800">
+                        <SelectValue placeholder="Selecione um instrutor" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl shadow-2xl border-slate-200 dark:border-slate-800">
+                        {((usersQuery.data?.data ?? []) as any[]).map((u: any) => (
+                          <SelectItem key={String(u.id)} value={String(u.id)} className="rounded-lg my-1">{u.name ?? String(u.id)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between rounded-lg border p-3">
-                  <div className="space-y-0.5"><Label>Publicar</Label></div>
-                  <Switch
-                    checked={form.watch('publicar') === 's'}
-                    onCheckedChange={(checked) => form.setValue('publicar', checked ? 's' : 'n')}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                  <div className={`flex items-center justify-between rounded-2xl border-2 p-4 transition-all duration-300 ${form.watch('ativo') === 's' ? 'border-green-500/30 bg-green-50/30 dark:bg-green-500/5' : 'border-slate-200 dark:border-slate-800 bg-white/30'}`}>
+                    <div className="space-y-1">
+                      <Label className="text-base font-bold text-foreground/90 flex items-center gap-2">
+                        Ativar 
+                        {form.watch('ativo') === 's' && <Check className="h-4 w-4 text-green-500" />}
+                      </Label>
+                      <p className="text-xs text-muted-foreground font-medium">Disponibiliza o curso para o sistema</p>
+                    </div>
+                    <Switch
+                      checked={form.watch('ativo') === 's'}
+                      onCheckedChange={(checked) => form.setValue('ativo', checked ? 's' : 'n')}
+                      className="data-[state=checked]:bg-green-500 scale-110"
+                    />
+                  </div>
+
+                  <div className={`flex items-center justify-between rounded-2xl border-2 p-4 transition-all duration-300 ${form.watch('publicar') === 's' ? 'border-blue-500/30 bg-blue-50/30 dark:bg-blue-500/5' : 'border-slate-200 dark:border-slate-800 bg-white/30'}`}>
+                    <div className="space-y-1">
+                      <Label className="text-base font-bold text-foreground/90 flex items-center gap-2">
+                        Publicar
+                        {form.watch('publicar') === 's' && <Check className="h-4 w-4 text-blue-500" />}
+                      </Label>
+                      <p className="text-xs text-muted-foreground font-medium">Exibe o curso na página pública (site)</p>
+                    </div>
+                    <Switch
+                      checked={form.watch('publicar') === 's'}
+                      onCheckedChange={(checked) => form.setValue('publicar', checked ? 's' : 'n')}
+                      className="data-[state=checked]:bg-blue-600 scale-110"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-foreground/80">Duração <span className="text-[10px] font-normal text-muted-foreground text-primary uppercase ml-1">(automático)</span></Label>
+                    <Input placeholder="0" readOnly title="Calculado automaticamente a partir do conteúdo" {...form.register('duracao')} className="h-11 rounded-xl bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 text-primary font-bold" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-foreground/80">Unidade de duração<RequiredMark /></Label>
+                    <Select value={form.watch('unidade_duracao')} onValueChange={(v) => form.setValue('unidade_duracao', v)}>
+                      <SelectTrigger className="h-11 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="seg">Segundo(s)</SelectItem>
+                        <SelectItem value="min">Minuto(s)</SelectItem>
+                        <SelectItem value="hrs">Hora(s)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors?.unidade_duracao && (
+                      <p className="text-xs text-red-600 font-medium">{String((form.formState.errors as any).unidade_duracao?.message)}</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm overflow-hidden mt-6">
+              <CardHeader className="pb-4 border-b border-slate-100/50 dark:border-slate-800/50 mb-6">
+                 <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <BookOpen className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-foreground/90">Conteúdo Detalhado</h3>
+                      <p className="text-sm text-muted-foreground">Descrição longa e observações internas do curso.</p>
+                    </div>
+                 </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-foreground/80">Descrição Pública</Label>
+                  <RichTextEditor
+                    value={form.watch('descricao') || ''}
+                    onChange={(html) => {
+                      form.setValue('descricao', html, { shouldValidate: true });
+                      form.setValue('descricao_curso', html, { shouldValidate: true });
+                    }}
+                    placeholder="Descrição do curso que os alunos verão..."
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Duração<RequiredMark /></Label>
-                <Input placeholder="0" readOnly title="Calculado automaticamente a partir do conteúdo" {...form.register('duracao')} className={form.formState.errors?.duracao ? 'border-red-500' : ''} />
-                {form.formState.errors?.duracao && (
-                  <p className="text-xs text-red-600">{String(form.formState.errors.duracao.message)}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label>Unidade de duração<RequiredMark /></Label>
-                <Select value={form.watch('unidade_duracao')} onValueChange={(v) => form.setValue('unidade_duracao', v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="seg">Segundo(s)</SelectItem>
-                    <SelectItem value="min">Minuto(s)</SelectItem>
-                    <SelectItem value="hrs">Hora(s)</SelectItem>
-                  </SelectContent>
-                </Select>
-                {form.formState.errors?.unidade_duracao && (
-                  <p className="text-xs text-red-600">{String((form.formState.errors as any).unidade_duracao?.message)}</p>
-                )}
-              </div>
-
-              
-          {/* Descrição com WYSIWYG e Observações como Textarea */}
-          <div className="space-y-2 md:col-span-2">
-            <Label>Descrição</Label>
-            <RichTextEditor
-              value={form.watch('descricao') || ''}
-              onChange={(html) => {
-                // Atualiza ambos os campos para compatibilidade com API e UI
-                form.setValue('descricao', html, { shouldValidate: true });
-                form.setValue('descricao_curso', html, { shouldValidate: true });
-              }}
-              placeholder="Descrição do curso"
-            />
-          </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label>Observações</Label>
-                <Textarea rows={5} placeholder="Observações internas" {...form.register('observacoes')} />
-                {form.formState.errors?.observacoes && (
-                  <p className="text-xs text-red-600">{String((form.formState.errors as any).observacoes?.message)}</p>
-                )}
-              </div>
-            </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-foreground/80">Observações Internas</Label>
+                  <Textarea rows={4} placeholder="Notas exclusivas para a equipe administrativa..." {...form.register('observacoes')} className="rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800" />
+                  {form.formState.errors?.observacoes && (
+                    <p className="text-xs text-red-600 font-medium">{String((form.formState.errors as any).observacoes?.message)}</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Imagem */}
-          <TabsContent value="image" className="space-y-4 pt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2 md:col-span-2">
-                <Label>Imagem de capa do curso</Label>
-                <div className="flex items-center gap-2">
-                  <Button type="button" variant="secondary" onClick={() => setMediaOpen(true)}>Escolher imagem</Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      form.setValue('imagem_url', '', { shouldValidate: true });
-                      form.setValue('imagem_file_id', undefined as any, { shouldValidate: true });
-                      // form.setValue('imagem_titulo', '', { shouldValidate: false }); // Deprecated or incorrect key
-                    }}
-                  >
-                    Limpar imagem
-                  </Button>
-                  {form.watch('config.cover.file_id') ? (
-                    <span className="text-xs text-muted-foreground">ID selecionado: {String(form.watch('config.cover.file_id'))}</span>
-                  ) : null}
+          <TabsContent value="image" className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <Card className="border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm overflow-hidden">
+              <CardHeader className="pb-4 border-b border-slate-100/50 dark:border-slate-800/50 mb-6">
+                 <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <ImageIcon className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-foreground/90">Visual do Curso</h3>
+                      <p className="text-sm text-muted-foreground">Escolha uma imagem de capa atraente para o seu curso.</p>
+                    </div>
+                 </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-bold text-foreground/80">Imagem de capa</Label>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button type="button" variant="secondary" onClick={() => setMediaOpen(true)} className="rounded-xl font-bold bg-primary/5 text-primary hover:bg-primary/10 border-primary/20 transition-all">
+                          <ImageIcon className="h-4 w-4 mr-2" /> 
+                          Abrir Biblioteca
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="rounded-xl font-semibold text-muted-foreground hover:text-red-500 transition-all"
+                          onClick={() => {
+                            form.setValue('config.cover.url', '', { shouldValidate: true });
+                            form.setValue('config.cover.file_id', undefined as any, { shouldValidate: true });
+                          }}
+                        >
+                          Remover
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="p-1 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-950/30">
+                      <ImageUpload
+                        name="config.cover.url"
+                        label=""
+                        value={form.watch('config.cover.url') || ''}
+                        onChange={(val) => form.setValue('config.cover.url', val || '', { shouldValidate: true })}
+                        onUpload={uploadCourseCover}
+                        maxSize={5}
+                        className="border-none shadow-none bg-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label className="text-sm font-bold text-foreground/80">Visualização prévia</Label>
+                    <div className="aspect-video rounded-2xl border-2 border-slate-100 dark:border-slate-800 overflow-hidden bg-slate-100 dark:bg-slate-900 flex items-center justify-center shadow-inner relative group">
+                      {form.watch('config.cover.url') ? (
+                        <>
+                          <img src={form.watch('config.cover.url')!} alt="Pré-visualização" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="bg-white/90 dark:bg-slate-900/90 py-2 px-4 rounded-full text-xs font-bold shadow-xl">Capa Selecionada</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center gap-3 text-muted-foreground/40">
+                          <ImageIcon className="h-12 w-12" />
+                          <span className="text-xs font-bold uppercase tracking-widest">Sem imagem vinculada</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground italic text-center">
+                      Recomendado: 1280x720px (16:9) em format JPG ou PNG até 5MB.
+                    </p>
+                  </div>
                 </div>
-                <ImageUpload
-                  name="config.cover.url"
-                  label="Imagem de capa"
-                  value={form.watch('config.cover.url') || ''}
-                  onChange={(val) => form.setValue('config.cover.url', val || '', { shouldValidate: true })}
-                  onUpload={uploadCourseCover}
-                  maxSize={5}
-                  className="max-w-2xl"
-                />
-              </div>
-              {Boolean(form.watch('config.cover.url')) && (
-                <div className="md:col-span-2">
-                  <img src={form.watch('config.cover.url')!} alt="Pré-visualização" className="max-h-48 rounded border" />
-                </div>
-              )}
-            </div>
-            {/* Modal de Biblioteca de Mídia */}
+              </CardContent>
+            </Card>
+            
             <MediaLibraryModal
               open={mediaOpen}
               onClose={() => setMediaOpen(false)}
@@ -2571,142 +2659,154 @@ export function CourseForm({
           </TabsContent>
 
           {/* Valores/Parcelas */}
-          <TabsContent value="pricing" className="space-y-4 pt-4">
-            {/**
-             * PricingTab
-             * pt-BR: Aba dedicada para cadastrar valores (inscrição, valor total) e parcelamentos.
-             * en-US: Dedicated tab to register pricing (enrollment, total value) and installments.
-             */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label>Inscrição</Label>
-                <Input
-                  placeholder="R$ 0,00"
-                  value={form.watch('inscricao') || ''}
-                  onChange={(e) => {
-                    /**
-                     * applyBRLMaskForEnrollment
-                     * pt-BR: Aplica máscara BRL ao valor de inscrição.
-                     * en-US: Applies BRL mask to enrollment amount.
-                     */
-                    const v = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
-                    form.setValue('inscricao', v, { shouldValidate: true });
-                  }}
-                  className={form.formState.errors?.inscricao ? 'border-red-500' : ''}
-                />
-                {form.formState.errors?.inscricao && (
-                  <p className="text-xs text-red-600">{String(form.formState.errors.inscricao.message)}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label>Valor</Label>
-                <Input
-                  placeholder="R$ 900,00"
-                  value={form.watch('valor') || ''}
-                  onChange={(e) => {
-                    /**
-                     * applyBRLMaskForTotal
-                     * pt-BR: Aplica máscara BRL ao valor total do curso e recalcula parcela.
-                     * en-US: Applies BRL mask to total price and recalculates installment.
-                     */
-                    const v = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
-                    form.setValue('valor', v, { shouldValidate: true });
-                    recalcInstallment(v, form.getValues('parcelas'));
-                  }}
-                  className={form.formState.errors?.valor ? 'border-red-500' : ''}
-                />
-                {form.formState.errors?.valor && (
-                  <p className="text-xs text-red-600">{String(form.formState.errors.valor.message)}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label>Parcelas</Label>
-                <Select value={form.watch('parcelas') || ''} onValueChange={(v) => {
-                  form.setValue('parcelas', v, { shouldValidate: true });
-                  recalcInstallment(form.getValues('valor'), v);
-                }}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1</SelectItem>
-                    <SelectItem value="2">2</SelectItem>
-                    <SelectItem value="3">3</SelectItem>
-                    <SelectItem value="4">4</SelectItem>
-                    <SelectItem value="5">5</SelectItem>
-                    <SelectItem value="6">6</SelectItem>
-                    <SelectItem value="7">7</SelectItem>
-                    <SelectItem value="8">8</SelectItem>
-                    <SelectItem value="9">9</SelectItem>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="11">11</SelectItem>
-                    <SelectItem value="12">12</SelectItem>
-                  </SelectContent>
-                </Select>
-                {form.formState.errors?.parcelas && (
-                  <p className="text-xs text-red-600">{String(form.formState.errors.parcelas.message)}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label>Valor da parcela</Label>
-                <Input
-                  placeholder="R$ 900,00"
-                  value={form.watch('valor_parcela') || ''}
-                  onChange={(e) => {
-                    /**
-                     * applyBRLMaskForInstallment
-                     * pt-BR: Aplica máscara BRL ao valor de cada parcela.
-                     * en-US: Applies BRL mask to each installment value.
-                     */
-                    const v = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
-                    form.setValue('valor_parcela', v, { shouldValidate: true });
-                  }}
-                  readOnly
-                  className={form.formState.errors?.valor_parcela ? 'border-red-500' : ''}
-                />
-                {form.formState.errors?.valor_parcela && (
-                  <p className="text-xs text-red-600">{String(form.formState.errors.valor_parcela.message)}</p>
-                )}
-              </div>
-            </div>
+          <TabsContent value="pricing" className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <Card className="border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm overflow-hidden">
+              <CardHeader className="pb-4 border-b border-slate-100/50 dark:border-slate-800/50 mb-6">
+                 <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <DollarSign className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-foreground/90">Gestão de Valores</h3>
+                      <p className="text-sm text-muted-foreground">Defina os custos de inscrição, valor total e opções de parcelamento.</p>
+                    </div>
+                 </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-foreground/80">Taxa de Inscrição</Label>
+                    <Input
+                      placeholder="R$ 0,00"
+                      className="h-11 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 font-bold"
+                      value={form.watch('inscricao') || ''}
+                      onChange={(e) => {
+                        const v = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
+                        form.setValue('inscricao', v, { shouldValidate: true });
+                      }}
+                    />
+                    {form.formState.errors?.inscricao && (
+                      <p className="text-xs text-red-600 font-medium">{String(form.formState.errors.inscricao.message)}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-foreground/80">Valor do Curso</Label>
+                    <Input
+                      placeholder="R$ 900,00"
+                      className="h-11 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 font-bold text-primary"
+                      value={form.watch('valor') || ''}
+                      onChange={(e) => {
+                        const v = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
+                        form.setValue('valor', v, { shouldValidate: true });
+                        recalcInstallment(v, form.getValues('parcelas'));
+                      }}
+                    />
+                    {form.formState.errors?.valor && (
+                      <p className="text-xs text-red-600 font-medium">{String(form.formState.errors.valor.message)}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-foreground/80">Max. Parcelas</Label>
+                    <Select value={form.watch('parcelas') || ''} onValueChange={(v) => {
+                      form.setValue('parcelas', v, { shouldValidate: true });
+                      recalcInstallment(form.getValues('valor'), v);
+                    }}>
+                      <SelectTrigger className="h-11 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        {[1,2,3,4,5,6,7,8,9,10,11,12].map(p => (
+                          <SelectItem key={p} value={String(p)}>{p}x</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-foreground/80">Valor da Parcela</Label>
+                    <Input
+                      placeholder="R$ 0,00"
+                      readOnly
+                      className="h-11 rounded-xl bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 font-semibold text-muted-foreground italic"
+                      value={form.watch('valor_parcela') || ''}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Configurações */}
-          <TabsContent value="config" className="space-y-4 pt-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2"><Label>Próximo curso</Label><Input {...form.register('config.proximo_curso')} /></div>
-              <div className="space-y-2">
-                <Label>Grátis</Label>
-                <Select value={form.watch('config.gratis')} onValueChange={(v) => form.setValue('config.gratis', v as any)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent><SelectItem value="s">Sim</SelectItem><SelectItem value="n">Não</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2"><Label>Comissão</Label><Input placeholder="3,00" {...form.register('config.comissao')} /></div>
-              <div className="space-y-2"><Label>Tipo desconto taxa</Label>
-                <Select value={form.watch('config.tipo_desconto_taxa')} onValueChange={(v) => form.setValue('config.tipo_desconto_taxa', v as any)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent><SelectItem value="v">Valor</SelectItem><SelectItem value="p">Percentual</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2"><Label>Desconto taxa</Label><Input {...form.register('config.desconto_taxa')} /></div>
-              <div className="space-y-2 md:col-span-3"><Label>Página de divulgação</Label><Input {...form.register('config.pagina_divulgacao')} /></div>
-              <div className="space-y-2 md:col-span-3"><Label>Vídeo (YouTube)</Label><Input placeholder="https://..." {...form.register('config.video')} /></div>
-              <div className="space-y-2"><Label>Página de venda (link)</Label><Input {...form.register('config.pagina_venda.link')} /></div>
-              <div className="space-y-2"><Label>Página de venda (label)</Label><Input {...form.register('config.pagina_venda.label')} /></div>
-              <div className="space-y-2"><Label>ADC: Recheck</Label>
-                <Select value={form.watch('config.adc.recheck')} onValueChange={(v) => form.setValue('config.adc.recheck', v as any)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent><SelectItem value="s">Sim</SelectItem><SelectItem value="n">Não</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2"><Label>ADC: Recorrente</Label>
-                <Select value={form.watch('config.adc.recorrente')} onValueChange={(v) => form.setValue('config.adc.recorrente', v as any)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent><SelectItem value="s">Sim</SelectItem><SelectItem value="n">Não</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2"><Label>ADC: Cor (hex)</Label><Input placeholder="FFFFFF" {...form.register('config.adc.cor')} /></div>
-              <div className="space-y-2"><Label>EAD: ID EADControl</Label><Input {...form.register('config.ead.id_eadcontrol')} /></div>
-            </div>
+          <TabsContent value="config" className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <Card className="border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm overflow-hidden">
+              <CardHeader className="pb-4 border-b border-slate-100/50 dark:border-slate-800/50 mb-6">
+                 <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Settings2 className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-foreground/90">Parâmetros Avançados</h3>
+                      <p className="text-sm text-muted-foreground">Configurações técnicas, integrações e redirecionamentos.</p>
+                    </div>
+                 </div>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2"><Label className="font-bold">Próximo curso</Label><Input className="rounded-xl border-slate-200" {...form.register('config.proximo_curso')} /></div>
+                  <div className="space-y-2">
+                    <Label className="font-bold">Curso Grátis?</Label>
+                    <Select value={form.watch('config.gratis')} onValueChange={(v) => form.setValue('config.gratis', v as any)}>
+                      <SelectTrigger className="rounded-xl border-slate-200"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent className="rounded-xl"><SelectItem value="s">Sim</SelectItem><SelectItem value="n">Não</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2"><Label className="font-bold">Comissão (R$)</Label><Input placeholder="0,00" className="rounded-xl border-slate-200" {...form.register('config.comissao')} /></div>
+                  
+                  <div className="space-y-2">
+                    <Label className="font-bold">Tipo Desconto Taxa</Label>
+                    <Select value={form.watch('config.tipo_desconto_taxa')} onValueChange={(v) => form.setValue('config.tipo_desconto_taxa', v as any)}>
+                      <SelectTrigger className="rounded-xl border-slate-200"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent className="rounded-xl"><SelectItem value="v">Valor Fixo</SelectItem><SelectItem value="p">Percentual</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2"><Label className="font-bold">Valor do Desconto</Label><Input className="rounded-xl border-slate-200" {...form.register('config.desconto_taxa')} /></div>
+                  <div className="space-y-2"><Label className="font-bold">Cores ADC (Hex)</Label><Input placeholder="FFFFFF" className="rounded-xl border-slate-200" {...form.register('config.adc.cor')} /></div>
+
+                  <div className="space-y-2 md:col-span-3">
+                    <Label className="font-bold">URL da Página de Divulgação (Site)</Label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Input placeholder="https://..." className="rounded-xl border-slate-200 pl-9" {...form.register('config.pagina_divulgacao')} />
+                        <ExternalLink className="absolute left-3 top-3 h-4 w-4 text-muted-foreground/50" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 md:col-span-3">
+                    <Label className="font-bold">Vídeo Demonstrativo (YouTube/Vimeo)</Label>
+                    <Input placeholder="Link do vídeo de apresentação" className="rounded-xl border-slate-200" {...form.register('config.video')} />
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2"><Label className="font-bold">Página de Venda (Link Direto)</Label><Input placeholder="URL externa de checkout" className="rounded-xl border-slate-200" {...form.register('config.pagina_venda.link')} /></div>
+                  <div className="space-y-2"><Label className="font-bold">Texto do Botão Venda</Label><Input placeholder="Ex: Comprar Agora" className="rounded-xl border-slate-200" {...form.register('config.pagina_venda.label')} /></div>
+                  
+                  <div className="space-y-2">
+                    <Label className="font-bold">ADC: Recheck</Label>
+                    <Select value={form.watch('config.adc.recheck')} onValueChange={(v) => form.setValue('config.adc.recheck', v as any)}>
+                      <SelectTrigger className="rounded-xl border-slate-200"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent className="rounded-xl"><SelectItem value="s">Ativo</SelectItem><SelectItem value="n">Inativo</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold">ADC: Recorrente</Label>
+                    <Select value={form.watch('config.adc.recorrente')} onValueChange={(v) => form.setValue('config.adc.recorrente', v as any)}>
+                      <SelectTrigger className="rounded-xl border-slate-200"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent className="rounded-xl"><SelectItem value="s">Ativo</SelectItem><SelectItem value="n">Inativo</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2"><Label className="font-bold">ID Externo (EADControl)</Label><Input className="rounded-xl border-slate-200" {...form.register('config.ead.id_eadcontrol')} /></div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Aeronaves — removido do layout principal para alinhar com a imagem (mantemos seleção por módulo) */}
@@ -2855,97 +2955,103 @@ export function CourseForm({
           </TabsContent>
 
           {/* Matrículas */}
-          <TabsContent value="enrollments" className="space-y-4 pt-4">
-            {/**
-             * EnrollmentsTabContent
-             * pt-BR: Renderiza a tabela de matrículas do curso com coluna Situação.
-             * en-US: Renders course enrollments table with Situation column.
-             */}
-            <CourseEnrollmentsTab courseId={courseNumericId} />
+          <TabsContent value="enrollments" className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <Card className="border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm overflow-hidden min-h-[400px]">
+               <CardContent className="p-0">
+                  <CourseEnrollmentsTab courseId={courseNumericId} />
+               </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Perguntas */}
-          <TabsContent value="questions" className="space-y-4 pt-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium">Perguntas e respostas</h3>
-              <Button type="button" variant="outline" onClick={() => {
-                /**
-                 * addQuestion
-                 * pt-BR: Adiciona uma pergunta vazia na lista.
-                 * en-US: Adds an empty question to the list.
-                 */
-                const qs = [...(form.getValues('perguntas') ?? [])];
-                qs.push({ pergunta: '', resposta: '' });
-                form.setValue('perguntas', qs);
-              }}><Plus className="h-4 w-4 mr-2" />Adicionar pergunta</Button>
-            </div>
-            {(form.watch('perguntas') ?? []).map((q, idx) => (
-              <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end border rounded-md p-3">
-                <div className="md:col-span-6 space-y-2">
-                  <Label>Pergunta<RequiredMark /></Label>
-                  <Input value={q.pergunta || ''} onChange={(e) => {
+          <TabsContent value="questions" className="space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <Card className="border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm overflow-hidden">
+               <CardHeader className="pb-4 border-b border-slate-100/50 dark:border-slate-800/50 mb-6 flex flex-row items-center justify-between">
+                 <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <HelpCircle className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-foreground/90">FAQ do Curso</h3>
+                      <p className="text-sm text-muted-foreground">Perguntas frequentes para ajudar os alunos interessados.</p>
+                    </div>
+                 </div>
+                 <Button type="button" variant="default" onClick={() => {
                     const qs = [...(form.getValues('perguntas') ?? [])];
-                    qs[idx] = { ...qs[idx], pergunta: e.target.value };
+                    qs.push({ pergunta: '', resposta: '' });
                     form.setValue('perguntas', qs);
-                  }} />
-                </div>
-                <div className="md:col-span-6 space-y-2">
-                  <Label>Resposta</Label>
-                  <Textarea rows={3} value={q.resposta || ''} onChange={(e) => {
-                    const qs = [...(form.getValues('perguntas') ?? [])];
-                    qs[idx] = { ...qs[idx], resposta: e.target.value };
-                    form.setValue('perguntas', qs);
-                  }} />
-                </div>
-                <div className="md:col-span-12 flex items-center justify-end">
-                  <Button type="button" variant="ghost" size="icon" onClick={() => {
-                    /**
-                     * removeQuestion
-                     * pt-BR: Remove a pergunta pelo índice.
-                     * en-US: Removes a question by index.
-                     */
-                    const qs = [...(form.getValues('perguntas') ?? [])];
-                    qs.splice(idx, 1);
-                    form.setValue('perguntas', qs);
-                  }}><X className="h-4 w-4" /></Button>
-                </div>
-              </div>
-            ))}
+                  }} className="rounded-xl shadow-lg shadow-primary/20"><Plus className="h-4 w-4 mr-2" /> Nova Pergunta</Button>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {(form.watch('perguntas') ?? []).length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground italic">Nenhuma pergunta cadastrada ainda.</div>
+                )}
+                {(form.watch('perguntas') ?? []).map((q, idx) => (
+                  <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start border border-slate-100 dark:border-slate-800 rounded-2xl p-6 bg-white/30 dark:bg-slate-950/30 transition-all hover:border-primary/20 group">
+                    <div className="md:col-span-11 space-y-4">
+                      <div className="space-y-2">
+                        <Label className="font-bold flex items-center gap-2">Pergunta <span className="text-primary/40 text-[10px] uppercase font-black">#{idx+1}</span></Label>
+                        <Input placeholder="Qual a dúvida mais comum?" className="rounded-xl border-slate-200 h-11" value={q.pergunta || ''} onChange={(e) => {
+                          const qs = [...(form.getValues('perguntas') ?? [])];
+                          qs[idx] = { ...qs[idx], pergunta: e.target.value };
+                          form.setValue('perguntas', qs);
+                        }} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-bold">Resposta</Label>
+                        <Textarea rows={3} placeholder="Explique detalhadamente..." className="rounded-xl border-slate-200" value={q.resposta || ''} onChange={(e) => {
+                          const qs = [...(form.getValues('perguntas') ?? [])];
+                          qs[idx] = { ...qs[idx], resposta: e.target.value };
+                          form.setValue('perguntas', qs);
+                        }} />
+                      </div>
+                    </div>
+                    <div className="md:col-span-1 flex items-center justify-center pt-8">
+                      <Button type="button" variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-red-50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all" onClick={() => {
+                        const qs = [...(form.getValues('perguntas') ?? [])];
+                        qs.splice(idx, 1);
+                        form.setValue('perguntas', qs);
+                      }}><X className="h-5 w-5" /></Button>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 
         {/* Barra fixa de ações no rodapé (Estilo SaaS Premium) */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white/80 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-          <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
-            {/* Lado esquerdo: Cancelar e Link do Aluno */}
-            <div className="flex items-center gap-3">
-              <Button type="button" variant="ghost" size="sm" onClick={() => navigate('/admin/school/courses')} className="text-muted-foreground hover:text-foreground font-semibold">
-                Cancelar
+        <div className="fixed bottom-0 left-0 right-0 z-[60] border-t border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xl shadow-[0_-8px_40px_rgba(0,0,0,0.08)]">
+          <div className="container mx-auto px-6 py-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Button type="button" variant="ghost" onClick={() => navigate('/admin/school/courses')} className="text-muted-foreground hover:text-foreground font-bold rounded-xl transition-all h-12 px-6 hover:bg-slate-100 dark:hover:bg-slate-800">
+                Descartar
               </Button>
-              <div className="h-4 w-px bg-muted/60 mx-1 hidden min-[900px]:block" />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={goToPreview}
-                disabled={!Boolean((initialData as any)?.slug || (initialData as any)?.token)}
-                className="border-muted-foreground/20 font-semibold px-4"
-              >
-                <Eye className="h-4 w-4 mr-2 text-primary/70" />Preview do curso
-              </Button>
-              {(() => {
-                const { href, absolute } = buildStudentPreviewUrl();
-                return href ? (
-                  <div className="flex items-center gap-2 ml-2 group">
-                    <a href={href} target="_blank" rel="noreferrer" className="text-xs font-bold text-primary/80 hover:text-primary underline flex items-center transition-colors">
-                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Link do Aluno
-                    </a>
-                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-primary/5 text-primary/60 hover:text-primary transition-all" onClick={() => copyText(absolute)} title="Copiar link da visualização do aluno">
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ) : null;
-              })()}
+              <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-2 hidden md:block" />
+              <div className="hidden lg:flex items-center gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={goToPreview}
+                  disabled={!Boolean((initialData as any)?.slug || (initialData as any)?.token)}
+                  className="border-slate-200 dark:border-slate-800 font-bold rounded-xl h-12 px-6 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-900 transition-all"
+                >
+                  <Eye className="h-4 w-4 mr-2" /> Ver Preview
+                </Button>
+                {(() => {
+                  const { href, absolute } = buildStudentPreviewUrl();
+                  return href ? (
+                    <div className="flex items-center gap-2 group bg-slate-100/50 dark:bg-slate-800/50 p-1.5 rounded-xl pr-3 border border-slate-200/50 dark:border-slate-700/50">
+                       <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-lg bg-white dark:bg-slate-900 shadow-sm text-primary/60 hover:text-primary transition-all" onClick={() => copyText(absolute)} title="Copiar link do aluno">
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <a href={href} target="_blank" rel="noreferrer" className="text-xs font-black text-muted-foreground hover:text-primary transition-colors flex items-center gap-2">
+                        URL DO ALUNO <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  ) : null;
+                })()}
+              </div>
             </div>
             {/* Lado direito: ações principais */}
             <div className="flex items-center gap-3">

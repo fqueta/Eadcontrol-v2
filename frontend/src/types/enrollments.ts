@@ -53,6 +53,12 @@ export interface EnrollmentRecord {
    */
   config?: { funnelId?: string | number | null; stage_id?: string | number | null; [key: string]: any };
   /**
+   * Expiration date
+   * pt-BR: Data de validade de acesso ao conteúdo.
+   * en-US: Content access expiration date.
+   */
+  validade_acesso?: string | null;
+  /**
    * Generic index signature
    * pt-BR: Permite campos adicionais sem quebrar o TypeScript.
    * en-US: Allows additional fields without breaking TypeScript.
@@ -61,16 +67,12 @@ export interface EnrollmentRecord {
 }
 
 export interface CreateEnrollmentInput {
-  /**
-   * Minimal payload
-   * pt-BR: Campos mínimos para criação, mantidos genéricos.
-   * en-US: Minimal fields for creation, kept generic.
-   */
   name: string;
   student_id?: string;
   course_id?: string;
   amount_brl?: number;
   config?: { funnelId?: string | number | null; stage_id?: string | number | null; [key: string]: any };
+  validade_acesso?: string | null;
 }
 
 export interface UpdateEnrollmentInput extends Partial<CreateEnrollmentInput> {}

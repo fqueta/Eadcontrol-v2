@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Settings, Save, Palette, Link, Image as ImageIcon, Building2 } from "lucide-react";
+import { Settings, Save, Palette, Link, Image as ImageIcon, Building2, ShieldCheck, Layers, Plus, MonitorPlay, Clock } from "lucide-react";
 import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription, getInstitutionUrl, syncBrandingToMetaTags } from "@/lib/branding";
 import { systemSettingsService, AdvancedSystemSettings } from "@/services/systemSettingsService";
 import { useApiOptions } from "@/hooks/useApiOptions";
@@ -208,7 +208,10 @@ export default function SystemSettings() {
   const [institutionDescription, setInstitutionDescription] = useState<string>(() => getInstitutionDescription());
   const [institutionUrl, setInstitutionUrl] = useState<string>(() => getInstitutionUrl());
   const [institutionWhatsApp, setInstitutionWhatsApp] = useState<string>(() => {
-    try { return (localStorage.getItem('app_whatsapp') || '').trim(); } catch { return ''; }
+    try { 
+      const val = (localStorage.getItem('app_whatsapp') || '').trim();
+      return val ? format(val, { mask: '+__ (__) _____-____', replacement: { _: /\d/ } }) : '';
+    } catch { return ''; }
   });
 
   /**
@@ -304,7 +307,8 @@ export default function SystemSettings() {
       const optWhatsapp = getOptByKeys(['app_whatsapp']);
       const valWhatsapp = (optWhatsapp && (optWhatsapp.value ?? '')) || '';
       if (valWhatsapp && valWhatsapp !== institutionWhatsApp) {
-        setInstitutionWhatsApp(valWhatsapp);
+        const formatted = format(valWhatsapp, { mask: '+__ (__) _____-____', replacement: { _: /\d/ } });
+        setInstitutionWhatsApp(formatted);
         localStorage.setItem('app_whatsapp', valWhatsapp);
         (window as any).__APP_WHATSAPP__ = valWhatsapp;
       }
@@ -801,42 +805,76 @@ export default function SystemSettings() {
   const whatsappMaskRef = useMask({ mask: '+__ (__) _____-____', replacement: { _: /\d/ } });
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Cabeçalho */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Settings className="h-6 w-6" />
-          <h1 className="text-2xl font-bold">Configurações do Sistema</h1>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 pb-20">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground/60">
+            <Settings className="h-3 w-3" />
+            Configurações
+            <span className="text-primary/40">•</span>
+            <span className="text-primary italic">Sistema</span>
+          </div>
+          <h1 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-3">
+            <Settings className="h-8 w-8 text-primary" />
+            Configurações do Sistema
+          </h1>
+          <p className="text-sm font-medium text-muted-foreground">Gerencie as preferências globais, aparência e infraestrutura da sua escola.</p>
         </div>
-        {/* Botão visível apenas na aba avançada */}
+        
         {activeTab === "advanced" && (
-          <Button onClick={handleSaveSettings} className="flex items-center space-x-2">
-            <Save className="h-4 w-4" />
-            <span>Salvar Configurações</span>
+          <Button 
+            onClick={handleSaveSettings}
+            className="h-12 px-6 rounded-xl bg-primary hover:bg-primary/90 text-white font-black shadow-lg shadow-primary/20 flex items-center gap-2 transition-all hover:scale-105 active:scale-95"
+          >
+            <Save className="h-5 w-5" />
+            Salvar Configurações
           </Button>
         )}
       </div>
 
-      {/* Abas de Configurações */}
       <Tabs defaultValue="basic" className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="basic">Configurações Básicas</TabsTrigger>
-          <TabsTrigger value="advanced">Configurações Avançadas</TabsTrigger>
-          <TabsTrigger value="api">Configurações de API</TabsTrigger>
-        </TabsList>
+        <div className="p-1 bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-xl rounded-2xl w-fit mb-8 border border-slate-200/50 dark:border-slate-700/50">
+          <TabsList className="bg-transparent h-12 gap-1 p-0">
+            <TabsTrigger 
+              value="basic" 
+              className="rounded-xl px-6 h-10 font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all gap-2"
+            >
+              <Palette className="h-4 w-4" />
+              Básicas
+            </TabsTrigger>
+            <TabsTrigger 
+              value="advanced" 
+              className="rounded-xl px-6 h-10 font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all gap-2"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Avançadas
+            </TabsTrigger>
+            <TabsTrigger 
+              value="api" 
+              className="rounded-xl px-6 h-10 font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all gap-2"
+            >
+              <Link className="h-4 w-4" />
+              API & Integrações
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        {/* Aba de Configurações Básicas */}
-        <TabsContent value="basic" className="space-y-6">
+        <TabsContent value="basic" className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
           {/* Card de Configurações de Aparência */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Palette className="h-5 w-5" />
-                <span>Configurações de Aparência</span>
-              </CardTitle>
-              <CardDescription>
-                Personalize a aparência e o tema da interface do sistema.
-              </CardDescription>
+          <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden">
+            <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 shadow-sm">
+                  <Palette className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-black tracking-tight">Estilo & Aparência</CardTitle>
+                  <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mt-1">
+                    Personalize a identidade visual da plataforma
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Switches de Aparência */}
@@ -1023,17 +1061,21 @@ export default function SystemSettings() {
               </div>
           </CardContent>
         </Card>
-        {/* Card - Identidade Institucional */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Building2 className="h-5 w-5" />
-              <span>Identidade Institucional</span>
-            </CardTitle>
-            <CardDescription>
-              Cadastre o nome da instituição para personalizar textos e metadados da aplicação.
-            </CardDescription>
-          </CardHeader>
+          {/* Card - Identidade Institucional */}
+          <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden mt-8">
+            <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-600 shadow-sm">
+                  <Building2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-black tracking-tight">Identidade Institucional</CardTitle>
+                  <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mt-1">
+                    Cadastre as informações da sua organização
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="institution_name">Nome da instituição</Label>
@@ -1095,25 +1137,33 @@ export default function SystemSettings() {
               />
               <p className="text-sm text-muted-foreground">Número para contato via WhatsApp (com DDI, ex: +55).</p>
             </div>
-            <div className="flex justify-end pt-2">
-              <Button onClick={handleSaveInstitution} className="flex items-center space-x-2">
+            <div className="flex justify-end pt-6 border-t border-slate-100 dark:border-slate-800 p-8">
+              <Button 
+                onClick={handleSaveInstitution}
+                className="h-11 px-6 rounded-xl bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white font-bold flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-slate-900/10"
+              >
                 <Save className="h-4 w-4" />
-                <span>Salvar Instituição</span>
+                Salvar Instituição
               </Button>
             </div>
           </CardContent>
         </Card>
+
         {/* Card - Branding & Imagens */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <ImageIcon className="h-5 w-5" />
-                <span>Branding & Imagens</span>
-              </CardTitle>
-              <CardDescription>
-                Envie a logo, favicon e imagem de redes sociais. Os arquivos são gravados em <code>/file-storage</code> e as URLs ficam salvas para personalizar seu sistema.
-              </CardDescription>
-            </CardHeader>
+        <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden mt-8">
+          <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 shadow-sm">
+                <ImageIcon className="h-6 w-6" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-black tracking-tight">Branding & Imagens</CardTitle>
+                <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mt-1">
+                  Logo, Favicon e Imagens de Compartilhamento
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
@@ -1154,21 +1204,31 @@ export default function SystemSettings() {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-4 border-t">
-                <Button onClick={handleSaveBranding} className="flex items-center space-x-2">
+              <div className="flex justify-end pt-6 border-t border-slate-100 dark:border-slate-800 p-8">
+                <Button 
+                  onClick={handleSaveBranding}
+                  className="h-11 px-6 rounded-xl bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white font-bold flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-slate-900/10"
+                >
                   <Save className="h-4 w-4" />
-                  <span>Salvar Branding</span>
+                  Salvar Branding
                 </Button>
               </div>
             </CardContent>
           </Card>
           {/* Card 1 - Configurações com Switch */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações Gerais</CardTitle>
-              <CardDescription>
-                Configure as opções básicas do sistema usando os interruptores abaixo.
-              </CardDescription>
+          <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden mt-8">
+            <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-sm">
+                  <Settings className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-black tracking-tight">Configurações Gerais</CardTitle>
+                  <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mt-1">
+                    Operações básicas e manutenção do sistema
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
@@ -1227,23 +1287,32 @@ export default function SystemSettings() {
                 />
               </div>
               
-              {/* Botão de salvamento do card geral */}
-              <div className="flex justify-end pt-4 border-t">
-                <Button onClick={handleSaveGeneralSettings} className="flex items-center space-x-2">
+              <div className="flex justify-end pt-6 border-t border-slate-100 dark:border-slate-800 p-8">
+                <Button 
+                  onClick={handleSaveGeneralSettings}
+                  className="h-11 px-6 rounded-xl bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white font-bold flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-slate-900/10"
+                >
                   <Save className="h-4 w-4" />
-                  <span>Salvar Configurações Gerais</span>
+                  Salvar Configurações Gerais
                 </Button>
               </div>
             </CardContent>
           </Card>
 
           {/* Card 2 - Configurações com Select */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Preferências do Sistema</CardTitle>
-              <CardDescription>
-                Configure as preferências padrão do sistema usando os seletores abaixo.
-              </CardDescription>
+          <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden mt-8">
+            <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 shadow-sm">
+                  <Layers className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-black tracking-tight">Preferências Regionais</CardTitle>
+                  <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mt-1">
+                    Idioma, Fuso Horário e Moeda
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -1314,11 +1383,13 @@ export default function SystemSettings() {
                 </Select>
               </div>
               
-              {/* Botão de salvamento das preferências */}
-              <div className="flex justify-end pt-4 border-t">
-                <Button onClick={handleSaveSystemPreferences} className="flex items-center space-x-2">
+              <div className="flex justify-end pt-6 border-t border-slate-100 dark:border-slate-800 p-8">
+                <Button 
+                  onClick={handleSaveSystemPreferences}
+                  className="h-11 px-6 rounded-xl bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white font-bold flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-slate-900/10"
+                >
                   <Save className="h-4 w-4" />
-                  <span>Salvar Preferências</span>
+                  Salvar Preferências
                 </Button>
               </div>
             </CardContent>
@@ -1326,14 +1397,21 @@ export default function SystemSettings() {
         </TabsContent>
 
         {/* Aba de Configurações Avançadas */}
-        <TabsContent value="advanced" className="space-y-6">
+        <TabsContent value="advanced" className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
           {/* Card 1 - Configurações com Switch */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações de Sistema</CardTitle>
-              <CardDescription>
-                Configure opções avançadas do sistema que afetam performance e segurança.
-              </CardDescription>
+          <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden">
+            <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-sm">
+                  <ShieldCheck className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-black tracking-tight">Drivers & Performance</CardTitle>
+                  <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mt-1">
+                    Otimização e Segurança do Core
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
@@ -1395,12 +1473,19 @@ export default function SystemSettings() {
           </Card>
 
           {/* Card 2 - Configurações com Select */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações de Infraestrutura</CardTitle>
-              <CardDescription>
-                Configure drivers e níveis de sistema para otimizar o funcionamento.
-              </CardDescription>
+          <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden mt-8">
+            <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 shadow-sm">
+                  <Layers className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-black tracking-tight">Infraestrutura do Servidor</CardTitle>
+                  <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mt-1">
+                    Drivers de Cache, Sessão e Filas
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -1478,12 +1563,19 @@ export default function SystemSettings() {
           </Card>
 
           {/* Card 3 - Configurações com Input */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações Numéricas</CardTitle>
-              <CardDescription>
-                Configure limites e valores numéricos do sistema.
-              </CardDescription>
+          <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden mt-8">
+            <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 shadow-sm">
+                  <Clock className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-black tracking-tight">Limites & Timeouts</CardTitle>
+                  <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mt-1">
+                    Configurações de fluxo e retenção
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -1565,15 +1657,19 @@ export default function SystemSettings() {
           </Card>
 
            {/* Card de Importação de Usuários */}
-           <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Settings className="h-5 w-5" />
-                <span>Importação de Usuários em Massa</span>
-              </CardTitle>
-              <CardDescription>
-                Importe usuários de uma URL externa (formato Eduma/WP).
-              </CardDescription>
+           <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden mt-8">
+            <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 shadow-sm">
+                  <MonitorPlay className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-black tracking-tight">Importação em Massa</CardTitle>
+                  <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mt-1">
+                    Sincronização com Propostas Externas
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1589,6 +1685,8 @@ export default function SystemSettings() {
                         <SelectContent>
                             <SelectItem value="users">Usuários (Users)</SelectItem>
                             <SelectItem value="courses">Cursos (Courses)</SelectItem>
+                            <SelectItem value="comments">Comentários (Comments)</SelectItem>
+                            <SelectItem value="enrollments">Matrículas (Enrollments)</SelectItem>
                         </SelectContent>
                     </Select>
                  </div>
@@ -1609,23 +1707,27 @@ export default function SystemSettings() {
                  </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Selecione o tipo de entidade (Usuários ou Cursos) e forneça a URL correspondente.
+                Selecione o tipo de entidade (Usuários, Cursos, Comentários ou Matrículas) e forneça a URL correspondente.
               </p>
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Aba de Configurações de API */}
-        <TabsContent value="api" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Link className="h-5 w-5" />
-                <span>Configurações de API</span>
-              </CardTitle>
-              <CardDescription>
-                Configure as opções de API do sistema, incluindo URLs, tokens e configurações do Alloyal.
-              </CardDescription>
+        <TabsContent value="api" className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+          <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden">
+            <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-sm">
+                  <Link className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-black tracking-tight">API & Integrações</CardTitle>
+                  <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mt-1">
+                    Conectividade e Ferramentas Externas
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {apiLoading ? (
@@ -1668,31 +1770,36 @@ export default function SystemSettings() {
                  </div>
                )}
                
-               {/* Botão de Salvar */}
-               {getApiConfigOptions().length > 0 && (
-                 <div className="flex justify-end pt-4 border-t">
-                   <Button 
-                     onClick={handleSaveApiSettings}
-                     disabled={isLoading || Object.keys(localApiOptions).length === 0}
-                     className="flex items-center space-x-2"
-                   >
-                     <Save className="h-4 w-4" />
-                     <span>
-                       {isLoading ? 'Salvando...' : 'Salvar Configurações'}
-                     </span>
-                   </Button>
-                 </div>
-               )}
+                {/* Botão de Salvar */}
+                {getApiConfigOptions().length > 0 && (
+                  <div className="flex justify-end pt-6 border-t border-slate-100 dark:border-slate-800 p-8">
+                    <Button 
+                      onClick={handleSaveApiSettings}
+                      disabled={isLoading || Object.keys(localApiOptions).length === 0}
+                      className="h-11 px-6 rounded-xl bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white font-bold flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-slate-900/10"
+                    >
+                      <Save className="h-4 w-4" />
+                      {isLoading ? 'Salvando...' : 'Salvar Configurações de API'}
+                    </Button>
+                  </div>
+                )}
            </CardContent>
           </Card>
 
           {/* Card - Configurações de Funcionalidade */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações de Funcionalidade</CardTitle>
-              <CardDescription>
-                Lista de inputs (texto) carregada de `/options/all` para IDs, URLs e tokens.
-              </CardDescription>
+          <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden mt-8">
+            <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 shadow-sm">
+                  <Settings className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-black tracking-tight">Recursos da Plataforma</CardTitle>
+                  <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mt-1">
+                    IDs de Funis, Etapas e Tokens Globais
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {apiLoading ? (
@@ -1778,14 +1885,14 @@ export default function SystemSettings() {
               )}
 
               {(apiOptions || []).length > 0 && (
-                <div className="flex justify-end pt-4 border-t">
+                <div className="flex justify-end pt-6 border-t border-slate-100 dark:border-slate-800 p-8">
                   <Button
                     onClick={handleSaveFunctionalityOptions}
                     disabled={isLoading || Object.keys(localApiOptions).length === 0}
-                    className="flex items-center space-x-2"
+                    className="h-11 px-6 rounded-xl bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white font-bold flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-slate-900/10"
                   >
                     <Save className="h-4 w-4" />
-                    <span>{isLoading ? 'Salvando...' : 'Salvar Configurações'}</span>
+                    {isLoading ? 'Salvando...' : 'Salvar Preferências Globais'}
                   </Button>
                 </div>
               )}
