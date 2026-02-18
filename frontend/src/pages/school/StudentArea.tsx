@@ -97,7 +97,9 @@ export default function StudentArea() {
    * en-US: Normalizes paginated response into a plain array.
    */
   const enrollments = useMemo(() => {
-    const arr = (enrollmentsResp?.data || enrollmentsResp?.items || []) as any[];
+    // Cast to any to handle cases where items might be used in pagination instead of data
+    const resp = enrollmentsResp as any;
+    const arr = (resp?.data || resp?.items || []) as any[];
     return Array.isArray(arr) ? arr : [];
   }, [enrollmentsResp]);
 
@@ -444,167 +446,185 @@ export default function StudentArea() {
 
   return (
     <InclusiveSiteLayout>
-      <div className="container mx-auto p-4 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Minha área</h1>
-          <p className="text-muted-foreground">Painel do aluno • cursos e progresso</p>
+      <div className="container mx-auto p-6 space-y-8">
+        {/* Header Personalizado */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-white/90">Olá, {user?.name?.split(' ')[0]}! 👋</h1>
+            <p className="text-blue-100">Bem-vindo de volta ao seu painel de estudos.</p>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate('/aluno/cursos')} className="bg-white/10 hover:bg-white/20 text-white border-none backdrop-blur-sm">
+              <BookOpen className="mr-2 h-4 w-4" /> 
+              Meus Cursos
+            </Button>
+          </div>
         </div>
 
         {/* Acesso rápido / Resumo */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Acesso rápido</CardTitle>
-            <CardDescription>Atalhos e resumo das suas informações</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {renderQuickCards()}
-          </CardContent>
-        </Card>
-
-        {/* Meus cursos foi movido para página dedicada /aluno/cursos */}
-
-        {/* Próximas atividades */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Próximas atividades</CardTitle>
-            <CardDescription>Continue de onde parou, por curso/turma</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {filteredEnrollments.length === 0 && (
-              <div className="text-muted-foreground">Nenhuma atividade pendente com os filtros atuais.</div>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {filteredEnrollments.map((enroll) => (
-                <div key={String(enroll?.id || Math.random())} className="flex items-center justify-between p-3 border rounded">
-                  <div className="flex flex-col">
-                    <span className="font-medium">{resolveCourseTitle(enroll)}</span>
-                    {resolveTurmaName(enroll) && (
-                      <span className="text-xs text-muted-foreground">{resolveTurmaName(enroll)}</span>
-                    )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Meus cursos */}
+            <Card className="hover:shadow-lg hover:border-violet-300 dark:hover:border-violet-700 transition-all cursor-pointer group bg-white/95 backdrop-blur-sm border-white/20" onClick={() => navigate('/aluno/cursos')}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-lg group-hover:scale-110 transition-transform">
+                    <BookOpen className="w-5 h-5 text-violet-600 dark:text-violet-400" />
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={async () => {
-                      const slug = await ensureCourseSlug(enroll);
-                      if (!slug) {
-                        toast({
-                          title: 'Não foi possível abrir o curso',
-                          description: 'Este curso não possui um slug identificável no momento.',
-                          variant: 'destructive',
-                        });
-                        return;
-                      }
-                      handleContinueCourse(enroll);
-                    }}
-                  >
-                    Continuar
+                  <span className="text-2xl font-bold">{enrollments.length}</span>
+                </div>
+                <CardTitle className="text-sm font-medium text-muted-foreground mt-2">Cursos Matriculados</CardTitle>
+              </CardHeader>
+            </Card>
+
+            {/* Minhas faturas */}
+            <Card className="hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700 transition-all cursor-pointer group bg-white/95 backdrop-blur-sm border-white/20" onClick={() => navigate('/aluno/faturas')}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg group-hover:scale-110 transition-transform">
+                    <Receipt className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <span className="text-2xl font-bold">—</span>
+                </div>
+                <CardTitle className="text-sm font-medium text-muted-foreground mt-2">Faturas em Aberto</CardTitle>
+              </CardHeader>
+            </Card>
+
+            {/* Meus pedidos */}
+            <Card className="hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 transition-all cursor-pointer group bg-white/95 backdrop-blur-sm border-white/20" onClick={() => navigate('/aluno/pedidos')}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                    <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg group-hover:scale-110 transition-transform">
+                    <ShoppingCart className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <span className="text-2xl font-bold">—</span>
+                </div>
+                <CardTitle className="text-sm font-medium text-muted-foreground mt-2">Meus Pedidos</CardTitle>
+              </CardHeader>
+            </Card>
+
+            {/* Perfil */}
+            <Card className="hover:shadow-lg hover:border-amber-300 dark:hover:border-amber-700 transition-all cursor-pointer group bg-white/95 backdrop-blur-sm border-white/20" onClick={() => navigate('/aluno/perfil')}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg group-hover:scale-110 transition-transform">
+                    <UserCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 text-muted-foreground">
+                       <span className="sr-only">Editar</span>
+                       <span className="text-xs">Editar</span>
                   </Button>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <CardTitle className="text-sm font-medium text-muted-foreground mt-2">Meu Perfil</CardTitle>
+              </CardHeader>
+            </Card>
+        </div>
 
-        {/* Meus certificados */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Meus certificados</CardTitle>
-            <CardDescription>Visualize e faça download, quando disponíveis</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {enrollments
-                .filter((e) => {
-                  const status = String(e?.status || e?.situacao || '').toLowerCase();
-                  const hasUrl = Boolean((e?.preferencias || {})?.certificate_url);
-                  return status.includes('conclu') || hasUrl;
-                })
-                .map((e) => {
-                  const title = resolveCourseTitle(e);
-                  const url = (e?.preferencias || {})?.certificate_url;
-                  const disabled = !url;
-                  return (
-                    <div key={String(e?.id || Math.random())} className="flex items-center justify-between p-3 border rounded">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{title}</span>
-                        <span className="text-xs text-muted-foreground">Certificado</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="default" onClick={() => openCertificateInternal(e)}>Ver certificado</Button>
-                        <Button size="sm" variant={disabled ? 'outline' : 'secondary'} disabled={disabled} onClick={() => openCertificateExternal(e)}>
-                          {disabled ? 'Indisponível' : 'Abrir URL' }
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={async () => {
-                            try {
-                              const blob = await certificatesService.generatePdf(e.id);
-                              const objectUrl = URL.createObjectURL(blob);
-                              const a = document.createElement('a');
-                              a.href = objectUrl;
-                              a.download = `certificado_${String(e.id)}.pdf`;
-                              document.body.appendChild(a);
-                              a.click();
-                              document.body.removeChild(a);
-                              URL.revokeObjectURL(objectUrl);
-                              toast({ title: 'Certificado gerado', description: 'Download iniciado com sucesso.' });
-                            } catch (err: any) {
-                              toast({
-                                title: 'Falha ao gerar certificado',
-                                description: String(err?.message || 'Tente novamente mais tarde.'),
-                                variant: 'destructive',
-                              });
-                            }
-                          }}
-                        >
-                          Solicitar PDF
-                        </Button>
-                      </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Coluna Principal - Cursos */}
+            <div className="lg:col-span-2 space-y-6">
+                <div className="flex items-center justify-between">
+                   <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100">Continuar Estudando</h2>
+                   {/* Filtros poderiam vir aqui */}
+                </div>
+                
+                {filteredEnrollments.length === 0 ? (
+                    <Card className="bg-slate-50 border-dashed">
+                       <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                          <BookOpen className="h-12 w-12 text-slate-300 mb-4" />
+                          <h3 className="text-lg font-medium text-slate-900">Nenhum curso em andamento</h3>
+                          <p className="text-slate-500 max-w-sm mt-2">Você ainda não iniciou nenhum curso ou não possui matrículas ativas.</p>
+                          <Button className="mt-6" onClick={() => navigate('/cursos')}>Explorar Cursos</Button>
+                       </CardContent>
+                    </Card>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {filteredEnrollments.slice(0, 4).map((enroll) => renderEnrollmentCard(enroll))}
                     </div>
-                  );
-                })}
+                )}
+                
+                {filteredEnrollments.length > 4 && (
+                    <div className="text-center pt-2">
+                        <Button variant="outline" onClick={() => navigate('/aluno/cursos')}>Ver todos os cursos</Button>
+                    </div>
+                )}
+                
+                {/* Certificados */}
+                 <div className="pt-8">
+                   <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-4">Certificados Disponíveis</h2>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {enrollments
+                        .filter((e) => {
+                          const status = String(e?.status || e?.situacao || '').toLowerCase();
+                          const hasUrl = Boolean((e?.preferencias || {})?.certificate_url);
+                          return status.includes('conclu') || hasUrl; // status 20 usually
+                        })
+                        .map((e) => {
+                           const title = resolveCourseTitle(e);
+                           const url = (e?.preferencias || {})?.certificate_url;
+                           const disabled = !url; 
+                           
+                           return (
+                             <Card key={e.id} className="border-l-4 border-l-yellow-400">
+                                <CardContent className="p-4 flex items-center justify-between">
+                                   <div>
+                                      <div className="font-medium line-clamp-1" title={title}>{title}</div>
+                                      <div className="text-xs text-muted-foreground mt-1">Concluído em: {new Date().toLocaleDateString()}</div>
+                                   </div>
+                                    <Button size="icon" variant="ghost" onClick={() => openCertificateInternal(e)} title="Ver Certificado">
+                                       <GraduationCap className="h-5 w-5 text-yellow-600" />
+                                    </Button>
+                                </CardContent>
+                             </Card>
+                           )
+                        })}
+                        
+                        {enrollments.filter(e => {
+                             const status = String(e?.status || e?.situacao || '').toLowerCase();
+                             const hasUrl = Boolean((e?.preferencias || {})?.certificate_url);
+                             return status.includes('conclu') || hasUrl;
+                        }).length === 0 && (
+                            <p className="text-sm text-muted-foreground col-span-full">Nenhum certificado disponível ainda.</p>
+                        )}
+                   </div>
+                 </div>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Suporte / FAQ */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Suporte e FAQ</CardTitle>
-            <CardDescription>Encontre ajuda rápida e contato</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="p-3 border rounded">
-                <div className="font-medium mb-1">Central de ajuda</div>
-                <Button asChild variant="outline" size="sm"><a target="_blank" href="/docs/faq">Abrir FAQ</a></Button>
-              </div>
-              <div className="p-3 border rounded">
-                <div className="font-medium mb-1">Contato</div>
-                <Button asChild variant="outline" size="sm"><a href="mailto:suporte@eadcontrol.com">Enviar e-mail</a></Button>
-              </div>
-              <div className="p-3 border rounded">
-                <div className="font-medium mb-1">WhatsApp</div>
-                <Button asChild variant="outline" size="sm"><a target="_blank" href="https://wa.me/5500000000000">Abrir WhatsApp</a></Button>
-              </div>
+            {/* Sidebar - Suporte e Outros */}
+            <div className="space-y-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-lg">Precisa de Ajuda?</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                         <Button variant="outline" className="w-full justify-start" asChild>
+                            <a href="mailto:suporte@eadcontrol.com">
+                               <div className="bg-blue-100 p-1 rounded mr-3 text-blue-600"><UserCircle className="h-4 w-4"/></div>
+                               Falar com Suporte
+                            </a>
+                         </Button>
+                         <Button variant="outline" className="w-full justify-start" asChild>
+                            <a target="_blank" href="https://wa.me/5500000000000">
+                               <div className="bg-green-100 p-1 rounded mr-3 text-green-600"><div className="h-4 w-4 font-bold text-xs flex items-center justify-center">WA</div></div>
+                               WhatsApp
+                            </a>
+                         </Button>
+                         <Button variant="outline" className="w-full justify-start" asChild>
+                            <a href="/docs/faq">
+                               <div className="bg-slate-100 p-1 rounded mr-3 text-slate-600"><BookOpen className="h-4 w-4"/></div>
+                               Perguntas Frequentes
+                            </a>
+                         </Button>
+                    </CardContent>
+                </Card>
+                
+                {/* Banner Promocional ou Aviso */}
+                <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl p-6 border border-primary/10">
+                    <h3 className="font-semibold text-primary mb-2">Mantenha seu perfil atualizado</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Garanta que seus dados estejam corretos para emissão de certificados.</p>
+                    <Button size="sm" onClick={() => navigate('/aluno/perfil')}>Ver meu perfil</Button>
+                </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Perfil do aluno */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Perfil do aluno</CardTitle>
-            <CardDescription>Atualize seus dados e senha</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={() => navigate('/loja/area-cliente?tab=settings')} variant="outline">Atualizar cadastro</Button>
-              <Button onClick={() => navigate('/reset-password')} variant="outline">Alterar senha</Button>
-            </div>
-          </CardContent>
-        </Card>
+        </div>
       </div>
     </InclusiveSiteLayout>
   );
