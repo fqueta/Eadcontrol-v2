@@ -1,6 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
-import { Bell, Search, LogOut, Sun, Moon, Loader2 } from "lucide-react";
+import { Bell, Search, LogOut, Sun, Moon, Loader2, LayoutDashboard, Users, Package, BarChart2, Laptop } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -281,27 +281,31 @@ export function AppLayout({ children }: AppLayoutProps) {
               <CommandEmpty>Nenhum resultado.</CommandEmpty>
               <CommandGroup heading="Ir para">
                 <CommandItem onSelect={() => { setCmdOpen(false); navigate('/admin/school-dashboard'); }}>
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
                   Dashboard Ead Control
                 </CommandItem>
                 <CommandItem onSelect={() => { setCmdOpen(false); navigate('/admin/clients'); }}>
+                  <Users className="mr-2 h-4 w-4" />
                   Clientes
                 </CommandItem>
-                <CommandItem onSelect={() => { setCmdOpen(false); navigate('/admin/service-orders'); }}>
-                  Ordens de Serviço
-                </CommandItem>
+
                 <CommandItem onSelect={() => { setCmdOpen(false); navigate('/admin/products'); }}>
+                  <Package className="mr-2 h-4 w-4" />
                   Produtos
                 </CommandItem>
                 <CommandItem onSelect={() => { setCmdOpen(false); navigate('/admin/metrics'); }}>
+                  <BarChart2 className="mr-2 h-4 w-4" />
                   Métricas
                 </CommandItem>
               </CommandGroup>
               <CommandSeparator />
               <CommandGroup heading="Ações">
                 <CommandItem onSelect={() => { toggleTheme(); }}>
+                  <Laptop className="mr-2 h-4 w-4" />
                   Alternar tema
                 </CommandItem>
                 <CommandItem onSelect={() => { setCmdOpen(false); handleLogout(); }}>
+                  <LogOut className="mr-2 h-4 w-4" />
                   Sair
                 </CommandItem>
               </CommandGroup>
