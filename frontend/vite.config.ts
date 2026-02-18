@@ -27,7 +27,6 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('lucide-react')) return 'icons';
             if (id.includes('@vimeo/player')) return 'player';
             if (id.includes('@radix-ui')) return 'radix';
-            if (id.includes('recharts')) return 'charts';
             if (id.includes('date-fns')) return 'dates';
             if (id.includes('@tanstack')) return 'query';
           }
