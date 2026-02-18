@@ -71,13 +71,15 @@ export default function StudentArea() {
    */
   const clientId = useMemo(() => {
     const candidates = [
+      user?.id,
       (user as any)?.id_cliente,
       (user as any)?.client_id,
       (user as any)?.cliente_id,
     ];
     for (const v of candidates) {
-      const n = Number(v);
-      if (Number.isFinite(n) && n > 0) return n;
+      if (v === undefined || v === null) continue;
+      const s = String(v).trim();
+      if (s !== '' && s !== '0') return s;
     }
     return undefined;
   }, [user]);
@@ -476,7 +478,7 @@ export default function StudentArea() {
                   <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-lg group-hover:scale-110 transition-transform">
                     <BookOpen className="w-5 h-5 text-violet-600 dark:text-violet-400" />
                   </div>
-                  <span className="text-2xl font-bold">{enrollments.length}</span>
+                  <span className="text-2xl font-bold">{filteredEnrollments.length}</span>
                 </div>
                 <CardTitle className="text-sm font-medium text-muted-foreground mt-2">Cursos Matriculados</CardTitle>
               </CardHeader>
@@ -544,15 +546,10 @@ export default function StudentArea() {
                     </Card>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {filteredEnrollments.slice(0, 4).map((enroll) => renderEnrollmentCard(enroll))}
+                        {filteredEnrollments.map((enroll) => renderEnrollmentCard(enroll))}
                     </div>
                 )}
                 
-                {filteredEnrollments.length > 4 && (
-                    <div className="text-center pt-2">
-                        <Button variant="outline" onClick={() => navigate('/aluno/cursos')}>Ver todos os cursos</Button>
-                    </div>
-                )}
                 
                 {/* Certificados */}
                  <div className="pt-8">
