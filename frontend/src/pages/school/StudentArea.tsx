@@ -11,6 +11,7 @@ import { coursesService } from '@/services/coursesService';
 import { publicCoursesService } from '@/services/publicCoursesService';
 import { useToast } from '@/hooks/use-toast';
 import { certificatesService } from '@/services/certificatesService';
+import { getInstitutionWhatsApp } from '@/lib/branding';
 
 /**
  * StudentArea
@@ -447,18 +448,23 @@ export default function StudentArea() {
   return (
     <InclusiveSiteLayout>
       <div className="container mx-auto p-6 space-y-8">
-        {/* Header Personalizado */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white/90">Olá, {user?.name?.split(' ')[0]}! 👋</h1>
-            <p className="text-blue-100">Bem-vindo de volta ao seu painel de estudos.</p>
+        {/* Header Personalizado (Banner) */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 p-8 shadow-lg text-white">
+          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Olá, {user?.name?.split(' ')[0]}! 👋</h1>
+              <p className="text-blue-100 text-lg font-light">Bem-vindo de volta ao seu painel de estudos.</p>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={() => navigate('/aluno/cursos')} className="bg-white/20 hover:bg-white/30 text-white border border-white/20 backdrop-blur-sm transition-all shadow-sm">
+                <BookOpen className="mr-2 h-4 w-4" /> 
+                Meus Cursos
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={() => navigate('/aluno/cursos')} className="bg-white/10 hover:bg-white/20 text-white border-none backdrop-blur-sm">
-              <BookOpen className="mr-2 h-4 w-4" /> 
-              Meus Cursos
-            </Button>
-          </div>
+          {/* Background decoration */}
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-40 w-40 rounded-full bg-black/10 blur-2xl pointer-events-none"></div>
         </div>
 
         {/* Acesso rápido / Resumo */}
@@ -603,7 +609,7 @@ export default function StudentArea() {
                             </a>
                          </Button>
                          <Button variant="outline" className="w-full justify-start" asChild>
-                            <a target="_blank" href="https://wa.me/5500000000000">
+                            <a target="_blank" href={`https://wa.me/${getInstitutionWhatsApp().replace(/\D/g, '') || '5500000000000'}`}>
                                <div className="bg-green-100 p-1 rounded mr-3 text-green-600"><div className="h-4 w-4 font-bold text-xs flex items-center justify-center">WA</div></div>
                                WhatsApp
                             </a>

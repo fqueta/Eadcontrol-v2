@@ -15,6 +15,7 @@ import { useApiOptions } from "@/hooks/useApiOptions";
 import { useFunnelsList, useStagesList } from "@/hooks/funnels";
 import { fileStorageService, type FileStorageItem, extractFileStorageUrl } from "@/services/fileStorageService";
 import { ImageUpload } from "@/components/lib/ImageUpload";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * Página de configurações do sistema
@@ -22,6 +23,9 @@ import { ImageUpload } from "@/components/lib/ImageUpload";
  * Cada aba possui cards com diferentes tipos de configurações
  */
 export default function SystemSettings() {
+  const { user } = useAuth();
+  const permissionId = user?.permission_id ? parseInt(String(user.permission_id)) : 0;
+
   // Estado da aba ativa
   const [activeTab, setActiveTab] = useState("basic");
   
@@ -804,6 +808,31 @@ export default function SystemSettings() {
 
   const whatsappMaskRef = useMask({ mask: '+__ (__) _____-____', replacement: { _: /\d/ } });
 
+  if (permissionId > 2) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 animate-in fade-in zoom-in-95 duration-500">
+        <div className="h-24 w-24 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center text-red-600 dark:text-red-400 shadow-xl shadow-red-500/10">
+          <ShieldCheck className="h-12 w-12" />
+        </div>
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-black tracking-tight text-foreground">Acesso Restrito</h1>
+          <p className="text-muted-foreground text-sm font-medium max-w-[300px] mx-auto">
+            Sua conta não possui privilégios suficientes para visualizar ou editar as configurações do sistema.
+          </p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={() => window.history.back()}
+          className="mt-4 rounded-xl px-8 font-bold border-2"
+        >
+          Voltar para Segurança
+        </Button>
+      </div>
+    );
+  }
+
+  const isRestrictedLevel = permissionId === 2;
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 pb-20">
       {/* Header */}
@@ -843,20 +872,25 @@ export default function SystemSettings() {
               <Palette className="h-4 w-4" />
               Básicas
             </TabsTrigger>
-            <TabsTrigger 
-              value="advanced" 
-              className="rounded-xl px-6 h-10 font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all gap-2"
-            >
-              <ShieldCheck className="h-4 w-4" />
-              Avançadas
-            </TabsTrigger>
-            <TabsTrigger 
-              value="api" 
-              className="rounded-xl px-6 h-10 font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all gap-2"
-            >
-              <Link className="h-4 w-4" />
-              API & Integrações
-            </TabsTrigger>
+            
+            {!isRestrictedLevel && (
+              <>
+                <TabsTrigger 
+                  value="advanced" 
+                  className="rounded-xl px-6 h-10 font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all gap-2"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  Avançadas
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="api" 
+                  className="rounded-xl px-6 h-10 font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all gap-2"
+                >
+                  <Link className="h-4 w-4" />
+                  API & Integrações
+                </TabsTrigger>
+              </>
+            )}
           </TabsList>
         </div>
 
@@ -1299,101 +1333,103 @@ export default function SystemSettings() {
             </CardContent>
           </Card>
 
-          {/* Card 2 - Configurações com Select */}
-          <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden mt-8">
-            <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 shadow-sm">
-                  <Layers className="h-6 w-6" />
+          {/* Card 2 - Configurações com Select - Preferências Regionais */}
+          {!isRestrictedLevel && (
+            <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden mt-8">
+              <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 shadow-sm">
+                    <Layers className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-black tracking-tight">Preferências Regionais</CardTitle>
+                    <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mt-1">
+                      Idioma, Fuso Horário e Moeda
+                    </CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-xl font-black tracking-tight">Preferências Regionais</CardTitle>
-                  <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mt-1">
-                    Idioma, Fuso Horário e Moeda
-                  </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="defaultLanguage">Idioma Padrão</Label>
+                  <Select
+                    value={basicSelectSettings.defaultLanguage}
+                    onValueChange={(value) => handleBasicSelectChange('defaultLanguage', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o idioma" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
+                      <SelectItem value="en-US">English (US)</SelectItem>
+                      <SelectItem value="es-ES">Español</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="defaultLanguage">Idioma Padrão</Label>
-                <Select
-                  value={basicSelectSettings.defaultLanguage}
-                  onValueChange={(value) => handleBasicSelectChange('defaultLanguage', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o idioma" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
-                    <SelectItem value="en-US">English (US)</SelectItem>
-                    <SelectItem value="es-ES">Español</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="timezone">Fuso Horário</Label>
-                <Select
-                  value={basicSelectSettings.timezone}
-                  onValueChange={(value) => handleBasicSelectChange('timezone', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o fuso horário" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="America/Sao_Paulo">São Paulo (GMT-3)</SelectItem>
-                    <SelectItem value="America/New_York">New York (GMT-5)</SelectItem>
-                    <SelectItem value="Europe/London">London (GMT+0)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="timezone">Fuso Horário</Label>
+                  <Select
+                    value={basicSelectSettings.timezone}
+                    onValueChange={(value) => handleBasicSelectChange('timezone', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o fuso horário" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="America/Sao_Paulo">São Paulo (GMT-3)</SelectItem>
+                      <SelectItem value="America/New_York">New York (GMT-5)</SelectItem>
+                      <SelectItem value="Europe/London">London (GMT+0)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="dateFormat">Formato de Data</Label>
-                <Select
-                  value={basicSelectSettings.dateFormat}
-                  onValueChange={(value) => handleBasicSelectChange('dateFormat', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o formato" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                    <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-                    <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dateFormat">Formato de Data</Label>
+                  <Select
+                    value={basicSelectSettings.dateFormat}
+                    onValueChange={(value) => handleBasicSelectChange('dateFormat', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o formato" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                      <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                      <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="currency">Moeda Padrão</Label>
-                <Select
-                  value={basicSelectSettings.currency}
-                  onValueChange={(value) => handleBasicSelectChange('currency', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a moeda" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="BRL">Real (R$)</SelectItem>
-                    <SelectItem value="USD">Dólar ($)</SelectItem>
-                    <SelectItem value="EUR">Euro (€)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex justify-end pt-6 border-t border-slate-100 dark:border-slate-800 p-8">
-                <Button 
-                  onClick={handleSaveSystemPreferences}
-                  className="h-11 px-6 rounded-xl bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white font-bold flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-slate-900/10"
-                >
-                  <Save className="h-4 w-4" />
-                  Salvar Preferências
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="space-y-2">
+                  <Label htmlFor="currency">Moeda Padrão</Label>
+                  <Select
+                    value={basicSelectSettings.currency}
+                    onValueChange={(value) => handleBasicSelectChange('currency', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a moeda" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BRL">Real (R$)</SelectItem>
+                      <SelectItem value="USD">Dólar ($)</SelectItem>
+                      <SelectItem value="EUR">Euro (€)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex justify-end pt-6 border-t border-slate-100 dark:border-slate-800 p-8">
+                  <Button 
+                    onClick={handleSaveSystemPreferences}
+                    className="h-11 px-6 rounded-xl bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white font-bold flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-slate-900/10"
+                  >
+                    <Save className="h-4 w-4" />
+                    Salvar Preferências
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Aba de Configurações Avançadas */}
