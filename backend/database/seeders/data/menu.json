@@ -15,6 +15,7 @@
   },
   {
     "title": "Escola",
+    "icon": "GraduationCap",
     "submenu": [
       { "title": "Interessados", "url": "/school/interested" },
       { "title": "Matrículas", "url": "/school/enroll" },
@@ -29,7 +30,7 @@
   },
   {
     "title": "Gerenciar Site",
-    "icon": "FileText",
+    "icon": "Globe",
     "submenu": [
       { "title": "Paginas do site", "url": "/site/menus-site" },
       { "title": "Componentes", "url": "/site/coteudo-site" },
@@ -39,7 +40,7 @@
   },
   {
     "title": "Relatórios",
-    "icon": "LineChart",
+    "icon": "ChartPie",
     "submenu": [
       { "title": "Geral", "url": "/reports/relatorio-geral" },
       { "title": "Acesso de conteudo", "url": "/reports/content-access" },
@@ -53,7 +54,7 @@
   },
   {
     "title": "Configurações",
-    "icon": "Cog",
+    "icon": "Settings",
     "submenu": [
         { "title": "Usuários", "url": "/settings/users" },
         { "title": "Dados da empresa", "url": "/settings/dados_conta" },
@@ -61,7 +62,8 @@
         { "title": "Permissões", "url": "/settings/permissions" },
         { "title": "Cupom de desconto", "url": "/settings/cupom_desconto" },
         { "title": "Funil e etapas", "url": "/settings/stages" },
-        { "title": "Categorias", "url": "/categories" },
+        { "title": "Categorias", "url": "/categories" },        
+        { "title": "Integrações", "url": "/settings/integrations" },
         { "title": "Sistema", "url": "/settings/system"}
     ]
   }

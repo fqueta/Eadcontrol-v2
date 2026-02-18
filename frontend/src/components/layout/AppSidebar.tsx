@@ -1,4 +1,4 @@
-import { ChevronUp, ChevronDown, User, Wrench } from "lucide-react";
+import { ChevronUp, ChevronDown, User, Wrench, Settings, ChartPie, GraduationCap, Globe } from "lucide-react";
 import * as React from "react";
 import { NavLink, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";

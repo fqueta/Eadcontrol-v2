@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRedirect } from '@/hooks/useRedirect';
 import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
 import BrandLogo from '@/components/branding/BrandLogo';
+import { getSiteKey, getRecaptchaToken, loadRecaptchaScript, fetchRecaptchaConfig, type RecaptchaConfig } from '@/lib/recaptcha';
 import { getInstitutionName, getInstitutionNameAsync, getInstitutionSlogan, hydrateBrandingFromPublicApi } from '@/lib/branding';
 
 import { Button } from '@/components/ui/button';
@@ -45,14 +46,33 @@ export default function Register() {
   const [institutionName, setInstitutionName] = useState<string>(() => getInstitutionName());
   const [institutionSlogan, setInstitutionSlogan] = useState<string>(() => getInstitutionSlogan());
 
+  // State for reCAPTCHA config
+  const [recaptchaConfig, setRecaptchaConfig] = useState<RecaptchaConfig>({ enabled: false, site_key: null });
+
+  /**
+   * useEffect: Fetch reCAPTCHA config and load script
+   */
+  useEffect(() => {
+    let mounted = true;
+    fetchRecaptchaConfig().then((config) => {
+      if (mounted) {
+        setRecaptchaConfig(config);
+        if (config.enabled && config.site_key) {
+          loadRecaptchaScript(config.site_key).catch(() => {});
+        }
+      }
+    });
+    return () => { mounted = false; };
+  }, []);
+
   // Hydrate branding on mount
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const { name, slogan } = await hydrateBrandingFromPublicApi({ persist: true });
+        const { name } = await hydrateBrandingFromPublicApi({ persist: true });
         const finalName = name || (await getInstitutionNameAsync());
-        const finalSlogan = slogan || getInstitutionSlogan();
+        const finalSlogan = getInstitutionSlogan();
         if (!cancelled) {
           setInstitutionName(finalName);
           setInstitutionSlogan(finalSlogan);
@@ -86,11 +106,29 @@ export default function Register() {
   });
 
   const onSubmit = async (data: RegisterFormData) => {
+    const { enabled, site_key } = recaptchaConfig;
+    const captcha_action = 'register';
+    let captcha_token = '';
+
+    if (enabled && site_key) {
+      try {
+        captcha_token = await getRecaptchaToken(site_key, captcha_action);
+        if (!captcha_token) {
+          await new Promise((r) => setTimeout(r, 300));
+          captcha_token = await getRecaptchaToken(site_key, captcha_action);
+        }
+      } catch (e) {
+        console.warn('Recaptcha generation failed, proceeding without token:', e);
+      }
+    }
+
     const success = await registerUser({
       name: data.name,
       email: data.email,
       password: data.password,
       password_confirmation: data.password_confirmation,
+      captcha_token,
+      captcha_action,
     });
     if (success) {
       setRegisterSuccess(true);

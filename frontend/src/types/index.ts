@@ -305,3 +305,19 @@ export interface ApiDeleteResponse {
 export * from './products';
 export * from './serviceOrders';
 export * from './redemptions';
+
+export interface ApiCredential {
+  id: number;
+  name: string;
+  slug: string;
+  active: boolean;
+  config: any;
+  metas?: {
+      id: number;
+      api_credential_id: number;
+      key: string;
+      value: string;
+  }[];
+  created_at?: string;
+  updated_at?: string;
+}

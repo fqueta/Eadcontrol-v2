@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+use App\Helpers\RecaptchaHelper;
+
 class AuthController extends Controller
 {
     /**
@@ -30,7 +32,6 @@ class AuthController extends Controller
         ]);
     }
 
-
     /**
      * Realiza login e emite token para usuários ativos.
      *
@@ -40,10 +41,8 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         // Validate CAPTCHA first
-        // pt-BR: Verificação temporariamente relaxada para permitir login enquanto a chave do Google é corrigida.
-        // en-US: Verification temporarily relaxed to allow login while Google key is fixed.
         try {
-            if (!$this->verifyCaptcha($request, 'login')) {
+            if (!RecaptchaHelper::verify($request->input('captcha_token', ''), 'login', $request->ip())) {
                 Log::warning('Login CAPTCHA failed but bypassed for emergency access.', ['email' => $request->email]);
                 // return response()->json([
                 //     'message' => 'Falha na verificação de segurança (CAPTCHA).',
@@ -96,6 +95,41 @@ class AuthController extends Controller
             'menu' => $filteredMenu,
             'redirect' => $group->redirect_login ?? '/home',
             'force_password_change' => $forcePasswordChange,
+        ]);
+    }
+
+    /**
+     * Retorna a configuração pública do reCAPTCHA
+     */
+    public function recaptchaConfig()
+    {
+        $credential = \App\Http\Controllers\api\ApiCredentialController::get('google-recaptcha');
+        
+        $enabled = false;
+        $siteKey = null;
+
+        // 1. DB Config
+        if ($credential) {
+            if ($credential->active) {
+                $enabled = true;
+                $siteKey = $credential->config['site_key'] ?? null;
+            } else {
+                // If inactive in DB, it's disabled.
+                $enabled = false;
+            }
+        } 
+        // 2. Fallback to Env if NO DB credential exists
+        else {
+            $siteKey = config('services.recaptcha.site_key');
+            $secret = config('services.recaptcha.secret');
+            if ($siteKey && $secret) {
+                $enabled = true;
+            }
+        }
+
+        return response()->json([
+            'enabled' => $enabled,
+            'site_key' => $siteKey,
         ]);
     }
 
@@ -280,66 +314,5 @@ class AuthController extends Controller
         return $filtered;
     }
 
-    /**
-     * verifyCaptcha
-     * pt-BR: Verifica o token do reCAPTCHA v3 junto ao Google, validando ação e score.
-     * en-US: Verifies reCAPTCHA v3 token with Google, checking action and score.
-     */
-    private function verifyCaptcha(Request $request, string $expectedAction = 'login'): bool
-    {
-        $token = (string) $request->input('captcha_token', '');
-        $action = (string) $request->input('captcha_action', $expectedAction);
-        $secret = config('services.recaptcha.secret');
-        $verifyUrl = config('services.recaptcha.verify_url');
-        $minScore = (float) config('services.recaptcha.min_score', 0.5);
 
-        if (!$secret || !$token) {
-            return false;
-        }
-
-        $resp = Http::asForm()->post($verifyUrl, [
-            'secret' => $secret,
-            'response' => $token,
-            'remoteip' => $request->ip(),
-        ]);
-
-        Log::info('Recaptcha Check', [
-            'ip' => $request->ip(),
-            'response' => $resp->json(),
-        ]);
-        if (!$resp->ok()) {
-            return false;
-        }
-        $data = $resp->json();
-        $success = (bool) ($data['success'] ?? false);
-        $score = (float) ($data['score'] ?? 0.0);
-        $actionResp = (string) ($data['action'] ?? '');
-        
-        if (!$success) {
-            // DEBUG: Retornando erro detalhado para o frontend
-            abort(response()->json([
-                'message' => 'CAPTCHA Failed (Google Request)',
-                'debug' => $data,
-                'errors' => ['captcha_token' => ['Invalid CAPTCHA token']]
-            ], 422));
-        }
-        
-        if ($actionResp && $actionResp !== $expectedAction) {
-             abort(response()->json([
-                'message' => 'CAPTCHA Action Mismatch',
-                'debug' => $data,
-                 'errors' => ['captcha_token' => ['Action mismatch']]
-            ], 422));
-        }
-
-        if ($score < $minScore) {
-             abort(response()->json([
-                'message' => 'CAPTCHA Low Score',
-                'debug' => $data,
-                'errors' => ['captcha_token' => ['Low score']]
-            ], 422));
-        }
-
-        return true;
-    }
 }

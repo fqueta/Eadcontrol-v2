@@ -51,3 +51,29 @@ export async function getRecaptchaToken(siteKey: string, action: string): Promis
 export function getSiteKey(): string {
   return (import.meta as any).env?.VITE_RECAPTCHA_SITE_KEY || '';
 }
+
+import api from '@/lib/axios';
+
+export interface RecaptchaConfig {
+  enabled: boolean;
+  site_key: string | null;
+}
+
+/**
+ * fetchRecaptchaConfig
+ * pt-BR: Busca a configuração pública do reCAPTCHA do backend.
+ * en-US: Fetches public reCAPTCHA configuration from the backend.
+ */
+export async function fetchRecaptchaConfig(): Promise<RecaptchaConfig> {
+  try {
+    const { data } = await api.get<RecaptchaConfig>('/auth/recaptcha-config');
+    return data;
+  } catch (error) {
+    console.warn('Failed to load reCAPTCHA config from backend, falling back to local env', error);
+    const localKey = getSiteKey();
+    return {
+      enabled: !!localKey,
+      site_key: localKey || null,
+    };
+  }
+}

@@ -69,9 +69,12 @@ Route::name('api.')->prefix('v1')->middleware([
     })->where('any', '.*');
 
     Route::post('/login',[AuthController::class,'login'])->name('login');
-    // Validação de token (pública): retorna "valid" ou "invalid"
     Route::get('user/validate-token/{token}', [UserController::class, 'validateToken'])
         ->name('user.validate-token');
+
+    // Mapeamento para configuração do reCAPTCHA
+    Route::get('auth/recaptcha-config', [AuthController::class, 'recaptchaConfig'])
+        ->name('auth.recaptcha-config');
 
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
@@ -312,6 +315,14 @@ Route::name('api.')->prefix('v1')->middleware([
             Route::put('{id}/menu-permissions', [MenuPermissionController::class, 'updatePermissions'])->name('menu-permissions.update');
             // Route::post('{id}/menus', [PermissionMenuController::class, 'update']);
         });
+
+        // Rotas para api-credentials
+        Route::get('api-credentials/trash/list', [\App\Http\Controllers\api\ApiCredentialController::class, 'trash'])->name('api-credentials.trash');
+        Route::put('api-credentials/{id}/restore', [\App\Http\Controllers\api\ApiCredentialController::class, 'restore'])->name('api-credentials.restore');
+        Route::delete('api-credentials/{id}/force', [\App\Http\Controllers\api\ApiCredentialController::class, 'forceDelete'])->name('api-credentials.forceDelete');
+        Route::apiResource('api-credentials', \App\Http\Controllers\api\ApiCredentialController::class,['parameters' => [
+            'api-credentials' => 'id'
+        ]]);
     });
     // Rotas para tracking events
     Route::post('tracking/whatsapp-contact', [TrackingEventController::class, 'whatsappContact'])->name('tracking.whatsapp-contact');

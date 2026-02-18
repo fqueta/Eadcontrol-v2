@@ -21,7 +21,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { getSiteKey, getRecaptchaToken, loadRecaptchaScript } from '@/lib/recaptcha';
+import { getSiteKey, getRecaptchaToken, loadRecaptchaScript, fetchRecaptchaConfig, type RecaptchaConfig } from '@/lib/recaptcha';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -70,11 +70,23 @@ export default function Login() {
    * pt-BR: Carrega o script do reCAPTCHA v3 assim que a página é montada.
    * en-US: Loads the reCAPTCHA v3 script as soon as the page mounts.
    */
+  // State for reCAPTCHA config
+  const [recaptchaConfig, setRecaptchaConfig] = useState<RecaptchaConfig>({ enabled: false, site_key: null });
+
+  /**
+   * useEffect: Fetch reCAPTCHA config and load script
+   */
   useEffect(() => {
-    const siteKey = getSiteKey();
-    if (siteKey) {
-      loadRecaptchaScript(siteKey).catch(() => {/* ignore errors */});
-    }
+    let mounted = true;
+    fetchRecaptchaConfig().then((config) => {
+      if (mounted) {
+        setRecaptchaConfig(config);
+        if (config.enabled && config.site_key) {
+          loadRecaptchaScript(config.site_key).catch(() => {});
+        }
+      }
+    });
+    return () => { mounted = false; };
   }, []);
 
   /**
@@ -86,9 +98,9 @@ export default function Login() {
     let cancelled = false;
     (async () => {
       try {
-        const { name, slogan } = await hydrateBrandingFromPublicApi({ persist: true });
+        const { name } = await hydrateBrandingFromPublicApi({ persist: true });
         const finalName = name || (await getInstitutionNameAsync());
-        const finalSlogan = slogan || getInstitutionSlogan();
+        const finalSlogan = getInstitutionSlogan();
         if (!cancelled) {
           setInstitutionName(finalName);
           setInstitutionSlogan(finalSlogan);
@@ -111,19 +123,21 @@ export default function Login() {
    *        Performs a quick second attempt if the first token is empty.
    */
   const onSubmit = async (data: LoginFormData) => {
-    const siteKey = getSiteKey();
+    const { enabled, site_key } = recaptchaConfig;
     const captcha_action = 'login';
     let captcha_token = '';
-    try {
-      captcha_token = siteKey ? await getRecaptchaToken(siteKey, captcha_action) : '';
-      // Quick retry if token came empty on first attempt
-      if (siteKey && !captcha_token) {
-        await new Promise((r) => setTimeout(r, 300));
-        captcha_token = await getRecaptchaToken(siteKey, captcha_action);
+
+    if (enabled && site_key) {
+      try {
+        captcha_token = await getRecaptchaToken(site_key, captcha_action);
+        // Quick retry if token came empty on first attempt
+        if (!captcha_token) {
+          await new Promise((r) => setTimeout(r, 300));
+          captcha_token = await getRecaptchaToken(site_key, captcha_action);
+        }
+      } catch (e) {
+        console.warn('Recaptcha generation failed, proceeding without token:', e);
       }
-    } catch (e) {
-      console.warn('Recaptcha generation failed (likely invalid site key config), proceeding without token:', e);
-      // Proceed with empty token so user is not blocked frontend-side
     }
 
     const success = await login({

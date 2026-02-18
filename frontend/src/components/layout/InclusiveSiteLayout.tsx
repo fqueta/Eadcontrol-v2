@@ -449,8 +449,8 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
           <div className="border-t border-white/5 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-500">
             <p>&copy; {new Date().getFullYear()} Incluir & Educar. Todos os direitos reservados.</p>
             <div className="flex gap-6">
-              <span className="hover:text-slate-300 cursor-pointer transition-colors">Privacidade</span>
-              <span className="hover:text-slate-300 cursor-pointer transition-colors">Termos</span>
+              <Link to="/pagina/politica-de-privacidade" className="hover:text-slate-300 transition-colors">Privacidade</Link>
+              <Link to="/pagina/termos" className="hover:text-slate-300 transition-colors">Termos</Link>
             </div>
           </div>
         </div>

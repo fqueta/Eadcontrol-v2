@@ -46,6 +46,7 @@ const Users = lazy(() => import("./pages/settings/Users"));
 const UserCreate = lazy(() => import("./pages/settings/UserCreate"));
 const UserProfiles = lazy(() => import("./pages/settings/UserProfiles"));
 const SystemSettings = lazy(() => import("./pages/settings/SystemSettings"));
+const IntegrationsList = lazy(() => import("./pages/settings/IntegrationsList"));
 const Stages = lazy(() => import("./pages/settings/Stages"));
 const TableInstallment = lazy(() => import("./pages/settings/TableInstallment"));
 import Login from "./pages/auth/Login";
@@ -782,6 +783,13 @@ const App = () => {
                     >
                       <Permissions />
                     </PermissionGuard>
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/settings/integrations" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <IntegrationsList />
                   </AppLayout>
                 </AdminProtectedRoute>
               } />
