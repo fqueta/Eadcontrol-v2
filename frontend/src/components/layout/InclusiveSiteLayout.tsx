@@ -267,7 +267,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
                   <Link to="/login">Entrar</Link>
                 </Button>
                 <Button asChild className="bg-primary hover:bg-primary/90 text-white shadow-md shadow-primary/20 rounded-lg px-6 transition-all duration-300 hover:scale-[1.02]">
-                  <Link to="/public-client-form">Cadastrar</Link>
+                  <Link to="/register">Cadastrar</Link>
                 </Button>
               </div>
             )}
@@ -349,7 +349,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
                   <Link to="/login">Acessar Conta</Link>
                 </Button>
                 <Button asChild className="w-full h-12 rounded-xl font-bold bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20" onClick={() => setMobileNavOpen(false)}>
-                  <Link to="/public-client-form">Criar Cadastro Grátis</Link>
+                  <Link to="/register">Criar Cadastro Grátis</Link>
                 </Button>
               </div>
             )}
@@ -431,7 +431,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
               <ul className="space-y-3 text-sm text-slate-400">
                 <li><Link to="/cursos" className="hover:text-primary transition-colors flex items-center group"><span className="w-1.5 h-1.5 rounded-full bg-primary/40 mr-2 opacity-0 group-hover:opacity-100 transition-all -ml-3.5 group-hover:ml-0" />Cursos</Link></li>
                 <li><Link to="/login" className="hover:text-primary transition-colors flex items-center group"><span className="w-1.5 h-1.5 rounded-full bg-primary/40 mr-2 opacity-0 group-hover:opacity-100 transition-all -ml-3.5 group-hover:ml-0" />Entrar</Link></li>
-                <li><Link to="/public-client-form" className="hover:text-primary transition-colors flex items-center group"><span className="w-1.5 h-1.5 rounded-full bg-primary/40 mr-2 opacity-0 group-hover:opacity-100 transition-all -ml-3.5 group-hover:ml-0" />Cadastro</Link></li>
+                <li><Link to="/register" className="hover:text-primary transition-colors flex items-center group"><span className="w-1.5 h-1.5 rounded-full bg-primary/40 mr-2 opacity-0 group-hover:opacity-100 transition-all -ml-3.5 group-hover:ml-0" />Cadastro</Link></li>
               </ul>
             </div>
             <div>

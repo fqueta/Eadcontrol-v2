@@ -56,7 +56,7 @@ const LandingPage = ({ linkLoja }: { linkLoja?: string }) => {
                 </Button>
               </a>
               <Button size="lg" variant="outline" asChild className="w-full sm:w-auto border-primary/20 text-primary hover:bg-blue-50 rounded-md whitespace-nowrap">
-                <Link to="/public-client-form">Fazer cadastro</Link>
+                <Link to="/register">Fazer cadastro</Link>
               </Button>
             </div>
           </div>
@@ -135,7 +135,7 @@ const LandingPage = ({ linkLoja }: { linkLoja?: string }) => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-md mx-auto sm:max-w-none">
             <Button size="lg" className="w-full sm:w-auto bg-white text-primary hover:bg-blue-50 rounded-md" asChild>
-              <Link to="/public-client-form">
+              <Link to="/register">
                 Cadastrar-se
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
