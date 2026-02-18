@@ -32,10 +32,16 @@ class PasswordResetLinkController extends Controller
     // public function store(Request $request,$api=false): RedirectResponse
     public function store(Request $request,$api=false)
     {
-        // CAPTCHA verification removed as per request
-        // if (!RecaptchaHelper::verify($request->input('captcha_token', ''), 'forgot_password', $request->ip())) {
-        //     // ...
-        // }
+        if (!RecaptchaHelper::verify($request->input('captcha_token', ''), 'forgot_password', $request->ip())) {
+            $isApi = $api || $request->is('api/*') || $request->expectsJson();
+            if($isApi) {
+                return response()->json([
+                    'status' => 422,
+                    'message' => __('Falha na verificação do reCAPTCHA.'),
+                ], 422);
+            }
+            return back()->withErrors(['email' => __('Falha na verificação do reCAPTCHA.')]);
+        }
         $request->validate([
             'email' => 'required|email',
         ]);
