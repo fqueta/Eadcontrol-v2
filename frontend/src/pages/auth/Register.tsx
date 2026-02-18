@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useRedirect } from '@/hooks/useRedirect';
-import { AuthLayout } from '@/components/auth/AuthLayout';
+import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
+import BrandLogo from '@/components/branding/BrandLogo';
+import { getInstitutionName, getInstitutionNameAsync, getInstitutionSlogan, hydrateBrandingFromPublicApi } from '@/lib/branding';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -37,6 +40,32 @@ export default function Register() {
   const [registerSuccess, setRegisterSuccess] = useState(false);
   const { register: registerUser, isLoading, user, isAuthenticated } = useAuth();
   const { redirectAfterAuth } = useRedirect();
+
+  // Branding state
+  const [institutionName, setInstitutionName] = useState<string>(() => getInstitutionName());
+  const [institutionSlogan, setInstitutionSlogan] = useState<string>(() => getInstitutionSlogan());
+
+  // Hydrate branding on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { name, slogan } = await hydrateBrandingFromPublicApi({ persist: true });
+        const finalName = name || (await getInstitutionNameAsync());
+        const finalSlogan = slogan || getInstitutionSlogan();
+        if (!cancelled) {
+          setInstitutionName(finalName);
+          setInstitutionSlogan(finalSlogan);
+        }
+      } catch {
+        if (!cancelled) {
+          setInstitutionName(getInstitutionName());
+          setInstitutionSlogan(getInstitutionSlogan());
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Efeito para redirecionar após registro bem-sucedido
   useEffect(() => {
@@ -69,133 +98,193 @@ export default function Register() {
   };
 
   return (
-    <AuthLayout 
-      title="Criar Conta" 
-      subtitle="Crie sua conta para começar"
-    >
-      {/* <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Nome Completo</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Seu nome completo"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+    <InclusiveSiteLayout>
+      <section className="relative py-12">
+        {/* Elementos decorativos de fundo */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -left-40 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-blue-400/20 rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/4 w-60 h-60 bg-blue-300/10 rounded-full blur-2xl"></div>
+          <div className="absolute bottom-1/4 right-1/3 w-40 h-40 bg-blue-200/10 rounded-full blur-xl"></div>
+        </div>
 
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input
-                    type="email"
-                    placeholder="seu@email.com"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Senha</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Sua senha"
-                      {...field}
+        <div className="relative z-10 flex w-full max-w-6xl mx-auto px-4">
+          {/* Lado esquerdo - Branding */}
+          <div className="hidden lg:flex lg:w-1/2 items-center justify-center relative">
+            <div className="text-center p-8 bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 shadow-xl">
+              <div className="mb-6 flex justify-center">
+                 <div className="bg-white/90 p-6 rounded-2xl shadow-inner">
+                    <BrandLogo 
+                      alt={institutionName || 'Logo'} 
+                      className="h-32 w-auto object-contain" 
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                 </div>
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-2 drop-shadow-md">
+                {institutionName}
+              </h2>
+              {institutionSlogan && (
+                <p className="text-blue-100 text-lg max-w-sm mx-auto font-light leading-relaxed">
+                  {institutionSlogan}
+                </p>
+              )}
+            </div>
+          </div>
 
-          <FormField
-            control={form.control}
-            name="password_confirmation"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Confirmar Senha</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Input
-                      type={showPasswordConfirmation ? 'text' : 'password'}
-                      placeholder="Confirme sua senha"
-                      {...field}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)}
-                    >
-                      {showPasswordConfirmation ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* Lado direito - Formulário */}
+          <div className="w-full lg:w-1/2 flex items-center justify-center">
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 border border-slate-100">
+              
+              {/* Header com botão voltar */}
+              <div className="flex items-center mb-8">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  className="text-slate-500 hover:text-primary hover:bg-primary/5 p-2 mr-2"
+                >
+                  <Link to="/">
+                    <ArrowLeft className="h-5 w-5" />
+                  </Link>
+                </Button>
+                
+                 {/* Mobile Heading */}
+                <div className="flex-1 text-center lg:hidden">
+                  <BrandLogo alt={institutionName || 'Logo'} className="h-10 mx-auto mb-2" />
+                  <h1 className="text-lg font-bold text-primary">{institutionName}</h1>
+                </div>
 
-          <Button 
-            type="submit" 
-            className="w-full" 
-            disabled={isLoading}
-          >
-            {isLoading ? 'Criando conta...' : 'Criar Conta'}
-          </Button>
-        </form>
-      </Form> */}
-      <div className="mt-4 text-center">
-        <h1>Para obter acesso entre em contato com o nosso suporte</h1>
-        <p></p>
-      </div>
+                {/* Desktop Heading */}
+                <div className="flex-1 text-right hidden lg:block">
+                  <h1 className="text-2xl font-bold text-slate-800">Crie sua Conta</h1>
+                  <p className="text-xs text-muted-foreground">Preencha os dados abaixo</p>
+                </div>
+              </div>
 
-      <div className="text-center text-sm">
-        <span className="text-muted-foreground">Já tem uma conta? </span>
-        <Link to="/login" className="text-primary hover:underline hover:text-blue-700">
-          Entre aqui
-        </Link>
-      </div>
-    </AuthLayout>
+              {/* Formulário */}
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-primary font-medium">Nome Completo</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Seu nome completo"
+                            className="border-primary/20 focus:border-primary focus:ring-primary"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-primary font-medium">Email</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="seu@email.com"
+                            className="border-primary/20 focus:border-primary focus:ring-primary"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-primary font-medium">Senha</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type={showPassword ? 'text' : 'password'}
+                              placeholder="Mínimo 6 caracteres"
+                              className="border-primary/20 focus:border-primary focus:ring-primary pr-10"
+                              {...field}
+                            />
+                            <button
+                              type="button"
+                              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                              onClick={() => setShowPassword(!showPassword)}
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                              )}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="password_confirmation"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-primary font-medium">Confirmar Senha</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type={showPasswordConfirmation ? 'text' : 'password'}
+                              placeholder="Repita a senha"
+                              className="border-primary/20 focus:border-primary focus:ring-primary pr-10"
+                              {...field}
+                            />
+                            <button
+                              type="button"
+                              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                              onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)}
+                            >
+                              {showPasswordConfirmation ? (
+                                <EyeOff className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                              )}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-primary hover:bg-blue-700 text-white font-medium rounded-md mt-2" 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Criando conta...' : 'Criar Conta'}
+                  </Button>
+                </form>
+              </Form>
+
+              <div className="text-center text-sm mt-6">
+                <span className="text-muted-foreground">Já tem uma conta? </span>
+                <Link to="/login" className="text-primary underline hover:text-blue-700 font-medium">
+                  Entre aqui
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </InclusiveSiteLayout>
   );
 }

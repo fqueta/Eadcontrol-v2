@@ -155,41 +155,55 @@ export default function Login() {
         </div>
 
         <div className="relative z-10 flex w-full max-w-6xl mx-auto px-4">
-          {/* Lado esquerdo - Ícone e elementos decorativos */}
+          {/* Lado esquerdo - Logo e Branding */}
           <div className="hidden lg:flex lg:w-1/2 items-center justify-center relative">
-            <div className="text-center">
-              {/* Ícone principal */}
-              <div className="w-64 h-64 bg-white/10 backdrop-blur-sm rounded-3xl flex items-center justify-center mb-8 mx-auto border border-white/20">
-                <div className="w-32 h-32 bg-white rounded-2xl flex items-center justify-center">
-                  <svg className="w-20 h-20 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                  </svg>
-                </div>
+            <div className="text-center p-8 bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 shadow-xl">
+              <div className="mb-6 flex justify-center">
+                 <div className="bg-white/90 p-6 rounded-2xl shadow-inner">
+                    <BrandLogo 
+                      alt={institutionName || 'Logo'} 
+                      className="h-32 w-auto object-contain" 
+                    />
+                 </div>
               </div>
+              <h2 className="text-3xl font-bold text-white mb-2 drop-shadow-md">
+                {institutionName}
+              </h2>
+              {institutionSlogan && (
+                <p className="text-blue-100 text-lg max-w-sm mx-auto font-light leading-relaxed">
+                  {institutionSlogan}
+                </p>
+              )}
             </div>
           </div>
 
           {/* Lado direito - Formulário */}
           <div className="w-full lg:w-1/2 flex items-center justify-center">
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8">
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 border border-slate-100">
               {/* Header com botão voltar */}
-              <div className="flex items-center mb-6">
+              <div className="flex items-center mb-8">
                 <Button
                   variant="ghost"
                   size="sm"
                   asChild
-                  className="text-blue-700 hover:bg-blue-50 p-2"
+                  className="text-slate-500 hover:text-primary hover:bg-primary/5 p-2 mr-2"
                 >
                   <Link to="/">
-                    <ArrowLeft className="h-4 w-4" />
+                    <ArrowLeft className="h-5 w-5" />
                   </Link>
                 </Button>
-                  <div className="flex-1 text-center">
-                  {/* Brand logo (dinâmico via API/options) */}
-                  <BrandLogo alt={institutionName || 'Logo'} className="h-10 mx-auto mb-2" />
-                  <h1 className="text-xl font-bold text-primary">{institutionName}</h1>
-                  <p className="text-xs text-muted-foreground">{institutionSlogan}</p>
+                
+                {/* Mobile Heading (visible on all, but essential for mobile) */}
+                <div className="flex-1 text-center lg:hidden">
+                  <BrandLogo alt={institutionName || 'Logo'} className="h-12 mx-auto mb-2" />
+                  <h1 className="text-lg font-bold text-primary">{institutionName}</h1>
                 </div>
+                
+                {/* Desktop Heading adjustment: Just concise Title */}
+                 <div className="flex-1 text-right hidden lg:block">
+                    <h1 className="text-2xl font-bold text-slate-800">Bem-vindo</h1>
+                    <p className="text-xs text-muted-foreground">Faça login para acessar</p>
+                 </div>
               </div>
 
               <p className="text-muted-foreground text-sm mb-6 text-center">
@@ -289,7 +303,7 @@ export default function Login() {
 
               <div className="text-center text-sm mt-4">
                 <span className="text-muted-foreground">Não tem uma conta? </span>
-                <Link to="/public-client-form" className="text-primary underline hover:text-blue-700 font-medium">
+                <Link to="/register" className="text-primary underline hover:text-blue-700 font-medium">
                   Cadastre-se
                 </Link>
               </div>
