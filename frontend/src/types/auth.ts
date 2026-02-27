@@ -52,6 +52,11 @@ export interface LoginCredentials {
    * en-US: Action associated with the token (e.g., 'login').
    */
   captcha_action?: string;
+  /**
+   * public_form_token
+   * pt-BR: Token customizado assinado pelo servidor.
+   */
+  public_form_token?: string;
 }
 
 export interface RegisterData {
@@ -71,6 +76,11 @@ export interface RegisterData {
    * en-US: Action associated with the token (e.g., 'register').
    */
   captcha_action?: string;
+  /**
+   * public_form_token
+   * pt-BR: Token customizado assinado pelo servidor.
+   */
+  public_form_token?: string;
 }
 
 export interface ForgotPasswordData {
@@ -87,6 +97,11 @@ export interface ForgotPasswordData {
    * en-US: Action associated with the token (e.g., 'forgot_password').
    */
   captcha_action?: string;
+  /**
+   * public_form_token
+   * pt-BR: Token customizado assinado pelo servidor.
+   */
+  public_form_token?: string;
 }
 
 export interface ResetPasswordData {

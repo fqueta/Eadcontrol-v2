@@ -18,7 +18,8 @@ import {
 } from '@/components/ui/form';
 import { authService } from '@/services/authService';
 import { toast } from '@/hooks/use-toast';
-import { getRecaptchaToken, loadRecaptchaScript, fetchRecaptchaConfig, type RecaptchaConfig } from '@/lib/recaptcha';
+import api from '@/lib/axios';
+// import { getRecaptchaToken, loadRecaptchaScript, fetchRecaptchaConfig, type RecaptchaConfig } from '@/lib/recaptcha';
 import BrandLogo from '@/components/branding/BrandLogo';
 import { getInstitutionName, getInstitutionNameAsync, getInstitutionSlogan, hydrateBrandingFromPublicApi } from '@/lib/branding';
 
@@ -34,24 +35,10 @@ export default function ForgotPassword() {
   const [institutionName, setInstitutionName] = useState<string>(() => getInstitutionName());
   const [institutionSlogan, setInstitutionSlogan] = useState<string>(() => getInstitutionSlogan());
   
-  // State for reCAPTCHA config
-  const [recaptchaConfig, setRecaptchaConfig] = useState<RecaptchaConfig>({ enabled: false, site_key: null });
-
   /**
-   * useEffect: Fetch reCAPTCHA config and load script
+   * Honeypot field name
    */
-  useEffect(() => {
-    let mounted = true;
-    fetchRecaptchaConfig().then((config) => {
-      if (mounted) {
-        setRecaptchaConfig(config);
-        if (config.enabled && config.site_key) {
-          loadRecaptchaScript(config.site_key).catch(() => {});
-        }
-      }
-    });
-    return () => { mounted = false; };
-  }, []);
+  const HONEYPOT_FIELD = 'website_verify_extra';
 
   /**
    * hydrateBranding
@@ -88,27 +75,17 @@ export default function ForgotPassword() {
     try {
       setIsLoading(true);
       
-      const { enabled, site_key } = recaptchaConfig;
-      const captcha_action = 'forgot_password';
-      let captcha_token = '';
-
-      if (enabled && site_key) {
-        try {
-          captcha_token = await getRecaptchaToken(site_key, captcha_action);
-          // Quick retry if token came empty on first attempt
-          if (!captcha_token) {
-            await new Promise((r) => setTimeout(r, 300));
-            captcha_token = await getRecaptchaToken(site_key, captcha_action);
-          }
-        } catch (e) {
-          console.warn('Recaptcha generation failed, proceeding without token:', e);
-        }
+      let public_form_token = '';
+      try {
+        const response = await api.post('/public/form-token/forgot_password');
+        public_form_token = response.data.token;
+      } catch (e) {
+        console.error('Failed to fetch security token:', e);
       }
-
+ 
       await authService.forgotPassword({ 
         email: data.email,
-        captcha_action,
-        captcha_token,
+        public_form_token,
       });
       setEmailSent(true);
       toast({
@@ -236,6 +213,15 @@ export default function ForgotPassword() {
 
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  {/* Honeypot Field */}
+                  <div style={{ display: 'none' }} aria-hidden="true">
+                    <input
+                      type="text"
+                      name={HONEYPOT_FIELD}
+                      tabIndex={-1}
+                      autoComplete="off"
+                    />
+                  </div>
                   <FormField
                     control={form.control}
                     name="email"

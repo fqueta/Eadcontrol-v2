@@ -11,9 +11,13 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 use App\Helpers\RecaptchaHelper;
+use App\Http\Controllers\api\PublicFormTokenController;
+use App\Traits\HandlesSecurityTokens;
 
 class AuthController extends Controller
 {
+    use HandlesSecurityTokens;
+
     /**
      * Filtra menu pelo array de permissões do usuário
      */
@@ -40,17 +44,18 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        // Validate CAPTCHA first
-        try {
-            if (!RecaptchaHelper::verify($request->input('captcha_token', ''), 'login', $request->ip())) {
-                Log::warning('Login CAPTCHA failed but bypassed for emergency access.', ['email' => $request->email]);
-                // return response()->json([
-                //     'message' => 'Falha na verificação de segurança (CAPTCHA).',
-                //     'errors' => ['captcha_token' => ['Invalid or low-score CAPTCHA token']],
-                // ], 422);
-            }
-        } catch (\Exception $e) {
-            Log::error('CAPTCHA Check Error (Bypassed): ' . $e->getMessage());
+        // 1. Validate Security Token (PublicFormToken + Honeypot ONLY)
+        // pt-BR: Removemos o reCAPTCHA conforme solicitado, mantendo apenas Token customizado + Honeypot
+        if (!$this->verifySecurityToken($request, 'login', false)) {
+            Log::warning('Login Security Check failed.', [
+                'email' => $request->email,
+                'ip' => $request->ip()
+            ]);
+            
+            return response()->json([
+                'message' => 'Falha na verificação de segurança.',
+                'errors' => ['security' => ['Verificação de segurança falhou ou Honeypot detectado.']],
+            ], 422);
         }
         $credentials = $request->only('email', 'password');
 
@@ -111,6 +116,7 @@ class AuthController extends Controller
         // 1. DB Config
         if ($credential) {
             if ($credential->active) {
+                // If the user wants reCAPTCHA disabled globally, they should deactivate it in DB
                 $enabled = true;
                 $siteKey = $credential->config['site_key'] ?? null;
             } else {
@@ -123,9 +129,15 @@ class AuthController extends Controller
             $siteKey = config('services.recaptcha.site_key');
             $secret = config('services.recaptcha.secret');
             if ($siteKey && $secret) {
+                // To remove it from login, we should probably check if it was explicitly disabled for login in config
                 $enabled = true;
             }
         }
+
+        // Special case: If we are calling this to decide whether to show reCAPTCHA on login page, 
+        // and we just disabled it in the login controller logic, we should reflect that here.
+        // For now, let's keep it simple: if the user wants it gone, we can force false here if preferred.
+        // $enabled = false; // Uncomment this to hide reCAPTCHA everywhere
 
         return response()->json([
             'enabled' => $enabled,

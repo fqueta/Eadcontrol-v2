@@ -7,6 +7,7 @@ import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
 import BrandLogo from '@/components/branding/BrandLogo';
 import { getInstitutionName, getInstitutionNameAsync, getInstitutionSlogan, hydrateBrandingFromPublicApi } from '@/lib/branding';
+import api from '@/lib/axios'; // Fixed import: axios instead of api
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useRedirect } from '@/hooks/useRedirect';
@@ -21,7 +22,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { getSiteKey, getRecaptchaToken, loadRecaptchaScript, fetchRecaptchaConfig, type RecaptchaConfig } from '@/lib/recaptcha';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -70,24 +70,13 @@ export default function Login() {
    * pt-BR: Carrega o script do reCAPTCHA v3 assim que a página é montada.
    * en-US: Loads the reCAPTCHA v3 script as soon as the page mounts.
    */
-  // State for reCAPTCHA config
-  const [recaptchaConfig, setRecaptchaConfig] = useState<RecaptchaConfig>({ enabled: false, site_key: null });
+  // State for reCAPTCHA config (Not used for login anymore, but kept for other forms if needed, or removed)
+  // const [recaptchaConfig, setRecaptchaConfig] = useState<RecaptchaConfig>({ enabled: false, site_key: null });
 
   /**
-   * useEffect: Fetch reCAPTCHA config and load script
+   * Honeypot field name
    */
-  useEffect(() => {
-    let mounted = true;
-    fetchRecaptchaConfig().then((config) => {
-      if (mounted) {
-        setRecaptchaConfig(config);
-        if (config.enabled && config.site_key) {
-          loadRecaptchaScript(config.site_key).catch(() => {});
-        }
-      }
-    });
-    return () => { mounted = false; };
-  }, []);
+  const HONEYPOT_FIELD = 'website_verify_extra';
 
   /**
    * hydrateBrandingFromPublicApi
@@ -117,36 +106,27 @@ export default function Login() {
 
   /**
    * onSubmit
-   * pt-BR: Antes de enviar, obtém um token reCAPTCHA v3 para a ação "login".
-   *        Faz uma segunda tentativa rápida se o primeiro token vier vazio.
-   * en-US: Before submit, acquires a reCAPTCHA v3 token for "login" action.
-   *        Performs a quick second attempt if the first token is empty.
+   * pt-BR: Obtém um token de formulário público assinado pelo PHP e envia junto com os dados de login.
+   * en-US: Acquires a signed public form token from PHP and sends it along with the login data.
    */
   const onSubmit = async (data: LoginFormData) => {
-    const { enabled, site_key } = recaptchaConfig;
-    const captcha_action = 'login';
-    let captcha_token = '';
+    let public_form_token = '';
 
-    if (enabled && site_key) {
-      try {
-        captcha_token = await getRecaptchaToken(site_key, captcha_action);
-        // Quick retry if token came empty on first attempt
-        if (!captcha_token) {
-          await new Promise((r) => setTimeout(r, 300));
-          captcha_token = await getRecaptchaToken(site_key, captcha_action);
-        }
-      } catch (e) {
-        console.warn('Recaptcha generation failed, proceeding without token:', e);
-      }
+    try {
+      // Fetch fresh token from backend
+      const response = await api.post('/public/form-token/login');
+      public_form_token = response.data.token;
+    } catch (e) {
+      console.error('Failed to fetch security token:', e);
     }
 
     const success = await login({
       email: data.email,
       password: data.password,
       remember: data.remember,
-      captcha_action,
-      captcha_token,
+      public_form_token, // Send custom token instead of reCAPTCHA
     });
+
     if (success) {
       setLoginSuccess(true);
     }
@@ -226,6 +206,15 @@ export default function Login() {
 
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  {/* Honeypot Field (Hidden from humans) */}
+                  <div style={{ display: 'none' }} aria-hidden="true">
+                    <input
+                      type="text"
+                      name={HONEYPOT_FIELD}
+                      tabIndex={-1}
+                      autoComplete="off"
+                    />
+                  </div>
                   <FormField
                     control={form.control}
                     name="email"

@@ -9,7 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRedirect } from '@/hooks/useRedirect';
 import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
 import BrandLogo from '@/components/branding/BrandLogo';
-import { getSiteKey, getRecaptchaToken, loadRecaptchaScript, fetchRecaptchaConfig, type RecaptchaConfig } from '@/lib/recaptcha';
+import api from '@/lib/axios';
+// import { getSiteKey, getRecaptchaToken, loadRecaptchaScript, fetchRecaptchaConfig, type RecaptchaConfig } from '@/lib/recaptcha';
 import { getInstitutionName, getInstitutionNameAsync, getInstitutionSlogan, hydrateBrandingFromPublicApi } from '@/lib/branding';
 
 import { Button } from '@/components/ui/button';
@@ -46,24 +47,10 @@ export default function Register() {
   const [institutionName, setInstitutionName] = useState<string>(() => getInstitutionName());
   const [institutionSlogan, setInstitutionSlogan] = useState<string>(() => getInstitutionSlogan());
 
-  // State for reCAPTCHA config
-  const [recaptchaConfig, setRecaptchaConfig] = useState<RecaptchaConfig>({ enabled: false, site_key: null });
-
   /**
-   * useEffect: Fetch reCAPTCHA config and load script
+   * Honeypot field name
    */
-  useEffect(() => {
-    let mounted = true;
-    fetchRecaptchaConfig().then((config) => {
-      if (mounted) {
-        setRecaptchaConfig(config);
-        if (config.enabled && config.site_key) {
-          loadRecaptchaScript(config.site_key).catch(() => {});
-        }
-      }
-    });
-    return () => { mounted = false; };
-  }, []);
+  const HONEYPOT_FIELD = 'website_verify_extra';
 
   // Hydrate branding on mount
   useEffect(() => {
@@ -106,29 +93,20 @@ export default function Register() {
   });
 
   const onSubmit = async (data: RegisterFormData) => {
-    const { enabled, site_key } = recaptchaConfig;
-    const captcha_action = 'register';
-    let captcha_token = '';
-
-    if (enabled && site_key) {
-      try {
-        captcha_token = await getRecaptchaToken(site_key, captcha_action);
-        if (!captcha_token) {
-          await new Promise((r) => setTimeout(r, 300));
-          captcha_token = await getRecaptchaToken(site_key, captcha_action);
-        }
-      } catch (e) {
-        console.warn('Recaptcha generation failed, proceeding without token:', e);
-      }
+    let public_form_token = '';
+    try {
+      const response = await api.post('/public/form-token/register');
+      public_form_token = response.data.token;
+    } catch (e) {
+      console.error('Failed to fetch security token:', e);
     }
-
+ 
     const success = await registerUser({
       name: data.name,
       email: data.email,
       password: data.password,
       password_confirmation: data.password_confirmation,
-      captcha_token,
-      captcha_action,
+      public_form_token,
     });
     if (success) {
       setRegisterSuccess(true);
@@ -202,6 +180,15 @@ export default function Register() {
               {/* Formulário */}
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  {/* Honeypot Field */}
+                  <div style={{ display: 'none' }} aria-hidden="true">
+                    <input
+                      type="text"
+                      name={HONEYPOT_FIELD}
+                      tabIndex={-1}
+                      autoComplete="off"
+                    />
+                  </div>
                   <FormField
                     control={form.control}
                     name="name"

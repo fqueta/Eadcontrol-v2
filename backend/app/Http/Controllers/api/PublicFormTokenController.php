@@ -15,6 +15,12 @@ use Illuminate\Support\Str;
 class PublicFormTokenController extends Controller
 {
     /**
+     * Nome do campo honeypot (campo oculto que bots preenchem).
+     * Honeypot field name (hidden field that bots fill).
+     */
+    const HONEYPOT_FIELD = 'website_verify_extra';
+
+    /**
      * Gera um token assinado para um formulário público.
      * Generate a signed token for a public form.
      *
@@ -92,6 +98,20 @@ class PublicFormTokenController extends Controller
      */
     public function validate(Request $request)
     {
+        // 1. Verificação de Honeypot: Se este campo estiver preenchido, é um bot.
+        // 1. Honeypot check: If this field is filled, it's a bot.
+        $honeypot = $request->input(self::HONEYPOT_FIELD);
+        if (!empty($honeypot)) {
+            \Illuminate\Support\Facades\Log::warning('Honeypot detection: bot blocked.', [
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent()
+            ]);
+            return response()->json([
+                'valid'   => false,
+                'message' => 'Detectada atividade suspeita (Honeypot).',
+            ], 422);
+        }
+
         $validated = $request->validate([
             'token' => ['required', 'string'],
             'form'  => ['nullable', 'string', 'max:100'],

@@ -14,15 +14,18 @@ use Illuminate\Validation\Rules;
 use Illuminate\Support\Facades\Http;
 
 use App\Helpers\RecaptchaHelper;
+use App\Traits\HandlesSecurityTokens;
 
 class RegisterController extends Controller
 {
+    use HandlesSecurityTokens;
+
     public function store(Request $request)
     {
-        if (!RecaptchaHelper::verify($request->input('captcha_token', ''), 'register', $request->ip())) {
+        if (!$this->verifySecurityToken($request, 'register')) {
             return response()->json([
-                'message' => 'Falha na verificação de segurança (CAPTCHA).',
-                'errors' => ['captcha_token' => ['Invalid or low-score CAPTCHA token']],
+                'message' => 'Falha na verificação de segurança.',
+                'errors' => ['security' => ['Verificação de segurança falhou ou Honeypot detectado.']],
             ], 422);
         }
         $request->validate([

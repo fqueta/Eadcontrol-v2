@@ -12,6 +12,7 @@ use App\Services\Qlib;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
+use App\Traits\HandlesSecurityTokens;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -24,6 +25,8 @@ use App\Models\Course;
  */
 class PublicEnrollmentController extends Controller
 {
+    use HandlesSecurityTokens;
+
     /**
      * verifyMathChallenge
      * pt-BR: Valida o desafio matemático simples (soma de dois números).
@@ -96,11 +99,11 @@ class PublicEnrollmentController extends Controller
             RateLimiter::hit($key, 15 * 60);
         }
 
-        // Basic anti-bot checks: honeypot + time-trap + reCAPTCHA
-        if ($this->isBotLike($request)) {
+        // Basic anti-bot checks: honeypot + time-trap + reCAPTCHA + PublicFormToken
+        if ($this->isBotLike($request) || !$this->verifySecurityToken($request, 'public_enrollment')) {
             return response()->json([
                 'message' => 'Envio suspeito detectado.',
-                'errors' => ['bot' => ['Submission flagged by anti-bot checks']],
+                'errors' => ['bot' => ['Submission flagged by anti-bot checks or security token validation']],
             ], 422);
         }
         if (!$this->verifyMathChallenge($request)) {
@@ -463,10 +466,10 @@ class PublicEnrollmentController extends Controller
         }
 
         // Anti-bot checks for interest route as well
-        if ($this->isBotLike($request)) {
+        if ($this->isBotLike($request) || !$this->verifySecurityToken($request, 'public_interest')) {
             return response()->json([
                 'message' => 'Envio suspeito detectado.',
-                'errors' => ['bot' => ['Submission flagged by anti-bot checks']],
+                'errors' => ['bot' => ['Submission flagged by anti-bot checks or security token validation']],
             ], 422);
         }
         if (!$this->verifyMathChallenge($request)) {

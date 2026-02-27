@@ -11,9 +11,12 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 use App\Helpers\RecaptchaHelper;
+use App\Traits\HandlesSecurityTokens;
 
 class PasswordResetLinkController extends Controller
 {
+    use HandlesSecurityTokens;
+
     /**
      * Show the password reset link request page.
      */
@@ -29,18 +32,17 @@ class PasswordResetLinkController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    // public function store(Request $request,$api=false): RedirectResponse
     public function store(Request $request,$api=false)
     {
-        if (!RecaptchaHelper::verify($request->input('captcha_token', ''), 'forgot_password', $request->ip())) {
+        if (!$this->verifySecurityToken($request, 'forgot_password')) {
             $isApi = $api || $request->is('api/*') || $request->expectsJson();
             if($isApi) {
                 return response()->json([
                     'status' => 422,
-                    'message' => __('Falha na verificação do reCAPTCHA.'),
+                    'message' => __('Falha na verificação de segurança.'),
                 ], 422);
             }
-            return back()->withErrors(['email' => __('Falha na verificação do reCAPTCHA.')]);
+            return back()->withErrors(['email' => __('Falha na verificação de segurança.')]);
         }
         $request->validate([
             'email' => 'required|email',
