@@ -27,59 +27,6 @@ class PublicEnrollmentController extends Controller
 {
     use HandlesSecurityTokens;
 
-    /**
-     * verifyMathChallenge
-     * pt-BR: Valida o desafio matemático simples (soma de dois números).
-     * en-US: Validates simple math challenge (sum of two numbers).
-     */
-    private function verifyMathChallenge(Request $request): bool
-    {
-        $a = (int) $request->input('challenge_a', 0);
-        $b = (int) $request->input('challenge_b', 0);
-        $ans = $request->input('challenge_answer');
-
-        // Skip challenge for authenticated users (Sanctum)
-        if (auth('sanctum')->check()) {
-            return true;
-        }
-
-        // Allow creating leads/enrollments in local/testing without challenge if 'skip_captcha' is present
-        // or just rely on the frontend sending valid numbers.
-        if (config('app.env') === 'local' && $request->has('skip_captcha')) {
-            return true;
-        }
-
-        // Must have values
-        if ($a <= 0 || $b <= 0 || is_null($ans)) {
-            return false;
-        }
-
-        return ($a + $b) === (int)$ans;
-    }
-
-    /**
-     * isBotLike
-     * pt-BR: Verifica honeypot e time-trap; rejeita se campo oculto estiver preenchido
-     *        ou se o envio ocorrer rápido demais após render (ex.: < 3s).
-     * en-US: Checks honeypot and time-trap; rejects if hidden field is filled
-     *        or submission happens too fast after render (e.g., < 3s).
-     */
-    private function isBotLike(Request $request, int $minMillis = 3000): bool
-    {
-        // Authenticated users are trusted (no bot check needed)
-        if (auth('sanctum')->check()) {
-            return false;
-        }
-
-        $honeypot = (string) $request->input('hp_field', '');
-        if ($honeypot !== '') return true;
-        $renderedAt = (int) $request->input('form_rendered_at', 0);
-        if ($renderedAt > 0) {
-            $elapsed = (int) (microtime(true) * 1000) - $renderedAt;
-            if ($elapsed < $minMillis) return true;
-        }
-        return false;
-    }
 
     /**
      * Registra um cliente e cria uma matrícula no curso informado (padrão: id 2).
@@ -100,16 +47,10 @@ class PublicEnrollmentController extends Controller
         }
 
         // Basic anti-bot checks: honeypot + time-trap + reCAPTCHA + PublicFormToken
-        if ($this->isBotLike($request) || !$this->verifySecurityToken($request, 'public_enrollment')) {
+        if (!$this->verifySecurityToken($request, 'public_enrollment')) {
             return response()->json([
                 'message' => 'Envio suspeito detectado.',
                 'errors' => ['bot' => ['Submission flagged by anti-bot checks or security token validation']],
-            ], 422);
-        }
-        if (!$this->verifyMathChallenge($request)) {
-            return response()->json([
-                'message' => 'Falha na verificação de segurança (Desafio Matemático incorreto).',
-                'errors' => ['challenge_answer' => ['Resposta incorreta']],
             ], 422);
         }
 
@@ -466,16 +407,10 @@ class PublicEnrollmentController extends Controller
         }
 
         // Anti-bot checks for interest route as well
-        if ($this->isBotLike($request) || !$this->verifySecurityToken($request, 'public_interest')) {
+        if (!$this->verifySecurityToken($request, 'public_interest')) {
             return response()->json([
                 'message' => 'Envio suspeito detectado.',
                 'errors' => ['bot' => ['Submission flagged by anti-bot checks or security token validation']],
-            ], 422);
-        }
-        if (!$this->verifyMathChallenge($request)) {
-            return response()->json([
-                'message' => 'Falha na verificação de segurança (Desafio Matemático incorreto).',
-                'errors' => ['challenge_answer' => ['Resposta incorreta']],
             ], 422);
         }
 

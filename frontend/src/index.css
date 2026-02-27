@@ -19,10 +19,12 @@ All colors MUST be HSL.
 
     /* Brand Primary: Blue #0083c8 */
     --primary: 201 100% 39%; 
+    --primary-hover: 201 100% 30%;
     --primary-foreground: 0 0% 100%;
 
     /* Brand Secondary: Yellow #fdc00f */
     --secondary: 45 98% 53%;
+    --secondary-hover: 45 98% 43%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
     --muted: 210 40% 96.1%;
@@ -62,9 +64,11 @@ All colors MUST be HSL.
 
     /* Brand Primary (Dark Mode) - Slightly lighter for contrast */
     --primary: 201 100% 50%;
+    --primary-hover: 201 100% 60%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 45 98% 53%;
+    --secondary-hover: 45 98% 43%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
     --muted: 215 27.9% 16.9%;

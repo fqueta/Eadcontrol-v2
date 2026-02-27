@@ -201,11 +201,13 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
       // Hydrate Appearance Settings (Colors)
       try {
         const primary = String(dataObj['app_primary_color'] || '').trim();
+        const primaryText = String(dataObj['app_primary_text_color'] || '').trim();
         const secondary = String(dataObj['app_secondary_color'] || '').trim();
+        const secondaryText = String(dataObj['app_secondary_text_color'] || '').trim();
         const hover = String(dataObj['app_hover_color'] || '').trim();
         // const darkModeDefault = String(dataObj['app_dark_mode_default'] || '').trim(); // Optional: Enforce default dark mode
 
-        if (primary || secondary || hover) {
+        if (primary || primaryText || secondary || secondaryText || hover) {
           const stored = localStorage.getItem('appearanceSettings');
           let settings = stored ? JSON.parse(stored) : {};
           
@@ -214,8 +216,16 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
             settings.primaryColor = primary;
             changed = true;
           }
+          if (primaryText && settings.primaryTextColor !== primaryText) {
+            settings.primaryTextColor = primaryText;
+            changed = true;
+          }
           if (secondary && settings.secondaryColor !== secondary) {
             settings.secondaryColor = secondary;
+            changed = true;
+          }
+          if (secondaryText && settings.secondaryTextColor !== secondaryText) {
+            settings.secondaryTextColor = secondaryText;
             changed = true;
           }
           if (hover && settings.hoverColor !== hover) {

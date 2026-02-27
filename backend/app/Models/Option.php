@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class Option extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory;
 
     protected $fillable = [
         'token',
@@ -27,8 +27,8 @@ class Option extends Model
     //     'value' => 'array',
     // ];
 
-    public $incrementing = false;   // 👈 precisa porque o id não é int
-    protected $keyType = 'string';  // 👈 precisa porque UUID é string
+    public $incrementing = true;
+    protected $keyType = 'int';
 
     /**
      * Escopo global para filtrar apenas registros não excluídos

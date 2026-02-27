@@ -15,8 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { phoneApplyMask, phoneRemoveMask } from '@/lib/masks/phone-apply-mask';
 import { Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import api from '@/lib/axios';
 
-import { MathCaptchaWidget, MathCaptchaRef } from '@/components/ui/MathCaptchaWidget';
 import { ValidationConflictModal } from '@/components/modals/ValidationConflictModal';
 
 /**
@@ -130,19 +130,8 @@ export default function InviteEnroll() {
 
   // Field-level errors from API validation
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  // Security helpers: honeypot & time-trap
-  const [formRenderedAt, setFormRenderedAt] = useState<number>(() => Date.now());
-  const [hpField, setHpField] = useState<string>('');
-  // Security helpers: honeypot & time-trap
-
-  
-  // Math CAPTCHA state
-  const mathWidgetRef = useRef<MathCaptchaRef>(null);
-  const [challenge, setChallenge] = useState<{ a: number; b: number; answer: number | null }>({ a: 0, b: 0, answer: null });
-
-  useEffect(() => {
-    setFormRenderedAt(Date.now());
-  }, []);
+  // Security helpers: honeypot & time-trap removed
+  const HONEYPOT_FIELD = 'website_verify_extra';
 
   /**
    * onRegistrationSuccessEffect
@@ -270,11 +259,8 @@ export default function InviteEnroll() {
     // en-US: Requires valid course to enable submission.
     if (courseId <= 0) return false;
     
-    // Require Math answer
-    if (!challenge.answer) return false;
-    
     return true;
-  }, [name, email, password, confirmPassword, institution, privacyAccepted, termsAccepted, phone, isPhoneInvalid, isPasswordTooWeak, passwordsMismatch, courseId, challenge.answer, isAuthenticated]);
+  }, [name, email, password, confirmPassword, institution, privacyAccepted, termsAccepted, phone, isPhoneInvalid, isPasswordTooWeak, passwordsMismatch, courseId, isAuthenticated]);
 
   /**
    * handleSubmit
@@ -317,12 +303,16 @@ export default function InviteEnroll() {
     setSubmitting(true);
     setFieldErrors({});
     setRegistrationSuccess(false);
+
+    let public_form_token = '';
     try {
-      // Math Challenge Payload
-      const challenge_a = challenge.a;
-      const challenge_b = challenge.b;
-      const challenge_answer = challenge.answer;
-   
+      const response = await api.post('/public/form-token/public_enrollment');
+      public_form_token = response.data.token;
+    } catch (e) {
+      console.error('Failed to fetch security token:', e);
+    }
+
+    try {
       const resp = await publicEnrollmentService.registerAndEnroll({
         institution,
         name,
@@ -333,12 +323,8 @@ export default function InviteEnroll() {
         privacyAccepted,
         termsAccepted,
         invite_token: inviteToken || undefined,
-        // Security payload (Math Challenge)
-        challenge_a,
-        challenge_b,
-        challenge_answer,
-        form_rendered_at: formRenderedAt,
-        hp_field: hpField,
+        // Security payload
+        public_form_token,
       });
       /**
        * resolveSuccess
@@ -390,9 +376,6 @@ export default function InviteEnroll() {
       setFieldErrors(fErrors);
       setTimeout(() => focusFirstError(fErrors), 0);
       toast({ title: 'Erro de validação', description: details.length ? details.join('; ') : message, variant: 'destructive' });
-      // Reset Math Challenge on error
-      if (mathWidgetRef.current) mathWidgetRef.current.reset();
-      setChallenge(prev => ({ ...prev, answer: null }));
     } finally {
       setSubmitting(false);
     }
@@ -542,26 +525,21 @@ export default function InviteEnroll() {
               </div>
 
               <div className="md:col-span-2 flex flex-col items-center gap-4">
-                <MathCaptchaWidget
-                  ref={mathWidgetRef}
-                  onVerify={(a, b, answer) => setChallenge({ a, b, answer })}
-                />
-                
                 <div className="flex items-center gap-2 w-full justify-start">
                   <Button type="submit" disabled={!canSubmit || submitting}>
                     {submitting ? 'Enviando…' : 'Confirmar matrícula'}
                   </Button>
                 </div>
 
-                {/* Honeypot (should stay empty) */}
-                <input
-                  type="text"
-                  value={hpField}
-                  onChange={(e) => setHpField(e.target.value)}
-                  style={{ position: 'absolute', left: '-9999px', opacity: 0 }}
-                  aria-hidden="true"
-                  tabIndex={-1}
-                />
+                {/* Honeypot Field (Hidden from humans) */}
+                <div style={{ display: 'none' }} aria-hidden="true">
+                  <input
+                    type="text"
+                    name={HONEYPOT_FIELD}
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
+                </div>
               </div>
             </form>
           </CardContent>

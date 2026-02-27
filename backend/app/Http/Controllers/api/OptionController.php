@@ -56,7 +56,9 @@ class OptionController extends Controller
             'app_institution_description',
             'app_institution_url',
             'app_primary_color',
+            'app_primary_text_color',
             'app_secondary_color',
+            'app_secondary_text_color',
             'app_hover_color',
             'app_dark_mode_default',
             'app_whatsapp',
@@ -261,31 +263,23 @@ class OptionController extends Controller
         if (!$this->permissionService->isHasPermission('create')) {
             return response()->json(['error' => 'Acesso negado'], 403);
         }
-        $option = null;
-        // dd($request->all());
         foreach($request->all() as $key => $value){
-            if(!empty($key) && !empty($value)){
+            if(!empty($key) && $value !== null){
                 if(is_bool($value)){
                     $value = (string)$value;
                 }
-                $data_salv = [
-                    'name' => ucwords(str_replace('_',' ',$key)),
-                    'url' => $key,
-                    'value' => $value,
-                    'ativo' => 's',
-                    'excluido' => 'n',
-                    'deletado' => 'n',
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
-                ];
-                // dd($data_salv);
-                // $option[$key] = Option::updateOrInsert(
-                //     [
-                //         'value' => $value,
-                //     ],
-                //     $data_salv
-                // );
-                $option[$key] = Qlib::update_tab('options', $data_salv, "WHERE url = '$key'");
+                
+                $option[$key] = Option::updateOrCreate(
+                    ['url' => $key],
+                    [
+                        'name' => ucwords(str_replace('_',' ',$key)),
+                        'value' => $value,
+                        'ativo' => 's',
+                        'excluido' => 'n',
+                        'deletado' => 'n',
+                        'token' => Qlib::token(), // Qlib::token() should generate a new token if needed, or we can check if it exists
+                    ]
+                );
             }
         }
         // dd($option);

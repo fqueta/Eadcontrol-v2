@@ -26,8 +26,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   
   /**
    * Converte cor hex para valores HSL
+   * Opcionalmente permite ajustar a luminosidade (útil para hover)
    */
-  const hexToHsl = (hex: string): string => {
+  const hexToHsl = (hex: string, lightnessAdjust: number = 0): string => {
     // Remove o # se presente
     hex = hex.replace('#', '');
     
@@ -40,7 +41,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     const min = Math.min(r, g, b);
     let h = 0;
     let s = 0;
-    const l = (max + min) / 2;
+    let l = (max + min) / 2;
     
     if (max !== min) {
       const d = max - min;
@@ -57,7 +58,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     // Converte para valores HSL em porcentagem/graus
     const hDeg = Math.round(h * 360);
     const sPercent = Math.round(s * 100);
-    const lPercent = Math.round(l * 100);
+    // Aplica o ajuste de luminosidade
+    let lPercent = Math.round(l * 100) + lightnessAdjust;
+    
+    // Garante que fique entre 0 e 100
+    if (lPercent < 0) lPercent = 0;
+    if (lPercent > 100) lPercent = 100;
     
     return `${hDeg} ${sPercent}% ${lPercent}%`;
   };
@@ -91,6 +97,16 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           const hslSecondary = hexToHsl(appearanceSettings.secondaryColor);
           document.documentElement.style.setProperty('--secondary', hslSecondary);
         }
+
+        // Aplica cores de texto (foreground) personalizadas
+        if (appearanceSettings.primaryTextColor) {
+          const hslPrimaryText = hexToHsl(appearanceSettings.primaryTextColor);
+          document.documentElement.style.setProperty('--primary-foreground', hslPrimaryText);
+        }
+        if (appearanceSettings.secondaryTextColor) {
+          const hslSecondaryText = hexToHsl(appearanceSettings.secondaryTextColor);
+          document.documentElement.style.setProperty('--secondary-foreground', hslSecondaryText);
+        }
         
         // Aplica cor de destaque personalizada
         if (appearanceSettings.accentColor) {
@@ -98,10 +114,20 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           document.documentElement.style.setProperty('--accent', hslAccent);
         }
 
-        // Aplica cor de hover personalizada
+        // Aplica cor de hover primária (se não houver personalizada, deriva da primária)
         if (appearanceSettings.hoverColor) {
           const hslHover = hexToHsl(appearanceSettings.hoverColor);
           document.documentElement.style.setProperty('--primary-hover', hslHover);
+        } else if (appearanceSettings.primaryColor) {
+          // Deriva da primária escurecendo 10%
+          const hslHover = hexToHsl(appearanceSettings.primaryColor, -10);
+          document.documentElement.style.setProperty('--primary-hover', hslHover);
+        }
+
+        // Aplica cor de hover secundária (deriva da secundária)
+        if (appearanceSettings.secondaryColor) {
+          const hslSecondaryHover = hexToHsl(appearanceSettings.secondaryColor, -10);
+          document.documentElement.style.setProperty('--secondary-hover', hslSecondaryHover);
         }
         
         // Aplica configurações de sidebar

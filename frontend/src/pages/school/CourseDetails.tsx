@@ -14,11 +14,10 @@ import { toast } from '@/hooks/use-toast';
 import { emailsService } from '@/services/emailsService';
 import { publicEnrollmentService } from '@/services/publicEnrollmentService';
 import { useAuth } from '@/contexts/AuthContext';
+import api from '@/lib/axios';
 import { useEnrollmentsList } from '@/hooks/enrollments';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { phoneApplyMask } from '@/lib/masks/phone-apply-mask';
-import { MathCaptchaWidget, MathCaptchaRef } from '@/components/ui/MathCaptchaWidget';
-
 
 
 import { ValidationConflictModal } from '@/components/modals/ValidationConflictModal';
@@ -202,23 +201,14 @@ export default function CourseDetails() {
    */
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Security helpers: honeypot & time-trap
-  const [formRenderedAt, setFormRenderedAt] = useState<number>(0);
-  const [hpField, setHpField] = useState<string>('');
-  
-  // Security helpers: Math Challenge
-  const mathWidgetRef = useRef<MathCaptchaRef>(null);
-  const [challenge, setChallenge] = useState<{ a: number; b: number; answer: number | null }>({ a: 0, b: 0, answer: null });
+  // Security helpers removed
+  const HONEYPOT_FIELD = 'website_verify_extra';
 
   // Conflict Modal State
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
   const [conflictType, setConflictType] = useState<'email' | 'phone' | null>(null);
   const userFirst = user?.name?.split(' ')[0] || 'Aluno';
   const { isAuthenticated } = useAuth();
-
-  useEffect(() => {
-    setFormRenderedAt(Date.now());
-  }, []);
 
   /**
    * handleEmailBlur
@@ -317,20 +307,19 @@ export default function CourseDetails() {
            setIsSubmitting(false);
           return;
         }
-        if (!challenge.answer) {
-          toast({ variant: "destructive", title: "Erro", description: "Resolva o desafio matemático de segurança." });
-           setIsSubmitting(false);
-          return;
+
+        let public_form_token = '';
+        try {
+          const response = await api.post('/public/form-token/public_interest');
+          public_form_token = response.data.token;
+        } catch (e) {
+          console.error('Failed to fetch security token:', e);
         }
         
         payload.name = `Interesse • ${fullName}`;
         payload.email = email;
         payload.phone = phone;
-        payload.form_rendered_at = formRenderedAt;
-        payload.hp_field = hpField;
-        payload.challenge_a = challenge.a;
-        payload.challenge_b = challenge.b;
-        payload.challenge_answer = challenge.answer;
+        payload.public_form_token = public_form_token;
       }
 
       // Registra interesse via endpoint público
@@ -392,9 +381,6 @@ export default function CourseDetails() {
       });
       setSubmitSuccess(false);
       setSuccessMessage('');
-      // Reset challenge on error
-      if (mathWidgetRef.current) mathWidgetRef.current.reset();
-      setChallenge(prev => ({ ...prev, answer: null }));
     } finally {
       setIsSubmitting(false);
     }
@@ -572,26 +558,21 @@ export default function CourseDetails() {
                       </div>
                       
                       <div className="md:col-span-2 flex flex-col items-center gap-4 mt-2">
-                        <MathCaptchaWidget
-                          ref={mathWidgetRef}
-                          onVerify={(a, b, answer) => setChallenge({ a, b, answer })}
-                        />
-                        
                         <div className="w-full flex justify-end">
                           <Button type="submit" className="bg-primary hover:bg-blue-700 text-white rounded-md px-8 shadow-md hover:shadow-lg transition-all" disabled={isSubmitting}>
                             {isSubmitting ? 'Enviando...' : 'Enviar interesse'}
                           </Button>
                         </div>
                       </div>
-                      {/* Honeypot (should stay empty) */}
-                      <input
-                        type="text"
-                        value={hpField}
-                        onChange={(e) => setHpField(e.target.value)}
-                        style={{ position: 'absolute', left: '-9999px', opacity: 0 }}
-                        aria-hidden="true"
-                        tabIndex={-1}
-                      />
+                      {/* Honeypot Field (Hidden from humans) */}
+                      <div style={{ display: 'none' }} aria-hidden="true">
+                        <input
+                          type="text"
+                          name={HONEYPOT_FIELD}
+                          tabIndex={-1}
+                          autoComplete="off"
+                        />
+                      </div>
                     </form>
                   )}
                 </CardContent>

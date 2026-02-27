@@ -19,14 +19,7 @@ class PublicEnrollmentService extends BaseApiService {
     id_curso?: number;
     id_turma?: number;
     // Security fields
-    captcha_token?: string;
-    captcha_action?: string;
-    form_rendered_at?: number;
-    hp_field?: string;
-    // Security fields (Math Challenge)
-    challenge_a?: number;
-    challenge_b?: number;
-    challenge_answer?: number;
+    public_form_token?: string;
   }): Promise<any> {
     const resp = await this.post<any>('/matriculas/interested', payload);
     return resp.data || resp;
@@ -51,12 +44,7 @@ class PublicEnrollmentService extends BaseApiService {
     termsAccepted?: boolean;
     invite_token?: string;
     // Security fields
-    // Security fields (Math Challenge)
-    challenge_a?: number;
-    challenge_b?: number;
-    challenge_answer?: number;
-    form_rendered_at?: number;
-    hp_field?: string;
+    public_form_token?: string;
   }): Promise<any> {
     const resp = await this.post<any>('/clients/matricula', payload);
     return resp.data || resp;
