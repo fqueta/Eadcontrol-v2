@@ -13,10 +13,11 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\View;
+use App\Traits\HasDynamicBranding;
 
 class NewCommentNotification extends Notification
 {
-    use Queueable;
+    use Queueable, HasDynamicBranding;
 
     protected $comment;
     protected $frontendUrl;
@@ -27,7 +28,8 @@ class NewCommentNotification extends Notification
     public function __construct(Comment $comment)
     {
         $this->comment = $comment;
-        $this->frontendUrl = Qlib::get_frontend_url();
+        $this->frontendUrl = $this->getFrontendUrl();
+        $this->loadDynamicBranding();
     }
 
     /**
@@ -92,41 +94,11 @@ class NewCommentNotification extends Notification
             'commentBody' => $this->comment->body,
             'rating' => $this->comment->rating,
             'adminLink' => $this->frontendUrl . '/admin/comments', // Ajustar se necessário
-            'logoDataUri' => $this->getLogoDataUri(),
-            'logoSrc' => $this->getLogoSrc(),
+            'logoDataUri' => $this->logoDataUri,
+            'logoSrc' => $this->logoUrl,
+            'primaryColor' => $this->primaryColor,
+            'primaryTextColor' => $this->primaryTextColor,
+            'institutionName' => $this->institutionName,
         ];
-    }
-
-    /**
-     * Obtém o logo como data URI (base64) para uso em e-mails.
-     */
-    protected function getLogoDataUri(): ?string
-    {
-        $env = (string) env('MAIL_LOGO_BASE64', '');
-        if ($env !== '') {
-            $mime = env('MAIL_LOGO_MIME', 'image/svg+xml');
-            return 'data:' . $mime . ';base64,' . $env;
-        }
-
-        $path = public_path('logo.svg');
-        if (File::exists($path)) {
-            $content = File::get($path);
-            $base64 = base64_encode($content);
-            return 'data:image/svg+xml;base64,' . $base64;
-        }
-
-        return null;
-    }
-
-    /**
-     * Obtém uma URL pública para o logo quando disponível.
-     */
-    protected function getLogoSrc(): ?string
-    {
-        $publicUrl = (string) env('PUBLIC_LOGO_URL', '');
-        if ($publicUrl !== '') {
-            return $publicUrl;
-        }
-        return null;
     }
 }

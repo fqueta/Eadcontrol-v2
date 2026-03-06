@@ -151,20 +151,20 @@ export default function Login() {
         <div className="relative z-10 flex w-full max-w-6xl mx-auto px-4">
           {/* Lado esquerdo - Logo e Branding */}
           <div className="hidden lg:flex lg:w-1/2 items-center justify-center relative">
-            <div className="text-center p-8 bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 shadow-xl">
+            <div className="text-center p-8 bg-white/40 backdrop-blur-md rounded-3xl border border-white/50 shadow-xl">
               <div className="mb-6 flex justify-center">
-                 <div className="bg-white/90 p-6 rounded-2xl shadow-inner">
+                 <div className="bg-white/90 p-6 rounded-2xl shadow-sm">
                     <BrandLogo 
                       alt={institutionName || 'Logo'} 
                       className="h-32 w-auto object-contain" 
                     />
                  </div>
               </div>
-              <h2 className="text-3xl font-bold text-white mb-2 drop-shadow-md">
+              <h2 className="text-3xl font-bold text-slate-800 mb-2 drop-shadow-sm">
                 {institutionName}
               </h2>
               {institutionSlogan && (
-                <p className="text-blue-100 text-lg max-w-sm mx-auto font-light leading-relaxed">
+                <p className="text-slate-600 text-lg max-w-sm mx-auto font-light leading-relaxed">
                   {institutionSlogan}
                 </p>
               )}

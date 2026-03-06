@@ -5,15 +5,18 @@ namespace App\Notifications;
 use App\Notifications\Channels\BrevoChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\View;
+use Illuminate\Notifications\Messages\MailMessage;
+use App\Traits\HasDynamicBranding;
 
 /**
  * WelcomeEmailNotification
- * pt-BR: Notificação para envio de e-mail de boas-vindas via Brevo.
- * en-US: Notification to send welcome email through Brevo.
+ * pt-BR: Notificação para envio de e-mail de boas-vindas via Brevo e SMTP.
+ * en-US: Notification to send welcome email through Brevo and SMTP.
  */
 class WelcomeEmailNotification extends Notification
 {
-    use Queueable;
+    use Queueable, HasDynamicBranding;
 
     /** @var string */
     protected string $recipientName;
@@ -32,6 +35,8 @@ class WelcomeEmailNotification extends Notification
         $this->recipientName = $recipientName;
         $this->courseTitle = $courseTitle;
         $this->courseId = $courseId;
+        
+        $this->loadDynamicBranding();
     }
 
     /**
@@ -45,6 +50,20 @@ class WelcomeEmailNotification extends Notification
     }
 
     /**
+     * toMail
+     * pt-BR: Suporte para envio padrão via SMTP se o Brevo não estiver configurado.
+     */
+    public function toMail($notifiable): MailMessage
+    {
+        $subject = sprintf('Bem-vindo(a) ao curso %s - %s', $this->courseTitle, $this->institutionName);
+        $data = $this->getNotificationData();
+
+        return (new MailMessage)
+            ->subject($subject)
+            ->view('emails.welcome', $data);
+    }
+
+    /**
      * toBrevo
      * pt-BR: Constrói o payload esperado pela API do Brevo.
      * en-US: Builds the payload expected by Brevo API.
@@ -53,36 +72,39 @@ class WelcomeEmailNotification extends Notification
      */
     public function toBrevo($notifiable): array
     {
-        $subject = sprintf('Bem-vindo(a) ao curso %s', $this->courseTitle);
+        $subject = sprintf('Bem-vindo(a) ao curso %s - %s', $this->courseTitle, $this->institutionName);
+        $data = $this->getNotificationData();
 
-        $htmlContent = sprintf(
-            '<p>Olá %s,</p>
-             <p>Obrigado pelo seu interesse no curso <strong>%s</strong>.</p>
-             <p>Nossa equipe entrará em contato em breve com mais detalhes e próximos passos.</p>
-             %s
-             <p>Atenciosamente,<br/>Equipe Incluir &amp; Educar</p>',
-            e($this->recipientName),
-            e($this->courseTitle),
-            $this->courseId ? '<p><small>ID do curso: '.e((string)$this->courseId).'</small></p>' : ''
-        );
-
-        $textContent = sprintf(
-            "Olá %s,\n\n" .
-            "Obrigado pelo seu interesse no curso '%s'.\n" .
-            "Nossa equipe entrará em contato em breve com mais detalhes e próximos passos.\n\n" .
-            "%s" .
-            "Atenciosamente,\nEquipe Incluir & Educar",
-            $this->recipientName,
-            $this->courseTitle,
-            $this->courseId ? ('ID do curso: ' . $this->courseId . "\n\n") : ''
-        );
+        $htmlContent = View::make('emails.welcome', $data)->render();
 
         return [
             'subject' => $subject,
             'htmlContent' => $htmlContent,
-            'textContent' => $textContent,
             // pt-BR: 'sender' será preenchido pelo BrevoChannel a partir de config/services.php.
             // en-US: 'sender' will be filled by BrevoChannel from config/services.php.
+        ];
+    }
+    
+    /**
+     * Array de dados centralizado para as Views
+     */
+    protected function getNotificationData(): array
+    {
+        return [
+            'recipientName' => $this->recipientName,
+            'courseTitle' => $this->courseTitle,
+            'courseName' => $this->courseTitle,
+            'courseId' => $this->courseId,
+            'courseSlug' => null, // Opcional, adicionar ao builder se necessário depois
+            'loginUrl' => $this->getFrontendUrl() . '/login',
+            
+            // Variáveis injetadas pelo Trait HasDynamicBranding
+            'logoDataUri' => $this->logoDataUri,
+            'logoSrc' => $this->logoUrl,
+            'primaryColor' => $this->primaryColor,
+            'primaryTextColor' => $this->primaryTextColor,
+            'institutionName' => $this->institutionName,
+            'companyName' => $this->institutionName,
         ];
     }
 }

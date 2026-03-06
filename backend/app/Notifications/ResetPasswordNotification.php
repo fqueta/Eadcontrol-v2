@@ -9,9 +9,11 @@ use App\Services\Qlib;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\File;
+use App\Traits\HasDynamicBranding;
 
 class ResetPasswordNotification extends ResetPasswordBase
 {
+    use HasDynamicBranding;
     /**
      * Define os canais de entrega da notificação.
      * Se a API key do Brevo estiver configurada, usa o canal Brevo; caso contrário, usa e-mail padrão.
@@ -20,10 +22,12 @@ class ResetPasswordNotification extends ResetPasswordBase
      * @return array
      */
     public $frontendUrl = '';
+
     public function __construct($token)
     {
         $this->token = $token;
-        $this->frontendUrl = Qlib::get_frontend_url();
+        $this->frontendUrl = $this->getFrontendUrl();
+        $this->loadDynamicBranding();
     }
     public function via($notifiable)
     {
@@ -49,15 +53,18 @@ class ResetPasswordNotification extends ResetPasswordBase
         $resetLink = $this->frontendUrl . '/reset-password/' . $this->token . '?email=' . urlencode($notifiable->email);
 
         // Renderiza nosso template com o tema/layout do projeto
-        $logoDataUri = $this->getLogoDataUri();
-        $logoSrc = Qlib::get_logo_url();
+        $logoDataUri = $this->getLogoDataUri(); // Fallback to getLogoDataUri if DB logo is missing
+        $logoSrc = !empty($this->logoUrl) ? $this->logoUrl : $this->getLogoSrc(); // DB logo takes precedence
 
         return (new MailMessage)
-            ->subject('Redefinição de Senha')
+            ->subject('Redefinição de Senha - ' . $this->institutionName)
             ->view('emails.password_reset', [
                 'resetLink' => $resetLink,
                 'logoDataUri' => $logoDataUri,
                 'logoSrc' => $logoSrc,
+                'primaryColor' => $this->primaryColor,
+                'primaryTextColor' => $this->primaryTextColor,
+                'institutionName' => $this->institutionName,
             ]);
     }
 
@@ -80,58 +87,20 @@ class ResetPasswordNotification extends ResetPasswordBase
         $resetLink = $this->frontendUrl . '/reset-password/' . $this->token . '?email=' . urlencode($notifiable->email);
 
         // Reaproveita o mesmo template Blade para o conteúdo HTML do Brevo
+        $logoSrc = !empty($this->logoUrl) ? $this->logoUrl : $this->getLogoSrc();
+
         $html = View::make('emails.password_reset', [
             'resetLink' => $resetLink,
             'logoDataUri' => $this->getLogoDataUri(),
-            'logoSrc' => $this->getLogoSrc(),
+            'logoSrc' => $logoSrc,
+            'primaryColor' => $this->primaryColor,
+            'primaryTextColor' => $this->primaryTextColor,
+            'institutionName' => $this->institutionName,
         ])->render();
 
         return [
-            'subject' => 'Redefinição de Senha',
+            'subject' => 'Redefinição de Senha - ' . $this->institutionName,
             'htmlContent' => $html,
         ];
-    }
-
-    /**
-     * Obtém o logo como data URI (base64) para uso em e-mails.
-     * Prioriza ENV "MAIL_LOGO_BASE64", depois arquivo public/logo.svg.
-     *
-     * @return string|null Data URI (ex.: data:image/svg+xml;base64,PHN2Zy4uLg==) ou null se indisponível
-     */
-    protected function getLogoDataUri(): ?string
-    {
-        // Se informado diretamente por ENV/Config, usar
-        $env = (string) env('MAIL_LOGO_BASE64', '');
-        if ($env !== '') {
-            // Tenta inferir MIME a partir de um prefixo opcional, senão assume SVG
-            $mime = env('MAIL_LOGO_MIME', 'image/svg+xml');
-            return 'data:' . $mime . ';base64,' . $env;
-        }
-
-        // Caso contrário, tenta carregar public/logo.svg
-        $path = public_path('logo.svg');
-        if (File::exists($path)) {
-            $content = File::get($path);
-            $base64 = base64_encode($content);
-            return 'data:image/svg+xml;base64,' . $base64;
-        }
-
-        return null;
-    }
-
-    /**
-     * Obtém uma URL pública para o logo quando disponível.
-     * Prioriza ENV/Config "PUBLIC_LOGO_URL" para garantir visibilidade em clientes como Gmail.
-     * Se não houver URL pública, retorna null para que o template use o fallback (data URI ou asset local).
-     *
-     * @return string|null
-     */
-    protected function getLogoSrc(): ?string
-    {
-        $publicUrl = (string) env('PUBLIC_LOGO_URL', '');
-        if ($publicUrl !== '') {
-            return $publicUrl;
-        }
-        return null;
     }
 }
