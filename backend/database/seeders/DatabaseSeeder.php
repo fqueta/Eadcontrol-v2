@@ -40,6 +40,8 @@ class DatabaseSeeder extends Seeder
                     AeronavesSeeder::class,
                     CursosSeeder::class,
                     TurmasSeeder::class,
+                    StripeCredentialSeeder::class,
+                    AsaasCredentialSeeder::class,
                     // QoptionSeeder::class,
             ];
 
@@ -56,6 +58,8 @@ class DatabaseSeeder extends Seeder
                     FunnelStageSeeder::class,
                     AircraftAttendanceSeeder::class,
                     AeronavesSeeder::class,
+                    StripeCredentialSeeder::class,
+                    AsaasCredentialSeeder::class,
             ];
 
         }

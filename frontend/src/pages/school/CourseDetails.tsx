@@ -22,6 +22,7 @@ import { phoneApplyMask } from '@/lib/masks/phone-apply-mask';
 
 import { ValidationConflictModal } from '@/components/modals/ValidationConflictModal';
 import { PublicCourseComments } from '@/components/school/PublicCourseComments';
+import { checkoutService } from '@/services/checkoutService';
 
 /**
  * CourseDetails
@@ -245,15 +246,10 @@ export default function CourseDetails() {
 
   /**
    * handleBuy
-   * pt-BR: Abre link de compra quando disponível; caso contrário, redireciona para matrícula.
-   * en-US: Opens purchase link when available; otherwise redirects to enrollment.
+   * pt-BR: Abre link de compra quando disponível; caso contrário, redireciona para o checkout do Stripe.
+   * en-US: Opens purchase link when available; otherwise redirects to Stripe checkout.
    */
-  /**
-   * handleBuy
-   * pt-BR: Abre link de compra quando disponível; caso contrário, redireciona para matrícula.
-   * en-US: Opens purchase link when available; otherwise redirects to enrollment.
-   */
-  const handleBuy = () => {
+  const handleBuy = async () => {
     const c: any = course || {};
     if (isAlreadyEnrolled) {
       toast({
@@ -270,8 +266,50 @@ export default function CourseDetails() {
       window.open(link, '_blank');
       return;
     }
-    const q = new URLSearchParams({ courseId: String(c?.id || '') }).toString();
-    navigate(`/admin/sales/proposals/create?${q}`);
+
+    if (!isAuthenticated) {
+      toast({
+        title: "Atenção",
+        description: "Você precisa estar logado ou criar uma conta para comprar o curso."
+      });
+      // Salva a url de retorno
+      const returnUrl = encodeURIComponent(window.location.pathname);
+      navigate(`/login?returnUrl=${returnUrl}`);
+      return;
+    }
+
+    try {
+      const payload: any = {
+        course_id: Number(c?.id)
+      };
+
+      if (isAuthenticated && user) {
+        payload.email = user.email;
+        payload.name = user.name;
+        payload.phone = user.celular;
+      }
+
+      toast({
+        title: "Processando...",
+        description: "Redirecionando para o pagamento seguro..."
+      });
+
+      const provider = 'asaas'; // TODO: Tornar isso dinâmico depois (Stripe ou Asaas)
+      
+      const response = await checkoutService.createCheckoutSession(provider, payload);
+      if (response && response.url) {
+        window.location.href = response.url;
+      } else {
+        throw new Error("URL de checkout inválida.");
+      }
+    } catch (err: any) {
+      console.error('Erro ao iniciar checkout:', err);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: err?.body?.message || err?.message || "Falha ao iniciar pagamento. Tente novamente."
+      });
+    }
   };
 
   /**

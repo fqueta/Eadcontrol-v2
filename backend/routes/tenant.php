@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\admin\DashboardController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\api\AuthController;
 use App\Http\Controllers\api\ClientController;
 use App\Http\Controllers\api\MenuPermissionController;
@@ -169,6 +170,9 @@ Route::name('api.')->prefix('api/v1')->middleware([
     Route::post('public/check-email', [PublicEnrollmentController::class, 'checkEmail'])
         ->name('public.check-email')
         ->middleware('throttle:60,1');
+
+    // Public payment checkout routes (Removido daqui pois agora exige autenticação)
+    // Route::post('public/checkout/{provider}', [CheckoutController::class, 'createSession']);
 
 
 
@@ -578,6 +582,9 @@ Route::name('api.')->prefix('api/v1')->middleware([
             // Route::post('{id}/menus', [PermissionMenuController::class, 'update']);
         });
 
+        // Checkout
+        Route::post('checkout/{provider}', [CheckoutController::class, 'createSession']);
+
         // Rotas para gráficos do dashboard (dados mocados)
         // Resumo único do dashboard (payload consolidado)
         Route::get('dashboard/summary', [DashboardChartController::class, 'summary'])
@@ -592,6 +599,7 @@ Route::name('api.')->prefix('api/v1')->middleware([
     // Rotas para tracking events
     Route::post('tracking/whatsapp-contact', [TrackingEventController::class, 'whatsappContact'])->name('tracking.whatsapp-contact');
     // Rotas para webhooks
+    Route::post('webhooks/{provider}', [CheckoutController::class, 'handleWebhook'])->name('webhook.payment');
     Route::any('webhook/{endp1}', [WebhookController::class, 'handleSingleEndpoint'])->name('webhook.single');
     Route::any('webhook/{endp1}/{endp2}', [WebhookController::class, 'handleDoubleEndpoint'])->name('webhook.double');
 });

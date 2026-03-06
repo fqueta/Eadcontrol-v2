@@ -5,9 +5,8 @@ namespace App\Notifications;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
 use App\Notifications\Channels\BrevoChannel;
-use App\Services\Qlib;
+use App\Traits\HasDynamicBranding;
 use Illuminate\Support\Facades\View;
-use Illuminate\Support\Facades\File;
 
 /**
  * Notificação de boas-vindas para novos clientes.
@@ -15,6 +14,8 @@ use Illuminate\Support\Facades\File;
  */
 class WelcomeNotification extends Notification
 {
+    use HasDynamicBranding;
+
     /** @var int */
     protected $courseId;
 
@@ -37,6 +38,8 @@ class WelcomeNotification extends Notification
         $this->courseSlug = $courseSlug;
         $this->courseName = $courseName;
         $this->enrollmentId = $enrollmentId;
+        
+        $this->loadDynamicBranding();
     }
 
     /**
@@ -53,24 +56,12 @@ class WelcomeNotification extends Notification
      */
     public function toMail($notifiable)
     {
-        $frontendUrl = Qlib::get_frontend_url();
-        $loginUrl = $frontendUrl ? $frontendUrl . '/login' : null;
-        $companyName = Qlib::get_company_name() ?: config('app.name');
+        $subject = sprintf('Boas-vindas ao %s', $this->institutionName);
+        $data = $this->getNotificationData($notifiable);
+
         return (new MailMessage)
-            ->subject('Boas-vindas ao ' . $companyName)
-            ->view('emails.welcome', [
-                'loginUrl' => $loginUrl,
-                'courseId' => $this->courseId,
-                'courseSlug' => $this->courseSlug,
-                'logoDataUri' => $this->getLogoDataUri(),
-                'logoSrc' => Qlib::get_logo_url(),
-                'companyName' => $companyName,
-                'courseName' => $this->courseName,
-                'primaryColor' => Qlib::get_primary_color(),
-                'primaryTextColor' => Qlib::get_primary_text_color(),
-                'secondaryColor' => Qlib::get_secondary_color(),
-                'secondaryTextColor' => Qlib::get_secondary_text_color(),
-            ]);
+            ->subject($subject)
+            ->view('emails.welcome', $data);
     }
 
     /**
@@ -79,52 +70,43 @@ class WelcomeNotification extends Notification
      */
     public function toBrevo($notifiable)
     {
-        $frontendUrl = Qlib::get_frontend_url();
-        $loginUrl = $frontendUrl ? $frontendUrl . '/login' : null;
+        $subject = sprintf('Boas-vindas ao %s', $this->institutionName);
+        $data = $this->getNotificationData($notifiable);
 
-        $companyName = Qlib::get_company_name() ?: config('app.name');
-        $html = View::make('emails.welcome', [
-            'loginUrl' => $loginUrl,
-            'courseId' => $this->courseId,
-            'courseSlug' => $this->courseSlug,
-            'logoSrc' => Qlib::get_logo_url(),
-            'companyName' => $companyName,
-            'courseName' => $this->courseName,
-            'primaryColor' => Qlib::get_primary_color(),
-            'secondaryColor' => Qlib::get_secondary_color(),
-        ])->render();
+        $html = View::make('emails.welcome', $data)->render();
 
         return [
-            'subject' => 'Boas-vindas ao ' . $companyName,
+            'subject' => $subject,
             'htmlContent' => $html,
         ];
     }
-
+    
     /**
-     * Obtém o logo como data URI (base64) para uso em e-mails.
+     * Get the data for the notification template.
      */
-    protected function getLogoDataUri(): ?string
+    protected function getNotificationData($notifiable): array
     {
-        $env = (string) env('MAIL_LOGO_BASE64', '');
-        if ($env !== '') {
-            $mime = env('MAIL_LOGO_MIME', 'image/svg+xml');
-            return 'data:' . $mime . ';base64,' . $env;
+        $recipientName = trim($notifiable->nome . ' ' . $notifiable->sobrenome);
+        if (empty($recipientName)) {
+            $recipientName = $notifiable->name ?? 'Aluno';
         }
-        $path = public_path('logo.svg');
-        if (File::exists($path)) {
-            $content = File::get($path);
-            $base64 = base64_encode($content);
-            return 'data:image/svg+xml;base64,' . $base64;
-        }
-        return null;
-    }
 
-    /**
-     * Obtém URL pública para o logo quando disponível.
-     */
-    protected function getLogoSrc(): ?string
-    {
-        $publicUrl = (string) env('PUBLIC_LOGO_URL', '');
-        return $publicUrl !== '' ? $publicUrl : null;
+        return [
+            'recipientName' => $recipientName,
+            'courseTitle' => $this->courseName,
+            'courseName' => $this->courseName,
+            'courseId' => $this->courseId,
+            'courseSlug' => $this->courseSlug,
+            'loginUrl' => $this->getFrontendUrl() . '/login',
+            
+            // Variáveis injetadas pelo Trait HasDynamicBranding
+            'logoDataUri' => $this->logoDataUri,
+            'logoSrc' => $this->logoUrl,
+            'primaryColor' => $this->primaryColor,
+            'primaryTextColor' => $this->primaryTextColor,
+            'institutionName' => $this->institutionName,
+            'institutionSlogan' => $this->institutionSlogan,
+            'companyName' => $this->institutionName,
+        ];
     }
 }
