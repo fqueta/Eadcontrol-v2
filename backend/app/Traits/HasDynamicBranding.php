@@ -24,10 +24,18 @@ trait HasDynamicBranding
         $this->institutionName = Qlib::qoption('app_institution_name') ?? config('app.name');
         
         $logo = Qlib::get_logo_url();
-        if (!empty($logo) && !str_starts_with($logo, 'http')) {
-            $this->logoUrl = url($logo);
+        if (!empty($logo)) {
+            if (!str_starts_with($logo, 'http')) {
+                $logo = url($logo);
+            }
+            // Fix dynamically if the URL was saved as http:// due to missing proxy headers
+            $forceHttps = config('app.env') === 'production' || str_starts_with(config('app.url') ?? '', 'https://') || request()->secure();
+            if ($forceHttps && str_starts_with($logo, 'http://')) {
+                $logo = str_replace('http://', 'https://', $logo);
+            }
+            $this->logoUrl = $logo;
         } else {
-            $this->logoUrl = $logo ?? '';
+            $this->logoUrl = '';
         }
 
         $this->logoDataUri = $this->getLogoDataUri();
