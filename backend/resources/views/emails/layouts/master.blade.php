@@ -9,24 +9,30 @@
     <div style="width: 100%; background-color: #f5f7fb; padding: 24px 0;">
         <div style="width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
             <!-- Header -->
-            <div style="padding: 30px 24px; background-color: {{ $primaryColor ?? '#1b1b18' }}; color: {{ $primaryTextColor ?? '#ffffff' }}; text-align: center;">
-                <div style="display: block; margin-bottom: 12px;">
-                    @if (!empty($logoSrc))
-                        <img src="{{ $logoSrc }}" alt="Logo" style="height: 48px; width: auto; max-width: 250px; display: inline-block; vertical-align: middle;" />
-                    @elseif (!empty($logoDataUri))
-                        <img src="{{ $logoDataUri }}" alt="Logo" style="height: 48px; width: auto; max-width: 250px; display: inline-block; vertical-align: middle;" />
-                    @else
-                        <img src="{{ asset('logo.svg') }}" alt="Logo" style="height: 48px; width: 48px; display: inline-block; vertical-align: middle;" />
-                    @endif
-                </div>
-                <div style="font-weight: 600; letter-spacing: 0.5px; font-size: 22px; margin-bottom: 4px; color: {{ $primaryTextColor ?? '#ffffff' }};">
-                    {{ $institutionName ?? config('app.name') }}
-                </div>
-                @if(!empty($institutionSlogan))
-                <div style="font-size: 14px; font-weight: 400; opacity: 0.9; color: {{ $primaryTextColor ?? '#ffffff' }};">
-                    {{ $institutionSlogan }}
-                </div>
-                @endif
+            <div style="padding: 30px 24px; background-color: {{ $primaryColor ?? '#ffffff' }}; color: {{ $primaryTextColor ?? '#1e293b' }}; text-align: center;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation">
+                    <tr>
+                        <td align="center">
+                            <div style="margin-bottom: 0;">
+                                @if (!empty($logoSrc))
+                                    <img src="{{ $logoSrc }}" alt="Logo" style="height: auto; max-height: 80px; width: auto; max-width: 250px; display: block; margin: 0 auto; border: 0;" />
+                                @elseif (!empty($logoDataUri))
+                                    <img src="{{ $logoDataUri }}" alt="Logo" style="height: auto; max-height: 80px; width: auto; max-width: 250px; display: block; margin: 0 auto; border: 0;" />
+                                @else
+                                    <img src="{{ asset('logo.svg') }}" alt="Logo" style="height: auto; max-height: 80px; width: auto; max-width: 250px; display: block; margin: 0 auto; border: 0;" />
+                                @endif
+                            </div>
+                            <div style="margin-top: 30px; font-size: 23px; font-weight: bold; color: {{ $primaryTextColor ?? '#1e293b' }}; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                                {{ $institutionName ?? config('app.name') }}
+                            </div>
+                            @if(!empty($institutionSlogan))
+                            <div style="margin-top: 8px; font-size: 14px; font-weight: 400; color: {{ $primaryTextColor ?? '#475569' }}; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; opacity: 0.9;">
+                                {{ $institutionSlogan }}
+                            </div>
+                            @endif
+                        </td>
+                    </tr>
+                </table>
             </div>
             
             <!-- Content -->
