@@ -96,6 +96,7 @@ class ResetPasswordNotification extends ResetPasswordBase
             'primaryColor' => $this->primaryColor,
             'primaryTextColor' => $this->primaryTextColor,
             'institutionName' => $this->institutionName,
+            'institutionSlogan' => $this->institutionSlogan,
         ])->render();
 
         return [

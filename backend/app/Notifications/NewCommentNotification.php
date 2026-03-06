@@ -99,6 +99,7 @@ class NewCommentNotification extends Notification
             'primaryColor' => $this->primaryColor,
             'primaryTextColor' => $this->primaryTextColor,
             'institutionName' => $this->institutionName,
+            'institutionSlogan' => $this->institutionSlogan,
         ];
     }
 }

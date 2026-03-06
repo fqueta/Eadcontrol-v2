@@ -105,6 +105,7 @@ class WelcomeEmailNotification extends Notification
             'primaryTextColor' => $this->primaryTextColor,
             'institutionName' => $this->institutionName,
             'companyName' => $this->institutionName,
+            'institutionSlogan' => $this->institutionSlogan,
         ];
     }
 }

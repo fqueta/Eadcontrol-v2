@@ -10,6 +10,7 @@ trait HasDynamicBranding
     public $primaryColor = '';
     public $primaryTextColor = '';
     public $institutionName = '';
+    public $institutionSlogan = '';
     public $logoUrl = '';
     public $logoDataUri = '';
 
@@ -22,6 +23,7 @@ trait HasDynamicBranding
         $this->primaryColor = Qlib::qoption('app_primary_color') ?? '#0a0a0a';
         $this->primaryTextColor = Qlib::qoption('app_primary_text_color') ?? '#ffffff';
         $this->institutionName = Qlib::qoption('app_institution_name') ?? config('app.name');
+        $this->institutionSlogan = Qlib::qoption('app_institution_slogan') ?? '';
         
         $logo = Qlib::get_logo_url();
         if (!empty($logo)) {

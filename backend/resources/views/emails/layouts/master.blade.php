@@ -9,17 +9,24 @@
     <div style="width: 100%; background-color: #f5f7fb; padding: 24px 0;">
         <div style="width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
             <!-- Header -->
-            <div style="padding: 20px 24px; background-color: {{ $primaryColor ?? '#1b1b18' }}; color: {{ $primaryTextColor ?? '#ffffff' }}; text-align: center;">
-                <div style="display: inline-block; font-weight: 600; letter-spacing: 0.3px; font-size: 18px;">
+            <div style="padding: 30px 24px; background-color: {{ $primaryColor ?? '#1b1b18' }}; color: {{ $primaryTextColor ?? '#ffffff' }}; text-align: center;">
+                <div style="display: block; margin-bottom: 12px;">
                     @if (!empty($logoSrc))
-                        <img src="{{ $logoSrc }}" alt="Logo" style="height: 24px; width: auto; max-width: 150px; vertical-align: middle; margin-right: 8px;" />
+                        <img src="{{ $logoSrc }}" alt="Logo" style="height: 48px; width: auto; max-width: 250px; display: inline-block; vertical-align: middle;" />
                     @elseif (!empty($logoDataUri))
-                        <img src="{{ $logoDataUri }}" alt="Logo" style="height: 24px; width: auto; max-width: 150px; vertical-align: middle; margin-right: 8px;" />
+                        <img src="{{ $logoDataUri }}" alt="Logo" style="height: 48px; width: auto; max-width: 250px; display: inline-block; vertical-align: middle;" />
                     @else
-                        <img src="{{ asset('logo.svg') }}" alt="Logo" style="height: 24px; width: 24px; vertical-align: middle; margin-right: 8px;" />
+                        <img src="{{ asset('logo.svg') }}" alt="Logo" style="height: 48px; width: 48px; display: inline-block; vertical-align: middle;" />
                     @endif
-                    <span style="vertical-align: middle; color: {{ $primaryTextColor ?? '#ffffff' }};">{{ $institutionName ?? config('app.name') }}</span>
                 </div>
+                <div style="font-weight: 600; letter-spacing: 0.5px; font-size: 22px; margin-bottom: 4px; color: {{ $primaryTextColor ?? '#ffffff' }};">
+                    {{ $institutionName ?? config('app.name') }}
+                </div>
+                @if(!empty($institutionSlogan))
+                <div style="font-size: 14px; font-weight: 400; opacity: 0.9; color: {{ $primaryTextColor ?? '#ffffff' }};">
+                    {{ $institutionSlogan }}
+                </div>
+                @endif
             </div>
             
             <!-- Content -->
