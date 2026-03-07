@@ -126,7 +126,7 @@ export default function Enroll() {
     situacao_id: selectedSituationId || undefined,
   }), [page, perPage, debouncedSearch, selectedCourseId, selectedClassId, studentFilter, selectedSituationId]);
 
-  const { data: enrollmentsResp, isLoading, isFetching, error } = useEnrollmentsList(listParams, {
+  const { data: enrollmentsResp, isLoading, isFetching, error, refetch } = useEnrollmentsList(listParams, {
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: 1,
@@ -135,6 +135,7 @@ export default function Enroll() {
   const deleteMutation = useDeleteEnrollment({
     onSuccess: () => {
       toast({ title: 'Matrícula excluída', description: 'A matrícula foi removida com sucesso.' });
+      refetch();
     },
     onError: (err: any) => {
       toast({ title: 'Erro ao excluir', description: err?.message || 'Tente novamente.', variant: 'destructive' });
