@@ -247,7 +247,7 @@ class TrackingEventController extends Controller
                 return [
                     'id' => $item->resource_id,
                     'title' => $activity ? ($activity->post_title ?? 'Atividade Sem Título') : 'Atividade #' . $item->resource_id,
-                    'type' => $activity ? ($activity->post_mime_type ?? 'unknown') : 'unknown',
+                    'type' => $activity ? ($activity->post_mime_type ?? data_get($activity->config, 'type_activities', 'unknown')) : 'unknown',
                     'views' => $item->total
                 ];
             });

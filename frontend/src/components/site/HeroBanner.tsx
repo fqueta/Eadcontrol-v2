@@ -78,10 +78,11 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
       {/* Background image with enhanced overlay */}
       {current?.image_url && (
         <div className="absolute inset-0 z-0">
-          <img
-            src={current.image_url}
-            alt={current.title}
-            className="w-full h-full object-cover transition-transform duration-1000 transform scale-105"
+          <div
+            className="w-full h-full bg-cover bg-center bg-no-repeat bg-fixed transition-transform duration-1000 transform scale-105"
+            style={{ backgroundImage: `url(${current.image_url})` }}
+            role="img"
+            aria-label={current.title}
           />
           <div
             className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60"
@@ -205,13 +206,14 @@ function StaticHero({ name, slogan, description }: { name: string; slogan: strin
 
   return (
     <section className="relative md:h-[85vh] min-h-[600px] flex items-center px-4 overflow-hidden group">
-      {/* Background image with high quality restoration */}
+      {/* Background image with parallax effect */}
       <div className="absolute inset-0 z-0">
         {heroImage ? (
-          <img
-            src={heroImage}
-            alt="Hero Background"
-            className="w-full h-full object-cover transition-transform duration-[10s] transform group-hover:scale-110"
+          <div
+            className="w-full h-full bg-cover bg-center bg-no-repeat bg-fixed"
+            style={{ backgroundImage: `url(${heroImage})` }}
+            role="img"
+            aria-label="Hero Background"
           />
         ) : (
           <div className="w-full h-full bg-slate-200" />
