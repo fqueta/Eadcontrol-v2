@@ -93,8 +93,8 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
 
       {/* Modernized Content Container (Glassmorphism) */}
       <div className="container mx-auto relative z-10">
-        <div className="max-w-5xl mx-auto p-8 md:p-12 rounded-[2.5rem] bg-black/20 backdrop-blur-xl border border-white/10 shadow-2xl animate-in fade-in zoom-in-95 duration-1000 text-center">
-          <div className="inline-block p-1 rounded-full bg-white/5 border border-white/10 mb-6 group transition-transform hover:scale-110">
+        <div className="max-w-5xl mx-auto p-8 md:p-12 rounded-xl bg-black/20 backdrop-blur-xl border border-white/10 shadow-2xl animate-in fade-in zoom-in-95 duration-1000 text-center">
+          <div className="inline-block p-1 rounded-xl bg-white/5 border border-white/10 mb-6 group transition-transform hover:scale-110">
             <BrandLogo alt="Logo" className="h-12 w-auto drop-shadow-2xl animate-pulse" />
           </div>
           
@@ -118,20 +118,20 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
             {current?.config?.cta_url ? (
-              <Button size="lg" asChild className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white rounded-xl h-14 px-10 text-lg font-bold transition-all shadow-xl hover:shadow-blue-500/20 active:scale-95">
+              <Button size="lg" asChild className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white rounded-lg h-14 px-10 text-lg font-bold transition-all shadow-xl hover:shadow-blue-500/20 active:scale-95">
                 <Link to={current.config.cta_url}>
                   {current.config.cta_label || 'Saiba mais'}
                   <ArrowRight className="ml-2 h-6 w-6" />
                 </Link>
               </Button>
             ) : (
-              <Button size="lg" asChild className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white rounded-xl h-14 px-10 text-lg font-bold transition-all shadow-xl hover:shadow-blue-500/20 active:scale-95">
+              <Button size="lg" asChild className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white rounded-lg h-14 px-10 text-lg font-bold transition-all shadow-xl hover:shadow-blue-500/20 active:scale-95">
                 <Link to="/cursos">Ver Cursos <ArrowRight className="ml-2 h-6 w-6" /></Link>
               </Button>
             )}
             
             <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer" className="w-full sm:w-auto">
-              <Button size="lg" variant="outline" className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl h-14 px-10 text-lg font-bold transition-all backdrop-blur-sm">
+              <Button size="lg" variant="outline" className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-lg h-14 px-10 text-lg font-bold transition-all backdrop-blur-sm">
                 Conhecer o site
                 <ExternalLink className="ml-2 h-5 w-5" />
               </Button>
@@ -140,7 +140,7 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
             <div className="w-full sm:w-auto">
               <HeroImageEditor 
                 size="lg" 
-                className="w-full sm:w-auto bg-fuchsia-600 hover:bg-fuchsia-500 text-white border-transparent h-14 px-10 rounded-xl font-bold transition-all shadow-xl hover:shadow-fuchsia-500/20"
+                className="w-full sm:w-auto bg-fuchsia-600 hover:bg-fuchsia-500 text-white border-transparent h-14 px-10 rounded-lg font-bold transition-all shadow-xl hover:shadow-fuchsia-500/20"
               />
             </div>
           </div>
@@ -222,8 +222,8 @@ function StaticHero({ name, slogan, description }: { name: string; slogan: strin
       </div>
 
       <div className="container mx-auto relative z-10">
-        <div className="max-w-5xl mx-auto p-8 md:p-12 rounded-[2.5rem] bg-white/30 backdrop-blur-md border border-white/40 shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-1000 text-center">
-          <div className="inline-block p-1 rounded-3xl bg-white/40 border border-white/60 mb-8 shadow-sm animate-bounce-slow">
+        <div className="max-w-5xl mx-auto p-8 md:p-12 rounded-xl bg-white/30 backdrop-blur-md border border-white/40 shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-1000 text-center">
+          <div className="inline-block p-1 rounded-xl bg-white/40 border border-white/60 mb-8 shadow-sm animate-bounce-slow">
             <BrandLogo alt="Logo" className="h-16 w-auto drop-shadow-sm" />
           </div>
           
@@ -245,19 +245,19 @@ function StaticHero({ name, slogan, description }: { name: string; slogan: strin
           </div>
 
           <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
-            <Button size="lg" asChild className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-14 px-10 text-lg font-extrabold transition-all shadow-xl hover:shadow-primary/30 active:scale-95 border-none">
+            <Button size="lg" asChild className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg h-14 px-10 text-lg font-extrabold transition-all shadow-xl hover:shadow-primary/30 active:scale-95 border-none">
               <Link to="/cursos">
                 Ver Cursos <ArrowRight className="ml-2 h-6 w-6" />
               </Link>
             </Button>
 
             <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer" className="w-full sm:w-auto">
-              <Button size="lg" variant="outline" className="w-full bg-secondary hover:bg-secondary/90 border-transparent text-secondary-foreground rounded-xl h-14 px-10 text-lg font-extrabold transition-all shadow-xl hover:shadow-secondary/30 active:scale-95">
+              <Button size="lg" variant="outline" className="w-full bg-secondary hover:bg-secondary/90 border-transparent text-secondary-foreground rounded-lg h-14 px-10 text-lg font-extrabold transition-all shadow-xl hover:shadow-secondary/30 active:scale-95">
                 Conhecer o site <ArrowRight className="ml-2 h-6 w-6" />
               </Button>
             </a>
 
-            <Button size="lg" variant="outline" asChild className="w-full sm:w-auto bg-white/80 hover:bg-white border-slate-200 text-primary rounded-xl h-14 px-10 text-lg font-extrabold transition-all shadow-sm backdrop-blur-sm">
+            <Button size="lg" variant="outline" asChild className="w-full sm:w-auto bg-white/80 hover:bg-white border-slate-200 text-primary rounded-lg h-14 px-10 text-lg font-extrabold transition-all shadow-sm backdrop-blur-sm">
               <Link to="/register">Cadastrar</Link>
             </Button>
 
@@ -265,7 +265,7 @@ function StaticHero({ name, slogan, description }: { name: string; slogan: strin
               <HeroImageEditor 
                 size="lg" 
                 onChanged={(url) => setHeroImage(url)} 
-                className="w-full sm:w-auto bg-primary/20 hover:bg-primary/30 text-primary border-primary/20 h-14 px-10 rounded-xl font-extrabold transition-all shadow-sm active:scale-95 backdrop-blur-sm"
+                className="w-full sm:w-auto bg-primary/20 hover:bg-primary/30 text-primary border-primary/20 h-14 px-10 rounded-lg font-extrabold transition-all shadow-sm active:scale-95 backdrop-blur-sm"
               />
             </div>
           </div>

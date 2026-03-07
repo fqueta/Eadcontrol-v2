@@ -58,9 +58,9 @@ const LandingPage = ({ linkLoja }: { linkLoja?: string }) => {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10">
-            <Card className="group border-slate-100 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] transition-all duration-500 rounded-[2rem] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:-translate-y-2 cursor-default overflow-hidden">
+            <Card className="group border-slate-100 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] transition-all duration-500 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:-translate-y-2 cursor-default overflow-hidden">
               <CardHeader className="text-center pb-2">
-                <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-3xl flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110 group-hover:rotate-3 duration-500 overflow-hidden relative">
+                <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110 group-hover:rotate-3 duration-500 overflow-hidden relative">
                   <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <BookOpen className="h-10 w-10 text-blue-600 dark:text-blue-400 relative z-10" />
                 </div>
@@ -84,9 +84,9 @@ const LandingPage = ({ linkLoja }: { linkLoja?: string }) => {
               </CardContent>
             </Card>
 
-            <Card className="group border-slate-100 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] transition-all duration-500 rounded-[2rem] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:-translate-y-2 cursor-default overflow-hidden">
+            <Card className="group border-slate-100 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] transition-all duration-500 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:-translate-y-2 cursor-default overflow-hidden">
               <CardHeader className="text-center pb-2">
-                <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-3xl flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110 group-hover:-rotate-3 duration-500 overflow-hidden relative">
+                <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110 group-hover:-rotate-3 duration-500 overflow-hidden relative">
                   <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <Plane className="h-10 w-10 text-blue-600 dark:text-blue-400 relative z-10" />
                 </div>
@@ -110,9 +110,9 @@ const LandingPage = ({ linkLoja }: { linkLoja?: string }) => {
               </CardContent>
             </Card>
 
-            <Card className="group border-slate-100 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] transition-all duration-500 rounded-[2rem] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:-translate-y-2 cursor-default overflow-hidden">
+            <Card className="group border-slate-100 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] transition-all duration-500 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:-translate-y-2 cursor-default overflow-hidden">
               <CardHeader className="text-center pb-2">
-                <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-3xl flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110 group-hover:rotate-6 duration-500 overflow-hidden relative">
+                <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110 group-hover:rotate-6 duration-500 overflow-hidden relative">
                   <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <Wrench className="h-10 w-10 text-blue-600 dark:text-blue-400 relative z-10" />
                 </div>
@@ -136,9 +136,9 @@ const LandingPage = ({ linkLoja }: { linkLoja?: string }) => {
               </CardContent>
             </Card>
 
-            <Card className="group border-slate-100 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] transition-all duration-500 rounded-[2rem] bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:-translate-y-2 cursor-default overflow-hidden">
+            <Card className="group border-slate-100 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] transition-all duration-500 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:-translate-y-2 cursor-default overflow-hidden">
               <CardHeader className="text-center pb-2">
-                <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-3xl flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110 group-hover:-rotate-6 duration-500 overflow-hidden relative">
+                <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110 group-hover:-rotate-6 duration-500 overflow-hidden relative">
                   <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <Compass className="h-10 w-10 text-blue-600 dark:text-blue-400 relative z-10" />
                 </div>
@@ -178,14 +178,14 @@ const LandingPage = ({ linkLoja }: { linkLoja?: string }) => {
             Junte-se a centenas de instituições que já transformaram seu processo pedagógico com inclusividade e tecnologia.
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-            <Button size="lg" className="w-full sm:w-auto bg-white text-blue-900 hover:bg-blue-50 rounded-2xl h-16 px-12 text-lg font-black shadow-2xl transition-all active:scale-95" asChild>
+            <Button size="lg" className="w-full sm:w-auto bg-white text-blue-900 hover:bg-blue-50 rounded-lg h-16 px-12 text-lg font-black shadow-2xl transition-all active:scale-95" asChild>
               <Link to="/register">
                 Começar Agora
                 <ArrowRight className="ml-2 h-6 w-6" />
               </Link>
             </Button>
             <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer" className="w-full sm:w-auto">
-              <Button size="lg" variant="outline" className="w-full bg-transparent border-white/30 text-white hover:bg-white/10 rounded-2xl h-16 px-12 text-lg font-black backdrop-blur-md transition-all active:scale-95">
+              <Button size="lg" variant="outline" className="w-full bg-transparent border-white/30 text-white hover:bg-white/10 rounded-lg h-16 px-12 text-lg font-black backdrop-blur-md transition-all active:scale-95">
                 Ver Site Oficial
                 <ExternalLink className="ml-2 h-6 w-6" />
               </Button>
