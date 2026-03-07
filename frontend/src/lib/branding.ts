@@ -157,8 +157,18 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
   const base = getTenantApiUrl() + getVersionApi();
   const publicUrl = `${base}/public/options/branding`;
   try {
-    const res = await fetch(publicUrl, { method: 'GET', headers: { 'Accept': 'application/json' } });
+    try {
+      if ((import.meta as any)?.env?.DEV) console.debug('[branding] fetch', publicUrl);
+    } catch {}
+    const res = await fetch(publicUrl, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' },
+      cache: 'no-store',
+    });
     if (!res.ok) {
+      try {
+        if ((import.meta as any)?.env?.DEV) console.warn('[branding] non-OK response', res.status);
+      } catch {}
       return {};
     }
     const json = await res.json();
@@ -167,6 +177,9 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
 
     const dataObj = json?.data as Record<string, any> | undefined;
     if (dataObj && typeof dataObj === 'object') {
+      try {
+        if ((import.meta as any)?.env?.DEV) console.debug('[branding] payload keys', Object.keys(dataObj || {}));
+      } catch {}
       logoUrl = String(dataObj['app_logo_url'] || '').trim() || undefined;
       name = String(dataObj['app_institution_name'] || dataObj['site_name'] || dataObj['app_name'] || '').trim() || undefined;
 
@@ -178,78 +191,120 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
       const description = String(dataObj['app_institution_description'] || '').trim();
       const urlInst = String(dataObj['app_institution_url'] || '').trim();
       const whatsapp = String(dataObj['app_whatsapp'] || '').trim();
+      const theme = String(dataObj['app_theme'] || '').trim();
+      const fontFamily = String(dataObj['app_font_family'] || '').trim();
+      const heroTitle = String(dataObj['home_hero_title'] || '').trim();
+      const heroImageUrl = String(dataObj['home_hero_image_url'] || '').trim();
+      const hf1t = String(dataObj['home_feature_1_title'] || '').trim();
+      const hf1d = String(dataObj['home_feature_1_desc'] || '').trim();
+      const hf2t = String(dataObj['home_feature_2_title'] || '').trim();
+      const hf2d = String(dataObj['home_feature_2_desc'] || '').trim();
+      const hf3t = String(dataObj['home_feature_3_title'] || '').trim();
+      const hf3d = String(dataObj['home_feature_3_desc'] || '').trim();
+      const hf4t = String(dataObj['home_feature_4_title'] || '').trim();
+      const hf4d = String(dataObj['home_feature_4_desc'] || '').trim();
+      const notify = () => {
+        try {
+          window.dispatchEvent(new Event('branding:updated'));
+          window.dispatchEvent(new Event('storage'));
+        } catch {}
+      };
       if (persist) {
-        if (favicon) { try { localStorage.setItem('app_favicon_url', favicon); } catch {} anyWin.__APP_FAVICON_URL__ = favicon; }
-        if (social) { try { localStorage.setItem('app_social_image_url', social); } catch {} anyWin.__APP_SOCIAL_IMAGE_URL__ = social; }
-        if (slogan) { try { localStorage.setItem('app_institution_slogan', slogan); } catch {} anyWin.__APP_INSTITUTION_SLOGAN__ = slogan; }
-        if (description) { try { localStorage.setItem('app_institution_description', description); } catch {} anyWin.__APP_INSTITUTION_DESCRIPTION__ = description; }
-        if (urlInst) { try { localStorage.setItem('app_institution_url', urlInst); } catch {} anyWin.__APP_INSTITUTION_URL__ = urlInst; }
-        if (whatsapp) { try { localStorage.setItem('app_whatsapp', whatsapp); } catch {} anyWin.__APP_WHATSAPP__ = whatsapp; }
+        // Enforce persistence even if empty (allows clearing fields from DB)
+        const setVal = (key: string, val: string, winKey: string) => {
+          try { localStorage.setItem(key, val); } catch {}
+          anyWin[winKey] = val;
+        };
+        setVal('app_favicon_url', favicon, '__APP_FAVICON_URL__');
+        setVal('app_social_image_url', social, '__APP_SOCIAL_IMAGE_URL__');
+        setVal('app_institution_slogan', slogan, '__APP_INSTITUTION_SLOGAN__');
+        setVal('app_institution_description', description, '__APP_INSTITUTION_DESCRIPTION__');
+        setVal('app_institution_url', urlInst, '__APP_INSTITUTION_URL__');
+        setVal('app_whatsapp', whatsapp, '__APP_WHATSAPP__');
+        setVal('app_theme', theme, '__APP_THEME__');
+        setVal('app_font_family', fontFamily, '__APP_FONT_FAMILY__');
+        setVal('home_hero_title', heroTitle, '__HOME_HERO_TITLE__');
+        setVal('home_hero_image_url', heroImageUrl, '__HOME_HERO_IMAGE_URL__');
+        
+        notify();
+
+        try {
+          if ((import.meta as any)?.env?.DEV) {
+            const keys = [
+              'app_institution_name','app_institution_slogan','app_institution_description',
+              'home_hero_title','home_hero_image_url',
+              'home_feature_1_title','home_feature_1_desc',
+              'home_feature_2_title','home_feature_2_desc',
+              'home_feature_3_title','home_feature_3_desc',
+              'home_feature_4_title','home_feature_4_desc',
+            ];
+            const stored = keys.filter(k => {
+              try { return !!localStorage.getItem(k); } catch { return false; }
+            });
+            console.debug('[branding] stored keys', stored);
+          }
+        } catch {}
       }
-    }
-
-    if (persist) {
-      const anyWin = window as any;
-      if (logoUrl) { try { localStorage.setItem('app_logo_url', logoUrl); } catch {} anyWin.__APP_LOGO_URL__ = logoUrl; }
-      if (name) {
-        try { localStorage.setItem('app_institution_name', name); } catch {}
-        anyWin.__APP_INSTITUTION_NAME__ = name;
-        anyWin.__APP_SITE_NAME__ = anyWin.__APP_SITE_NAME__ || name;
-        anyWin.__APP_APP_NAME__ = anyWin.__APP_APP_NAME__ || name;
-      }
-
-      // Hydrate Appearance Settings (Colors)
-      try {
-        const primary = String(dataObj['app_primary_color'] || '').trim();
-        const primaryText = String(dataObj['app_primary_text_color'] || '').trim();
-        const secondary = String(dataObj['app_secondary_color'] || '').trim();
-        const secondaryText = String(dataObj['app_secondary_text_color'] || '').trim();
-        const hover = String(dataObj['app_hover_color'] || '').trim();
-        // const darkModeDefault = String(dataObj['app_dark_mode_default'] || '').trim(); // Optional: Enforce default dark mode
-
-        if (primary || primaryText || secondary || secondaryText || hover) {
-          const stored = localStorage.getItem('appearanceSettings');
-          let settings = stored ? JSON.parse(stored) : {};
-          
-          let changed = false;
-          if (primary && settings.primaryColor !== primary) {
-            settings.primaryColor = primary;
-            changed = true;
-          }
-          if (primaryText && settings.primaryTextColor !== primaryText) {
-            settings.primaryTextColor = primaryText;
-            changed = true;
-          }
-          if (secondary && settings.secondaryColor !== secondary) {
-            settings.secondaryColor = secondary;
-            changed = true;
-          }
-          if (secondaryText && settings.secondaryTextColor !== secondaryText) {
-            settings.secondaryTextColor = secondaryText;
-            changed = true;
-          }
-          if (hover && settings.hoverColor !== hover) {
-            settings.hoverColor = hover;
-            changed = true;
-          }
-
-          if (changed) {
-            localStorage.setItem('appearanceSettings', JSON.stringify(settings));
-            // Trigger storage event for ThemeContext to pick up immediately if in same tab
-            // Note: window.dispatchEvent(new StorageEvent(...)) doesn't work for same window in all browsers,
-            // but ThemeContext listens to 'storage' which usually fires across tabs. 
-            // To force update in current tab, we might need a custom event or direct call, 
-            // but since this runs on app init, ThemeContext might pick it up on mount or we rely on reload.
-            // For now, let's try manual dispatch for same-window listeners.
-            window.dispatchEvent(new Event('storage')); 
-          }
+      if (persist) {
+        const anyWin = window as any;
+        if (logoUrl) { try { localStorage.setItem('app_logo_url', logoUrl); } catch {} anyWin.__APP_LOGO_URL__ = logoUrl; }
+        if (name) {
+          try { localStorage.setItem('app_institution_name', name); } catch {}
+          anyWin.__APP_INSTITUTION_NAME__ = name;
+          anyWin.__APP_SITE_NAME__ = anyWin.__APP_SITE_NAME__ || name;
+          anyWin.__APP_APP_NAME__ = anyWin.__APP_APP_NAME__ || name;
         }
-      } catch (e) {
-        console.error('Failed to hydrate appearance settings:', e);
+        try {
+          if ((import.meta as any)?.env?.DEV) console.debug('[branding] resolved name/logo', { name, logoUrl });
+        } catch {}
+
+        // Hydrate Appearance Settings (Colors)
+        try {
+          const primary = String(dataObj['app_primary_color'] || '').trim();
+          const primaryText = String(dataObj['app_primary_text_color'] || '').trim();
+          const secondary = String(dataObj['app_secondary_color'] || '').trim();
+          const secondaryText = String(dataObj['app_secondary_text_color'] || '').trim();
+          const hover = String(dataObj['app_hover_color'] || '').trim();
+
+          if (primary || primaryText || secondary || secondaryText || hover) {
+            const stored = localStorage.getItem('appearanceSettings');
+            let settings = stored ? JSON.parse(stored) : {};
+            
+            let changed = false;
+            if (primary && settings.primaryColor !== primary) {
+              settings.primaryColor = primary;
+              changed = true;
+            }
+            if (primaryText && settings.primaryTextColor !== primaryText) {
+              settings.primaryTextColor = primaryText;
+              changed = true;
+            }
+            if (secondary && settings.secondaryColor !== secondary) {
+              settings.secondaryColor = secondary;
+              changed = true;
+            }
+            if (secondaryText && settings.secondaryTextColor !== secondaryText) {
+              settings.secondaryTextColor = secondaryText;
+              changed = true;
+            }
+            if (hover && settings.hoverColor !== hover) {
+              settings.hoverColor = hover;
+              changed = true;
+            }
+
+            if (changed) {
+              localStorage.setItem('appearanceSettings', JSON.stringify(settings));
+              window.dispatchEvent(new Event('storage')); 
+            }
+          }
+        } catch (e) {
+          console.error('Failed to hydrate appearance settings:', e);
+        }
       }
     }
     return { name, logoUrl };
-  } catch {
+  } catch (err) {
+    console.error('[branding] hydration error', err);
     return {};
   }
 }
@@ -307,6 +362,45 @@ export async function getInstitutionNameAsync(defaultName: string = 'Ead Control
   return name || existing || defaultName;
 }
 import { getTenantApiUrl, getVersionApi } from '@/lib/qlib';
+
+export function getHomeFeatureTitle(n: 1|2|3|4, def: string): string {
+  const k = `home_feature_${n}_title`;
+  try {
+    const v = localStorage.getItem(k);
+    return v && v.trim() !== '' ? v : def;
+  } catch {
+    return def;
+  }
+}
+export function getHomeFeatureDesc(n: 1|2|3|4, def: string): string {
+  const k = `home_feature_${n}_desc`;
+  try {
+    const v = localStorage.getItem(k);
+    return v && v.trim() !== '' ? v : def;
+  } catch {
+    return def;
+  }
+}
+
+/**
+ * getHomeHeroTitle
+ * pt-BR: Obtém o título do banner principal persistido nas opções públicas.
+ */
+export function getHomeHeroTitle(defaultTitle: string): string {
+  try {
+    const v = localStorage.getItem('home_hero_title');
+    if (v && v.trim() !== '') return v.trim();
+  } catch {}
+  return defaultTitle;
+}
+
+export function getHomeHeroImageUrl(defaultUrl: string = ''): string {
+  try {
+    const v = localStorage.getItem('home_hero_image_url');
+    if (v && v.trim() !== '') return v.trim();
+  } catch {}
+  return defaultUrl;
+}
 
 /**
  * applyBrandingFavicon

@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Settings, Save, Palette, Link, Image as ImageIcon, Building2, ShieldCheck, Layers, Plus, MonitorPlay, Clock } from "lucide-react";
 import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription, getInstitutionUrl, syncBrandingToMetaTags } from "@/lib/branding";
+import { predefinedThemes } from "@/lib/themes";
 import { systemSettingsService, AdvancedSystemSettings } from "@/services/systemSettingsService";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useApiOptions } from "@/hooks/useApiOptions";
 import { useFunnelsList, useStagesList } from "@/hooks/funnels";
 import { fileStorageService, type FileStorageItem, extractFileStorageUrl } from "@/services/fileStorageService";
@@ -24,6 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
  */
 export default function SystemSettings() {
   const { user } = useAuth();
+  const { applyThemeSettings: applyGlobalTheme } = useTheme();
   const permissionId = user?.permission_id ? parseInt(String(user.permission_id)) : 0;
 
   // Estado da aba ativa
@@ -116,6 +119,12 @@ export default function SystemSettings() {
       showAnimations: true,
     };
   });
+
+  // Estado para o tema do site público
+  const [siteTheme, setSiteTheme] = useState(() => localStorage.getItem('app_theme') || 'default');
+
+  // Estado para a fonte do site público
+  const [siteFont, setSiteFont] = useState(() => localStorage.getItem('app_font_family') || '');
 
   // Estados para configurações avançadas - Switch
   const [advancedSwitchSettings, setAdvancedSwitchSettings] = useState({
@@ -575,22 +584,26 @@ export default function SystemSettings() {
   const handleSaveAppearanceSettings = async () => {
     // 1. Salva no localStorage para aplicação imediata local
     localStorage.setItem('appearanceSettings', JSON.stringify(appearanceSettings));
-    applyAppearanceSettings(appearanceSettings);
+    localStorage.setItem('app_theme', siteTheme);
+    if (siteFont) localStorage.setItem('app_font_family', siteFont);
+    applyGlobalTheme();
     
     // 2. Persiste no backend para aplicação pública/global
     try {
-      await systemSettingsService.saveAdvancedSettings({
-        ...advancedSwitchSettings, // Mantém outros settings se necessário, mas o endpoint /options/all aceita parcial
-        // Mapeia para as chaves esperadas no backend (prefixo app_)
+      const payload: Record<string, any> = {
+        ...advancedSwitchSettings,
         app_primary_color: appearanceSettings.primaryColor,
         app_primary_text_color: appearanceSettings.primaryTextColor,
         app_secondary_color: appearanceSettings.secondaryColor,
         app_secondary_text_color: appearanceSettings.secondaryTextColor,
         app_hover_color: appearanceSettings.hoverColor,
         app_dark_mode_default: appearanceSettings.darkMode ? 'true' : 'false',
-      } as any);
+        app_theme: siteTheme,
+      };
+      if (siteFont) payload.app_font_family = siteFont;
       
-      toast.success('Aparência salva e publicada com sucesso!');
+      await systemSettingsService.saveAdvancedSettings(payload as any);
+      toast.success('Aparência e Tema salvos com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar aparência no servidor:', error);
       toast.error('Salvo localmente, mas erro ao sincronizar com servidor.');
@@ -1094,7 +1107,7 @@ export default function SystemSettings() {
               {/* Selects de Aparência */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="theme">Tema</Label>
+                  <Label htmlFor="theme">Tema do Painel</Label>
                   <Select
                     value={appearanceSettings.theme}
                     onValueChange={(value) => handleAppearanceChange('theme', value)}
@@ -1107,6 +1120,25 @@ export default function SystemSettings() {
                       <SelectItem value="modern">Moderno</SelectItem>
                       <SelectItem value="classic">Clássico</SelectItem>
                       <SelectItem value="minimal">Minimalista</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="siteTheme">Tema do Site Público</Label>
+                  <Select
+                    value={siteTheme}
+                    onValueChange={(value) => setSiteTheme(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tema do site" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {predefinedThemes.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1125,6 +1157,29 @@ export default function SystemSettings() {
                       <SelectItem value="medium">Média</SelectItem>
                       <SelectItem value="large">Grande</SelectItem>
                       <SelectItem value="extra-large">Extra Grande</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="siteFont">Fonte do Site Público</Label>
+                  <Select
+                    value={siteFont || 'default_font'}
+                    onValueChange={(value) => setSiteFont(value === 'default_font' ? '' : value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Fonte padrão (Inter)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default_font">Padrão (Inter)</SelectItem>
+                      <SelectItem value="'Roboto', sans-serif">Roboto</SelectItem>
+                      <SelectItem value="'Open Sans', sans-serif">Open Sans</SelectItem>
+                      <SelectItem value="'Lato', sans-serif">Lato</SelectItem>
+                      <SelectItem value="'Poppins', sans-serif">Poppins</SelectItem>
+                      <SelectItem value="'Montserrat', sans-serif">Montserrat</SelectItem>
+                      <SelectItem value="'Nunito', sans-serif">Nunito</SelectItem>
+                      <SelectItem value="'Raleway', sans-serif">Raleway</SelectItem>
+                      <SelectItem value="'Merriweather', serif">Merriweather (Serifa)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

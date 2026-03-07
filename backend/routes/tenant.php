@@ -151,6 +151,10 @@ Route::name('api.')->prefix('api/v1')->middleware([
         Route::get('options/branding', [OptionController::class, 'publicBranding'])
             ->name('options.public.branding')
             ->middleware('throttle:60,1');
+        // Endpoint público: banner rotativo da landing page
+        Route::get('posts/banners', [PostController::class, 'publicBanners'])
+            ->name('posts.public.banners')
+            ->middleware('throttle:60,1');
 
     });
 

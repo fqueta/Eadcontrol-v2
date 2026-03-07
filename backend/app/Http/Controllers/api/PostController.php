@@ -146,7 +146,7 @@ class PostController extends Controller
             'post_parent'   => 'nullable|integer|exists:posts,ID',
             'guid'          => 'nullable|string|max:255',
             'menu_order'    => 'nullable|integer',
-            'post_type'     => ['nullable', Rule::in(['post', 'page', 'attachment', 'revision', 'nav_menu_item'])],
+            'post_type'     => ['nullable', Rule::in(['post', 'page', 'attachment', 'revision', 'nav_menu_item', 'banner_slide'])],
             'post_mime_type' => 'nullable|string|max:100',
             'comment_count' => 'nullable|integer',
             'config'        => 'array',
@@ -257,7 +257,7 @@ class PostController extends Controller
             'post_parent'   => 'nullable|integer|exists:posts,ID',
             'guid'          => 'nullable|string|max:255',
             'menu_order'    => 'nullable|integer',
-            'post_type'     => ['nullable', Rule::in(['post', 'page', 'attachment', 'revision', 'nav_menu_item'])],
+            'post_type'     => ['nullable', Rule::in(['post', 'page', 'attachment', 'revision', 'nav_menu_item', 'banner_slide'])],
             'post_mime_type' => 'nullable|string|max:100',
             'comment_count' => 'nullable|integer',
             'config'        => 'array',
@@ -439,5 +439,39 @@ class PostController extends Controller
         return response()->json([
             'message' => 'Post excluído permanentemente'
         ], 200);
+    }
+
+    /**
+     * Listar banners públicos (sem autenticação)
+     * Retorna posts do tipo 'banner_slide' com status 'publish' em ordem de menu_order
+     */
+    public function publicBanners(): \Illuminate\Http\JsonResponse
+    {
+        $banners = Post::query()
+            ->where('post_type', 'banner_slide')
+            ->where('post_status', 'publish')
+            ->where(function ($q) {
+                $q->whereNull('deletado')->orWhere('deletado', '!=', 's');
+            })
+            ->where(function ($q) {
+                $q->whereNull('excluido')->orWhere('excluido', '!=', 's');
+            })
+            ->orderBy('menu_order', 'asc')
+            ->get(['ID', 'post_title', 'post_excerpt', 'post_content', 'guid', 'menu_order', 'config'])
+            ->map(function ($post) {
+                return [
+                    'id'         => $post->ID,
+                    'title'      => $post->post_title,
+                    'subtitle'   => $post->post_excerpt,
+                    'content'    => $post->post_content,
+                    'image_url'  => $post->guid,
+                    'menu_order' => $post->menu_order,
+                    'config'     => is_string($post->config)
+                        ? (json_decode($post->config, true) ?? [])
+                        : ($post->config ?? []),
+                ];
+            });
+
+        return response()->json(['data' => $banners]);
     }
 }

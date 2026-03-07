@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -58,6 +59,7 @@ import jsPDF from 'jspdf';
   // Novo campo do formulário para meta.texto_desconto
   // New form field backing meta.texto_desconto
   meta_texto_desconto: z.string().optional(),
+  ativo: z.boolean().optional(),
   id: z.string().optional(),
 });
 
@@ -137,6 +139,7 @@ export default function ProposalsEdit() {
       // Valor padrão vazio para meta.texto_desconto
       // Default empty value for meta.texto_desconto
       meta_texto_desconto: '',
+      ativo: true,
       id: id || '',
     },
   });
@@ -635,6 +638,7 @@ export default function ProposalsEdit() {
       situacao_id: values.situacao_id || '',
       // pt-BR: Envia a validade (em dias) conforme valor do formulário
       // en-US: Sends validity (in days) as provided by the form
+      ativo: values.ativo ? 's' : 'n',
       meta: {
         validade: values.validade,
         gera_valor: values.gera_valor,
@@ -725,6 +729,7 @@ export default function ProposalsEdit() {
       // pt-BR: Recupera meta.texto_desconto para preencher o novo campo do formulário
       // en-US: Restores meta.texto_desconto to populate the new form field
       meta_texto_desconto: metaSafe('texto_desconto', ''),
+      ativo: safe('ativo', 's') === 's',
       // pt-BR: Recupera parcelada/parcelas dos metadados; fallback para orc.parcelamento
       // en-US: Restore parcelada/parcelas from metadata; fallback to orc.parcelamento
       parcelada: String(metaSafe('parcelada', 'false')) === 'true',
@@ -1261,6 +1266,27 @@ export default function ProposalsEdit() {
               <CardDescription>Defina o tempo de acesso ao curso para este aluno.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
+              <FormField
+                control={form.control}
+                name="ativo"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-white shadow-sm">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base font-bold">Matrícula Ativa</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Se desativado, o aluno perderá imediatamente o acesso ao conteúdo do curso.
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}

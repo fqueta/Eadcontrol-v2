@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, ReactNode } from 'react';
+import { predefinedThemes } from '@/lib/themes';
 
 interface ThemeContextType {
   applyThemeSettings: () => void;
@@ -8,10 +9,10 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
+  console.log('useTheme hook called, context:', !!context);
+  // Se o contexto não estiver disponível (ex: em páginas que escapam ao provider padrão),
+  // retorna um objeto seguro com funções vazias para evitar erros fatais
+  return context || { applyThemeSettings: () => {} };
 };
 
 interface ThemeProviderProps {
@@ -24,6 +25,26 @@ interface ThemeProviderProps {
  */
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   
+  /**
+   * Carrega uma fonte do Google Fonts dinamicamente
+   */
+  const loadGoogleFont = (fontFamily: string) => {
+    // Extrai o nome da fonte do valor CSS (ex: "'Roboto', sans-serif" → "Roboto")
+    const match = fontFamily.match(/['"]([^'"]+)['"]/);
+    if (!match) return;
+    const fontName = match[1];
+    if (fontName === 'Inter') return; // Inter já está carregada
+
+    const linkId = `google-font-${fontName.toLowerCase().replace(/\s+/g, '-')}`;
+    if (document.getElementById(linkId)) return; // Já carregada
+
+    const link = document.createElement('link');
+    link.id = linkId;
+    link.rel = 'stylesheet';
+    link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;500;600;700&display=swap`;
+    document.head.appendChild(link);
+  };
+
   /**
    * Converte cor hex para valores HSL
    * Opcionalmente permite ajustar a luminosidade (útil para hover)
@@ -39,9 +60,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
+    let l = (max + min) / 2;
     let h = 0;
     let s = 0;
-    let l = (max + min) / 2;
     
     if (max !== min) {
       const d = max - min;
@@ -73,8 +94,35 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
    */
   const applyThemeSettings = () => {
     try {
-      // Carrega configurações de aparência
+      // 1. Aplica o tema pré-definido se houver
+      const themeId = localStorage.getItem('app_theme') || 'default';
+      const theme = predefinedThemes.find(t => t.id === themeId);
+      
+      if (theme) {
+        const root = document.documentElement;
+        root.style.setProperty('--primary', hexToHsl(theme.colors.primary));
+        root.style.setProperty('--secondary', hexToHsl(theme.colors.secondary));
+        root.style.setProperty('--background', hexToHsl(theme.colors.background));
+        root.style.setProperty('--foreground', hexToHsl(theme.colors.foreground));
+        root.style.setProperty('--accent', hexToHsl(theme.colors.accent));
+        root.style.setProperty('--primary-hover', hexToHsl(theme.colors.primary, -10));
+        root.style.setProperty('--secondary-hover', hexToHsl(theme.colors.secondary, -10));
+        
+        if (theme.fontFamily) {
+          root.style.setProperty('--font-family', theme.fontFamily);
+        }
+      }
+
+      // 2. Carrega configurações de aparência (overrides)
       const savedAppearanceSettings = localStorage.getItem('appearanceSettings');
+      const fontOverride = localStorage.getItem('app_font_family');
+      
+      if (fontOverride) {
+        document.documentElement.style.setProperty('--font-family', fontOverride);
+        // Load Google Font if needed
+        loadGoogleFont(fontOverride);
+      }
+
       if (savedAppearanceSettings) {
         const appearanceSettings = JSON.parse(savedAppearanceSettings);
         
@@ -114,22 +162,21 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           document.documentElement.style.setProperty('--accent', hslAccent);
         }
 
-        // Aplica cor de hover primária (se não houver personalizada, deriva da primária)
+        // Aplica cor de hover primária
         if (appearanceSettings.hoverColor) {
           const hslHover = hexToHsl(appearanceSettings.hoverColor);
           document.documentElement.style.setProperty('--primary-hover', hslHover);
         } else if (appearanceSettings.primaryColor) {
-          // Deriva da primária escurecendo 10%
           const hslHover = hexToHsl(appearanceSettings.primaryColor, -10);
           document.documentElement.style.setProperty('--primary-hover', hslHover);
         }
 
-        // Aplica cor de hover secundária (deriva da secundária)
+        // Aplica cor de hover secundária
         if (appearanceSettings.secondaryColor) {
           const hslSecondaryHover = hexToHsl(appearanceSettings.secondaryColor, -10);
           document.documentElement.style.setProperty('--secondary-hover', hslSecondaryHover);
         }
-        
+
         // Aplica configurações de sidebar
         if (appearanceSettings.sidebarCollapsed !== undefined) {
           // Esta configuração será aplicada pelo UserPrefsContext
@@ -139,8 +186,18 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         if (appearanceSettings.showNotifications !== undefined) {
           // Esta configuração será aplicada pelos componentes que usam notificações
         }
-        
-        // console.log('Configurações de aparência aplicadas:', appearanceSettings);
+
+        // Aplica tamanho da fonte global
+        if (appearanceSettings.fontSize) {
+          const fontSizes = {
+            small: '14px',
+            medium: '16px',
+            large: '18px',
+            'extra-large': '20px'
+          };
+          const size = fontSizes[appearanceSettings.fontSize as keyof typeof fontSizes] || '16px';
+          document.documentElement.style.setProperty('--base-font-size', size);
+        }
       }
       
       // Carrega configurações básicas que afetam a aparência
@@ -152,8 +209,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         if (basicSettings.language) {
           document.documentElement.lang = basicSettings.language;
         }
-        
-        console.log('Configurações básicas aplicadas:', basicSettings);
       }
       
     } catch (error) {

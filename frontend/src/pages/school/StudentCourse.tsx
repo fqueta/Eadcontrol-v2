@@ -117,7 +117,7 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
    *        `id_cliente` (when available) and the `public` flag.
    */
   const { data: enrollmentsResp, isLoading: isEnrollmentsLoading } = useEnrollmentsList(
-    { page: 1, per_page: 1, id_curso: courseNumericId, id_cliente: clientNumericId, public: '1' } as any,
+    { page: 1, per_page: 1, id_curso: courseNumericId, id_cliente: clientNumericId, public: '1', ativo: 's' } as any,
     { enabled: isStudent && !!courseNumericId }
   );
 

@@ -357,6 +357,16 @@ export default function Enroll() {
             onEdit={(enroll: any) => navigate(`/admin/sales/proposals/edit/${String(enroll.id)}`, { state: { returnTo } })}
             onGenerateCertificate={(enroll: any) => navigate(`/admin/school/certificados/gerar?id=${String(enroll?.id ?? '')}`)}
             onDelete={(enroll: any) => { setSelected(enroll); setDeleteOpen(true); }}
+            onToggleActive={(enroll: any, isActive: boolean) => {
+              updateMutation.mutate({
+                id: String(enroll.id),
+                data: { ativo: isActive ? 's' : 'n' }
+              } as any, {
+                onSuccess: () => {
+                  toast({ title: 'Sucesso', description: `Matrícula ${isActive ? 'ativada' : 'desativada'} com sucesso.` });
+                }
+              });
+            }}
           />
 
           {/* Pagination */}

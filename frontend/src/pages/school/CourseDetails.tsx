@@ -274,7 +274,7 @@ export default function CourseDetails() {
       });
       // Salva a url de retorno
       const returnUrl = encodeURIComponent(window.location.pathname);
-      navigate(`/login?returnUrl=${returnUrl}`);
+      navigate(`/login?redirect=${returnUrl}`);
       return;
     }
 

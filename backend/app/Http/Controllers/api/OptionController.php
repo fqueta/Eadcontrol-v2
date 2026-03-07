@@ -62,6 +62,19 @@ class OptionController extends Controller
             'app_hover_color',
             'app_dark_mode_default',
             'app_whatsapp',
+            'app_theme',
+            'app_font_family',
+            // Home hero title (banner principal)
+            'home_hero_title',
+            'home_hero_image_url',
+            'home_feature_1_title',
+            'home_feature_1_desc',
+            'home_feature_2_title',
+            'home_feature_2_desc',
+            'home_feature_3_title',
+            'home_feature_3_desc',
+            'home_feature_4_title',
+            'home_feature_4_desc',
         ];
 
         // Fetch options for allowed keys only

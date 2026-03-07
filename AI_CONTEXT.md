@@ -43,8 +43,7 @@
 1.  **Backend (Octane)**:
     ```bash
     cd backend
-    ./vendor/bin/sail up -d
-    ./vendor/bin/sail artisan octane:start --host=0.0.0.0 --port=8000 --watch
+    php artisan octane:start --server=roadrunner --port=8002
     ```
 2.  **Frontend**:
     ```bash

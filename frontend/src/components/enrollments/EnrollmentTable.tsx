@@ -2,6 +2,7 @@ import React from 'react';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -25,6 +26,33 @@ import {
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
+/**
+ * StatusSwitch
+ * pt-BR: Sub-componente de switch com estado local para feedback imediato.
+ * en-US: Switch sub-component with local state for immediate feedback.
+ */
+function StatusSwitch({ checked, onCheckedChange }: { checked: boolean; onCheckedChange: (checked: boolean) => void }) {
+  const [localChecked, setLocalChecked] = React.useState(checked);
+
+  // Sync with prop if it changes externally (e.g., after a successful mutation/refetch)
+  React.useEffect(() => {
+    setLocalChecked(checked);
+  }, [checked]);
+
+  const handleToggle = (newValue: boolean) => {
+    setLocalChecked(newValue);
+    onCheckedChange(newValue);
+  };
+
+  return (
+    <Switch
+      checked={localChecked}
+      onCheckedChange={handleToggle}
+      className="data-[state=checked]:bg-emerald-500 mx-auto"
+    />
+  );
+}
+
 export interface EnrollmentTableProps {
   items: any[];
   isLoading?: boolean;
@@ -46,6 +74,7 @@ export interface EnrollmentTableProps {
    * en-US: Action to generate/link certificate for the selected enrollment.
    */
   onGenerateCertificate?: (item: any) => void;
+  onToggleActive?: (item: any, isActive: boolean) => void;
 }
 
 /**
@@ -61,7 +90,8 @@ export default function EnrollmentTable({
   onDelete, 
   resolveAmountBRL, 
   onProgress, 
-  onGenerateCertificate 
+  onGenerateCertificate,
+  onToggleActive
 }: EnrollmentTableProps) {
   const amountFormatter = resolveAmountBRL || (() => '-');
 
@@ -145,6 +175,7 @@ export default function EnrollmentTable({
               </div>
             </TableHead>
             <TableHead className="px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70">Situação</TableHead>
+            <TableHead className="px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70">Ativo</TableHead>
             <TableHead className="px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-muted-foreground/70">
               <div className="flex items-center justify-end gap-2">
                 <DollarSign className="h-3 w-3" /> Valor
@@ -217,6 +248,12 @@ export default function EnrollmentTable({
                   <TableCell className="px-6 py-4 text-center">
                     {resolveStatusBadge(enroll)}
                   </TableCell>
+                  <TableCell className="px-6 py-4 text-center">
+                    <StatusSwitch
+                      checked={String(enroll.ativo).toLowerCase() === 's' || enroll.ativo === 1 || enroll.ativo === '1'}
+                      onCheckedChange={(checked) => onToggleActive?.(enroll, checked)}
+                    />
+                  </TableCell>
                   <TableCell className="px-6 py-4 text-right">
                     <span className="font-black text-sm text-primary/90 tabular-nums">
                       {amountFormatter(enroll)}
@@ -233,7 +270,7 @@ export default function EnrollmentTable({
                         <DropdownMenuLabel className="text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2 py-2">Gerenciamento</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => onView?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
                           <Eye className="h-3.5 w-3.5 text-primary" /> 
-                          Visualizar Proposta
+                          Visualizar
                         </DropdownMenuItem>
                         {isMatriculated(enroll) && (
                           <DropdownMenuItem onClick={() => onProgress?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">

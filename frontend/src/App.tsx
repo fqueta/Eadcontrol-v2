@@ -49,7 +49,7 @@ const SystemSettings = lazy(() => import("./pages/settings/SystemSettings"));
 const IntegrationsList = lazy(() => import("./pages/settings/IntegrationsList"));
 const Stages = lazy(() => import("./pages/settings/Stages"));
 const TableInstallment = lazy(() => import("./pages/settings/TableInstallment"));
-const Login = lazy(() => import("./pages/auth/Login"));
+import Login from "./pages/auth/Login";
 const Metrics = lazy(() => import("./pages/settings/Metrics"));
 const AircraftsSettings = lazy(() => import("./pages/settings/AircraftsSettings"));
 const Register = lazy(() => import("./pages/auth/Register"));

@@ -15,8 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { User, LogOut, ChevronDown, Monitor, ExternalLink, Moon, Sun, Menu, Home, BookOpen, Receipt, ShoppingCart, GraduationCap, UserCircle } from "lucide-react";
 import { BrandLogo } from "@/components/branding/BrandLogo";
-import { useEffect as useEffectReact } from "react";
-import { applyBrandingFavicon, hydrateBrandingFromPublicApi } from "@/lib/branding";
+
+import { applyBrandingFavicon, hydrateBrandingFromPublicApi, getInstitutionName, getInstitutionSlogan, getInstitutionDescription } from "@/lib/branding";
 import { ForceChangePasswordModal } from "@/components/auth/ForceChangePasswordModal";
 
 type InclusiveSiteLayoutProps = {
@@ -37,6 +37,9 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
   const { toast } = useToast();
   const [isDark, setIsDark] = useState<boolean>(false);
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
+  const [institutionName, setInstitutionName] = useState(() => getInstitutionName() || 'Instituição');
+  const [institutionSlogan, setInstitutionSlogan] = useState(() => getInstitutionSlogan() || '');
+  const [institutionDescription, setInstitutionDescription] = useState(() => getInstitutionDescription() || '');
   /**
    * BrandLogo usage
    * pt-BR: Substitui lógica manual por componente BrandLogo para resolver a URL
@@ -52,12 +55,20 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
    * en-US: On public layout mount, hydrate branding via public endpoint
    *         and apply brand favicon.
    */
-  useEffectReact(() => {
+  useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         await hydrateBrandingFromPublicApi({ persist: true });
-        if (!cancelled) applyBrandingFavicon('/favicon.ico');
+        if (!cancelled) {
+          // Atualiza os valores de branding dinâmicos após hidratação
+          setInstitutionName(getInstitutionName() || 'Instituição');
+          setInstitutionSlogan(getInstitutionSlogan() || '');
+          setInstitutionDescription(getInstitutionDescription() || '');
+          // Re-aplica o tema agora que o localStorage foi populado com os dados do banco
+          applyThemeSettings();
+          applyBrandingFavicon('/favicon.ico');
+        }
       } catch {
         if (!cancelled) applyBrandingFavicon('/favicon.ico');
       }
@@ -127,7 +138,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
   const permission_id: any = user?.permission_id;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] dark:bg-[#020617] transition-colors duration-500">
+    <div className="min-h-screen bg-background transition-colors duration-500">
       {/* Refined background elements for modern app feel */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute -top-[10%] -right-[10%] w-[40%] h-[40%] bg-blue-400/10 dark:bg-blue-600/5 blur-[120px] rounded-full" />
@@ -146,8 +157,8 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
               className="h-10 rounded-xl ring-1 ring-primary/10 dark:ring-primary/20 p-1.5 bg-white dark:bg-slate-900 shadow-sm"
             />
             <div className="hidden md:block">
-              <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-indigo-600 dark:from-blue-400 dark:to-indigo-400">Incluir & Educar</h1>
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/70 dark:text-blue-200/50">Tecnologia que Inclui</p>
+              <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-indigo-600 dark:from-blue-400 dark:to-indigo-400">{institutionName}</h1>
+               {institutionSlogan && <p className="text-[10px] uppercase tracking-wider font-bold text-primary/80 dark:text-blue-300/70">{institutionSlogan}</p>}
             </div>
           </div>
           {/* Mobile actions: theme toggle + menu */}
@@ -415,12 +426,12 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
                   className="h-10 brightness-0 invert opacity-80 group-hover:opacity-100 transition-opacity"
                 />
                 <div className="border-l border-white/10 pl-3">
-                  <h3 className="font-bold text-lg tracking-tight">Incluir & Educar</h3>
-                  <p className="text-xs text-slate-500 uppercase tracking-widest font-medium">Tecnologia com propósito</p>
+                  <h3 className="font-bold text-lg tracking-tight">{institutionName}</h3>
+                   {institutionSlogan && <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">{institutionSlogan}</p>}
                 </div>
               </div>
               <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
-                A maior distribuidora de soluções educacionais inclusivas do Brasil. Transformando a educação através da tecnologia e inovação.
+                {institutionDescription || 'Educação e tecnologia juntos.'}
               </p>
               <div className="flex space-x-4">
                 {/* Social media placeholders if needed, otherwise just leave or remove */}
@@ -447,7 +458,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
             </div>
           </div>
           <div className="border-t border-white/5 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-500">
-            <p>&copy; {new Date().getFullYear()} Incluir & Educar. Todos os direitos reservados.</p>
+            <p>&copy; {new Date().getFullYear()} {institutionName}. Todos os direitos reservados.</p>
             <div className="flex gap-6">
               <Link to="/pagina/politica-de-privacidade" className="hover:text-slate-300 transition-colors">Privacidade</Link>
               <Link to="/pagina/termos" className="hover:text-slate-300 transition-colors">Termos</Link>

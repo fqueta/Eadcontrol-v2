@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -44,9 +44,9 @@ export default function Login() {
   const { login, isLoading, user, isAuthenticated } = useAuth();
   const { redirectAfterAuth } = useRedirect();
   // Nome da instituição (dinâmico via API/options)
-  const [institutionName, setInstitutionName] = useState<string>(() => getInstitutionName());
+  const [institutionName, setInstitutionName] = useState<string>('Ead Control');
   // Slogan da instituição (dinâmico via API/options)
-  const [institutionSlogan, setInstitutionSlogan] = useState<string>(() => getInstitutionSlogan());
+  const [institutionSlogan, setInstitutionSlogan] = useState<string>('');
 
   // Efeito para redirecionar após login bem-sucedido
   useEffect(() => {
