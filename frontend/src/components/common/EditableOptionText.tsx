@@ -148,6 +148,7 @@ export function EditableOptionText({
           defaultValue={value}
           className={cn(
             'w-full resize-y rounded-md border border-blue-300 p-2 text-sm',
+            'bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100',
             'focus:outline-none focus:ring-2 focus:ring-primary',
             className,
           )}
@@ -162,6 +163,7 @@ export function EditableOptionText({
           defaultValue={value}
           className={cn(
             'w-full rounded-md border border-blue-300 px-2 py-1',
+            'bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100',
             'focus:outline-none focus:ring-2 focus:ring-primary',
             className,
           )}
