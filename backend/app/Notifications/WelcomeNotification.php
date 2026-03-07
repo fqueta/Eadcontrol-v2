@@ -17,7 +17,7 @@ use Illuminate\Bus\Queueable;
  */
 class WelcomeNotification extends Notification implements ShouldQueue
 {
-    use Queueable, HasDynamicBranding;
+    use HasDynamicBranding, Queueable;
 
     /** @var int */
     protected $courseId;
