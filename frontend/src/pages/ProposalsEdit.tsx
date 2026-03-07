@@ -407,6 +407,17 @@ export default function ProposalsEdit() {
    * en-US: Determines if current situation (in form or loaded) is "Interested".
    */
   const selectedSituacaoId = form.watch('situacao_id');
+  
+  // Efeito para garantir que o campo situacao_id seja preenchido quando a matrícula carrega
+  useEffect(() => {
+    if (enrollment && !form.getValues('situacao_id')) {
+        const sitId = String((enrollment as any)?.situacao_id || '');
+        if (sitId) {
+            form.setValue('situacao_id', sitId);
+        }
+    }
+  }, [enrollment, form]);
+
   const isCurrentlyInterested = useMemo(() => {
     const list = Array.isArray((situationsData as any)?.data || (situationsData as any)?.items)
       ? ((situationsData as any).data || (situationsData as any).items)

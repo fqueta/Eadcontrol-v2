@@ -159,7 +159,10 @@ class MatriculaController extends Controller
         if ($request->filled('student')) {
             $studentTerm = trim((string)$request->input('student'));
             if ($studentTerm !== '') {
-                $query->where('users.name', 'like', "%$studentTerm%");
+                $query->where(function($q) use ($studentTerm) {
+                    $q->where('users.name', 'like', "%$studentTerm%")
+                      ->orWhere('users.email', 'like', "%$studentTerm%");
+                });
             }
         }
 

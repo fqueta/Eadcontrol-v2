@@ -114,6 +114,10 @@ export default function ProposalViewContent({ id }: ProposalViewContentProps) {
     return ((enrollment as any)?.orc?.parcelamento ?? null) as any;
   }, [enrollment]);
 
+  const isActive = useMemo(() => {
+    return (enrollment as any)?.ativo === 's';
+  }, [enrollment]);
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
       {/* Hero Summary Section */}
@@ -139,12 +143,14 @@ export default function ProposalViewContent({ id }: ProposalViewContentProps) {
           
           <div className="grid grid-cols-1 gap-4 text-sm w-full md:w-auto">
             <div className="flex items-center gap-3 p-3 rounded-xl bg-white border shadow-sm">
-              <div className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              <div className={`h-10 w-10 rounded-lg flex items-center justify-center font-bold ${isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
                 {clientName?.[0]?.toUpperCase() || '?'}
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold uppercase text-muted-foreground leading-none mb-1">Status</span>
-                <span className="font-bold text-emerald-700">Ativa</span>
+                <span className={`font-bold ${isActive ? 'text-emerald-700' : 'text-red-700'}`}>
+                  {isActive ? 'Ativa' : 'Inativa'}
+                </span>
               </div>
             </div>
           </div>
