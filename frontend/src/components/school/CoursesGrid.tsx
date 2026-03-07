@@ -106,7 +106,7 @@ export default function CoursesGrid() {
         )}>
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className={cn(
-              "animate-pulse bg-slate-100 dark:bg-slate-800/50 rounded-2xl overflow-hidden",
+              "animate-pulse bg-slate-100 dark:bg-slate-800/50 rounded-xl overflow-hidden",
               viewMode === 'grid' ? "h-[400px]" : "h-48"
             )}>
               <div className="h-48 bg-slate-200 dark:bg-slate-700" />
@@ -131,7 +131,7 @@ export default function CoursesGrid() {
       )}
       
       {!isLoading && items.length === 0 && (
-        <div className="p-20 text-center bg-white/50 dark:bg-slate-900/20 rounded-[2rem] border border-dashed border-slate-200 dark:border-white/5">
+        <div className="p-20 text-center bg-white/50 dark:bg-slate-900/20 rounded-xl border border-dashed border-slate-200 dark:border-white/5">
           <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
             <LayoutGrid className="w-10 h-10 text-muted-foreground/30" />
           </div>
@@ -154,7 +154,7 @@ export default function CoursesGrid() {
               return (
                 <Card 
                   key={c.id}
-                  className="group relative overflow-hidden border border-slate-200/50 dark:border-white/5 rounded-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm hover:shadow-2xl hover:shadow-primary/5 hover:border-primary/20 transition-all duration-500 cursor-pointer flex flex-col md:flex-row shadow-sm animate-in fade-in slide-in-from-bottom duration-700 fill-mode-both"
+                  className="group relative overflow-hidden border border-slate-200/50 dark:border-white/5 rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm hover:shadow-2xl hover:shadow-primary/5 hover:border-primary/20 transition-all duration-500 cursor-pointer flex flex-col md:flex-row shadow-sm animate-in fade-in slide-in-from-bottom duration-700 fill-mode-both"
                   style={{ animationDelay: `${idx * 50}ms` }}
                   onClick={() => onOpenCourse(c)}
                 >
@@ -206,7 +206,7 @@ export default function CoursesGrid() {
           return (
             <Card
               key={c.id}
-              className="group relative h-full flex flex-col overflow-hidden border border-slate-200/50 dark:border-white/5 rounded-[2rem] bg-white/50 dark:bg-slate-900/50 backdrop-blur-md hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2 transition-all duration-500 cursor-pointer shadow-sm animate-in fade-in zoom-in-95 duration-700 fill-mode-both"
+              className="group relative h-full flex flex-col overflow-hidden border border-slate-200/50 dark:border-white/5 rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2 transition-all duration-500 cursor-pointer shadow-sm animate-in fade-in zoom-in-95 duration-700 fill-mode-both"
               style={{ animationDelay: `${idx * 50}ms` }}
               onClick={() => onOpenCourse(c)}
             >
