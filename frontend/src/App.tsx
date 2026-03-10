@@ -11,6 +11,7 @@ import { AdminProtectedRoute } from "./components/auth/AdminProtectedRoute";
 import { AuthRedirect } from "./components/auth/AuthRedirect";
 import { AppLayout } from "./components/layout/AppLayout";
 import FaviconUpdater from "@/components/branding/FaviconUpdater";
+import { CookieConsent } from "@/components/common/CookieConsent";
 import { hydrateBrandingFromPublicApi, applyBrandingFromPersistedSources } from "@/lib/branding";
 import React, { useEffect, lazy, Suspense } from "react";
 // import Dashboard from "./pages/Dashboard";
@@ -191,6 +192,7 @@ const App = () => {
             <Toaster />
             <Sonner />
           <BrowserRouter>
+            <CookieConsent />
             <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Carregando…</div>}>
             <Routes>
               {/* Rotas públicas */}
