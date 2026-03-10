@@ -1,6 +1,6 @@
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-import { ArrowLeft, Mail, Phone, MapPin, User, Building, Calendar, GraduationCap, Briefcase, FileText, DollarSign, Edit, Plus, UserPlus } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, User, Building, Calendar, GraduationCap, Briefcase, FileText, DollarSign, Edit, Plus, UserPlus, Clock, Activity, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1035,6 +1035,69 @@ export default function ClientView() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Timeline de Eventos */}
+      <Card className="border-none shadow-md overflow-hidden bg-background">
+        <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/10 pb-4">
+          <CardTitle className="flex items-center text-xl font-bold flex-1">
+            <Activity className="mr-3 h-6 w-6 text-primary" />
+            Linha do Tempo de Atividades
+          </CardTitle>
+          <div className="text-xs text-muted-foreground">Últimos eventos registrados</div>
+        </CardHeader>
+        <CardContent className="pt-6 relative">
+          <div className="absolute left-[39px] top-6 bottom-6 w-0.5 bg-border rounded-full" />
+          <div className="space-y-6 relative">
+            {/* Exemplo de histórico: Acesso */}
+            <div className="flex gap-6 group">
+              <div className="relative">
+                <div className="h-10 w-10 rounded-full bg-indigo-50 border-4 border-background flex items-center justify-center text-indigo-500 shadow-sm relative z-10 group-hover:scale-110 transition-transform">
+                  <LogIn className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="flex-1 space-y-1.5 pb-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm text-foreground">Acesso ao Sistema</span>
+                  <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">Hoje, 08:15</span>
+                </div>
+                <p className="text-sm text-muted-foreground">Realizou login com sucesso através da plataforma EAD.</p>
+              </div>
+            </div>
+
+            {/* Exemplo de histórico: Cadastro no Curso */}
+            <div className="flex gap-6 group">
+              <div className="relative">
+                <div className="h-10 w-10 rounded-full bg-emerald-50 border-4 border-background flex items-center justify-center text-emerald-500 shadow-sm relative z-10 group-hover:scale-110 transition-transform">
+                  <GraduationCap className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="flex-1 space-y-1.5 pb-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm text-foreground">Nova Matrícula</span>
+                  <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">05/03/2026, 14:30</span>
+                </div>
+                <p className="text-sm text-muted-foreground">O cliente foi matriculado no curso <strong>Comunicação Suplementar Alternativa na Prática</strong>.</p>
+              </div>
+            </div>
+
+            {/* Exemplo de histórico: Criação */}
+            <div className="flex gap-6 group">
+              <div className="relative">
+                <div className="h-10 w-10 rounded-full bg-blue-50 border-4 border-background flex items-center justify-center text-blue-500 shadow-sm relative z-10 group-hover:scale-110 transition-transform">
+                  <UserPlus className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="flex-1 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm text-foreground">Cadastro Realizado</span>
+                  <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">{formatDate(client.created_at)}</span>
+                </div>
+                <p className="text-sm text-muted-foreground">Registro do cliente criado no sistema.</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <AlertDialog open={isPromoteModalOpen} onOpenChange={setIsPromoteModalOpen}>
         <AlertDialogContent>

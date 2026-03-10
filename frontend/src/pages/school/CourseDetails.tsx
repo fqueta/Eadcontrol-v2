@@ -249,13 +249,16 @@ export default function CourseDetails() {
    * pt-BR: Abre link de compra quando disponível; caso contrário, redireciona para o checkout do Stripe.
    * en-US: Opens purchase link when available; otherwise redirects to Stripe checkout.
    */
-  const handleBuy = async () => {
+  const handleBuy = () => {
     const c: any = course || {};
+    
+    if (!c.id) return;
+
     if (isAlreadyEnrolled) {
       toast({
         variant: "destructive",
-        title: "Erro",
-        description: "Você já está matriculado neste curso."
+        title: "Atenção",
+        description: "Você já possui acesso a este curso."
       });
       // Direciona para a página do aluno
       if (id) navigate(`/aluno/cursos/${String(id)}`);
@@ -267,49 +270,10 @@ export default function CourseDetails() {
       return;
     }
 
-    if (!isAuthenticated) {
-      toast({
-        title: "Atenção",
-        description: "Você precisa estar logado ou criar uma conta para comprar o curso."
-      });
-      // Salva a url de retorno
-      const returnUrl = encodeURIComponent(window.location.pathname);
-      navigate(`/login?redirect=${returnUrl}`);
-      return;
-    }
-
-    try {
-      const payload: any = {
-        course_id: Number(c?.id)
-      };
-
-      if (isAuthenticated && user) {
-        payload.email = user.email;
-        payload.name = user.name;
-        payload.phone = user.celular;
-      }
-
-      toast({
-        title: "Processando...",
-        description: "Redirecionando para o pagamento seguro..."
-      });
-
-      const provider = 'asaas'; // TODO: Tornar isso dinâmico depois (Stripe ou Asaas)
-      
-      const response = await checkoutService.createCheckoutSession(provider, payload);
-      if (response && response.url) {
-        window.location.href = response.url;
-      } else {
-        throw new Error("URL de checkout inválida.");
-      }
-    } catch (err: any) {
-      console.error('Erro ao iniciar checkout:', err);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: err?.body?.message || err?.message || "Falha ao iniciar pagamento. Tente novamente."
-      });
-    }
+    // pt-BR: Redireciona para a nova página de checkout rápido usando slug
+    // en-US: Redirects to the new fast checkout page using slug
+    const slug = c.slug || c.id;
+    navigate(`/checkout/${slug}`);
   };
 
   /**

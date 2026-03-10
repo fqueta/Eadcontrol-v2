@@ -137,38 +137,7 @@ export default function AdminEnrollmentProgress() {
     try { window.print(); } catch {}
   };
 
-  /**
-   * handleBack
-   * pt-BR: Volta para a lista de progresso do curso, preservando filtros quando disponíveis.
-   *        Usa estado de navegação (returnTo) ou deriva do currículo (course_id).
-   * en-US: Goes back to the course progress list, preserving filters when available.
-   *        Uses navigation state (returnTo) or derives from curriculum (course_id).
-   */
   const handleBack = () => {
-    // Prefer query params if present (shared link preserves filters)
-    const cidQ = searchParams.get('id_curso');
-    const tidQ = searchParams.get('id_turma');
-    const searchQ = searchParams.get('search');
-    if (cidQ || tidQ || searchQ) {
-      const params = new URLSearchParams();
-      if (cidQ) params.set('id_curso', cidQ);
-      if (tidQ) params.set('id_turma', tidQ);
-      if (searchQ && searchQ.trim()) params.set('search', searchQ.trim());
-      navigate(`/admin/school/courses/${cidQ || 'curso'}/progress?${params.toString()}`);
-      return;
-    }
-    const state = (location.state || {}) as any;
-    const returnTo: string | undefined = state?.returnTo;
-    if (returnTo) {
-      navigate(returnTo);
-      return;
-    }
-    const courseId = String((curriculum as any)?.course_id || '');
-    if (courseId) {
-      const params = new URLSearchParams({ id_curso: courseId });
-      navigate(`/admin/school/courses/${courseId}/progress?${params.toString()}`);
-      return;
-    }
     navigate(-1);
   };
 
@@ -176,7 +145,7 @@ export default function AdminEnrollmentProgress() {
   const studentName = String((curriculum as any)?.student_name || '');
 
   return (
-    <div className="container mx-auto p-6 max-w-5xl space-y-8 animate-in fade-in duration-500">
+    <div className="container mx-auto p-6 space-y-8 animate-in fade-in duration-500">
       {/*
        * Breadcrumbs
        * pt-BR: Trilhas de navegação para clareza, preservando filtros via URL.

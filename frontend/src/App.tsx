@@ -122,6 +122,7 @@ const PageCreate = lazy(() => import("./pages/site/PageCreate"));
 const PageEdit = lazy(() => import("./pages/site/PageEdit"));
 const PublicPage = lazy(() => import("./pages/site/PublicPage"));
 const SiteComponents = lazy(() => import("./pages/site/Components"));
+const FastCheckout = lazy(() => import("./pages/school/FastCheckout"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -506,6 +507,7 @@ const App = () => {
               <Route path="/cursos/:id/detalhes" element={<CourseDetails />} />
               {/* Página pública publicada por slug */}
               <Route path="/pagina/:slug" element={<PublicPage />} />
+              <Route path="/checkout/:courseSlug" element={<FastCheckout />} />
               {/**
                * pt-BR: Página pública de convite de matrícula via link do curso.
                * en-US: Public invitation enrollment page via course link.

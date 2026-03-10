@@ -16,6 +16,15 @@ interface PaymentGatewayInterface
     public function createCheckoutSession(int $courseId, array $customerData): string;
 
     /**
+     * Processes a direct payment (Credit Card, PIX, Boleto).
+     *
+     * @param \App\Models\Matricula $matricula
+     * @param array $paymentData {billingType, creditCard, creditCardHolderInfo...}
+     * @return array Response with payment status and necessary data (PIX code, invoice URL, etc.)
+     */
+    public function processPayment(\App\Models\Matricula $matricula, array $paymentData): array;
+
+    /**
      * Handles incoming webhooks from the payment gateway.
      *
      * @param Request $request

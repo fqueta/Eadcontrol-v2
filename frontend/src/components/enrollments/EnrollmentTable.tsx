@@ -25,6 +25,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * StatusSwitch
@@ -93,6 +94,7 @@ export default function EnrollmentTable({
   onGenerateCertificate,
   onToggleActive
 }: EnrollmentTableProps) {
+  const navigate = useNavigate();
   const amountFormatter = resolveAmountBRL || (() => '-');
 
   /**
@@ -273,7 +275,10 @@ export default function EnrollmentTable({
                           Visualizar
                         </DropdownMenuItem>
                         {isMatriculated(enroll) && (
-                          <DropdownMenuItem onClick={() => onProgress?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                          <DropdownMenuItem onClick={() => {
+                            const courseId = enroll?.id_curso || enroll?.curso_id || enroll?.course_id || '';
+                            navigate(`/admin/school/enrollments/${enroll.id}/progress?id_curso=${courseId}`);
+                          }} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
                             <BarChart3 className="h-3.5 w-3.5 text-emerald-500" /> 
                             Ver Progresso
                           </DropdownMenuItem>

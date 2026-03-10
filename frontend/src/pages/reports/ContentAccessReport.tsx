@@ -40,8 +40,10 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
+import { useNavigate } from "react-router-dom";
 
 export default function ContentAccessReport() {
+  const navigate = useNavigate();
   const [days, setDays] = useState(30);
   const { data, isLoading, error } = useAnalyticsDashboard(days);
 
@@ -377,8 +379,8 @@ export default function ContentAccessReport() {
                         <div className={`h-10 w-10 rounded-2xl flex items-center justify-center font-black text-xs shadow-sm shadow-inner transition-all group-hover:scale-110 ${getAvatarColor(user.name)}`}>
                           {getInitials(user.name)}
                         </div>
-                        <div className="flex flex-col">
-                          <span className="font-bold text-foreground tracking-tight group-hover:text-indigo-600 transition-colors">{user.name}</span>
+                        <div className="flex flex-col cursor-pointer" onClick={() => navigate(`/admin/clients/${user.user_id}/view`)}>
+                          <span className="font-bold text-foreground tracking-tight group-hover:text-indigo-600 transition-colors hover:underline">{user.name}</span>
                           <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">ID: {user.user_id}</span>
                         </div>
                       </div>

@@ -103,6 +103,7 @@ php artisan octane:start --server=roadrunner
 ```bash
 php artisan octane:start --server=roadrunner --port=8080
 ```
+php artisan octane:start --server=roadrunner --port=8002
 
 ## Liberar a Porta 8000
 

@@ -88,6 +88,10 @@ Route::name('api.')->prefix('v1')->middleware([
     // EN: Password reset endpoint for API clients (expects JSON)
     Route::post('reset-password', [\App\Http\Controllers\Auth\NewPasswordController::class, 'store'])
         ->name('password.store');
+    // Rotas de Checkout Público
+    Route::get('public/checkout/course/{id}', [\App\Http\Controllers\api\CheckoutController::class, 'getCourse'])->name('public.checkout.course');
+    Route::post('public/checkout/pay', [\App\Http\Controllers\api\CheckoutController::class, 'process'])->name('public.checkout.pay');
+
     Route::fallback(function () {
         return response()->json(['message' => 'Rota não encontrada'], 404);
     });

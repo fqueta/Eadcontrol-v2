@@ -1768,6 +1768,36 @@ class Qlib
         }
         return $ret;
     }
+
+    /**
+     * Registra um evento de interação/histórico para uma matrícula.
+     * Use para auditoria de pagamentos, mudanças de status, etc.
+     * 
+     * @param int|string $matriculaId
+     * @param string $eventType Ex: 'payment_request', 'payment_response', 'webhook_confirmation'
+     * @param string $description Descrição amigável do evento
+     * @param array $metadata Dados adicionais (payloads, respostas, etc)
+     */
+    static function logMatriculaEvent($matriculaId, $eventType, $description, $metadata = [])
+    {
+        try {
+            return \App\Models\TrackingEvent::create([
+                'event_type' => $eventType,
+                'resource_type' => \App\Models\Matricula::class,
+                'resource_id' => $matriculaId,
+                'url' => url()->current(),
+                'ip_address' => request()->ip(),
+                'user_id' => auth()->id(),
+                'metadata' => array_merge([
+                    'description' => $description,
+                ], $metadata)
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Erro ao registrar log de matrícula: " . $e->getMessage());
+            return false;
+        }
+    }
+
     /**
      * Metodo para pegar os meta matriculas
      * @param string $matricula_id,$meta_key=matricula key,$strig;

@@ -426,10 +426,8 @@ export default function ProposalsCreate() {
         // Navega para a origem e força atualização para feedback visual
         if (navState?.returnTo && typeof navState.returnTo === 'string') {
           navigate(navState.returnTo);
-        } else if (navState?.funnelId) {
-          navigate(`/admin/sales?funnel=${navState.funnelId}`);
         } else {
-          navigate('/admin/sales');
+          navigate('/admin/school/enroll');
         }
       } else {
         // Mantém na página e mostra confirmação
@@ -575,21 +573,12 @@ export default function ProposalsCreate() {
     form.handleSubmit(onSubmit)();
   }
 
-  /**
-   * handleBack
-   * pt-BR: Volta ao funil de vendas de origem, usando o estado de navegação.
-   * en-US: Returns to the originating sales funnel, using navigation state.
-   */
   function handleBack() {
     if (navState?.returnTo && typeof navState.returnTo === 'string') {
       navigate(navState.returnTo);
       return;
     }
-    if (navState?.funnelId) {
-      navigate(`/admin/sales?funnel=${navState.funnelId}`);
-      return;
-    }
-    navigate('/admin/sales');
+    navigate('/admin/school/enroll');
   }
 
   return (

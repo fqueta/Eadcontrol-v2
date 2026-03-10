@@ -159,6 +159,13 @@ class StripePaymentGateway implements PaymentGatewayInterface
         return response()->json(['status' => 'success']);
     }
 
+    public function processPayment(\App\Models\Matricula $matricula, array $paymentData): array
+    {
+        // For direct payments (Credit Card/PIX) via Stripe, implementation would be here.
+        // For now, mirroring Asaas change for signature compatibility.
+        throw new \Exception("Stripe direct payment not implemented yet.");
+    }
+
     protected function processEnrollment($courseId, $email, $name, $phone)
     {
         // Encontrar o Client

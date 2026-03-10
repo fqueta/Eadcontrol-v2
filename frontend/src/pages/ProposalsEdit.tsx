@@ -578,10 +578,8 @@ export default function ProposalsEdit() {
         try { queryClient.invalidateQueries(); } catch {}
         if (navState?.returnTo && typeof navState.returnTo === 'string') {
           navigate(navState.returnTo);
-        } else if (navState?.funnelId) {
-          navigate(`/admin/sales?funnel=${navState.funnelId}`);
         } else {
-          navigate('/admin/sales');
+          navigate('/admin/school/enroll');
         }
       } else {
         /**
@@ -869,21 +867,12 @@ export default function ProposalsEdit() {
     await updateEnrollment.mutateAsync({ id: String(id || ''), data: payload } as any);
   }
 
-  /**
-   * handleBack
-   * pt-BR: Retorna à página de origem, se disponível; senão, vai para vendas.
-   * en-US: Returns to origin page if available; otherwise, goes to sales.
-   */
   function handleBack() {
     if (navState?.returnTo && typeof navState.returnTo === 'string') {
       navigate(navState.returnTo);
       return;
     }
-    if (navState?.funnelId) {
-      navigate(`/admin/sales?funnel=${navState.funnelId}`);
-      return;
-    }
-    navigate('/admin/sales');
+    navigate('/admin/school/enroll');
   }
 
   /**

@@ -7,6 +7,7 @@ import { toast } from '@/hooks/use-toast';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<boolean>;
+  loginWithResponse: (response: any) => Promise<boolean>;
   register: (data: RegisterData) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -88,6 +89,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       updateAuthState(null, null, [], []);
       setUserPointsBalance(null);
+      return false;
+    }
+  };
+
+  const loginWithResponse = async (response: any): Promise<boolean> => {
+    try {
+      if (response.token) {
+        localStorage.setItem('auth_token', response.token);
+        localStorage.setItem('auth_user', JSON.stringify(response.user));
+        
+        if (response.permissions) {
+          localStorage.setItem('auth_permissions', JSON.stringify(response.permissions));
+        }
+        if (response.menu) {
+          localStorage.setItem('auth_menu', JSON.stringify(response.menu));
+        }
+
+        updateAuthState(
+          response.user, 
+          response.token, 
+          response.permissions || [], 
+          response.menu || [],
+          response.force_password_change || false
+        );
+        
+        await syncUserData();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error in loginWithResponse:', error);
       return false;
     }
   };
@@ -308,6 +340,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value: AuthContextType = {
     ...state,
     login,
+    loginWithResponse,
     register,
     logout,
     refreshUser,

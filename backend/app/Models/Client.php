@@ -37,6 +37,41 @@ class Client extends User
         });
     }
 
+    /**
+     * Resolve ou cria um cliente com base nos dados fornecidos.
+     * Centraliza a lógica de senha padrão (CPF sem máscara) e status.
+     * 
+     * @param array $data {email, name, cpfCnpj, phone}
+     * @return Client
+     */
+    public static function getOrCreate(array $data): self
+    {
+        $email = $data['email'] ?? null;
+        if (!$email) {
+            throw new \Exception("E-mail é obrigatório para identificação do cliente.");
+        }
+
+        $client = self::where('email', $email)->first();
+
+        if (!$client) {
+            $cpfCnpjClean = preg_replace('/\D/', '', $data['cpfCnpj'] ?? '');
+            
+            $client = self::create([
+                'name' => $data['name'] ?? explode('@', $email)[0],
+                'email' => $email,
+                'cpf' => $data['cpfCnpj'] ?? null,
+                'celular' => $data['phone'] ?? null,
+                'password' => \Illuminate\Support\Facades\Hash::make($cpfCnpjClean),
+                'status' => 'actived',
+                'genero' => 'ni',
+                'ativo' => 's',
+                'tipo_pessoa' => (isset($data['cpfCnpj']) && strlen($cpfCnpjClean) > 11) ? 'pj' : 'pf',
+            ]);
+        }
+
+        return $client;
+    }
+
     protected $fillable = [
         'tipo_pessoa',
         'name',
