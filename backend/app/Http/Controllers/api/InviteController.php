@@ -310,4 +310,57 @@ class InviteController extends Controller
         ]);
         return response()->json(['message' => 'Convite excluído com sucesso'], 200);
     }
+
+    /**
+     * usages
+     * pt-BR: Retorna o histórico de uso (alunos cadastrados) de um convite específico.
+     * en-US: Returns the usage history (registered students) for a specific invite.
+     */
+    public function usages(int $id)
+    {
+        $invite = Post::query()->ofType('convites')->where('ID', $id)->first();
+        if (!$invite) {
+            return response()->json(['message' => 'Convite não encontrado'], 404);
+        }
+
+        $usages = \App\Models\InviteUsage::where('invite_post_id', $id)
+            ->with(['client:id,name,email'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        $data = $usages->map(function ($u) {
+            $studentName = $u->client->name ?? 'Aluno Removido';
+            $studentEmail = $u->client->email ?? '-';
+            
+            // Tenta obter dados da matrícula se existirem no meta
+            $matriculaId = $u->meta['matricula_id'] ?? null;
+            $matriculaData = null;
+            
+            if ($matriculaId) {
+                $m = \App\Models\Matricula::with(['course:id,titulo,nome'])->find($matriculaId);
+                if ($m) {
+                    $matriculaData = [
+                        'id' => $m->id,
+                        'course_title' => $m->course->titulo ?? $m->course->nome ?? 'Curso não encontrado',
+                        'status' => $m->status,
+                        // pt-BR: 'a' costuma ser ativo, 'c' cancelado. O frontend pode mapear.
+                    ];
+                }
+            }
+
+            return [
+                'id' => $u->id,
+                'client_id' => $u->client_id,
+                'student_name' => $studentName,
+                'student_email' => $studentEmail,
+                'status' => $u->status,
+                'reason' => $u->reason,
+                'used_at' => optional($u->created_at)->toDateTimeString(),
+                'ip' => $u->ip,
+                'matricula' => $matriculaData,
+            ];
+        });
+
+        return response()->json(['data' => $data]);
+    }
 }

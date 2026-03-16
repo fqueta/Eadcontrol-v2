@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Calendar, Users, Link, Copy, Share2, Plus, Search, Trash2, Edit, Ticket } from 'lucide-react';
+import { formatDateOnly } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { phoneApplyMask, phoneRemoveMask } from '@/lib/masks/phone-apply-mask';
 import { Badge } from '@/components/ui/badge'; // Assuming Badge exists, if not will fix
@@ -46,6 +47,9 @@ export default function InvitesAdminPage() {
   const [isShareOpen, setIsShareOpen] = useState<boolean>(false);
   const [sharePhone, setSharePhone] = useState<string>('');
   const [shareMessage, setShareMessage] = useState<string>('');
+  // History state
+  const [historyInvite, setHistoryInvite] = useState<any | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
 
   /**
    * buildWhatsAppUrl
@@ -102,6 +106,17 @@ export default function InvitesAdminPage() {
   const { data: invitesData, isLoading } = useQuery({
     queryKey: ['admin', 'invites', 'list'],
     queryFn: async () => invitesService.list({ per_page: 50 }),
+  });
+
+  /**
+   * historyQuery
+   * pt-BR: Busca o histórico de uso de um convite específico.
+   * en-US: Fetches usage history for a specific invite.
+   */
+  const historyQuery = useQuery({
+    queryKey: ['admin', 'invites', 'history', historyInvite?.id],
+    queryFn: async () => invitesService.getUsages(historyInvite.id),
+    enabled: !!historyInvite?.id && isHistoryOpen,
   });
 
   /**
@@ -343,7 +358,18 @@ export default function InvitesAdminPage() {
                   <TableBody>
                     {rows.map((r) => {
                         const usagePercent = Math.min(100, Math.round((Number(r.usados) / Number(r.total)) * 100));
-                        const isExpired = r.validade && new Date(r.validade) < new Date();
+                        
+                        // pt-BR: Compara data de hoje com validade (YYYY-MM-DD) sem considerar fuso
+                        // en-US: Compares today's date with validity (YYYY-MM-DD) without considering timezone
+                        let isExpired = false;
+                        if (r.validade) {
+                          const today = new Date();
+                          const y = today.getFullYear();
+                          const m = String(today.getMonth() + 1).padStart(2, '0');
+                          const d = String(today.getDate()).padStart(2, '0');
+                          const todayStr = `${y}-${m}-${d}`;
+                          isExpired = r.validade < todayStr;
+                        }
                         
                         return (
                       <TableRow key={r.id} className="hover:bg-muted/30">
@@ -374,7 +400,7 @@ export default function InvitesAdminPage() {
                             {r.validade ? (
                                 <div className={`flex items-center gap-1.5 ${isExpired ? 'text-red-500' : 'text-muted-foreground'}`}>
                                     <Calendar className="h-3.5 w-3.5" />
-                                    <span className="text-sm">{new Date(r.validade).toLocaleDateString('pt-BR')}</span>
+                                    <span className="text-sm">{formatDateOnly(r.validade)}</span>
                                     {isExpired && <span className="text-[10px] bg-red-100 text-red-600 px-1 rounded">Exp</span>}
                                 </div>
                             ) : (
@@ -399,6 +425,13 @@ export default function InvitesAdminPage() {
                               }}>
                                 <Share2 className="mr-2 h-4 w-4" />
                                 Compartilhar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                setHistoryInvite(r);
+                                setIsHistoryOpen(true);
+                              }}>
+                                <Users className="mr-2 h-4 w-4" />
+                                Ver Histórico de Alunos
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => copyToClipboard(r.link)}>
                                 <Copy className="mr-2 h-4 w-4" />
@@ -591,6 +624,82 @@ export default function InvitesAdminPage() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* History Dialog */}
+        <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+          <DialogContent className="sm:max-w-[950px]">
+            <DialogHeader>
+              <DialogTitle>Histórico de Uso - {historyInvite?.nome}</DialogTitle>
+              <DialogDescription>
+                Alunos que se cadastraram através deste link de convite.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              {historyQuery.isLoading ? (
+                <div className="py-8 text-center text-muted-foreground animate-pulse">Carregando histórico...</div>
+              ) : (historyQuery.data as any)?.length > 0 ? (
+                <div className="max-h-[400px] overflow-y-auto border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead>Aluno</TableHead>
+                        <TableHead>E-mail</TableHead>
+                        <TableHead>Curso / Matrícula</TableHead>
+                        <TableHead>Data de Uso</TableHead>
+                        <TableHead className="text-right">Acesso</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(historyQuery.data as any).map((u: any) => (
+                        <TableRow key={u.id}>
+                          <TableCell className="font-medium whitespace-nowrap">{u.student_name}</TableCell>
+                          <TableCell className="text-muted-foreground">{u.student_email}</TableCell>
+                          <TableCell>
+                             {u.matricula ? (
+                               <div className="flex flex-col gap-0.5">
+                                 <span className="text-xs font-semibold text-primary truncate max-w-[180px]" title={u.matricula.course_title}>
+                                   {u.matricula.course_title}
+                                 </span>
+                                 <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] text-muted-foreground italic">Matrícula: #{u.matricula.id}</span>
+                                    {u.matricula.status === 'c' ? (
+                                      <span className="text-[9px] bg-red-50 text-red-500 px-1 rounded border border-red-100 uppercase font-bold">Cancelada</span>
+                                    ) : (
+                                      <span className="text-[9px] bg-green-50 text-green-500 px-1 rounded border border-green-100 uppercase font-bold">Ativa</span>
+                                    )}
+                                 </div>
+                               </div>
+                             ) : (
+                               <span className="text-muted-foreground text-xs">Pendente / Falha</span>
+                             )}
+                          </TableCell>
+                          <TableCell className="text-[10px] whitespace-nowrap">
+                             {u.used_at ? new Date(u.used_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                             {u.status === 'success' ? (
+                               <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-[10px] h-5 px-1.5">Sucesso</Badge>
+                             ) : (
+                               <Badge variant="destructive" className="bg-red-100 text-red-700 border-red-200 hover:bg-red-100 text-[10px] h-5 px-1.5">Falha</Badge>
+                             )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="py-12 text-center flex flex-col items-center gap-2 text-muted-foreground">
+                  <Users className="h-12 w-12 opacity-20" />
+                  <p>Nenhum aluno se cadastrou por este link ainda.</p>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end pt-2 border-t">
+               <Button variant="outline" onClick={() => setIsHistoryOpen(false)}>Fechar</Button>
+            </div>
           </DialogContent>
         </Dialog>
     </div>

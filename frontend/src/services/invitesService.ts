@@ -60,6 +60,16 @@ class InvitesService extends BaseApiService {
   }
 
   /**
+   * getUsages
+   * pt-BR: Obtém o histórico de uso (alunos) de um convite.
+   * en-US: Gets usage history (students) for an invite.
+   */
+  async getUsages(id: number): Promise<any> {
+    const resp = await this.get<any>(`/invites/${id}/usages`);
+    return resp.data || resp;
+  }
+
+  /**
    * destroy
    * pt-BR: Exclui um convite.
    * en-US: Deletes an invite.

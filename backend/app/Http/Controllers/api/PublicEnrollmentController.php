@@ -50,7 +50,7 @@ class PublicEnrollmentController extends Controller
         if (!$this->verifySecurityToken($request, 'public_enrollment')) {
             return response()->json([
                 'message' => 'Envio suspeito detectado.',
-                'errors' => ['bot' => ['Submission flagged by anti-bot checks or security token validation']],
+                'errors' => ['bot' => ['Envio sinalizado por verificações anti-bot ou validação de token de segurança']],
             ], 422);
         }
 
@@ -153,7 +153,7 @@ class PublicEnrollmentController extends Controller
                     ]);
                     return response()->json([
                         'message' => 'Convite inválido ou não encontrado',
-                        'errors' => ['invite_token' => ['Invite token not found']],
+                        'errors' => ['invite_token' => ['Token de convite não encontrado']],
                     ], 422);
                 }
                 $cfg = (array) ($invite->config ?? []);
@@ -178,7 +178,7 @@ class PublicEnrollmentController extends Controller
                 'errors' => ['invite_token' => ['Limite de uso do convite atingido']],
                     ], 422);
                 }
-                if ($validade && time() > $validade) {
+                if ($cfg['validade'] && date('Y-m-d') > $cfg['validade']) {
                     DB::rollBack();
                     // Audit: convite expirado
                     InviteUsage::create([
@@ -193,7 +193,7 @@ class PublicEnrollmentController extends Controller
                     ]);
                     return response()->json([
                         'message' => 'Este link de convite expirou',
-                        'errors' => ['invite_token' => ['Invite token expired']],
+                        'errors' => ['invite_token' => ['Token de convite expirado']],
                     ], 422);
                 }
                 // Se o convite possui curso associado, usar como fonte da matrícula
@@ -410,7 +410,7 @@ class PublicEnrollmentController extends Controller
         if (!$this->verifySecurityToken($request, 'public_interest')) {
             return response()->json([
                 'message' => 'Envio suspeito detectado.',
-                'errors' => ['bot' => ['Submission flagged by anti-bot checks or security token validation']],
+                'errors' => ['bot' => ['Envio sinalizado por verificações anti-bot ou validação de token de segurança']],
             ], 422);
         }
 

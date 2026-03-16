@@ -189,6 +189,7 @@ Route::name('api.')->prefix('api/v1')->middleware([
         Route::get('invites', [\App\Http\Controllers\api\InviteController::class, 'index'])->name('invites.index');
         Route::post('invites', [\App\Http\Controllers\api\InviteController::class, 'store'])->name('invites.store');
         Route::get('invites/{id}', [\App\Http\Controllers\api\InviteController::class, 'show'])->name('invites.show');
+        Route::get('invites/{id}/usages', [\App\Http\Controllers\api\InviteController::class, 'usages'])->name('invites.usages');
         Route::put('invites/{id}', [\App\Http\Controllers\api\InviteController::class, 'update'])->name('invites.update');
         Route::delete('invites/{id}', [\App\Http\Controllers\api\InviteController::class, 'destroy'])->name('invites.destroy');
         // Criar novo comentário (entra como pending para moderação)

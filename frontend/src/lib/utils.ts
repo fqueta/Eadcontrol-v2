@@ -25,6 +25,22 @@ export function formatDate(date: string | Date): string {
 }
 
 /**
+ * Formata uma data "pura" (YYYY-MM-DD) sem considerar fuso horário (exibe o dia exato da string)
+ */
+export function formatDateOnly(dateStr: string): string {
+  if (!dateStr || !dateStr.includes('-')) return '-';
+  
+  // Divide a string para evitar que o construtor Date trate como UTC midnight
+  const [year, month, day] = dateStr.split('-').map(Number);
+  if (!year || !month || !day) return '-';
+  
+  // Cria a data localmente (mês é 0-indexed)
+  const dateObj = new Date(year, month - 1, day);
+  
+  return dateObj.toLocaleDateString('pt-BR');
+}
+
+/**
  * Formata pontos como números inteiros com separadores de milhares
  */
 export function formatPoints(points: number): string {
