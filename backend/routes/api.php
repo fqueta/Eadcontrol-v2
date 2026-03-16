@@ -120,6 +120,7 @@ Route::name('api.')->prefix('v1')->middleware([
         Route::apiResource('clients', ClientController::class,['parameters' => [
             'clients' => 'id'
         ]]);
+        Route::get('clients/{id}/logs', [ClientController::class, 'logs'])->name('clients.logs');
         Route::post('clients/{id}/promote', [ClientController::class, 'promote'])->name('clients.promote');
         Route::get('clients/trash', [ClientController::class, 'trash'])->name('clients.trash');
         Route::put('clients/{id}/restore', [ClientController::class, 'restore'])->name('clients.restore');

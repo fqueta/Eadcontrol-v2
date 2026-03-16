@@ -72,7 +72,7 @@ export class FinancialCategoriesService extends BaseApiService {
    * @param id - ID da categoria financeira
    * @returns Promise void
    */
-  async deleteCategory(id: string): Promise<void> {
+  async deleteCategory(id: string): Promise<any> {
     return this.delete(`${this.endpoint}/${id}`);
   }
 

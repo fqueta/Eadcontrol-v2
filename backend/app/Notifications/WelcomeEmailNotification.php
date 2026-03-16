@@ -24,17 +24,20 @@ class WelcomeEmailNotification extends Notification
     protected string $courseTitle;
     /** @var int|string|null */
     protected $courseId;
+    /** @var string|null */
+    protected ?string $courseSlug;
 
     /**
      * __construct
      * pt-BR: Inicializa a notificação com dados do destinatário e curso.
      * en-US: Initializes the notification with recipient and course data.
      */
-    public function __construct(string $recipientName, string $courseTitle, $courseId = null, string $curseSlug = null)
+    public function __construct(string $recipientName, string $courseTitle, $courseId = null, string $courseSlug = null)
     {
         $this->recipientName = $recipientName;
         $this->courseTitle = $courseTitle;
         $this->courseId = $courseId;
+        $this->courseSlug = $courseSlug;
         
         $this->loadDynamicBranding();
     }
@@ -95,7 +98,8 @@ class WelcomeEmailNotification extends Notification
             'courseTitle' => $this->courseTitle,
             'courseName' => $this->courseTitle,
             'courseId' => $this->courseId,
-            'courseSlug' => null, // Opcional, adicionar ao builder se necessário depois
+            'courseSlug' => $this->courseSlug,
+            'courseUrl' => $this->courseSlug ? $this->getFrontendUrl() . '/aluno/cursos/' . $this->courseSlug : null,
             'loginUrl' => $this->getFrontendUrl() . '/login',
             
             // Variáveis injetadas pelo Trait HasDynamicBranding

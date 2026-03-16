@@ -11,6 +11,9 @@ export default defineConfig(({ mode }) => ({
     host: true,
     port: 4000,
     strictPort: true,
+    hmr: {
+      host: 'eadcontrol.localhost',
+    },
     headers: {
       'Cache-Control': 'public, max-age=31536000',
     },

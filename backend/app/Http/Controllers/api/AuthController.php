@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use App\Helpers\RecaptchaHelper;
 use App\Http\Controllers\api\PublicFormTokenController;
 use App\Traits\HandlesSecurityTokens;
+use App\Models\TrackingEvent;
 
 class AuthController extends Controller
 {
@@ -93,6 +94,21 @@ class AuthController extends Controller
         $config = is_string($user->config) ? json_decode($user->config, true) : $user->config;
         $forcePasswordChange = ($request->password === 'mudar12@3') || 
                                (isset($config['force_password_change']) && $config['force_password_change'] === 's');
+
+        // Log the login event
+        try {
+            TrackingEvent::create([
+                'user_id' => $user->id,
+                'event_type' => 'login',
+                'description' => 'Login no sistema',
+                'metadata' => [
+                    'ip' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Erro ao registrar TrackingEvent no login: ' . $e->getMessage());
+        }
 
         return response()->json([
             'user' => $user,

@@ -56,6 +56,18 @@ class Client extends User
         if (!$client) {
             $cpfCnpjClean = preg_replace('/\D/', '', $data['cpfCnpj'] ?? '');
             
+            if (!empty($cpfCnpjClean)) {
+                $cpfOriginal = $data['cpfCnpj'];
+                $cpfExists = self::where('cpf', $cpfOriginal)
+                                 ->orWhere('cpf', $cpfCnpjClean)
+                                 ->orWhere('cnpj', $cpfOriginal)
+                                 ->orWhere('cnpj', $cpfCnpjClean)
+                                 ->first();
+                if ($cpfExists) {
+                    throw new \Exception("O CPF/CNPJ informado já está vinculado a outro cadastro (" . $cpfExists->email . "). Por favor, faça login ou utilize o e-mail correto.");
+                }
+            }
+            
             $client = self::create([
                 'name' => $data['name'] ?? explode('@', $email)[0],
                 'email' => $email,

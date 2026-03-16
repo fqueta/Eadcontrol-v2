@@ -81,8 +81,8 @@ class ProductsService extends BaseApiService {
    * Exclui um produto
    * @param id - ID do produto
    */
-  async deleteProduct(id: string): Promise<void> {
-    await this.delete<void>(`${this.endpoint}/${id}`);
+  async deleteProduct(id: string): Promise<any> {
+    return this.delete<any>(`${this.endpoint}/${id}`);
   }
 
   /**
@@ -138,8 +138,8 @@ class ProductsService extends BaseApiService {
     return this.updateProduct(id, data);
   }
 
-  async deleteById(id: string): Promise<void> {
-    await super.delete(`${this.endpoint}/${id}`);
+  async deleteById(id: string): Promise<any> {
+    return await super.delete(`${this.endpoint}/${id}`);
   }
 }
 

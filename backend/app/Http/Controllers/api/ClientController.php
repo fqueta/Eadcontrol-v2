@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\Stage;
 use App\Models\User;
+use App\Models\TrackingEvent;
 use App\Services\PermissionService;
 use App\Services\Qlib;
 use Illuminate\Http\Request;
@@ -1152,5 +1153,29 @@ class ClientController extends Controller
             'status' => 200,
             'data' => $client
         ]);
+    }
+
+    /**
+     * Retorna os eventos de tracking/logs associados ao cliente.
+     * Combina os acessos (TrackingEvent) com dados do cliente.
+     */
+    public function logs(Request $request, string $id)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+        if (!$this->permissionService->isHasPermission('view')) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+
+        $perPage = $request->input('per_page', 10);
+
+        // Fetch user basic tracking events
+        $logs = TrackingEvent::where('user_id', $id)
+            ->latest()
+            ->paginate($perPage);
+
+        return response()->json($logs);
     }
 }

@@ -1,7 +1,7 @@
 import { ClientRecord, CreateClientInput, UpdateClientInput, ClientsListParams } from '@/types/clients';
 import { clientsService } from '@/services/clientsService';
 import { useGenericApi } from './useGenericApi';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 /**
@@ -32,6 +32,15 @@ export function useClient(id: string, queryOptions?: any) {
 export function useClientById(id: string, queryOptions?: any) {
   const api = getClientsApi();
   return api.useGetById(id, queryOptions);
+}
+
+export function useClientLogs(id: string, params?: any, queryOptions?: any) {
+  return useQuery({
+    queryKey: ['clients', 'logs', id, params],
+    queryFn: () => clientsService.getClientLogs(id, params),
+    enabled: !!id,
+    ...queryOptions,
+  });
 }
 
 export function useCreateClient(mutationOptions?: any) {

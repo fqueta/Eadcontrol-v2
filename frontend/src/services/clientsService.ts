@@ -31,6 +31,15 @@ class ClientsService extends BaseApiService {
   }
 
   /**
+   * Obtém logs do cliente por ID
+   * @param id - ID do cliente
+   */
+  async getClientLogs(id: string, params?: any): Promise<PaginatedResponse<any>> {
+    const response = await this.get<any>(`/clients/${id}/logs`, params);
+    return this.normalizePaginatedResponse<any>(response);
+  }
+
+  /**
    * Cria novo cliente
    * @param payload - Dados do cliente
    *
@@ -93,8 +102,8 @@ class ClientsService extends BaseApiService {
     return this.updateClient(id, data);
   }
 
-  async deleteById(id: string): Promise<void> {
-    await this.deleteClient(id);
+  async deleteById(id: string): Promise<any> {
+    return this.deleteClient(id);
   }
   
   /**

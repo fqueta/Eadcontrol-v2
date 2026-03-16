@@ -60,8 +60,8 @@ class ServicesService extends BaseApiService {
    * Remove um serviço
    * @param id - ID do serviço
    */
-  async deleteService(id: string): Promise<void> {
-    await this.delete(`${this.endpoint}/${id}`);
+  async deleteService(id: string): Promise<any> {
+    return this.delete(`${this.endpoint}/${id}`);
   }
 
   /**
@@ -100,8 +100,8 @@ class ServicesService extends BaseApiService {
     return this.updateService(id, data);
   }
 
-  async deleteById(id: string): Promise<void> {
-    await super.delete(`${this.endpoint}/${id}`);
+  async deleteById(id: string): Promise<any> {
+    return await super.delete(`${this.endpoint}/${id}`);
   }
 }
 

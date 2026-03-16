@@ -16,16 +16,12 @@ export interface GenericApiService<T, CreateInput, UpdateInput, ListParams = any
   getById(id: string): Promise<T>;
   create(data: CreateInput): Promise<T>;
   update(id: string, data: UpdateInput): Promise<T>;
-  /**
-   * pt-BR: Preferencial — evita colisão com método protegido `delete(endpoint)`.
-   * en-US: Preferred — avoids collision with protected `delete(endpoint)`.
-   */
-  deleteById?: (id: string) => Promise<void>;
+  deleteById?: (id: string) => Promise<any>;
   /**
    * pt-BR: Fallback — alguns serviços implementam `delete(id)` diretamente.
    * en-US: Fallback — some services implement `delete(id)` directly.
    */
-  delete?: (id: string) => Promise<void>;
+  delete?: (id: string) => Promise<any>;
 }
 
 export interface UseGenericApiOptions<T, CreateInput, UpdateInput, ListParams = any> {
@@ -95,11 +91,11 @@ export function useGenericApi<T, CreateInput, UpdateInput, ListParams = any>(
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: [queryKey] });
         if (!suppressToasts) toast.success(`${entityName} criado com sucesso!`);
-        mutationOptions?.onSuccess?.(data, data as any, undefined);
+        mutationOptions?.onSuccess?.(data, data as any, undefined, undefined as any);
       },
       onError: (error) => {
         if (!suppressToasts) toast.error(`Erro ao criar ${entityName.toLowerCase()}: ${error.message}`);
-        mutationOptions?.onError?.(error, error as any, undefined);
+        mutationOptions?.onError?.(error, error as any, undefined, undefined as any);
       },
       ...mutationOptions,
     });
@@ -118,11 +114,11 @@ export function useGenericApi<T, CreateInput, UpdateInput, ListParams = any>(
         queryClient.invalidateQueries({ queryKey: [queryKey] });
         queryClient.invalidateQueries({ queryKey: [queryKey, 'detail', variables.id] });
         if (!suppressToasts) toast.success(`${entityName} atualizado com sucesso!`);
-        mutationOptions?.onSuccess?.(data, variables, undefined);
+        mutationOptions?.onSuccess?.(data, variables, undefined, undefined as any);
       },
       onError: (error) => {
         if (!suppressToasts) toast.error(`Erro ao atualizar ${entityName.toLowerCase()}: ${error.message}`);
-        mutationOptions?.onError?.(error, error as any, undefined);
+        mutationOptions?.onError?.(error, error as any, undefined, undefined as any);
       },
       ...mutationOptions,
     });
@@ -135,7 +131,7 @@ export function useGenericApi<T, CreateInput, UpdateInput, ListParams = any>(
    * @param mutationOptions - Opções do useMutation
    */
   const useDelete = (
-    mutationOptions?: UseMutationOptions<void, Error, string>
+    mutationOptions?: UseMutationOptions<any, Error, string>
   ) => {
     return useMutation({
       /**
@@ -151,11 +147,11 @@ export function useGenericApi<T, CreateInput, UpdateInput, ListParams = any>(
         queryClient.removeQueries({ queryKey: [queryKey, 'detail', id] });
         queryClient.refetchQueries({ queryKey: [queryKey] });
         if (!suppressToasts) toast.success(`${entityName} excluído com sucesso!`);
-        mutationOptions?.onSuccess?.(data, id, undefined);
+        mutationOptions?.onSuccess?.(data, id, undefined, undefined as any);
       },
       onError: (error) => {
         if (!suppressToasts) toast.error(`Erro ao excluir ${entityName.toLowerCase()}: ${error.message}`);
-        mutationOptions?.onError?.(error, error as any, undefined);
+        mutationOptions?.onError?.(error, error as any, undefined, undefined as any);
       },
       ...mutationOptions,
     });

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 /**
  * StatusSwitch
@@ -95,6 +96,7 @@ export default function EnrollmentTable({
   onToggleActive
 }: EnrollmentTableProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const amountFormatter = resolveAmountBRL || (() => '-');
 
   /**
@@ -104,14 +106,15 @@ export default function EnrollmentTable({
    */
   function isMatriculated(enroll: any): boolean {
     const s = String(enroll?.situacao ?? enroll?.status ?? enroll?.config?.situacao ?? '').toLowerCase();
-    return s.startsWith('mat');
+    return s.startsWith('mat') || s.startsWith('cur') || s.startsWith('con');
   }
-
   /**
    * resolveStatusBadge
    * pt-BR: Retorna o componente Badge estilizado de acordo com a situação (Premium).
    * en-US: Returns the Badge component styled according to the situation (Premium).
    */
+  
+
   function resolveStatusBadge(enroll: any) {
     const s = String(enroll?.situacao ?? enroll?.status ?? enroll?.config?.situacao ?? '').toLowerCase();
     
@@ -274,7 +277,7 @@ export default function EnrollmentTable({
                           <Eye className="h-3.5 w-3.5 text-primary" /> 
                           Visualizar
                         </DropdownMenuItem>
-                        {isMatriculated(enroll) && (
+                        {isMatriculated(enroll) && Number(user?.permission_id) <= 3 && (
                           <DropdownMenuItem onClick={() => {
                             const courseId = enroll?.id_curso || enroll?.curso_id || enroll?.course_id || '';
                             navigate(`/admin/school/enrollments/${enroll.id}/progress?id_curso=${courseId}`);
@@ -285,7 +288,7 @@ export default function EnrollmentTable({
                         )}
                         <DropdownMenuItem onClick={() => onEdit?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
                           <Edit className="h-3.5 w-3.5 text-slate-500" /> 
-                          {String(enroll?.situacao ?? '').startsWith('int') ? 'Editar Cadastro' : 'Gerenciar Acesso / Certificado'}
+                          {String(enroll?.situacao ?? '').startsWith('int') ? 'Editar Cadastro' : 'Certificado'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="my-1 bg-slate-50 dark:bg-slate-800" />
                         <DropdownMenuItem className="text-red-500 cursor-pointer focus:bg-red-50 focus:text-red-600 gap-2 font-bold text-xs rounded-lg" onClick={() => onDelete?.(enroll)}>

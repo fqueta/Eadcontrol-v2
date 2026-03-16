@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, PauseCircle, PlayCircle, Printer, ArrowLeft, BookOpen, Clock, TrendingUp, Award, Calendar, ArrowRight } from 'lucide-react';
 import { progressService } from '@/services/progressService';
+import { formatDate } from '@/lib/utils';
 // Breadcrumbs UI
 // pt-BR: Importa componentes de trilha de navegação para exibir breadcrumbs no topo da página.
 // en-US: Imports breadcrumb UI components to render navigation trail at the top of the page.
@@ -90,6 +91,7 @@ export default function AdminEnrollmentProgress() {
     const Icon = a?.completed ? CheckCircle2 : (a?.needs_resume ? PlayCircle : PauseCircle);
     const badgeVariant = a?.completed ? 'default' : (a?.needs_resume ? 'secondary' : 'outline');
     const opacityClass = a?.completed ? 'opacity-60' : '';
+    const lastView = a?.updated_at ? formatDate(a.updated_at) : null;
     
     return (
       <div className={`flex items-center justify-between p-4 ${opacityClass}`}>
@@ -109,19 +111,26 @@ export default function AdminEnrollmentProgress() {
               </div>
            </div>
         </div>
-        <div className="flex items-center gap-2">
-          {a?.completed ? (
-              <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 px-3 py-1">
-                 <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Concluída
-              </Badge>
-          ) : a?.needs_resume ? (
-              <Badge variant="secondary" className="px-3 py-1 bg-amber-100 text-amber-800 hover:bg-amber-200 border-amber-200">
-                 <PlayCircle className="h-3.5 w-3.5 mr-1.5" /> Retomar
-              </Badge>
-          ) : (
-              <Badge variant="outline" className="text-muted-foreground border-dashed">
-                 Pendente
-              </Badge>
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-2">
+            {a?.completed ? (
+                <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 px-3 py-1">
+                   <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Concluída
+                </Badge>
+            ) : a?.needs_resume ? (
+                <Badge variant="secondary" className="px-3 py-1 bg-amber-100 text-amber-800 hover:bg-amber-200 border-amber-200">
+                   <PlayCircle className="h-3.5 w-3.5 mr-1.5" /> Retomar
+                </Badge>
+            ) : (
+                <Badge variant="outline" className="text-muted-foreground border-dashed">
+                   Pendente
+                </Badge>
+            )}
+          </div>
+          {lastView && (
+            <span className="text-[10px] text-muted-foreground font-medium whitespace-nowrap">
+              Visto em: {lastView}
+            </span>
           )}
         </div>
       </div>

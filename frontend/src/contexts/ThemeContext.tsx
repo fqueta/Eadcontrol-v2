@@ -9,7 +9,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
-  console.log('useTheme hook called, context:', !!context);
+  // console.log('useTheme hook called, context:', !!context);
   // Se o contexto não estiver disponível (ex: em páginas que escapam ao provider padrão),
   // retorna um objeto seguro com funções vazias para evitar erros fatais
   return context || { applyThemeSettings: () => {} };

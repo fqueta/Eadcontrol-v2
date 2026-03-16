@@ -23,6 +23,7 @@ import { useFunnel, useStagesList } from '@/hooks/funnels';
 import { phoneApplyMask } from '@/lib/masks/phone-apply-mask';
 import { useEnrollmentsList } from '@/hooks/enrollments';
 import EnrollmentTable from '@/components/enrollments/EnrollmentTable';
+import { useClientLogs } from '@/hooks/clients';
 import { currencyRemoveMaskToNumber } from '@/lib/masks/currency';
 import { useQuery } from '@tanstack/react-query';
 import { coursesService } from '@/services/coursesService';
@@ -134,6 +135,15 @@ export default function ClientView() {
   } as any;
   const { data: interestResp, isLoading: isInterestLoading, isFetching: isInterestFetching } = useEnrollmentsList(interestListParams, { enabled: !!clientId });
   const interestedCourses = Array.isArray(interestResp?.data) ? (interestResp!.data as any[]) : [];
+
+  /**
+   * getClientLogs (client scope)
+   * pt-BR: Carrega histórico de eventos do cliente.
+   */
+  const { data: logsResp, isLoading: isLogsLoading } = useClientLogs(clientId, { per_page: 20 }, {
+    enabled: !!clientId && !useMock,
+  });
+  const logs = Array.isArray(logsResp?.data) ? (logsResp!.data as any[]) : [];
 
   /**
    * resolveEnrollmentAmountBRL
@@ -1048,53 +1058,85 @@ export default function ClientView() {
         <CardContent className="pt-6 relative">
           <div className="absolute left-[39px] top-6 bottom-6 w-0.5 bg-border rounded-full" />
           <div className="space-y-6 relative">
-            {/* Exemplo de histórico: Acesso */}
-            <div className="flex gap-6 group">
-              <div className="relative">
-                <div className="h-10 w-10 rounded-full bg-indigo-50 border-4 border-background flex items-center justify-center text-indigo-500 shadow-sm relative z-10 group-hover:scale-110 transition-transform">
-                  <LogIn className="h-4 w-4" />
+            
+            {isLogsLoading ? (
+               <div className="flex gap-6 group">
+                <div className="flex-1 space-y-1.5 pb-2 ml-14">
+                  <span className="font-bold text-sm text-foreground">Carregando eventos...</span>
                 </div>
-              </div>
-              <div className="flex-1 space-y-1.5 pb-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-sm text-foreground">Acesso ao Sistema</span>
-                  <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">Hoje, 08:15</span>
-                </div>
-                <p className="text-sm text-muted-foreground">Realizou login com sucesso através da plataforma EAD.</p>
-              </div>
-            </div>
+               </div>
+            ) : logs.length > 0 ? (
+              logs.map((log) => {
+                let Icon = Activity;
+                let bgClass = "bg-gray-50 text-gray-500 border-background";
+                let title = "Evento";
+                let description = "";
 
-            {/* Exemplo de histórico: Cadastro no Curso */}
-            <div className="flex gap-6 group">
-              <div className="relative">
-                <div className="h-10 w-10 rounded-full bg-emerald-50 border-4 border-background flex items-center justify-center text-emerald-500 shadow-sm relative z-10 group-hover:scale-110 transition-transform">
-                  <GraduationCap className="h-4 w-4" />
-                </div>
-              </div>
-              <div className="flex-1 space-y-1.5 pb-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-sm text-foreground">Nova Matrícula</span>
-                  <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">05/03/2026, 14:30</span>
-                </div>
-                <p className="text-sm text-muted-foreground">O cliente foi matriculado no curso <strong>Comunicação Suplementar Alternativa na Prática</strong>.</p>
-              </div>
-            </div>
+                if (log.event_type === 'view') {
+                  Icon = LogIn;
+                  bgClass = "bg-indigo-50 text-indigo-500 border-background";
+                  title = "Visualização";
+                  description = "Realizou uma visualização no sistema.";
+                } else if (log.event_type === 'login') {
+                  Icon = LogIn;
+                  bgClass = "bg-indigo-50 text-indigo-500 border-background";
+                  title = "Login no Sistema";
+                  description = log.description || "Realizou login com sucesso.";
+                } else if (log.event_type === 'whatsapp_contact') {
+                  Icon = Phone;
+                  bgClass = "bg-green-50 text-green-500 border-background";
+                  title = "Contato via WhatsApp";
+                  description = "Iniciou um contato pelo WhatsApp.";
+                } else {
+                  title = log.event_type || "Atividade Registrada";
+                  description = log.description || "Nova atividade no sistema.";
+                }
 
-            {/* Exemplo de histórico: Criação */}
-            <div className="flex gap-6 group">
-              <div className="relative">
-                <div className="h-10 w-10 rounded-full bg-blue-50 border-4 border-background flex items-center justify-center text-blue-500 shadow-sm relative z-10 group-hover:scale-110 transition-transform">
-                  <UserPlus className="h-4 w-4" />
+                return (
+                  <div key={log.id} className="flex gap-6 group">
+                    <div className="relative">
+                      <div className={`h-10 w-10 rounded-full border-4 flex items-center justify-center shadow-sm relative z-10 group-hover:scale-110 transition-transform ${bgClass}`}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-1.5 pb-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-sm text-foreground">{title}</span>
+                        <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
+                          {formatDate(log.created_at)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{description}</p>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+                <div className="flex gap-6 group">
+                  <div className="flex-1 space-y-1.5 pb-2 ml-14">
+                    <span className="font-bold text-sm text-foreground text-muted-foreground">Nenhum evento registrado ainda.</span>
+                  </div>
+                </div>
+            )}
+
+            {/* Evento base de criação da conta sempre no final da timeline, se existir o cliente */}
+            {!useMock && client && (
+              <div className="flex gap-6 group">
+                <div className="relative">
+                  <div className="h-10 w-10 rounded-full bg-blue-50 border-4 border-background flex items-center justify-center text-blue-500 shadow-sm relative z-10 group-hover:scale-110 transition-transform">
+                    <UserPlus className="h-4 w-4" />
+                  </div>
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-foreground">Cadastro Realizado</span>
+                    <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">{formatDate(client.created_at)}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Registro do cliente criado no sistema.</p>
                 </div>
               </div>
-              <div className="flex-1 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-sm text-foreground">Cadastro Realizado</span>
-                  <span className="text-xs font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">{formatDate(client.created_at)}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">Registro do cliente criado no sistema.</p>
-              </div>
-            </div>
+            )}
+            
           </div>
         </CardContent>
       </Card>

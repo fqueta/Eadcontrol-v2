@@ -98,7 +98,6 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
                     $situacao_id_mat = \App\Services\Qlib::buscaValorDb('posts', 'post_name', 'mat', 'ID');
                     if ($matricula->situacao_id != $situacao_id_mat) {
                         $matricula->situacao_id = $situacao_id_mat;
-                        $matricula->data_matricula = now()->toDateString();
                         $matricula->save();
                         Log::info("Asaas Webhook: Matricula {$matricula->id} updated to 'mat' (enrolled).");
                         
@@ -120,6 +119,17 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
                             Log::info("Welcome email (Success) sent to {$client->email} via Webhook confirmation.");
                         } catch (\Exception $e) {
                             Log::error("Failed to send welcome email via Webhook: " . $e->getMessage());
+                        }
+
+                        // Notificar administradores da nova venda
+                        try {
+                            $admins = \App\Models\User::where('permission_id', '<', 3)->get();
+                            if ($admins->isNotEmpty()) {
+                                \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\NewSaleAdminNotification($matricula));
+                                Log::info("Admin sale notification sent for Matricula {$matricula->id} via Webhook.");
+                            }
+                        } catch (\Exception $e) {
+                            Log::error("Failed to send admin sale notification via Webhook: " . $e->getMessage());
                         }
                     }
                 } else {
@@ -203,7 +213,6 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
         if ($billingType === 'CREDIT_CARD' && isset($payment['status']) && ($payment['status'] === 'CONFIRMED' || $payment['status'] === 'RECEIVED')) {
             $situacao_id_mat = \App\Services\Qlib::buscaValorDb('posts', 'post_name', 'mat', 'ID');
             $matricula->situacao_id = $situacao_id_mat;
-            $matricula->data_matricula = now()->toDateString();
             $matricula->save();
 
             // Gerar token para auto-login
@@ -229,6 +238,17 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
                 Log::info("Welcome email (Success) sent to {$client->email} after CC approval.");
             } catch (\Exception $e) {
                 Log::error("Failed to send welcome email after CC approval: " . $e->getMessage());
+            }
+
+            // Notificar administradores da nova venda
+            try {
+                $admins = \App\Models\User::where('permission_id', '<', 3)->get();
+                if ($admins->isNotEmpty()) {
+                    \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\NewSaleAdminNotification($matricula));
+                    Log::info("Admin sale notification sent for Matricula {$matricula->id} after CC approval.");
+                }
+            } catch (\Exception $e) {
+                Log::error("Failed to send admin sale notification after CC approval: " . $e->getMessage());
             }
         }
 
@@ -274,7 +294,7 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
     /**
      * Garante que o cliente existe no Asaas e retorna seu ID do Asaas.
      */
-    protected function ensureAsaasCustomer(Client $client): string
+    protected function ensureAsaasCustomer(\App\Models\User $client): string
     {
         $email = $client->email;
         $customerId = \App\Services\Qlib::get_usermeta($client->id, 'id_asaas', true);

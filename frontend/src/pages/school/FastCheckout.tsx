@@ -36,6 +36,36 @@ const checkoutSchema = z.object({
     addressNumber: z.string().optional(),
     addressComplement: z.string().optional(),
   }).optional(),
+}).superRefine((data, ctx) => {
+  if (data.payment_method === 'credit_card') {
+    const cc = data.credit_card;
+    if (!cc?.number) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Número do cartão obrigatório", path: ["credit_card", "number"] });
+    }
+    if (!cc?.holderName) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Nome impresso obrigatório", path: ["credit_card", "holderName"] });
+    }
+    if (!cc?.expiryMonth || !/^(0[1-9]|1[0-2])$/.test(cc.expiryMonth)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Mês inválido", path: ["credit_card", "expiryMonth"] });
+    }
+    if (!cc?.expiryYear || !/^\d{2}$/.test(cc.expiryYear)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Ano inválido", path: ["credit_card", "expiryYear"] });
+    } else {
+      const currentYear = new Date().getFullYear() % 100;
+      if (parseInt(cc.expiryYear, 10) < currentYear) {
+         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Ano expirado", path: ["credit_card", "expiryYear"] });
+      }
+    }
+    if (!cc?.ccv || cc.ccv.length < 3) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "CVV obrigatório", path: ["credit_card", "ccv"] });
+    }
+    if (!cc?.postalCode) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "CEP obrigatório", path: ["credit_card", "postalCode"] });
+    }
+    if (!cc?.addressNumber) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Número obrigatório", path: ["credit_card", "addressNumber"] });
+    }
+  }
 });
 
 type CheckoutValues = z.infer<typeof checkoutSchema>;
@@ -137,6 +167,20 @@ const FastCheckout = () => {
       .replace(/\D/g, "")
       .replace(/(\d{5})(\d)/, "$1-$2")
       .replace(/(-\d{3})\d+?$/, "$1");
+  };
+
+  const maskMonth = (value: string) => {
+    let clean = value.replace(/\D/g, "");
+    if (clean.length === 2) {
+      const month = parseInt(clean, 10);
+      if (month < 1) clean = "01";
+      if (month > 12) clean = "12";
+    }
+    return clean;
+  };
+
+  const maskYear = (value: string) => {
+    return value.replace(/\D/g, "");
   };
 
   const maskCardNumber = (value: string) => {
@@ -412,13 +456,34 @@ const FastCheckout = () => {
                                                 <div className="space-y-2">
                                                     <Label className="text-xs font-bold text-slate-500">Validade</Label>
                                                     <div className="flex gap-2">
-                                                        <Input placeholder="MM" maxLength={2} {...form.register("credit_card.expiryMonth")} className="h-14 text-center rounded-xl font-bold" />
-                                                        <Input placeholder="AA" maxLength={2} {...form.register("credit_card.expiryYear")} className="h-14 text-center rounded-xl font-bold" />
+                                                        <Input 
+                                                            placeholder="MM" 
+                                                            maxLength={2} 
+                                                            {...form.register("credit_card.expiryMonth", {
+                                                                onChange: (e) => form.setValue("credit_card.expiryMonth", maskMonth(e.target.value))
+                                                            })} 
+                                                            className={`h-14 text-center rounded-xl font-bold ${form.formState.errors.credit_card?.expiryMonth ? 'border-red-500' : ''}`} 
+                                                        />
+                                                        <Input 
+                                                            placeholder="AA" 
+                                                            maxLength={2} 
+                                                            {...form.register("credit_card.expiryYear", {
+                                                                onChange: (e) => form.setValue("credit_card.expiryYear", maskYear(e.target.value))
+                                                            })} 
+                                                            className={`h-14 text-center rounded-xl font-bold ${form.formState.errors.credit_card?.expiryYear ? 'border-red-500' : ''}`} 
+                                                        />
                                                     </div>
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label className="text-xs font-bold text-slate-500">CVV</Label>
-                                                    <Input placeholder="000" maxLength={4} {...form.register("credit_card.ccv")} className="h-14 text-center rounded-xl font-bold" />
+                                                    <Input 
+                                                        placeholder="000" 
+                                                        maxLength={4} 
+                                                        {...form.register("credit_card.ccv", {
+                                                            onChange: (e) => form.setValue("credit_card.ccv", e.target.value.replace(/\D/g, ''))
+                                                        })} 
+                                                        className={`h-14 text-center rounded-xl font-bold ${form.formState.errors.credit_card?.ccv ? 'border-red-500' : ''}`} 
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
