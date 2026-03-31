@@ -1069,16 +1069,6 @@ export default function ProposalsEdit() {
           <Button variant="ghost" size="sm" onClick={handleBack} title="Voltar" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4 mr-2" /> Cancelar
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            onClick={() => setShowResponsible((s) => !s)}
-            className={`shadow-sm transition-all font-semibold ${showResponsible ? 'bg-primary/5 border-primary/30 text-primary' : 'border-muted-foreground/20'}`}
-          >
-            <Users className="h-4 w-4 mr-2" />
-            {showResponsible ? 'Ocultar Responsável' : 'Adicionar Responsável'}
-          </Button>
         </div>
       </div>
 

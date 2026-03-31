@@ -566,7 +566,7 @@ export default function EnrollmentView() {
     <div className="container mx-auto p-4 md:p-6 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
       
       {/* Breadcrumbs */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
         <Breadcrumb className="bg-muted/30 px-4 py-2 rounded-lg border w-fit">
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -579,7 +579,7 @@ export default function EnrollmentView() {
           </BreadcrumbList>
         </Breadcrumb>
         
-        <div className="flex gap-2">
+        <div className="flex gap-2 no-print">
           <Button variant="ghost" size="sm" onClick={handleBack} title="Voltar" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
           </Button>
@@ -676,8 +676,8 @@ export default function EnrollmentView() {
       </div>
 
       {/* KPIs Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="shadow-sm border-muted/60 bg-muted/5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-3">
+        <Card className="shadow-sm border-muted/60 bg-muted/5 print:border print:bg-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Conteúdos</CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -719,8 +719,8 @@ export default function EnrollmentView() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="shadow-sm border-muted/60 bg-muted/5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-1 print:gap-2">
+        <Card className="shadow-sm border-muted/60 bg-muted/5 print:border print:bg-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Progresso Detalhado</CardTitle>
             <TrendingUp className="h-4 w-4 text-primary" />
@@ -972,6 +972,83 @@ export default function EnrollmentView() {
            <ActivityTimeline />
         </TabsContent>
       </Tabs>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page { margin: 0.5cm; }
+          body { 
+            background: white !important; 
+            color: black !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .no-print, [role="tablist"], .sidebar, nav, header, footer, button, .breadcrumb-link {
+            display: none !important;
+          }
+          .container {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+          }
+
+          /* Tighten vertical spacing */
+          .space-y-8 > * + * { margin-top: 0.75rem !important; }
+          .space-y-6 > * + * { margin-top: 0.5rem !important; }
+          .space-y-10 > * + * { margin-top: 1rem !important; }
+          
+          /* Hero/Header section reduction */
+          .p-8, .md\\:p-10 { padding: 1rem !important; }
+          .gap-8 { gap: 0.75rem !important; }
+          .mb-12 { margin-bottom: 0.5rem !important; }
+
+          /* Card/Section reduction */
+          .card, .Card {
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: none !important;
+            page-break-inside: avoid;
+            background: white !important;
+            margin-bottom: 0.5rem !important;
+            border-radius: 8px !important;
+          }
+          .card-header, .CardHeader { padding: 0.5rem 1rem !important; }
+          .card-content, .CardContent { padding: 0.75rem 1rem !important; }
+
+          /* Typography reduction */
+          h1, .text-3xl, .md\\:text-5xl { 
+            font-size: 1.4rem !important; 
+            font-weight: 800 !important;
+            line-height: 1.1 !important;
+            color: black !important;
+          }
+          h2, .text-xl, .text-2xl { 
+            font-size: 1.1rem !important; 
+            font-weight: 700 !important;
+            color: black !important;
+          }
+          h3, .text-lg { 
+            font-size: 0.95rem !important; 
+            font-weight: 700 !important;
+          }
+          p, span, div { font-size: 0.85rem !important; }
+          .text-sm { font-size: 0.75rem !important; }
+          .text-xs { font-size: 0.65rem !important; }
+
+          /* Grid fixes for print */
+          .print\\:grid-cols-3 { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }
+          .print\\:grid-cols-1 { display: grid !important; grid-template-columns: 1fr !important; gap: 8px !important; }
+          
+          /* Visual Cleanup */
+          .bg-gradient-to-br, .bg-primary\\/5, .bg-muted\\/5, .bg-muted\\/30, .bg-emerald-50\\/50 { 
+            background: none !important; 
+            background-color: transparent !important;
+            border: 1px solid #eee !important;
+          }
+          .shadow-sm, .shadow-xl, .shadow-inner { box-shadow: none !important; }
+          .border-primary\\/10 { border-color: #eee !important; }
+        }
+      ` }} />
     </div>
   );
 }
