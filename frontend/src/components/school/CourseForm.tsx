@@ -550,6 +550,7 @@ export function CourseForm({
    */
   const watchedNome = form.watch('nome');
   const watchedSlug = form.watch('slug');
+  const watchedDuracao = form.watch('duracao');
   useEffect(() => {
     // Só gera slug automaticamente quando habilitado e há um nome válido.
     // Only auto-generate slug when enabled and there is a valid name.
@@ -2822,10 +2823,10 @@ export function CourseForm({
                 <div className="flex items-center gap-3 text-[10px] uppercase font-bold tracking-widest text-muted-foreground/80">
                   <span className="flex items-center gap-1.5 bg-muted/50 px-2 py-0.5 rounded">
                     <Users className="h-3 w-3" />
-                    {(form.watch('modulos') ?? []).length} Módulos
+                    {fields.length} Módulos
                   </span>
                   {(() => {
-                    const mods = (form.watch('modulos') ?? []) as any[];
+                    const mods = (form.getValues('modulos') ?? []) as any[];
                     const totalSecs = mods.reduce((acc, m) => acc + getModuleTotalSeconds(m), 0);
                     if (!totalSecs) return null;
                     return (
@@ -2873,7 +2874,7 @@ export function CourseForm({
                   Gerar Padrão
                 </Button>
                 {(() => {
-                  const total = (form.watch('modulos') ?? []).length;
+                  const total = fields.length;
                   const allCollapsed = total > 0 && collapsedModules.size === total;
                   return (
                     <Button
@@ -2936,7 +2937,7 @@ export function CourseForm({
                 />
               ))}
             
-            {(form.watch('modulos') ?? []).length === 0 && (
+            {fields.length === 0 && (
                  <div className="text-center py-16 border-2 border-dashed rounded-xl bg-muted/5">
                     <h3 className="text-lg font-medium text-foreground mb-2">Seu curso ainda não tem conteúdo</h3>
                     <p className="text-muted-foreground mb-6 max-w-sm mx-auto">Comece adicionando módulos para organizar as aulas, testes e materiais do seu curso.</p>
@@ -2992,17 +2993,13 @@ export function CourseForm({
                       <div className="space-y-2">
                         <Label className="font-bold flex items-center gap-2">Pergunta <span className="text-primary/40 text-[10px] uppercase font-black">#{idx+1}</span></Label>
                         <Input placeholder="Qual a dúvida mais comum?" className="rounded-xl border-slate-200 h-11" value={q.pergunta || ''} onChange={(e) => {
-                          const qs = [...(form.getValues('perguntas') ?? [])];
-                          qs[idx] = { ...qs[idx], pergunta: e.target.value };
-                          form.setValue('perguntas', qs);
+                          form.setValue(`perguntas.${idx}.pergunta`, e.target.value, { shouldDirty: true });
                         }} />
                       </div>
                       <div className="space-y-2">
                         <Label className="font-bold">Resposta</Label>
                         <Textarea rows={3} placeholder="Explique detalhadamente..." className="rounded-xl border-slate-200" value={q.resposta || ''} onChange={(e) => {
-                          const qs = [...(form.getValues('perguntas') ?? [])];
-                          qs[idx] = { ...qs[idx], resposta: e.target.value };
-                          form.setValue('perguntas', qs);
+                          form.setValue(`perguntas.${idx}.resposta`, e.target.value, { shouldDirty: true });
                         }} />
                       </div>
                     </div>
@@ -3156,6 +3153,11 @@ export function CourseForm({
   importVideoDuration,
   handleActivityFileUpload
  }: any) {
+   console.log('CourseModuleItem rendered', index, field.id);
+   useEffect(() => {
+     console.log('CourseModuleItem mounted', index, field.id);
+     return () => console.log('CourseModuleItem unmounted', index, field.id);
+   }, []);
    const { control, getValues, setValue } = useFormContext();
    // Watch specific module to trigger re-renders only for this item
    const m = useWatch({
@@ -3261,13 +3263,10 @@ export function CourseForm({
                     
                     <div className="flex-1 min-w-0">
                       <Input
-                        value={(m as any).title || ''}
+                        {...control.register(`modulos.${index}.title`)}
                         onChange={(e) => {
-                          const curr = [...(getValues('modulos') ?? [])];
-                          if(curr[index]) {
-                             curr[index] = { ...curr[index], title: e.target.value, name: e.target.value } as any;
-                             setValue('modulos', curr);
-                          }
+                          control.register(`modulos.${index}.title`).onChange(e);
+                          setValue(`modulos.${index}.name`, e.target.value, { shouldDirty: true });
                         }}
                         placeholder="Título do módulo (ex: Introdução ao Curso)"
                         className="font-black bg-transparent border-transparent hover:border-input focus:bg-background focus:border-input h-10 px-2 transition-all max-w-xl text-lg text-foreground/90 placeholder:text-muted-foreground/50"
@@ -3297,11 +3296,7 @@ export function CourseForm({
                          <Switch 
                             checked={((m as any).active || 's') === 's'} 
                             onCheckedChange={(c) => {
-                                const curr = [...(getValues('modulos') ?? [])];
-                                if(curr[index]) {
-                                   curr[index] = { ...curr[index], active: c ? 's' : 'n' } as any;
-                                   setValue('modulos', curr);
-                                }
+                               setValue(`modulos.${index}.active`, c ? 's' : 'n', { shouldDirty: true });
                             }}
                             className="scale-90"
                          />
@@ -3324,12 +3319,8 @@ export function CourseForm({
                              <div className="md:col-span-2 space-y-1.5">
                                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Unidade Tempo</Label>
                                  <Select value={(m as any).tipo_duracao || 'seg'} onValueChange={(v) => {
-                                    const curr = [...(getValues('modulos') ?? [])];
-                                    if(curr[index]) {
-                                       curr[index] = { ...curr[index], tipo_duracao: v } as any;
-                                       setValue('modulos', curr);
-                                       recalcCourseDuration();
-                                    }
+                                    setValue(`modulos.${index}.tipo_duracao`, v, { shouldDirty: true });
+                                    recalcCourseDuration();
                                   }}>
                                     <SelectTrigger className="h-8 bg-background"><SelectValue placeholder="Unidade" /></SelectTrigger>
                                     <SelectContent>
@@ -3343,14 +3334,10 @@ export function CourseForm({
                                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Duração Estimada</Label>
                                  <Input 
                                     className="h-8 bg-background"
-                                    value={(m as any).duration || ''} 
+                                    {...control.register(`modulos.${index}.duration`)}
                                     onChange={(e) => {
-                                        const curr = [...(getValues('modulos') ?? [])];
-                                        if(curr[index]) {
-                                           curr[index] = { ...curr[index], duration: e.target.value } as any;
-                                           setValue('modulos', curr);
-                                           recalcCourseDuration();
-                                        }
+                                        control.register(`modulos.${index}.duration`).onChange(e);
+                                        recalcCourseDuration();
                                   }} />
                              </div>
                              
@@ -3359,14 +3346,7 @@ export function CourseForm({
                                 <Input 
                                   className="h-8 bg-background block w-full" 
                                   placeholder="Uma breve descrição sobre o que será aprendido neste módulo..."
-                                  value={(typeof (m as any).description === 'string' ? (m as any).description : '') || ''}
-                                  onChange={(e) => {
-                                      const curr = [...(getValues('modulos') ?? [])];
-                                      if(curr[index]) {
-                                         curr[index] = { ...curr[index], description: e.target.value } as any;
-                                         setValue('modulos', curr);
-                                      }
-                                  }}
+                                  {...control.register(`modulos.${index}.description`)}
                                 />
                              </div>
                         </div>

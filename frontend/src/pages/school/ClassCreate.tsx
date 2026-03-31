@@ -1,59 +1,49 @@
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
 import { ClassForm } from '@/components/school/ClassForm';
 import { turmasService } from '@/services/turmasService';
 import type { TurmaPayload } from '@/types/turmas';
 
-/**
- * ClassCreate
- * pt-BR: Página para criar nova turma.
- * en-US: Page to create a new class.
- */
 export default function ClassCreate() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  /**
-   * createMutation
-   * pt-BR: Mutation para criar turma e invalidar lista.
-   * en-US: Mutation to create class and invalidate list.
-   */
   const createMutation = useMutation({
     mutationFn: async (payload: TurmaPayload) => turmasService.createTurma(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['turmas', 'list'] });
+      toast({ title: 'Turma criada', description: 'Nova turma cadastrada com sucesso!' });
       navigate('/admin/school/classes');
+    },
+    onError: (err: any) => {
+      toast({ title: 'Erro', description: String(err?.message ?? 'Falha ao criar turma'), variant: 'destructive' });
     },
   });
 
-  /**
-   * handleSubmit
-   * pt-BR: Envia dados para criação e navega para listagem.
-   * en-US: Sends data for creation and navigates to listing.
-   */
   const handleSubmit = async (data: TurmaPayload) => {
     await createMutation.mutateAsync(data);
   };
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Criar Turma</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate('/admin/school/classes')}>Voltar</Button>
+        <div className="space-y-1">
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground/90">Nova Turma</h1>
+          <p className="text-sm font-medium text-muted-foreground">Preencha as informações para criar uma nova turma</p>
         </div>
+        <Button variant="outline" onClick={() => navigate('/admin/school/classes')} className="h-10 rounded-xl font-bold">
+          <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+        </Button>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Novo Cadastro de Turma</CardTitle>
-          <CardDescription>Preencha as informações nas abas abaixo.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ClassForm onSubmit={handleSubmit} isSubmitting={createMutation.isPending} />
-        </CardContent>
-      </Card>
+
+      <ClassForm 
+        onSubmit={handleSubmit} 
+        isSubmitting={createMutation.isPending} 
+      />
     </div>
   );
 }

@@ -157,8 +157,11 @@ export function CourseActivityItem({
                           </div>
                       ) : (
                           <Input 
-                              value={a.titulo || ''} 
-                              onChange={(e) => onFieldChange('titulo', e.target.value)}
+                              {...control.register(`modulos.${index}.atividades.${aIdx}.titulo`)}
+                              onChange={(e) => {
+                                control.register(`modulos.${index}.atividades.${aIdx}.titulo`).onChange(e);
+                                if (['duracao', 'unidade_duracao', 'active'].includes('titulo')) recalcCourseDuration();
+                              }}
                               className="h-8 py-0 px-2 text-sm font-bold border-transparent bg-transparent hover:border-input focus:bg-background focus:border-input transition-all w-full max-w-[500px] placeholder:text-muted-foreground/40"
                               placeholder="Título da aula..."
                               onClick={(e) => e.stopPropagation()}
@@ -203,7 +206,15 @@ export function CourseActivityItem({
                          <div className="grid grid-cols-2 gap-3">
                              <div className="space-y-1.5">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Duração</Label>
-                                <Input className="h-9 bg-background text-center font-bold" value={a.duracao || ''} onChange={(e) => onFieldChange('duracao', e.target.value)} placeholder="0" />
+                                <Input 
+                                  className="h-9 bg-background text-center font-bold" 
+                                  {...control.register(`modulos.${index}.atividades.${aIdx}.duracao`)}
+                                  onChange={(e) => {
+                                    control.register(`modulos.${index}.atividades.${aIdx}.duracao`).onChange(e);
+                                    recalcCourseDuration();
+                                  }} 
+                                  placeholder="0" 
+                                />
                              </div>
                              <div className="space-y-1.5">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Unidade</Label>
@@ -248,8 +259,8 @@ export function CourseActivityItem({
                                             <Input 
                                                 className="h-10 font-mono text-sm bg-background border-2 focus-visible:ring-primary/20" 
                                                 placeholder="https://www.youtube.com/watch?v=..." 
-                                                value={(a as any).video_url || ''}
-                                                onChange={(e) => onFieldChange('video_url', e.target.value)}
+                                                {...control.register(`modulos.${index}.atividades.${aIdx}.video_url`)}
+                                                onChange={(e) => control.register(`modulos.${index}.atividades.${aIdx}.video_url`).onChange(e)}
                                                 onBlur={() => importVideoDuration(index, aIdx)} 
                                             />
                                             {(a as any).video_url && (
@@ -280,7 +291,12 @@ export function CourseActivityItem({
                                   </div>
                                   <div className="space-y-1.5">
                                       <Label className="text-[10px] font-bold uppercase text-muted-foreground">Ou link externo para download</Label>
-                                      <Input className="h-9 bg-background border-2" value={(a as any).arquivo_url || ''} onChange={(e) => onFieldChange('arquivo_url', e.target.value)} placeholder="https://..." />
+                                      <Input 
+                                        className="h-9 bg-background border-2" 
+                                        {...control.register(`modulos.${index}.atividades.${aIdx}.arquivo_url`)}
+                                        onChange={(e) => control.register(`modulos.${index}.atividades.${aIdx}.arquivo_url`).onChange(e)} 
+                                        placeholder="https://..." 
+                                      />
                                   </div>
                               </div>
                           )}
@@ -304,8 +320,7 @@ export function CourseActivityItem({
                                         type="number" 
                                         className="h-9 bg-background font-bold text-center border-2" 
                                         placeholder="70"
-                                        value={(a as any).quiz_config?.nota_minima ?? ''}
-                                        onChange={(e) => localUpdateQuizConfig('nota_minima', Number(e.target.value) || 0)}
+                                        {...control.register(`modulos.${index}.atividades.${aIdx}.quiz_config.nota_minima`, { valueAsNumber: true })}
                                       />
                                     </div>
                                     <div className="space-y-1.5">
@@ -314,8 +329,7 @@ export function CourseActivityItem({
                                         type="number" 
                                         className="h-9 bg-background font-bold text-center border-2" 
                                         placeholder="3"
-                                        value={(a as any).quiz_config?.tentativas ?? ''}
-                                        onChange={(e) => localUpdateQuizConfig('tentativas', Number(e.target.value) || 0)}
+                                        {...control.register(`modulos.${index}.atividades.${aIdx}.quiz_config.tentativas`, { valueAsNumber: true })}
                                       />
                                     </div>
                                     <div className="space-y-1.5">
@@ -324,8 +338,7 @@ export function CourseActivityItem({
                                         type="number" 
                                         className="h-9 bg-background font-bold text-center border-2" 
                                         placeholder="0"
-                                        value={(a as any).quiz_config?.time_limit ?? ''}
-                                        onChange={(e) => localUpdateQuizConfig('time_limit', Number(e.target.value) || 0)}
+                                        {...control.register(`modulos.${index}.atividades.${aIdx}.quiz_config.time_limit`, { valueAsNumber: true })}
                                       />
                                     </div>
                                     <div className="flex flex-col gap-3">

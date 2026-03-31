@@ -7,19 +7,55 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { coursesService } from '@/services/coursesService';
-import type { TurmaPayload, TurmaRecord, SimNao } from '@/types/turmas';
+import { usersService } from '@/services/usersService';
+import type { TurmaPayload, TurmaRecord } from '@/types/turmas';
+import { Loader2, Save, X, Calendar, Clock, DollarSign, Settings, Info, Users, BookOpen } from 'lucide-react';
 
-/**
- * ClassForm
- * pt-BR: Formulário em abas para criar/editar turmas.
- * en-US: Tabbed form to create/edit classes.
- */
+const simNao = z.enum(['s', 'n']);
+const timeRegex = /^([01]?\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/; // HH:mm[:ss]
+const dateRegex = /^\d{4}-\d{2}-\d{2}$/; // YYYY-MM-DD
+
+const classSchema = z.object({
+  token: z.string().min(1, 'Token é obrigatório'),
+  id_curso: z.coerce.number().int('Curso inválido'),
+  nome: z.string().optional(),
+  inicio: z.string().regex(dateRegex, 'Data inválida (YYYY-MM-DD)').optional().or(z.literal('').optional()),
+  fim: z.string().regex(dateRegex, 'Data inválida (YYYY-MM-DD)').optional().or(z.literal('').optional()),
+  professor: z.coerce.number().int('Professor inválido'),
+  Pgto: z.string().optional(),
+  Valor: z.coerce.number().min(0).optional(),
+  Matricula: z.coerce.number().min(0).optional(),
+  hora_inicio: z.string().regex(timeRegex, 'Hora inválida (HH:mm)').optional().or(z.literal('').optional()),
+  hora_fim: z.string().regex(timeRegex, 'Hora inválida (HH:mm)').optional().or(z.literal('').optional()),
+  duracao: z.coerce.number().int('Duração deve ser inteiro').optional(),
+  unidade_duracao: z.string().min(1, 'Unidade é obrigatória'),
+  dia1: simNao.default('n'),
+  dia2: simNao.default('n'),
+  dia3: simNao.default('n'),
+  dia4: simNao.default('n'),
+  dia5: simNao.default('n'),
+  dia6: simNao.default('n'),
+  dia7: simNao.default('n'),
+  TemHorario: simNao.default('n'),
+  Quadro: z.string().optional(),
+  autor: z.coerce.number().int('Autor inválido'),
+  ativo: simNao.default('s'),
+  ordenar: z.coerce.number().int().optional(),
+  Cidade: z.string().optional(),
+  QuemseDestina: z.string().optional(),
+  Novo: z.string().length(1).optional(),
+  obs: z.string().optional(),
+  max_alunos: z.coerce.number().int('Inteiro').min(0, '>= 0').optional(),
+  min_alunos: z.coerce.number().int('Inteiro').min(0, '>= 0').optional(),
+  config: z.any().optional(),
+});
+
 export function ClassForm({
   initialData,
   onSubmit,
@@ -29,109 +65,36 @@ export function ClassForm({
   onSubmit: (data: TurmaPayload) => Promise<void> | void;
   isSubmitting?: boolean;
 }) {
-  /**
-   * location/navigate
-   * pt-BR: Integra com o roteador para refletir `?tab=` e permitir histórico.
-   * en-US: Integrates with router to reflect `?tab=` and allow history.
-   */
   const navigate = useNavigate();
-  /**
-   * getClassFormTabStorageKey
-   * pt-BR: Gera a chave de storage para guardar/restaurar a aba ativa da Turma.
-   *        Usa o ID/TOKEN da turma quando disponível, senão 'new'.
-   * en-US: Generates storage key to persist/restore active tab of the Class form.
-   *        Uses class ID/TOKEN when available, otherwise 'new'.
-   */
+  const location = useLocation();
+
   const getClassFormTabStorageKey = () => {
     const id = (initialData as any)?.id ?? (initialData as any)?.token ?? 'new';
     return `classform:activeTab:${String(id)}`;
   };
 
-  /**
-   * activeTab
-   * pt-BR: Controla a aba ativa de forma controlada e persiste em sessionStorage.
-   *        Lê `?tab=` do URL, depois sessionStorage, por fim usa 'info'.
-   * en-US: Controls active tab and persists to sessionStorage.
-   *        Reads `?tab=` from URL, then sessionStorage, finally defaults to 'info'.
-   */
   const [activeTab, setActiveTab] = useState<string>(() => {
     try {
-      const urlTab = typeof window !== 'undefined'
-        ? new URLSearchParams(window.location.search).get('tab')
-        : null;
+      const urlTab = new URLSearchParams(location.search).get('tab');
       if (urlTab) return urlTab;
-      const stored = typeof window !== 'undefined'
-        ? window.sessionStorage.getItem(getClassFormTabStorageKey())
-        : null;
+      const stored = window.sessionStorage.getItem(getClassFormTabStorageKey());
       return stored || 'info';
     } catch {
       return 'info';
     }
   });
 
-  /**
-   * pt-BR: Reflete mudança da aba em sessionStorage e no URL (replaceState),
-   *        mantendo histórico limpo.
-   * en-US: Reflects tab changes into sessionStorage and URL (replaceState),
-   *        keeping history tidy.
-   */
   useEffect(() => {
     try {
       const key = getClassFormTabStorageKey();
       window.sessionStorage.setItem(key, activeTab);
-      const currentSearch = typeof window !== 'undefined' ? window.location.search : '';
-      const currentTab = new URLSearchParams(currentSearch).get('tab');
-      if (currentTab !== activeTab) {
-        const params = new URLSearchParams(currentSearch);
+      const params = new URLSearchParams(location.search);
+      if (params.get('tab') !== activeTab) {
         params.set('tab', activeTab);
-        navigate({ search: `?${params.toString()}` }, { replace: false });
+        navigate({ search: params.toString() }, { replace: true });
       }
     } catch {}
-  }, [activeTab, initialData, navigate]);
-  /**
-   * classSchema
-   * pt-BR: Valida campos principais, datas/horários, pagamento e configuração.
-   * en-US: Validates core fields, dates/times, payment and configuration.
-   */
-  const simNao = z.enum(['s', 'n']);
-  const timeRegex = /^([01]?\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/; // HH:mm[:ss]
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/; // YYYY-MM-DD
-  const classSchema = z.object({
-    token: z.string().min(1, 'Token é obrigatório'),
-    id_curso: z.coerce.number().int('Curso inválido'),
-    nome: z.string().optional(),
-    inicio: z.string().regex(dateRegex, 'Data inválida (YYYY-MM-DD)').optional().or(z.literal('').optional()),
-    fim: z.string().regex(dateRegex, 'Data inválida (YYYY-MM-DD)').optional().or(z.literal('').optional()),
-    professor: z.coerce.number().int('Professor inválido'),
-    Pgto: z.string().optional(),
-    Valor: z.coerce.number().min(0).optional(),
-    Matricula: z.coerce.number().min(0).optional(),
-    hora_inicio: z.string().regex(timeRegex, 'Hora inválida (HH:mm)').optional().or(z.literal('').optional()),
-    hora_fim: z.string().regex(timeRegex, 'Hora inválida (HH:mm)').optional().or(z.literal('').optional()),
-    duracao: z.coerce.number().int('Duração deve ser inteiro').optional(),
-    unidade_duracao: z.string().min(1, 'Unidade é obrigatória'),
-    dia1: simNao.default('n'),
-    dia2: simNao.default('n'),
-    dia3: simNao.default('n'),
-    dia4: simNao.default('n'),
-    dia5: simNao.default('n'),
-    dia6: simNao.default('n'),
-    dia7: simNao.default('n'),
-    TemHorario: simNao.default('n'),
-    Quadro: z.string().optional(),
-    autor: z.coerce.number().int('Autor inválido'),
-    ativo: simNao.default('s'),
-    ordenar: z.coerce.number().int().optional(),
-    Cidade: z.string().optional(),
-    QuemseDestina: z.string().optional(),
-    Novo: z.string().length(1).optional(),
-    obs: z.string().optional(),
-    max_alunos: z.coerce.number().int('Inteiro').min(0, '>= 0').optional(),
-    min_alunos: z.coerce.number().int('Inteiro').min(0, '>= 0').optional(),
-    // pt-BR: Configurações adicionais guardadas no objeto config
-    // en-US: Additional settings stored inside config object
-    config: z.any().optional(),
-  });
+  }, [activeTab, location.search, navigate]);
 
   const form = useForm<TurmaPayload>({
     resolver: zodResolver(classSchema),
@@ -171,23 +134,23 @@ export function ClassForm({
     },
   });
 
-  /**
-   * applyInitialData
-   * pt-BR: Preenche o formulário quando em modo de edição.
-   * en-US: Populates the form when in edit mode.
-   */
   useEffect(() => {
     if (!initialData) return;
+    
+    // Tratamento para JSON no config se vier como string do banco
+    let parsedConfig = initialData.config;
+    if (typeof parsedConfig === 'string') {
+      try { parsedConfig = JSON.parse(parsedConfig); } catch { /* ignore */ }
+    }
+    
     form.reset({
-      ...(initialData as TurmaRecord),
-    });
-  }, [initialData]);
+      ...initialData,
+      config: parsedConfig || {},
+      inicio: initialData.inicio ? initialData.inicio.split('T')[0] : '', // garante YYYY-MM-DD
+      fim: initialData.fim ? initialData.fim.split('T')[0] : '',
+    } as any);
+  }, [initialData, form]);
 
-  /**
-   * autoTokenFromName
-   * pt-BR: Gera token automaticamente a partir do nome quando vazio.
-   * en-US: Auto-generates token from name when empty.
-   */
   useEffect(() => {
     const nome = form.watch('nome');
     const token = form.watch('token');
@@ -195,264 +158,508 @@ export function ClassForm({
       const slug = String(nome)
         .toLowerCase()
         .normalize('NFD')
-        .replace(/\p{Diacritic}/gu, '')
+        .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '');
-      form.setValue('token', slug);
+      form.setValue('token', slug, { shouldValidate: true });
     }
   }, [form.watch('nome')]);
 
-  /**
-   * coursesQuery
-   * pt-BR: Lista cursos para seleção (id_curso).
-   * en-US: Lists courses for selection (id_curso).
-   */
   const coursesQuery = useQuery({
     queryKey: ['cursos', 'list', 200],
     queryFn: async () => coursesService.listCourses({ page: 1, per_page: 200 }),
   });
+  
   const courseOptions = useMemo(
     () => (coursesQuery.data?.data ?? []).map((c: any) => ({ id: String(c.id), nome: c.nome ?? String(c.id) })),
     [coursesQuery.data]
   );
 
-  /**
-   * handleSubmit
-   * pt-BR: Encaminha valores do formulário ao callback externo.
-   * en-US: Forwards form values to the external callback.
-   */
-  const handleSubmit = async () => {
-    const values = form.getValues();
-    await onSubmit(values);
+  const professorsQuery = useQuery({
+    queryKey: ['users', 'professors'],
+    queryFn: async () => usersService.listUsers({ permission_id: 6, per_page: 200 }),
+  });
+
+  const professorOptions = useMemo(
+    () => (professorsQuery.data?.data ?? []).map((u: any) => ({ id: String(u.id), nome: u.name ?? u.email ?? String(u.id) })),
+    [professorsQuery.data]
+  );
+
+  const handleSubmit = async (values: TurmaPayload) => {
+    // Preparar config de volta para string se for necessário pelo backend ou manter objeto
+    const payloadToSubmit = { ...values };
+    await onSubmit(payloadToSubmit);
   };
 
+  const diasSemana = [
+    { key: 'dia1', label: 'Segunda' },
+    { key: 'dia2', label: 'Terça' },
+    { key: 'dia3', label: 'Quarta' },
+    { key: 'dia4', label: 'Quinta' },
+    { key: 'dia5', label: 'Sexta' },
+    { key: 'dia6', label: 'Sábado' },
+    { key: 'dia7', label: 'Domingo' },
+  ] as const;
+
   return (
-    <div className="space-y-4">
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)}>
-        <TabsList>
-          <TabsTrigger value="info">Informações</TabsTrigger>
-          <TabsTrigger value="schedule">Datas/Horários</TabsTrigger>
-          <TabsTrigger value="payment">Pagamento</TabsTrigger>
-          <TabsTrigger value="config">Configuração</TabsTrigger>
-        </TabsList>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4 h-14 bg-slate-100/80 dark:bg-slate-900/50 p-1 rounded-2xl mb-6">
+            <TabsTrigger value="info" className="rounded-xl font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:shadow-sm">
+              <Info className="w-4 h-4 mr-2" /> Informações
+            </TabsTrigger>
+            <TabsTrigger value="schedule" className="rounded-xl font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:shadow-sm">
+              <Calendar className="w-4 h-4 mr-2" /> Horários
+            </TabsTrigger>
+            <TabsTrigger value="payment" className="rounded-xl font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:shadow-sm">
+              <DollarSign className="w-4 h-4 mr-2" /> Valores
+            </TabsTrigger>
+            <TabsTrigger value="config" className="rounded-xl font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:shadow-sm">
+              <Settings className="w-4 h-4 mr-2" /> Configurações
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Informações */}
-        <TabsContent value="info" className="space-y-4">
-          <Card className="p-4 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Nome do curso (select) */}
-              <div>
-                <Label>Nome do curso</Label>
-                <Select value={String(form.watch('id_curso') ?? '')} onValueChange={(v) => form.setValue('id_curso', Number(v))}>
-                  <SelectTrigger><SelectValue placeholder="-- Selecione --" /></SelectTrigger>
-                  <SelectContent>
-                    {courseOptions.map((c) => (<SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>))}
-                  </SelectContent>
-                </Select>
+          <div className="bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+            {/* INFORMAÇÕES */}
+            <TabsContent value="info" className="space-y-6 m-0 animate-in fade-in zoom-in-95 duration-300">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="id_curso"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold flex items-center gap-2"><BookOpen className="w-4 h-4 text-primary" /> Curso Vinculado</FormLabel>
+                      <Select value={String(field.value || '')} onValueChange={(v) => field.onChange(Number(v))}>
+                        <FormControl>
+                          <SelectTrigger className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                            <SelectValue placeholder="Selecione um curso..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="rounded-xl">
+                          {courseOptions.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="nome"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold flex items-center gap-2">Nome da Turma</FormLabel>
+                      <FormControl>
+                        <Input className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800" placeholder="Ex: Turma A - Manhã" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="token"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold">Token (Identificador Único)</FormLabel>
+                      <FormControl>
+                        <Input className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 font-mono text-sm" placeholder="turma-a-manha" {...field} />
+                      </FormControl>
+                      <FormDescription>Usado em URLs e referências do sistema.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="professor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold flex items-center gap-2"><Users className="w-4 h-4 text-primary" /> Professor</FormLabel>
+                      <Select value={field.value ? String(field.value) : "0"} onValueChange={(v) => field.onChange(Number(v))}>
+                        <FormControl>
+                          <SelectTrigger className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                            <SelectValue placeholder="Selecione um professor..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="rounded-xl max-h-[300px]">
+                          <SelectItem value="0">Nenhum professor</SelectItem>
+                          {professorOptions.map((p) => (
+                            <SelectItem key={p.id} value={String(p.id)}>{p.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              {/* Nome da Turma */}
-              <div>
-                <Label>Nome da Turma</Label>
-                <Input {...form.register('nome')} placeholder="Nome da Turma" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800/60">
+                <FormField
+                  control={form.control}
+                  name="min_alunos"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold">Mínimo de Alunos</FormLabel>
+                      <FormControl>
+                        <Input type="number" className="h-11 rounded-xl" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="max_alunos"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold">Máximo de Alunos</FormLabel>
+                      <FormControl>
+                        <Input type="number" className="h-11 rounded-xl" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="config.meta_alunos"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold">Meta de Alunos</FormLabel>
+                      <FormControl>
+                        <Input type="number" className="h-11 rounded-xl" {...field} value={field.value || ''} onChange={e => field.onChange(Number(e.target.value))} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              {/* Ativar: Sim/Não */}
-              <div className="flex items-center gap-3">
-                <Label>Ativar</Label>
-                <Switch checked={form.watch('ativo') === 's'} onCheckedChange={(checked) => form.setValue('ativo', checked ? 's' : 'n')} />
-                <span className="text-xs text-muted-foreground">{form.watch('ativo') === 's' ? 'Sim' : 'Não'}</span>
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800/60">
+                <FormField
+                  control={form.control}
+                  name="obs"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold">Observações Internas</FormLabel>
+                      <FormControl>
+                        <Textarea className="min-h-[100px] rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800" placeholder="Anotações sobre a turma..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </TabsContent>
+
+            {/* HORÁRIOS E DATAS */}
+            <TabsContent value="schedule" className="space-y-8 m-0 animate-in fade-in zoom-in-95 duration-300">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="inicio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold">Data de Início</FormLabel>
+                      <FormControl>
+                        <Input type="date" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="fim"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold">Data de Término</FormLabel>
+                      <FormControl>
+                        <Input type="date" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              {/* Link da turma no cavok */}
-              <div className="md:col-span-3">
-                <Label>Link da turma no cavok</Label>
-                <Input {...form.register('config.link_cavok')} placeholder="Link da turma no cavok" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-100 dark:border-slate-800/60">
+                <FormField
+                  control={form.control}
+                  name="duracao"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Carga Horária Total</FormLabel>
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input type="number" className="h-11 rounded-xl flex-1 bg-slate-50 dark:bg-slate-900" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                        </FormControl>
+                        <FormField
+                          control={form.control}
+                          name="unidade_duracao"
+                          render={({ field: uf }) => (
+                            <Select value={uf.value} onValueChange={uf.onChange}>
+                              <SelectTrigger className="w-[140px] h-11 rounded-xl bg-slate-50 dark:bg-slate-900">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-xl">
+                                <SelectItem value="Seg">Segundos</SelectItem>
+                                <SelectItem value="Min">Minutos</SelectItem>
+                                <SelectItem value="Hrs">Horas</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="TemHorario"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-xl border border-slate-100 dark:border-slate-800 p-3 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base font-bold">Horário Definido?</FormLabel>
+                          <FormDescription>Habilite se as aulas possuírem horário fixo</FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch checked={field.value === 's'} onCheckedChange={(c) => field.onChange(c ? 's' : 'n')} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {form.watch('TemHorario') === 's' && (
+                    <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
+                      <FormField
+                        control={form.control}
+                        name="hora_inicio"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="font-bold text-sm">Hora Início</FormLabel>
+                            <FormControl>
+                              <Input type="time" className="h-10 rounded-lg" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="hora_fim"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="font-bold text-sm">Hora Fim</FormLabel>
+                            <FormControl>
+                              <Input type="time" className="h-10 rounded-lg" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Min/Max/Meta alunos */}
-              <div>
-                <Label>Min de alunos</Label>
-                <Input type="number" {...form.register('min_alunos', { valueAsNumber: true })} />
-              </div>
-              <div>
-                <Label>Máx de alunos</Label>
-                <Input type="number" {...form.register('max_alunos', { valueAsNumber: true })} />
-              </div>
-              <div>
-                <Label>Meta de alunos</Label>
-                <Input type="number" {...form.register('config.meta_alunos', { valueAsNumber: true })} />
-              </div>
-
-              {/* Datas e duração */}
-              <div>
-                <Label>Data Início</Label>
-                <Input type="date" {...form.register('inicio')} />
-              </div>
-              <div>
-                <Label>Carga horária</Label>
-                <Input type="number" {...form.register('duracao', { valueAsNumber: true })} />
-              </div>
-              <div>
-                <Label>Unidade de duração</Label>
-                <Select value={String(form.watch('unidade_duracao') ?? '')} onValueChange={(v) => form.setValue('unidade_duracao', v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Seg">Segundo(s)</SelectItem>
-                    <SelectItem value="Min">Minuto(s)</SelectItem>
-                    <SelectItem value="Hrs">Hora(s)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Hora início */}
-              <div>
-                <Label>Hora início</Label>
-                <Input type="time" {...form.register('hora_inicio')} />
-              </div>
-
-              {/* Data fim */}
-              <div>
-                <Label>Data fim</Label>
-                <Input type="date" {...form.register('fim')} />
-              </div>
-
-              {/* Dias da semana */}
-              <div className="md:col-span-3">
-                <Label>Dia(s) da semana em que será realizado</Label>
-                <div className="grid grid-cols-7 gap-2 mt-2">
-                  {([
-                    { key: 'dia1', label: 'Seg' },
-                    { key: 'dia2', label: 'Ter' },
-                    { key: 'dia3', label: 'Qua' },
-                    { key: 'dia4', label: 'Qui' },
-                    { key: 'dia5', label: 'Sex' },
-                    { key: 'dia6', label: 'Sáb' },
-                    { key: 'dia7', label: 'Dom' },
-                  ] as const).map(({ key, label }) => (
-                    <Button
+              <div className="pt-6 border-t border-slate-100 dark:border-slate-800/60">
+                <FormLabel className="font-bold mb-4 block">Dias da Semana</FormLabel>
+                <div className="flex flex-wrap gap-3">
+                  {diasSemana.map(({ key, label }) => (
+                    <FormField
                       key={key}
-                      type="button"
-                      variant={form.watch(key as keyof TurmaPayload) === 's' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => form.setValue(key as any, form.watch(key as any) === 's' ? 'n' : 's')}
-                    >
-                      {label}
-                    </Button>
+                      control={form.control}
+                      name={key as any}
+                      render={({ field }) => {
+                        const isActive = field.value === 's';
+                        return (
+                          <FormItem>
+                            <FormControl>
+                              <Button
+                                type="button"
+                                variant={isActive ? "default" : "outline"}
+                                className={`rounded-xl h-10 px-4 font-bold transition-all ${isActive ? 'shadow-md shadow-primary/20' : 'bg-slate-50 dark:bg-slate-900'}`}
+                                onClick={() => field.onChange(isActive ? 'n' : 's')}
+                              >
+                                {label}
+                              </Button>
+                            </FormControl>
+                          </FormItem>
+                        );
+                      }}
+                    />
                   ))}
                 </div>
               </div>
+            </TabsContent>
 
-              {/* Observações */}
-              <div className="md:col-span-3">
-                <Label>Observações</Label>
-                <Textarea {...form.register('obs')} placeholder="Observações" />
+            {/* PAGAMENTO */}
+            <TabsContent value="payment" className="space-y-6 m-0 animate-in fade-in zoom-in-95 duration-300">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <FormField
+                  control={form.control}
+                  name="Pgto"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold">Método de Pagamento</FormLabel>
+                      <FormControl>
+                        <Input className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900" placeholder="Ex: Cartão, Boleto, Pix..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="Valor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold">Valor do Curso (R$)</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900 font-medium text-lg" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="Matricula"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold">Taxa de Matrícula (R$)</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900 font-medium text-lg" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </TabsContent>
+
+            {/* CONFIGURAÇÕES */}
+            <TabsContent value="config" className="space-y-6 m-0 animate-in fade-in zoom-in-95 duration-300">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="ativo"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-xl border border-slate-100 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base font-bold">Turma Ativa</FormLabel>
+                        <FormDescription>Define se a turma está visível e operante no sistema</FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch checked={field.value === 's'} onCheckedChange={(c) => field.onChange(c ? 's' : 'n')} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="config.fim_semana"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-xl border border-slate-100 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-900/50 shadow-sm">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base font-bold">Turma de Fim de Semana?</FormLabel>
+                        <FormDescription>Configuração especial para turmas intensivas</FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch checked={field.value === 's'} onCheckedChange={(c) => field.onChange(c ? 's' : 'n')} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              {/* Configurações Adicionais */}
-              <div className="md:col-span-3 border-t pt-4 mt-2">
-                <Label className="block mb-2">Configurações Adicionais</Label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Turma de fim de semana?</Label>
-                    <Select value={String(form.watch('config.fim_semana') ?? 'n')} onValueChange={(v) => form.setValue('config.fim_semana' as any, v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="n">Não</SelectItem>
-                        <SelectItem value="s">Sim</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Porcentagem de Entrada</Label>
-                    <Input type="number" step="1" {...form.register('config.percentual_entrada', { valueAsNumber: true })} placeholder="Ex: 30" />
-                  </div>
-                  <div>
-                    <Label>Professor (ID)</Label>
-                    <Input type="number" {...form.register('professor', { valueAsNumber: true })} />
-                  </div>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800/60">
+                <FormField
+                  control={form.control}
+                  name="config.link_cavok"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold">Link da Turma (Cavok)</FormLabel>
+                      <FormControl>
+                        <Input className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900" placeholder="https://..." {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="config.percentual_entrada"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-bold">Percentual de Entrada (%)</FormLabel>
+                      <FormControl>
+                        <Input type="number" className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900" placeholder="Ex: 30" {...field} value={field.value || ''} onChange={e => field.onChange(Number(e.target.value))} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-            </div>
-          </Card>
-        </TabsContent>
 
-        {/* Datas/Horários */}
-        <TabsContent value="schedule" className="space-y-4">
-          <Card className="p-4 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label>Início</Label>
-                <Input type="date" {...form.register('inicio')} />
-              </div>
-              <div>
-                <Label>Fim</Label>
-                <Input type="date" {...form.register('fim')} />
-              </div>
-              <div className="flex items-center gap-3">
-                <Switch checked={form.watch('TemHorario') === 's'} onCheckedChange={(checked) => form.setValue('TemHorario', checked ? 's' : 'n')} />
-                <Label>Horário definido</Label>
-              </div>
-              <div>
-                <Label>Hora Início</Label>
-                <Input type="time" {...form.register('hora_inicio')} />
-              </div>
-              <div>
-                <Label>Hora Fim</Label>
-                <Input type="time" {...form.register('hora_fim')} />
-              </div>
-            </div>
+              <FormField
+                control={form.control}
+                name="Quadro"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-bold">Estrutura / Quadro da Turma</FormLabel>
+                    <FormControl>
+                      <Textarea className="min-h-[100px] rounded-xl bg-slate-50 dark:bg-slate-900" placeholder="Detalhes do quadro..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </TabsContent>
+          </div>
+        </Tabs>
 
-            <div className="grid grid-cols-2 md:grid-cols-7 gap-4 pt-2">
-              {(['dia1','dia2','dia3','dia4','dia5','dia6','dia7'] as const).map((d) => (
-                <div key={d} className="flex items-center gap-3">
-                  <Switch checked={form.watch(d) === 's'} onCheckedChange={(c) => form.setValue(d, c ? 's' : 'n')} />
-                  <Label>{d.toUpperCase()}</Label>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </TabsContent>
-
-        {/* Pagamento */}
-        <TabsContent value="payment" className="space-y-4">
-          <Card className="p-4 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label>Método Pgto</Label>
-                <Input {...form.register('Pgto')} placeholder="Ex.: cartão, pix" />
-              </div>
-              <div>
-                <Label>Valor</Label>
-                <Input type="number" step="0.01" {...form.register('Valor', { valueAsNumber: true })} />
-              </div>
-              <div>
-                <Label>Matrícula</Label>
-                <Input type="number" step="0.01" {...form.register('Matricula', { valueAsNumber: true })} />
-              </div>
-            </div>
-          </Card>
-        </TabsContent>
-
-        {/* Configuração */}
-        <TabsContent value="config" className="space-y-4">
-          <Card className="p-4 space-y-4">
-            <div>
-              <Label>Quadro</Label>
-              <Textarea {...form.register('Quadro')} placeholder="Estrutura/Quadro da turma" />
-            </div>
-            <div>
-              <Label>Config (JSON)</Label>
-              <Textarea {...form.register('config')} placeholder="Objeto de configuração em JSON" />
-            </div>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      <div className="flex items-center justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => form.reset()}>Limpar</Button>
-        <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>Salvar</Button>
-      </div>
-    </div>
+        <div className="flex items-center justify-end gap-3 pt-6">
+          <Button 
+            type="button" 
+            variant="ghost" 
+            onClick={() => navigate('/admin/school/classes')} 
+            className="h-12 px-6 rounded-xl font-bold hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+          >
+            <X className="w-4 h-4 mr-2" /> Cancelar
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={isSubmitting} 
+            className="h-12 px-8 rounded-xl font-bold shadow-lg shadow-primary/20 text-md"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Save className="w-5 h-5 mr-2" />
+                Salvar Turma
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }

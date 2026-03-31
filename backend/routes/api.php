@@ -68,6 +68,10 @@ Route::name('api.')->prefix('v1')->middleware([
         return response()->noContent(204);
     })->where('any', '.*');
 
+    Route::post('impersonate-user/{id}', [UserController::class, 'impersonate'])
+        ->middleware(['auth:sanctum','auth.active'])
+        ->name('users.impersonate');
+
     Route::post('/login',[AuthController::class,'login'])->name('login');
     Route::get('user/validate-token/{token}', [UserController::class, 'validateToken'])
         ->name('user.validate-token');
@@ -92,9 +96,6 @@ Route::name('api.')->prefix('v1')->middleware([
     Route::get('public/checkout/course/{id}', [\App\Http\Controllers\api\CheckoutController::class, 'getCourse'])->name('public.checkout.course');
     Route::post('public/checkout/pay', [\App\Http\Controllers\api\CheckoutController::class, 'process'])->name('public.checkout.pay');
 
-    Route::fallback(function () {
-        return response()->json(['message' => 'Rota não encontrada'], 404);
-    });
     Route::get('pages/public/{slug}', [PageController::class, 'publicShowBySlug'])->name('pages.public.show');
     
     // Rota de teste para API

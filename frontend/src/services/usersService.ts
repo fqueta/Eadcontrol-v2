@@ -66,9 +66,10 @@ class UsersService {
     if (params?.sort) {
       searchParams.append('sort', params.sort);
     }
-
-    if (params?.sort) {
-      searchParams.append('sort', params.sort);
+    
+    // Filtro por tipo de permissão (ex: professores = 6)
+    if (params?.permission_id) {
+      searchParams.append('permission_id', String(params.permission_id));
     }
     
     let endpoint = '/users';
@@ -209,6 +210,40 @@ class UsersService {
     });
 
     return this.handleResponse<UserRecord[]>(response);
+  }
+
+  /**
+   * Impersonate a user
+   * @param id User ID to impersonate
+   */
+  async impersonate(id: string): Promise<{ token: string; user: any; menu: any; redirect: string; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/impersonate-user/${id}`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+    });
+
+    return this.handleResponse(response);
+  }
+
+  /**
+   * Fetch tracking events (logs)
+   * @param params Filtering parameters
+   */
+  async getTrackingEvents(params?: any): Promise<any> {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.keys(params).forEach(key => {
+        if (params[key]) searchParams.append(key, params[key]);
+      });
+    }
+    
+    const url = `${API_BASE_URL}/tracking-events${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    return this.handleResponse(response);
   }
 }
 

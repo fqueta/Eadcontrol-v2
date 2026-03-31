@@ -34,13 +34,22 @@ class TrackingEventController extends Controller
                 $query->byEventType($eventType);
             }
         }
+        // Aplicar filtro por user_id se fornecido
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->input('user_id'));
+        }
+
+        // Aplicar filtro por resource_type se fornecido
+        if ($request->filled('resource_type')) {
+            $query->where('resource_type', 'like', '%' . $request->input('resource_type'));
+        }
 
         // Ordenar por created_at em ordem decrescente
         $query->latest();
 
         // Aplicar paginação (15 registros por página por padrão)
         $perPage = $request->input('per_page', 15);
-        $trackingEvents = $query->paginate($perPage);
+        $trackingEvents = $query->with('resource')->paginate($perPage);
 
         // Formatar os dados conforme especificado
         $formattedData = $trackingEvents->map(function ($event) {
@@ -50,7 +59,15 @@ class TrackingEventController extends Controller
                 'phone' => $event->phone,
                 'url' => $event->url,
                 'ip_address' => $event->ip_address,
+                'user_id' => $event->user_id,
+                'resource_type' => $event->resource_type,
+                'resource_id' => $event->resource_id,
+                'metadata' => $event->metadata,
                 'created_at' => $event->created_at->format('Y-m-d H:i:s'),
+                'resource' => $event->resource ? [
+                    'id' => $event->resource->getKey(),
+                    'title' => $event->resource->titulo ?? $event->resource->nome ?? $event->resource->post_title ?? 'Recurso #' . $event->resource->getKey()
+                ] : null
             ];
         });
 
@@ -87,6 +104,7 @@ class TrackingEventController extends Controller
             'metadata' => 'nullable|array',
         ]);
 
+        $validated['ip_address'] = $request->header('X-Real-IP') ?: ($request->header('X-Forwarded-For') ? explode(',', $request->header('X-Forwarded-For'))[0] : $request->ip());
         $trackingEvent = TrackingEvent::create($validated);
 
         return response()->json([

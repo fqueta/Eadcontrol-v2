@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
  */
 export default function BudgetPreview({
   title = 'Proposta Comercial',
+  description = 'Confira os detalhes da proposta comercial preparada especialmente para você.',
   clientName,
   clientId,
   clientPhone,
@@ -27,6 +28,7 @@ export default function BudgetPreview({
   totalMasked,
 }: {
   title?: string;
+  description?: string;
   clientName: string;
   clientId?: string | number;
   clientPhone?: string;
@@ -77,7 +79,7 @@ export default function BudgetPreview({
               {title}
             </h2>
             <p className="text-slate-400 text-sm max-w-md">
-               Confira os detalhes da proposta comercial preparada especialmente para você.
+               {description}
             </p>
           </div>
           

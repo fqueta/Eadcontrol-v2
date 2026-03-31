@@ -22,11 +22,13 @@ import {
   User,
   BookOpen,
   CalendarDays,
-  DollarSign
+  DollarSign,
+  Activity
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { Progress } from '@/components/ui/progress';
 
 /**
  * StatusSwitch
@@ -61,7 +63,7 @@ export interface EnrollmentTableProps {
   /** Optional flag when a background refetch is happening; not used for UI state here */
   isFetching?: boolean;
   onView?: (item: any) => void;
-  onEdit?: (item: any) => void;
+  onEdit?: (item: any, tab?: string) => void;
   onDelete?: (item: any) => void;
   resolveAmountBRL?: (item: any) => string;
   /**
@@ -163,6 +165,26 @@ export default function EnrollmentTable({
     );
   }
 
+  function resolvePace(enroll: any) {
+    const progress = Number(enroll?.progresso ?? enroll?.progress ?? enroll?.meta?.progresso ?? 0);
+    
+    // pt-BR: Cores baseadas na "saúde" da matrícula
+    // en-US: Colors based on enrollment "health"
+    const colorClass = progress >= 70 ? 'bg-emerald-500' : progress >= 30 ? 'bg-amber-500' : 'bg-red-500';
+    const textColor = progress >= 70 ? 'text-emerald-600' : progress >= 30 ? 'text-amber-600' : 'text-red-600';
+    const bgColor = progress >= 70 ? 'bg-emerald-50/50' : progress >= 30 ? 'bg-amber-50/50' : 'bg-red-50/50';
+
+    return (
+      <div className={`p-2 rounded-xl ${bgColor} border border-transparent hover:border-slate-100 transition-all space-y-1.5 group/pace`}>
+        <div className="flex items-center justify-between px-0.5">
+           <span className={`text-[9px] font-black uppercase tracking-tighter ${textColor}`}>{progress >= 70 ? 'Excelente' : progress >= 30 ? 'Em Ritmo' : 'Crítico'}</span>
+           <span className={`text-[10px] font-black ${textColor}`}>{progress}%</span>
+        </div>
+        <Progress value={progress} className="h-1.5 bg-slate-200/50" indicatorClassName={`${colorClass} shadow-[0_0_8px_rgba(0,0,0,0.1)] transition-all duration-1000`} />
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-500">
       <Table>
@@ -180,6 +202,11 @@ export default function EnrollmentTable({
               </div>
             </TableHead>
             <TableHead className="px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70">Situação</TableHead>
+            <TableHead className="px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70 min-w-[120px]">
+               <div className="flex items-center justify-center gap-2">
+                  <Activity className="h-3 w-3" /> Saúde / Pace
+               </div>
+            </TableHead>
             <TableHead className="px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70">Ativo</TableHead>
             <TableHead className="px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-muted-foreground/70">
               <div className="flex items-center justify-end gap-2">
@@ -193,7 +220,7 @@ export default function EnrollmentTable({
           {isLoading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <TableRow key={i} className="animate-pulse">
-                <TableCell colSpan={6} className="px-6 py-10">
+                <TableCell colSpan={7} className="px-6 py-10">
                    <div className="flex items-center gap-4">
                      <div className="h-10 w-10 rounded-xl bg-slate-200 dark:bg-slate-800" />
                      <div className="flex flex-col gap-2 flex-1">
@@ -206,7 +233,7 @@ export default function EnrollmentTable({
             ))
           ) : items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="h-40 text-center">
+              <TableCell colSpan={7} className="h-40 text-center">
                 <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
                   <div className="h-12 w-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 mb-2">
                     <User className="h-6 w-6 text-slate-300" />
@@ -220,7 +247,11 @@ export default function EnrollmentTable({
             items.map((enroll: any) => {
               const studentName = enroll.cliente_nome || enroll.student_name || enroll.name || '-';
               return (
-                <TableRow key={String(enroll.id)} className="group transition-all hover:bg-slate-50/80 dark:hover:bg-slate-800/80 items-center border-transparent">
+                <TableRow 
+                  key={String(enroll.id)} 
+                  onDoubleClick={() => onView?.(enroll)}
+                  className="group transition-all hover:bg-slate-50/80 dark:hover:bg-slate-800/80 items-center border-transparent cursor-pointer"
+                >
                   <TableCell className="px-6 py-4 font-mono text-[10px] font-bold text-muted-foreground/60 group-hover:text-primary transition-colors">
                     {String(enroll.id).padStart(4, '0')}
                   </TableCell>
@@ -252,6 +283,9 @@ export default function EnrollmentTable({
                   </TableCell>
                   <TableCell className="px-6 py-4 text-center">
                     {resolveStatusBadge(enroll)}
+                  </TableCell>
+                  <TableCell className="px-6 py-4">
+                    {resolvePace(enroll)}
                   </TableCell>
                   <TableCell className="px-6 py-4 text-center">
                     <StatusSwitch
@@ -286,10 +320,25 @@ export default function EnrollmentTable({
                             Ver Progresso
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem onClick={() => onEdit?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
-                          <Edit className="h-3.5 w-3.5 text-slate-500" /> 
-                          {String(enroll?.situacao ?? '').startsWith('int') ? 'Editar Cadastro' : 'Certificado'}
+                        <DropdownMenuSeparator className="my-1 bg-slate-50 dark:bg-slate-800" />
+                        <DropdownMenuLabel className="text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2 py-2">Edição Rápida</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'principal')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                          <User className="h-3.5 w-3.5 text-slate-500" /> 
+                          Dados Principais
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'academico')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                          <BookOpen className="h-3.5 w-3.5 text-slate-500" /> 
+                          Acadêmico
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'financeiro')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                          <DollarSign className="h-3.5 w-3.5 text-slate-500" /> 
+                          Financeiro
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'acesso')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                          <CalendarDays className="h-3.5 w-3.5 text-slate-500" /> 
+                          Acesso e Validade
+                        </DropdownMenuItem>
+
                         <DropdownMenuSeparator className="my-1 bg-slate-50 dark:bg-slate-800" />
                         <DropdownMenuItem className="text-red-500 cursor-pointer focus:bg-red-50 focus:text-red-600 gap-2 font-bold text-xs rounded-lg" onClick={() => onDelete?.(enroll)}>
                           <Trash2 className="h-3.5 w-3.5" /> 

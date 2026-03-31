@@ -83,6 +83,7 @@ export interface UsersListParams {
    */
   sort?: string;
   excluido?: string;
+  permission_id?: string | number;
 }
 
 export interface Paginated<T> {

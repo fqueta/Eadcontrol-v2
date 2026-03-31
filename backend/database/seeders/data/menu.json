@@ -44,12 +44,7 @@
     "submenu": [
       { "title": "Geral", "url": "/reports/relatorio-geral" },
       { "title": "Acesso de conteudo", "url": "/reports/content-access" },
-      { "title": "Pós Venda", "url": "/reports/relatorio-escola" },
-      { "title": "Balanço", "url": "/reports/relatorio-balanco" },
-      { "title": "Turmas", "url": "/reports/relatorio-turmas" },
-      { "title": "Atendimento", "url": "/reports/relatorio-atendimento" },
-      { "title": "Horas Voadas", "url": "/reports/horas_voadas" },
-      { "title": "Contratos vencidos", "url": "/reports/contratos_vencidos" }
+      { "title": "Turmas", "url": "/reports/relatorio-turmas" }
     ]
   },
   {
@@ -57,7 +52,6 @@
     "icon": "Settings",
     "submenu": [
         { "title": "Usuários", "url": "/settings/users" },
-        { "title": "Dados da empresa", "url": "/settings/dados_conta" },
         { "title": "Biblioteca de mídia", "url": "/settings/media-library-demo" },
         { "title": "Permissões", "url": "/settings/permissions" },
         { "title": "Cupom de desconto", "url": "/settings/cupom_desconto" },

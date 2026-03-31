@@ -62,11 +62,14 @@ class CommentsService extends GenericApiService {
    * pt-BR: Lista comentários para moderação (admin) com paginação/filtros.
    * en-US: Lists comments for moderation (admin) with pagination/filters.
    */
-  adminList(status?: CommentStatus, page?: number, perPage?: number) {
+  adminList(status?: CommentStatus, page?: number, perPage?: number, userId?: string | number, commentableType?: string, commentableId?: string | number) {
     const params = new URLSearchParams();
     if (status) params.set('status', String(status));
     if (page && page > 0) params.set('page', String(page));
     if (perPage && perPage > 0) params.set('per_page', String(perPage));
+    if (userId) params.set('user_id', String(userId));
+    if (commentableType) params.set('commentable_type', commentableType);
+    if (commentableId) params.set('commentable_id', String(commentableId));
     const qs = params.toString();
     return this.customGet(`/admin/comments${qs ? `?${qs}` : ''}`);
   }

@@ -27,7 +27,7 @@ export const useAnalytics = () => {
         phone: data.phone,
       };
 
-      const token = localStorage.getItem('token'); 
+      const token = localStorage.getItem('auth_token'); 
       const apiUrl = getApiUrl();
 
       await axios.post(`${apiUrl}/tracking`, payload, {

@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, LogOut, ChevronDown, Monitor, ExternalLink, Moon, Sun, Menu, Home, BookOpen, Receipt, ShoppingCart, GraduationCap, UserCircle } from "lucide-react";
+import { User, LogOut, ChevronDown, Monitor, ExternalLink, Moon, Sun, Menu, Home, BookOpen, Receipt, ShoppingCart, GraduationCap, UserCircle, ShieldAlert } from "lucide-react";
 import { BrandLogo } from "@/components/branding/BrandLogo";
 
 import { applyBrandingFavicon, hydrateBrandingFromPublicApi, getInstitutionName, getInstitutionSlogan, getInstitutionDescription } from "@/lib/branding";
@@ -40,6 +40,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
   const [institutionName, setInstitutionName] = useState(() => getInstitutionName() || 'Instituição');
   const [institutionSlogan, setInstitutionSlogan] = useState(() => getInstitutionSlogan() || '');
   const [institutionDescription, setInstitutionDescription] = useState(() => getInstitutionDescription() || '');
+  const [isAdminImpersonating, setIsAdminImpersonating] = useState(false);
   /**
    * BrandLogo usage
    * pt-BR: Substitui lógica manual por componente BrandLogo para resolver a URL
@@ -75,6 +76,32 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  /**
+   * checkImpersonation
+   * pt-BR: Verifica se existe um token de admin salvo para exibir o banner de retorno.
+   * en-US: Checks if there is a saved admin token to show the return banner.
+   */
+  useEffect(() => {
+    setIsAdminImpersonating(!!localStorage.getItem('admin_token_snapshot'));
+  }, []);
+
+  /**
+   * handleReturnToAdmin
+   * pt-BR: Restaura a sessão do administrador e redireciona de volta.
+   * en-US: Restores admin session and redirects back.
+   */
+  const handleReturnToAdmin = () => {
+    const adminToken = localStorage.getItem('admin_token_snapshot');
+    if (adminToken) {
+      localStorage.setItem('auth_token', adminToken);
+      localStorage.removeItem('admin_token_snapshot');
+      // Limpa dados cacheados do aluno para forçar recarregamento do admin
+      localStorage.removeItem('user_data');
+      localStorage.removeItem('user_menu');
+      window.location.href = '/admin';
+    }
+  };
   /**
    * handleLogout
    * pt-BR: Efetua logout com feedback visual.
@@ -146,6 +173,27 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
       </div>
 
       <ForceChangePasswordModal />
+
+      {/* Impersonation Banner */}
+      {isAdminImpersonating && (
+        <div className="bg-orange-600 dark:bg-orange-700 text-white py-2 px-4 shadow-lg relative z-[60] flex items-center justify-between animate-in fade-in slide-in-from-top duration-500">
+          <div className="container mx-auto flex items-center justify-center gap-4 text-sm font-medium">
+            <ShieldAlert className="w-4 h-4 hidden sm:block" />
+            <span className="text-center">
+               <span className="hidden sm:inline">Você está acessando como aluno.</span> 
+               <span className="sm:ml-1 font-bold">Sessão de Personificação Ativa.</span>
+            </span>
+            <Button 
+                size="sm" 
+                variant="secondary" 
+                className="bg-white text-orange-700 hover:bg-orange-50 font-bold border-none h-7 px-3 text-xs"
+                onClick={handleReturnToAdmin}
+            >
+              Voltar para Admin
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <header className="bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-white/20 dark:border-slate-800/50 relative md:sticky md:top-0 z-50 shadow-[0_2px_20px_-2px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_30px_-5px_rgba(0,0,0,0.3)] transition-all duration-300">

@@ -17,7 +17,8 @@ import {
   Eraser,
   Sparkles,
   LayoutGrid,
-  Target
+  Target,
+  CheckCircle2
 } from 'lucide-react';
 import { Combobox, useComboboxOptions } from '@/components/ui/combobox';
 import { useQuery } from '@tanstack/react-query';
@@ -58,7 +59,10 @@ export default function Enroll() {
   
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
+  const [perPage, setPerPage] = useState(() => {
+    const saved = localStorage.getItem('eadcontrol_enroll_per_page');
+    return saved ? Number(saved) : 10;
+  });
   const [studentFilter, setStudentFilter] = useState<string>('');
   
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
@@ -240,6 +244,28 @@ export default function Enroll() {
           </div>
         </div>
       </div>
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-in fade-in slide-in-from-top-4 duration-700">
+        {[
+          { label: 'Total Registros', value: total, sub: 'Na base de dados', icon: LayoutGrid, color: 'text-primary', bg: 'bg-primary/10' },
+          { label: 'Alunos Ativos', value: enrollments.filter((e: any) => String(e?.situacao ?? '').startsWith('mat')).length, sub: 'Cursando agora', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+          { label: 'Interessados', value: enrollments.filter((e: any) => String(e?.situacao ?? '').startsWith('int')).length, sub: 'Potenciais alunos', icon: Target, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+          { label: 'Cancelados', value: enrollments.filter((e: any) => String(e?.situacao ?? '').startsWith('can')).length, sub: 'Últimos 30 dias', icon: Eraser, color: 'text-red-500', bg: 'bg-red-500/10' },
+        ].map((stat, i) => (
+          <Card key={i} className="border-none shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-3xl overflow-hidden p-6 hover:shadow-xl transition-all group border-b-4 border-transparent hover:border-primary/20">
+             <div className="flex items-center gap-4">
+                <div className={`h-12 w-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
+                   <stat.icon className="h-6 w-6" />
+                </div>
+                <div>
+                   <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{stat.label}</p>
+                   <h3 className="text-2xl font-black text-foreground/90">{stat.value}</h3>
+                   <p className="text-[9px] font-bold text-muted-foreground/40 italic">{stat.sub}</p>
+                </div>
+             </div>
+          </Card>
+        ))}
+      </div>
 
       {/* Main Container */}
       <div className="space-y-6">
@@ -354,8 +380,11 @@ export default function Enroll() {
               const courseId = String(selectedCourseId || enroll?.id_curso || enroll?.course_id || '');
               navigate(`/admin/school/courses/${courseId || 'curso'}/progress`);
             }}
-            onView={(enroll: any) => navigate(`/admin/sales/proposals/view/${String(enroll.id)}`, { state: { returnTo } })}
-            onEdit={(enroll: any) => navigate(`/admin/sales/proposals/edit/${String(enroll.id)}`, { state: { returnTo } })}
+            onView={(enroll: any) => navigate(`/admin/school/enrollments/view/${String(enroll.id)}`, { state: { returnTo } })}
+            onEdit={(enroll: any, tab?: string) => {
+              const query = tab ? `?tab=${tab}` : '';
+              navigate(`/admin/sales/proposals/edit/${String(enroll.id)}${query}`, { state: { returnTo } });
+            }}
             onGenerateCertificate={(enroll: any) => navigate(`/admin/school/certificados/gerar?id=${String(enroll?.id ?? '')}`)}
             onDelete={(enroll: any) => { setSelected(enroll); setDeleteOpen(true); }}
             onToggleActive={(enroll: any, isActive: boolean) => {
@@ -401,7 +430,15 @@ export default function Enroll() {
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3">
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Exibição</span>
-                <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
+                  <Select
+                    value={String(perPage)}
+                    onValueChange={(v) => {
+                      const val = Number(v);
+                      setPerPage(val);
+                      setPage(1);
+                      localStorage.setItem('eadcontrol_enroll_per_page', String(val));
+                    }}
+                  >
                   <SelectTrigger className="h-10 w-24 rounded-xl border-slate-200 font-bold bg-white/40">
                     <SelectValue />
                   </SelectTrigger>

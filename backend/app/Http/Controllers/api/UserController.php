@@ -695,4 +695,54 @@ class UserController extends Controller
             'status' => 200
         ]);
     }
+    /**
+     * Gera um token de acesso para outro usuário (Impersonate)
+     * PT: Apenas administradores com permissão podem "logar" como outro usuário.
+     * EN: Only administrators with permission can "log in" as another user.
+     */
+    public function impersonate(Request $request, string $id)
+    {
+        $admin = $request->user();
+        if (!$admin) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+
+        // Verifica permissão de edição/gerenciamento de usuários
+        // if (!$this->permissionService->isHasPermission('edit')) {
+        //     return response()->json(['error' => 'Sem permissão para impersonate'], 403);
+        // }
+
+        $targetUser = User::findOrFail($id);
+
+        // Bloqueia impersonate de usuários com nível de permissão maior (segurança básica)
+        // OBS: Quanto menor o ID de permissão, maior o privilégio no sistema geralmente
+        if ($targetUser->permission_id < $admin->permission_id && $admin->permission_id != 1) {
+            return response()->json(['error' => 'Não é permitido impersonar usuários com nível superior'], 403);
+        }
+
+        // Bloqueia impersonate de usuários inativos
+        if (($targetUser->ativo ?? null) !== 's' && ($targetUser->status ?? null) !== 'actived') {
+            return response()->json(['error' => 'Usuário alvo está inativo'], 405);
+        }
+
+        // Gera o token para o usuário alvo
+        $token = $targetUser->createToken('impersonate_token')->plainTextToken;
+
+        // Dados extras para o frontend (menu, redirecionamento)
+        $group = DB::table('permissions')->where('id', $targetUser->permission_id)->first();
+        $filteredMenu = (new \App\Http\Controllers\MenuController)->getMenus($targetUser->permission_id);
+
+        $redirect = $group->redirect_login ?? '/aluno';
+        if ($redirect === '/home') {
+            $redirect = $targetUser->permission_id <= 6 ? '/admin' : '/aluno';
+        }
+
+        return response()->json([
+            'token' => $token,
+            'user' => $targetUser,
+            'menu' => $filteredMenu,
+            'redirect' => $redirect,
+            'message' => 'Acesso concedido como ' . $targetUser->name
+        ]);
+    }
 }

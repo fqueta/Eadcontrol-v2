@@ -301,10 +301,24 @@ class CommentController extends Controller
     public function adminIndex(Request $request)
     {
         $status = $request->query('status');
-        $q = Comment::query()->with(['user:id,name']);
+        $userId = $request->query('user_id');
+        $cType = $request->query('commentable_type');
+        $cId = $request->query('commentable_id');
+
+        $q = Comment::query()->with(['user:id,name', 'commentable']);
         if ($status) {
             $q->where('status', $status);
         }
+        if ($userId) {
+            $q->where('user_id', $userId);
+        }
+        if ($cType) {
+            $q->where('commentable_type', $cType);
+        }
+        if ($cId) {
+            $q->where('commentable_id', $cId);
+        }
+
         $comments = $q->orderByDesc('created_at')->paginate(20);
 
         /**
@@ -313,11 +327,19 @@ class CommentController extends Controller
          * EN: Add `user_name` (author full name) and normalize returned fields for the frontend.
          */
         $comments->getCollection()->transform(function (Comment $c) {
+            $commentable = $c->commentable;
+            $title = null;
+            if ($commentable) {
+                // Activity model uses post_title, Curso model uses titulo/nome.
+                $title = $commentable->post_title ?? $commentable->titulo ?? $commentable->nome ?? null;
+            }
+
             return [
                 'id' => $c->id,
                 'parent_id' => $c->parent_id,
                 'commentable_type' => $c->commentable_type,
                 'commentable_id' => $c->commentable_id,
+                'commentable_title' => $title,
                 'user_id' => $c->user_id,
                 // PT: Nome do usuário; `name` é o campo principal no modelo User.
                 // EN: User display name; `name` is primary field in User model.
