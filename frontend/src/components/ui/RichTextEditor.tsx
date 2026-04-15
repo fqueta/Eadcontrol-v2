@@ -76,19 +76,19 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
   return (
     <div className="border rounded-md">
       {/* Toolbar */}
-      <div className="flex gap-2 p-2 border-b bg-muted">
-        <button type="button" className="text-sm px-2 py-1 rounded hover:bg-muted-foreground/10" onClick={() => execCmd('bold')} disabled={disabled}>B</button>
-        <button type="button" className="text-sm px-2 py-1 rounded hover:bg-muted-foreground/10" onClick={() => execCmd('italic')} disabled={disabled}>I</button>
-        <button type="button" className="text-sm px-2 py-1 rounded hover:bg-muted-foreground/10" onClick={() => execCmd('underline')} disabled={disabled}>U</button>
-        <button type="button" className="text-sm px-2 py-1 rounded hover:bg-muted-foreground/10" onClick={() => execCmd('insertUnorderedList')} disabled={disabled}>• Lista</button>
-        <button type="button" className="text-sm px-2 py-1 rounded hover:bg-muted-foreground/10" onClick={() => execCmd('insertOrderedList')} disabled={disabled}>1. Lista</button>
-        <button type="button" className="text-sm px-2 py-1 rounded hover:bg-muted-foreground/10" onClick={() => execCmd('formatBlock', 'p')} disabled={disabled}>Parágrafo</button>
+      <div className="flex flex-wrap gap-1 p-1.5 border-b bg-muted/50">
+        <button type="button" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => execCmd('bold')} disabled={disabled}>B</button>
+        <button type="button" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => execCmd('italic')} disabled={disabled}>I</button>
+        <button type="button" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => execCmd('underline')} disabled={disabled}>U</button>
+        <button type="button" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => execCmd('insertUnorderedList')} disabled={disabled}>• Lista</button>
+        <button type="button" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => execCmd('insertOrderedList')} disabled={disabled}>1. Lista</button>
+        <button type="button" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => execCmd('formatBlock', 'p')} disabled={disabled}>Parágrafo</button>
         {/* Alignment controls */}
         <span className="mx-2 w-px bg-border" />
-        <button type="button" title="Alinhar à esquerda" className="text-sm px-2 py-1 rounded hover:bg-muted-foreground/10" onClick={() => applyAlignment('left')} disabled={disabled}>Esq</button>
-        <button type="button" title="Centralizar" className="text-sm px-2 py-1 rounded hover:bg-muted-foreground/10" onClick={() => applyAlignment('center')} disabled={disabled}>Centro</button>
-        <button type="button" title="Alinhar à direita" className="text-sm px-2 py-1 rounded hover:bg-muted-foreground/10" onClick={() => applyAlignment('right')} disabled={disabled}>Dir</button>
-        <button type="button" title="Justificar" className="text-sm px-2 py-1 rounded hover:bg-muted-foreground/10" onClick={() => applyAlignment('justify')} disabled={disabled}>Justificar</button>
+        <button type="button" title="Alinhar à esquerda" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => applyAlignment('left')} disabled={disabled}>Esq</button>
+        <button type="button" title="Centralizar" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => applyAlignment('center')} disabled={disabled}>Centro</button>
+        <button type="button" title="Alinhar à direita" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => applyAlignment('right')} disabled={disabled}>Dir</button>
+        <button type="button" title="Justificar" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => applyAlignment('justify')} disabled={disabled}>Justificar</button>
       </div>
       {/* Editable area */}
       <div

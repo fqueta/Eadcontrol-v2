@@ -9,8 +9,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Post;
 use App\Models\Matricula;
+use App\Models\Curso;
+use App\Models\User;
 use App\Services\Qlib;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 
 class CertificatesController extends Controller
 {
@@ -21,7 +25,7 @@ class CertificatesController extends Controller
      */
     public function getTemplate(Request $request)
     {
-        $post = Post::ofType('certificado')->published()->first();
+        $post = Post::ofType('certificado')->first();
         if (!$post) {
             return response()->json([
                 'exists' => false,
@@ -45,6 +49,13 @@ class CertificatesController extends Controller
      */
     public function saveTemplate(Request $request)
     {
+        // pt-BR: Log para depuração de payload.
+        // en-US: Debug log for payload.
+        \Illuminate\Support\Facades\Log::info('CertificatesController@saveTemplate', [
+            'tenant' => tenancy()->tenant->id ?? 'no-tenant',
+            'payload' => $request->json()->all()
+        ]);
+
         // Aceita qualquer JSON e persiste em `config`.
         $payload = $request->json()->all();
         if (!is_array($payload)) {
@@ -58,6 +69,11 @@ class CertificatesController extends Controller
             'title' => ['nullable', 'string', 'max:255'],
             'body' => ['nullable', 'string'],
             'accentColor' => ['nullable', 'string', 'max:32'],
+            'footerLeft' => ['nullable', 'string', 'max:255'],
+            'footerRight' => ['nullable', 'string', 'max:255'],
+            'signatureLeftUrl' => ['nullable', 'string'],
+            'signatureRightUrl' => ['nullable', 'string'],
+            'bgUrl' => ['nullable', 'string'],
             'fields' => ['nullable', 'array'],
             'fields.*.key' => ['nullable', 'string', 'max:64'],
             'fields.*.label' => ['nullable', 'string', 'max:255'],
@@ -210,60 +226,162 @@ class CertificatesController extends Controller
 
     public function generatePdf(string $enrollmentId, Request $request)
     {
-        $matricula = Matricula::find($enrollmentId);
-        if (!$matricula) {
+        try {
+            Log::info('CertificatesController@generatePdf start', [
+                'enrollmentId' => $enrollmentId,
+                'tenant' => tenancy()->tenant->id ?? 'no-tenant',
+                'user' => auth()->id()
+            ]);
+
+            // Usar as relações que REALMENTE existem no modelo Matricula
+            $matricula = Matricula::with([
+                'student', 
+                'course'
+            ])->find($enrollmentId);
+
+            if (!$matricula) {
+                Log::warning('CertificatesController@generatePdf: Matricula not found', ['id' => $enrollmentId]);
+                return response()->json(['error' => 'Matrícula não encontrada'], 404);
+            }
+
+            $post = Post::ofType('certificado')->published()->first();
+            $config = $post ? ($post->config ?? []) : [];
+
+            // Resolvendo dados reais da matrícula usando fallbacks seguros
+            $studentModel = $matricula->student ?? $matricula->cliente;
+            $courseModel = $matricula->course ?? $matricula->curso;
+
+            if (!$studentModel || !$courseModel) {
+                Log::error('Student or Course relationship not resolved', [
+                    'student' => !!$studentModel,
+                    'course' => !!$courseModel,
+                    'matricula_id' => $matricula->id
+                ]);
+            }
+
+            $studentName = (string)($studentModel->name ?? $studentModel->nome ?? $matricula->cliente_nome ?? 'Aluno');
+            $courseName = (string)($courseModel->nome ?? $courseModel->titulo ?? $matricula->curso_nome ?? 'Curso');
+            
+            // Carga horária
+            $hours = '0';
+            if ($courseModel) {
+                $courseConfig = $courseModel->config ?? [];
+                $hours = (string)($courseConfig['workload'] ?? $courseModel->carga_horaria ?? $courseModel->duracao ?? '0');
+            }
+            
+            // Data de conclusão
+            $completionDate = (string)($matricula->data_conclusao ?? $matricula->conclusao_data ?? '');
+            if (!empty($completionDate)) {
+                $completionDate = \Illuminate\Support\Carbon::parse($completionDate)->format('d/m/Y');
+            } else {
+                $completionDate = \Illuminate\Support\Carbon::now()->format('d/m/Y');
+            }
+
+            $placeholders = [
+                'studentName' => $studentName,
+                'courseName' => $courseName,
+                'hours' => $hours,
+                'completionDate' => $completionDate,
+            ];
+
+            $title = (string)($config['title'] ?? 'CERTIFICADO');
+            $body = (string)($config['body'] ?? 'Certificamos que {studentName} concluiu o curso {courseName}.');
+            $footerLeft = (string)($config['footerLeft'] ?? '');
+            $footerRight = (string)($config['footerRight'] ?? '');
+            $bgUrl = (string)($config['bgUrl'] ?? '');
+            $accentColor = (string)($config['accentColor'] ?? '#111827');
+            $signatureLeftUrl = (string)($config['signatureLeftUrl'] ?? '');
+            $signatureRightUrl = (string)($config['signatureRightUrl'] ?? '');
+
+            // RESOLVER IMAGENS PARA BASE64
+            $imgToDataUri = function($url) {
+                if (empty($url)) return '';
+                try {
+                    // Se for URL de asset do tenancy e estiver no mesmo servidor
+                    if (str_contains($url, '/tenancy/assets/')) {
+                        $parts = explode('/tenancy/assets/', $url);
+                        $assetPath = end($parts);
+                        $fullPath = storage_path('app/public/' . $assetPath);
+                        if (file_exists($fullPath)) {
+                            $ext = pathinfo($fullPath, PATHINFO_EXTENSION);
+                            return 'data:image/' . ($ext ?: 'png') . ';base64,' . base64_encode(file_get_contents($fullPath));
+                        }
+                    }
+
+                    // Fallback para URL HTTP se parecer uma URL
+                    if (str_starts_with($url, 'http')) {
+                        $resp = Http::timeout(5)->get($url);
+                        if ($resp->successful()) {
+                            return 'data:' . $resp->header('Content-Type') . ';base64,' . base64_encode($resp->body());
+                        }
+                    }
+                    
+                    // Se for caminho relativo público
+                    if (!str_starts_with($url, 'http')) {
+                        $path = public_path($url);
+                        if (file_exists($path)) {
+                            $ext = pathinfo($path, PATHINFO_EXTENSION);
+                            return 'data:image/' . ($ext ?: 'png') . ';base64,' . base64_encode(file_get_contents($path));
+                        }
+                    }
+
+                    return $url;
+                } catch (\Exception $e) {
+                    Log::error('imgToDataUri failed: ' . $e->getMessage(), ['url' => $url]);
+                    return $url;
+                }
+            };
+
+            $bgBase64 = $imgToDataUri($bgUrl);
+            $sigLeftBase64 = $imgToDataUri($signatureLeftUrl);
+            $sigRightBase64 = $imgToDataUri($signatureRightUrl);
+
+            // Geração do QR Code e adição ao placeholder qrcode
+            $validationUrl = url('/certificado/validar/' . urlencode($matricula->id));
+            $qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" . urlencode($validationUrl);
+            $qrCodeBase64 = $imgToDataUri($qrCodeUrl);
+            
+            $placeholders['qrcode'] = '<img src="' . ($qrCodeBase64 ?: $qrCodeUrl) . '" style="width: 90px; height: 90px; display: inline-block; vertical-align: middle; margin: 5px;" />';
+
+            // Resolve placeholders no corpo do texto
+            $bodyResolved = preg_replace_callback('/\{(.*?)\}/', function ($m) use ($placeholders) {
+                $key = $m[1] ?? '';
+                return $placeholders[$key] ?? $m[0];
+            }, $body);
+
+            // Verifica se o qrcode já foi inserido via shortcode para não duplicar na view se quisermos
+            $hasQrShortcode = str_contains($body, '{qrcode}');
+
+            $html = view('certificates.pdf', [
+                'title' => $title,
+                'body' => $bodyResolved,
+                'footerLeft' => $footerLeft,
+                'footerRight' => $footerRight,
+                'bgUrl' => $bgBase64 ?: $bgUrl,
+                'accentColor' => $accentColor,
+                'signatureLeftUrl' => $sigLeftBase64 ?: $signatureLeftUrl,
+                'signatureRightUrl' => $sigRightBase64 ?: $signatureRightUrl,
+                'validationUrl' => $validationUrl,
+                'qrCodeBase64' => $qrCodeBase64 ?: $qrCodeUrl,
+                'hasQrShortcode' => $hasQrShortcode,
+            ])->render();
+
+            Pdf::setOptions([
+                'isRemoteEnabled' => true, 
+                'isHtml5ParserEnabled' => true,
+            ]);
+            
+            $pdf = Pdf::loadHTML($html);
+            $pdf->setPaper('A4', 'landscape');
+
+            return $pdf->download('certificado_' . $matricula->id . '.pdf');
+        } catch (\Exception $e) {
+            Log::error('Error generating PDF: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json([
-                'error' => 'Matrícula não encontrada'
-            ], 404);
+                'error' => 'Erro interno ao gerar PDF: ' . $e->getMessage()
+            ], 500);
         }
-
-        $post = Post::ofType('certificado')->published()->first();
-        $config = $post ? ($post->config ?? []) : [];
-
-        $studentName = (string)($matricula->cliente_nome ?? $matricula->aluno_nome ?? $matricula->nome ?? '');
-        $courseName = (string)($matricula->curso_nome ?? $matricula->nome_curso ?? '');
-        $hours = (string)($matricula->curso_carga_horaria ?? $matricula->carga_horaria ?? '');
-        $completionDate = (string)($matricula->data_conclusao ?? $matricula->conclusao_data ?? '');
-
-        $placeholders = [
-            'studentName' => $studentName,
-            'courseName' => $courseName,
-            'hours' => $hours,
-            'completionDate' => $completionDate,
-        ];
-
-        $title = (string)($config['title'] ?? 'Certificado de Conclusão');
-        $body = (string)($config['body'] ?? 'Certificamos que {studentName} concluiu o curso {courseName}.');
-        $footerLeft = (string)($config['footerLeft'] ?? 'Coordenador');
-        $footerRight = (string)($config['footerRight'] ?? 'Diretor');
-        $bgUrl = (string)($config['bgUrl'] ?? '');
-        $accentColor = (string)($config['accentColor'] ?? '#111827');
-
-        $bodyResolved = preg_replace_callback('/\{(.*?)\}/', function ($m) use ($placeholders) {
-            $key = $m[1] ?? '';
-            return $placeholders[$key] ?? $m[0];
-        }, $body);
-
-        $validationUrl = url('/certificado/validar/' . urlencode($matricula->id));
-
-        $html = view('certificates.pdf', [
-            'title' => $title,
-            'body' => $bodyResolved,
-            'footerLeft' => $footerLeft,
-            'footerRight' => $footerRight,
-            'bgUrl' => $bgUrl,
-            'accentColor' => $accentColor,
-            'validationUrl' => $validationUrl,
-        ])->render();
-
-        $paper = $request->input('paper', 'A4');
-        $orientation = $request->input('orientation', 'portrait');
-
-        Pdf::setOptions(['isRemoteEnabled' => true, 'isHtml5ParserEnabled' => true]);
-        $pdf = Pdf::loadHTML($html);
-        $pdf->setPaper($paper, $orientation);
-
-        $filename = 'certificado_' . $matricula->id . '.pdf';
-        return $pdf->download($filename);
     }
 }

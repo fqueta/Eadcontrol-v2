@@ -37,7 +37,7 @@ export function getTenantApiUrl(): string {
 
   if (!url) {
     if (/localhost|127\.0\.0\.1/.test(host)) {
-      url = 'http://api-{tenant_id}.localhost:8000/api'.replace('{tenant_id}', tenantId);
+      url = 'http://api-{tenant_id}.localhost:8002/api'.replace('{tenant_id}', tenantId);
     } else {
       url = `https://api-${host}/api`;
     }

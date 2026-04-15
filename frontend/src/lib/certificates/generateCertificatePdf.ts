@@ -1,5 +1,7 @@
 type CertificateSource = 'custom' | 'generic';
 
+import { certificatesService } from '@/services/certificatesService';
+
 export interface GenerateCertificatePdfParams {
   enrollmentId: string | number;
   studentId?: string | number;
@@ -61,13 +63,19 @@ export async function generateCertificatePdf({
 }: GenerateCertificatePdfParams): Promise<CertificateSource> {
   const safeName = sanitizeFileName(studentName);
 
+  // Default to backend PDF generator if not explicitly provided
+  const generator = customPdfGenerator || ((id) => certificatesService.generatePdf(id));
+
   // 1) Try custom backend template first (if available)
-  if (customPdfGenerator) {
+  if (generator) {
     try {
-      const blob = await customPdfGenerator(enrollmentId);
+      console.log(`[generateCertificatePdf] Calling generator for enrollmentId: ${enrollmentId}`);
+      const blob = await generator(enrollmentId);
       downloadBlob(blob, `certificado_${String(enrollmentId)}.pdf`);
       return 'custom';
-    } catch {
+    } catch (err: any) {
+      console.error('[generateCertificatePdf] Backend generator failed:', err);
+      window.alert(`Erro ao gerar certificado personalizado: ${err.message || err}. Usando modelo padrão.`);
       // fallback to generic certificate
     }
   }

@@ -2,47 +2,127 @@
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title }}</title>
     <style>
-        @page { size: A4; margin: 0; }
-        html, body { height: 100%; }
-        body { font-family: DejaVu Sans, Arial, sans-serif; color: #374151; }
-        .page { width: 210mm; min-height: 297mm; background: #ffffff; position: relative; }
-        .content { padding: 48px; }
-        .title { text-align: center; font-size: 28px; font-weight: 700; color: {{ $accentColor }}; }
-        .body { margin-top: 24px; font-size: 16px; line-height: 1.7; text-align: center; }
-        .footer { position: absolute; bottom: 64px; left: 48px; right: 48px; display: grid; grid-template-columns: 1fr 1fr; gap: 96px; }
-        .footer .item { text-align: center; }
-        .footer .line { border-top: 1px solid #9CA3AF; }
-        .footer .label { margin-top: 6px; font-size: 12px; color: #6B7280; }
-        .bg { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: {{ $bgUrl ? '1' : '0' }}; }
-        .qr { display: flex; justify-content: center; margin-top: 40px; }
-        .qr img { width: 120px; height: 120px; }
+        @page { size: A4 landscape; margin: 0; }
+        * { margin:0; padding:0; box-sizing: border-box; }
+        body { 
+            font-family: 'Helvetica', 'Arial', sans-serif; 
+            color: #374151; 
+            background: #ffffff;
+            margin: 0;
+            padding: 0;
+            width: 297mm;
+            height: 210mm;
+            overflow: hidden;
+        }
+        .bg-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 297mm;
+            height: 210mm;
+            z-index: 1;
+        }
+        .content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 297mm;
+            height: 210mm;
+            z-index: 10;
+            padding: 30px;
+            text-align: center;
+        }
+        .title {
+            margin-top: 20px;
+            font-size: 38px;
+            font-weight: bold;
+            color: {{ $accentColor }};
+            text-transform: uppercase;
+        }
+        .body-text {
+            margin-top: 15px;
+            font-size: 18px;
+            line-height: 1.4;
+            color: #4B5563;
+            padding: 0 60px;
+        }
+        .qr-section {
+            margin-top: 20px;
+        }
+        .qr-section img {
+            width: 100px;
+            height: 100px;
+        }
+        .footer-table {
+            position: absolute;
+            bottom: 50px;
+            left: 0;
+            right: 0;
+            width: 100%;
+            padding: 0 100px;
+            border-collapse: collapse;
+        }
+        .footer-table td {
+            width: 50%;
+            text-align: center;
+            vertical-align: bottom;
+            padding: 0 20px;
+        }
+        .signature-line {
+            border-top: 1px solid #9CA3AF;
+            margin: 5px auto 0;
+            width: 100%;
+        }
+        .footer-label {
+            font-size: 14px;
+            color: #6B7280;
+            margin-top: 5px;
+        }
+        .signature-img {
+            max-height: 80px;
+            max-width: 220px;
+            display: block;
+            margin: 0 auto 5px;
+        }
     </style>
 </head>
 <body>
-    <div class="page">
-        @if(!empty($bgUrl))
-            <div class="bg" style="background-image: url('{{ $bgUrl }}');"></div>
-        @endif
-        <div class="content">
-            <div class="title">{{ $title }}</div>
-            <div class="body">{{ $body }}</div>
-            <div class="qr">
-                <img alt="QR Code" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data={{ urlencode($validationUrl) }}">
-            </div>
-            <div class="footer">
-                <div class="item">
-                    <div class="line"></div>
-                    <div class="label">{{ $footerLeft }}</div>
-                </div>
-                <div class="item">
-                    <div class="line"></div>
-                    <div class="label">{{ $footerRight }}</div>
-                </div>
-            </div>
+    @if(!empty($bgUrl))
+        <img src="{{ $bgUrl }}" class="bg-img" />
+    @endif
+    
+    <div class="content">
+        <h1 class="title">{{ $title }}</h1>
+        
+        <div class="body-text">
+            {!! $body !!}
         </div>
+
+
+        <table class="footer-table">
+            <tr>
+                <td>
+                    @if(!empty($signatureLeftUrl))
+                        <img src="{{ $signatureLeftUrl }}" class="signature-img" />
+                    @else
+                        <div style="height: 80px;"></div>
+                    @endif
+                    <div class="signature-line"></div>
+                    <div class="footer-label">{{ $footerLeft }}</div>
+                </td>
+                <td>
+                    @if(!empty($signatureRightUrl))
+                        <img src="{{ $signatureRightUrl }}" class="signature-img" />
+                    @else
+                        <div style="height: 80px;"></div>
+                    @endif
+                    <div class="signature-line"></div>
+                    <div class="footer-label">{{ $footerRight }}</div>
+                </td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>

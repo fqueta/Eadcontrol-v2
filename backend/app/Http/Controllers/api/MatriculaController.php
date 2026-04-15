@@ -709,4 +709,162 @@ class MatriculaController extends Controller
             'data' => $matricula->fresh(),
         ], 200);
     }
+    /**
+     * PT-BR: Retorna dados completos da matrícula (Matricula) com aliases úteis para o front-end,
+     * incluindo metadados, parcelamentos e links públicos. Se o parâmetro $id_cliente for informado,
+     * valida a existência do cliente.
+     * EN: Returns full enrollment (Matricula) data with helpful aliases for the frontend,
+     * including metadata, installments and public links. If $id_cliente is provided, validates
+     * the client existence.
+     *
+     * @param int|string $id Identificador da matrícula
+     * @param int|null $id_cliente Identificador do cliente (opcional)
+     * @return array Dados agregados e normalizados da matrícula
+     */
+    public function getCertificateData(Request $request, $id)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+
+        $matricula = Matricula::with([
+            'curso:id,nome,descricao,config,tipo,imagem_url',
+            'cliente:id,name,email,cpf,rg,telefone,celular,endereco,numero,bairro,cidade,estado,cep',
+            'turma:id,nome',
+            'consultor:id,name',
+            'responsavel:id,name',
+            'situacao:id,post_title,post_name'
+        ])->find($id);
+
+        if (!$matricula) {
+            return response()->json(['error' => 'Matrícula não encontrada'], 404);
+        }
+
+        // Verificar permissão
+        if (!$this->isClient($user)) {
+            if (!$this->permissionService->isHasPermission('view')) {
+                return response()->json(['error' => 'Acesso negado'], 403);
+            }
+        } else {
+            if ($matricula->id_cliente != $user->id) {
+                return response()->json(['error' => 'Acesso negado'], 403);
+            }
+        }
+
+        // Verificar se tem certificado
+        if (!$matricula->certificado_url && !$matricula->certificado_base64) {
+            return response()->json(['error' => 'Certificado não disponível'], 404);
+        }
+
+        // Montar dados do certificado
+        $certificateData = [
+            'id' => $matricula->id,
+            'student' => [
+                'id' => $matricula->cliente->id,
+                'name' => $matricula->cliente->name,
+                'email' => $matricula->cliente->email,
+                'cpf' => $matricula->cliente->cpf,
+                'rg' => $matricula->cliente->rg,
+                'phone' => $matricula->cliente->telefone,
+                'mobile' => $matricula->cliente->celular,
+                'address' => $matricula->cliente->endereco,
+                'number' => $matricula->cliente->numero,
+                'neighborhood' => $matricula->cliente->bairro,
+                'city' => $matricula->cliente->cidade,
+                'state' => $matricula->cliente->estado,
+                'zip' => $matricula->cliente->cep,
+            ],
+            'course' => [
+                'id' => $matricula->curso->id,
+                'name' => $matricula->curso->nome,
+                'description' => $matricula->curso->descricao,
+                'type' => $matricula->curso->tipo,
+                'image_url' => $matricula->curso->imagem_url,
+                'config' => $matricula->curso->config,
+            ],
+            'enrollment' => [
+                'id' => $matricula->id,
+                'enrollment_date' => $matricula->data,
+                'completion_date' => $matricula->data_conclusao,
+                'status' => $matricula->status,
+                'situation' => $matricula->situacao ? $matricula->situacao->post_title : null,
+                'situation_slug' => $matricula->situacao ? $matricula->situacao->post_name : null,
+                'certificate_url' => $matricula->certificado_url,
+                'certificate_base64' => $matricula->certificado_base64,
+                'certificate_code' => $matricula->codigo_certificado,
+                'certificate_date' => $matricula->data_certificado,
+                'certificate_qrcode' => $matricula->qrcode_certificado,
+            ],
+            'instructor' => $matricula->consultor ? [
+                'id' => $matricula->consultor->id,
+                'name' => $matricula->consultor->name,
+            ] : null,
+            'class' => $matricula->turma ? [
+                'id' => $matricula->turma->id,
+                'name' => $matricula->turma->nome,
+            ] : null,
+            'responsible' => $matricula->responsavel ? [
+                'id' => $matricula->responsavel->id,
+                'name' => $matricula->responsavel->name,
+            ] : null,
+        ];
+
+        return response()->json($certificateData);
+    }
+    /**
+     * PT-BR: Retorna dados completos da matrícula (Matricula) com aliases úteis para o front-end,
+     * incluindo metadados, parcelamentos e links públicos. Se o parâmetro $id_cliente for informado,
+     * valida a existência do cliente.
+     * EN: Returns full enrollment (Matricula) data with helpful aliases for the frontend,
+     * including metadata, installments and public links. If $id_cliente is provided, validates
+     * the client existence.
+     *
+     * @param int|string $id Identificador da matrícula
+     * @param int|null $id_cliente Identificador do cliente (opcional)
+     * @return array Dados agregados e normalizados da matrícula
+     */
+    public function dm(int|string $id, int|string|null $id_cliente = null): array
+    {
+        $cliente = null;
+        if (!is_null($id_cliente)) {
+            $cliente = User::findOrFail($id_cliente);
+        }
+
+        // Consulta principal usando relacionamentos Eloquent e eager loading
+        $matricula = Matricula::with([
+                'curso:id,nome,tipo',
+                'turma:id,nome',
+                'cliente:id,name,email,cpf,celular,config,preferencias,ativo,permission_id,created_at,updated_at,autor',
+                'funnel:id,name',
+                'stage:id,name,funnel_id',
+                'situacao:ID,post_title',
+                'parcelamentos'
+            ])
+            ->findOrFail($id);
+
+        $data = $matricula->toArray();
+        // Aliases de nomes para compatibilidade com o front
+        $data['curso_nome'] = $matricula->curso->nome ?? null;
+        $data['curso_tipo'] = $matricula->curso->tipo ?? null;
+        $data['turma_nome'] = $matricula->turma->nome ?? null;
+        $data['cliente_nome'] = $matricula->cliente->name ?? null;
+        $data['funnel_nome'] = $matricula->funnel->name ?? null;
+        $data['stage_nome'] = $matricula->stage->name ?? null;
+        $data['situacao_nome'] = $matricula->situacao->post_title ?? null;
+
+        // Nó de cliente estruturado
+        $data['cliente'] = $matricula->cliente ? $this->mapClientNodeOutput($matricula->cliente) : null;
+        $data['meta'] = $this->getAllMatriculaMeta($matricula['id']);
+        $data['consultor'] = $this->mapClientNodeOutput(User::find($matricula['id_consultor']));
+        // Parcelamentos via relação Eloquent para manter consistência com sync()
+        // Parcelamentos já carregados via relação
+        $data['numero_contrato'] = $this->numero_contrato($matricula['id']);
+        $data['parcelamentos'] = $matricula->parcelamentos ? $matricula->parcelamentos->toArray() : [];
+        //incluir o campo com link publico da proposta
+        $link = '/aluno/matricula/'.$matricula['id_cliente'].'_'.Qlib::zerofill($matricula['id'],5).'/1';
+        $data['link_orcamento'] = Qlib::qoption('front_url') . $link;
+        $data['link_assinatura'] = Qlib::qoption('front_url') . str_replace('matricula','assinatura',$link);
+        return $data;
+    }
 }

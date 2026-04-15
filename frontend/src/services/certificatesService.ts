@@ -35,8 +35,11 @@ class CertificatesService extends BaseApiService {
 
   async generatePdf(enrollmentId: string | number): Promise<Blob> {
     const url = `${this.API_BASE_URL}/certificates/generate/${encodeURIComponent(String(enrollmentId))}`;
+    console.log(`[CertificatesService] Requesting PDF from: ${url}`);
     const headers = this.getHeaders();
     (headers as any)['Accept'] = 'application/pdf';
+    console.log(`[CertificatesService] Headers:`, headers);
+
     const response = await fetch(url, {
       method: 'POST',
       headers,
@@ -44,7 +47,11 @@ class CertificatesService extends BaseApiService {
     });
     if (!response.ok) {
       const text = await response.text().catch(() => '');
-      throw new Error(text || 'Falha ao gerar certificado');
+      // If the response is HTML, it's likely a server error page
+      if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+        throw new Error(`Erro no servidor (Status ${response.status}). O servidor retornou uma página HTML em vez de um PDF.`);
+      }
+      throw new Error(text || `Falha ao gerar certificado (Status ${response.status})`);
     }
     return response.blob();
   }
