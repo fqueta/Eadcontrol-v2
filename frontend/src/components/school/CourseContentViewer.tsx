@@ -4,11 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
- import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock, Star, ChevronDown, ChevronUp, GraduationCap, ChevronLeft, ChevronRight, Search, Circle, CircleCheck, AlertCircle, XCircle, Plus } from 'lucide-react';
+ import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock, Star, ChevronDown, ChevronUp, GraduationCap, Award, ChevronLeft, ChevronRight, Search, Circle, CircleCheck, AlertCircle, XCircle, Plus } from 'lucide-react';
 import { progressService } from '@/services/progressService';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -16,7 +24,7 @@ import commentsService from '@/services/commentsService';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Separator } from '@/components/ui/separator';
-import { certificatesService } from '@/services/certificatesService';
+import { generateCertificatePdf } from '@/lib/certificates/generateCertificatePdf';
 import { QuizGradeDetail } from './components/QuizGradeDetail';
 import { useAnalytics } from '@/hooks/useAnalytics';
 
@@ -600,6 +608,7 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [showCertDialog, setShowCertDialog] = useState(false);
   /**
    * collapseInactiveModules
    * pt-BR: Quando ativo, colapsa módulos que não contêm a atividade atual.
@@ -2185,28 +2194,54 @@ function htmlEquals(a: string, b: string): boolean {
 
   /**
    * handleRequestCertificate
-   * pt-BR: Solicita geração do certificado (PDF) para a matrícula atual.
-   *        Faz download local do arquivo e exibe feedback.
-   * en-US: Requests certificate (PDF) generation for current enrollment.
-   *        Downloads the file and shows feedback.
+   * pt-BR: Abre o dialog de preview do certificado genérico.
+   * en-US: Opens the generic certificate preview dialog.
    */
-  async function handleRequestCertificate() {
+  function handleRequestCertificate() {
+    if (!enrollmentId) {
+      toast({ title: 'Matrícula inválida', description: 'Não foi possível identificar sua matrícula.', variant: 'destructive' } as any);
+      return;
+    }
+    setShowCertDialog(true);
+  }
+
+  /**
+   * handleDownloadCertificate
+   * pt-BR: Gera o PDF do certificado genérico no front-end com jsPDF,
+   *        com layout idêntico ao portal de administração.
+   * en-US: Generates the generic certificate PDF using jsPDF,
+   *        with the same layout as the admin portal.
+   */
+  async function handleDownloadCertificate() {
+    if (!enrollmentId) return;
+    setGeneratingCert(true);
     try {
-      if (!enrollmentId) {
-        toast({ title: 'Matrícula inválida', description: 'Não foi possível identificar sua matrícula.', variant: 'destructive' } as any);
-        return;
+      let studentName = 'Aluno';
+      let studentId: string | undefined;
+      try {
+        const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
+        studentName = userData?.name || userData?.nome || (course as any)?._studentName || 'Aluno';
+        studentId = userData?.id ? String(userData.id) : undefined;
+      } catch {
+        studentName = (course as any)?._studentName || 'Aluno';
       }
-      setGeneratingCert(true);
-      const blob = await certificatesService.generatePdf(enrollmentId);
-      const objectUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = objectUrl;
-      a.download = `certificado_${String(enrollmentId)}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(objectUrl);
-      toast({ title: 'Certificado gerado', description: 'Download iniciado com sucesso.' });
+      const source = await generateCertificatePdf({
+        enrollmentId,
+        studentId,
+        studentName,
+        courseTitle: (course?.titulo || course?.nome || 'Curso') as string,
+        workloadLabel: (course as any)?.duracao
+          ? `${(course as any).duracao} ${(course as any).unidade_duracao || 'hrs'}`
+          : (courseTotalLabel || '---'),
+      });
+
+      toast({
+        title: 'Certificado gerado',
+        description: source === 'custom'
+          ? 'Download iniciado com sucesso.'
+          : 'Seu certificado foi baixado com sucesso.',
+      });
+      setShowCertDialog(false);
     } catch (err: any) {
       toast({
         title: 'Falha ao gerar certificado',
@@ -3368,6 +3403,63 @@ function htmlEquals(a: string, b: string): boolean {
           </Card>
         </main>
       </div>
+
+      {/* ── Certificate Preview Dialog ────────────────────── */}
+      <Dialog open={showCertDialog} onOpenChange={setShowCertDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GraduationCap className="h-5 w-5 text-amber-600" />
+              Certificado de Conclusão
+            </DialogTitle>
+            <DialogDescription>
+              Confira os dados do seu certificado antes de baixar.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="my-2 border-2 border-amber-200 rounded-xl overflow-hidden">
+            <div className="bg-gradient-to-r from-amber-600 to-yellow-500 h-1.5 w-full" />
+            <div className="p-8 text-center space-y-4 bg-amber-50/30">
+              <p className="text-xs tracking-[0.3em] uppercase text-amber-700/70 font-semibold">Certificado de Conclusão</p>
+              <p className="text-sm text-muted-foreground">Certificamos que</p>
+              <p className="text-2xl font-bold italic text-foreground">
+                {(course as any)?._studentName || 'Aluno'}
+              </p>
+              <p className="text-sm text-muted-foreground">concluiu com êxito o curso de</p>
+              <p className="text-lg font-bold text-amber-700">
+                {course?.titulo || course?.nome || 'Curso'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                realizado em {new Date().toLocaleDateString('pt-BR')}
+                {courseTotalLabel ? `, com carga horária de ${courseTotalLabel}.` : '.'}
+              </p>
+              <div className="pt-4">
+                <div className="mx-auto w-48 border-t border-amber-300" />
+                <p className="mt-1 text-xs text-muted-foreground">Diretoria Acadêmica</p>
+              </div>
+            </div>
+            <div className="bg-gradient-to-r from-amber-600 to-yellow-500 h-1.5 w-full" />
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowCertDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleDownloadCertificate}
+              disabled={generatingCert}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-semibold"
+            >
+              {generatingCert ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Gerando PDF...</>
+              ) : (
+                <><Award className="h-4 w-4 mr-2" />Baixar Certificado PDF</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import jsPDF from 'jspdf';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +54,7 @@ import { progressService } from '@/services/progressService';
 import commentsService from '@/services/commentsService';
 import { currencyRemoveMaskToNumber } from '@/lib/masks/currency';
 import { formatDate } from '@/lib/utils';
+import { generateCertificatePdf } from '@/lib/certificates/generateCertificatePdf';
 
 // Reusing cards from school module
 import BudgetPreview from '@/components/school/BudgetPreview';
@@ -214,73 +214,20 @@ export default function EnrollmentView() {
 
   /**
    * handleGenerateCertificate
-   * pt-BR: Gera o PDF do certificado usando jsPDF e os dados carregados na página.
-   * en-US: Generates the certificate PDF using jsPDF and the data loaded on the page.
+   * pt-BR: Gera certificado usando função compartilhada do sistema.
+   * en-US: Generates certificate using the shared system function.
    */
-  const handleGenerateCertificate = () => {
+  const handleGenerateCertificate = async () => {
     try {
-      const doc = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: 'a4'
+      await generateCertificatePdf({
+        enrollmentId: enrollmentId ?? '',
+        studentId: clientId || undefined,
+        studentName: clientName || 'Aluno',
+        courseTitle: courseTitle || 'Curso',
+        workloadLabel: (course as any)?.duracao
+          ? `${(course as any).duracao} ${(course as any).unidade_duracao || 'horas'}`
+          : '---',
       });
-      
-      const studentName = clientName || 'Nome do Aluno';
-      const courseName = courseTitle || 'Curso Online';
-      const duration = (course as any)?.duracao ? `${(course as any).duracao} ${(course as any).unidade_duracao || 'horas'}` : '??';
-      const dateStr = new Date().toLocaleDateString('pt-BR');
-
-      // Frame
-      doc.setDrawColor(200, 160, 50);
-      doc.setLineWidth(2);
-      doc.rect(10, 10, 277, 190);
-      
-      doc.setDrawColor(50, 50, 50);
-      doc.setLineWidth(0.5);
-      doc.rect(15, 15, 267, 180);
-
-      // Title
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(30);
-      doc.setTextColor(50, 50, 50);
-      doc.text('CERTIFICADO DE CONCLUSÃO', 148.5, 50, { align: 'center' });
-      
-      // Subtitle
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(14);
-      doc.setTextColor(100, 100, 100);
-      doc.text('Certificamos que', 148.5, 75, { align: 'center' });
-      
-      // Student Name
-      doc.setFont('times', 'bolditalic');
-      doc.setFontSize(28);
-      doc.setTextColor(30, 30, 30);
-      doc.text(studentName, 148.5, 95, { align: 'center' });
-      
-      // Body
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(14);
-      doc.setTextColor(80, 80, 80);
-      doc.text(`concluiu com êxito o curso de`, 148.5, 115, { align: 'center' });
-      
-      doc.setFont('times', 'bold');
-      doc.setFontSize(22);
-      doc.setTextColor(200, 160, 50); 
-      doc.text(courseName, 148.5, 130, { align: 'center' });
-      
-      // Final details
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(12);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`realizado em ${dateStr}, com carga horária de ${duration}.`, 148.5, 150, { align: 'center' });
-      
-      // Signature
-      doc.setLineWidth(0.5);
-      doc.line(80, 175, 217, 175);
-      doc.setFontSize(10);
-      doc.text('Diretoria Acadêmica', 148.5, 182, { align: 'center' });
-      
-      doc.save(`certificado_${studentName.replace(/\s+/g, '_').toLowerCase()}.pdf`);
       toast({ title: 'Sucesso', description: 'Certificado gerado com sucesso.' });
     } catch (err) {
       console.error(err);

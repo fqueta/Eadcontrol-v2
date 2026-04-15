@@ -4,9 +4,12 @@ namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Post;
 use App\Models\Matricula;
+use App\Services\Qlib;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class CertificatesController extends Controller
@@ -97,7 +100,25 @@ class CertificatesController extends Controller
      */
     public function validateCertificate(string $enrollmentId)
     {
-        $matricula = Matricula::find($enrollmentId);
+        $matricula = Matricula::join('cursos', 'matriculas.id_curso', '=', 'cursos.id')
+            ->leftJoin('turmas', 'matriculas.id_turma', '=', 'turmas.id')
+            ->leftJoin('users', 'matriculas.id_cliente', '=', 'users.id')
+            ->leftJoin('users as consultores', 'matriculas.id_consultor', '=', 'consultores.id')
+            ->leftJoin('posts', 'matriculas.situacao_id', '=', 'posts.id')
+            ->select(
+                'matriculas.*',
+                'cursos.nome as curso_nome',
+                'cursos.titulo as curso_titulo',
+                'cursos.tipo as curso_tipo',
+                'cursos.duracao as curso_duracao',
+                'cursos.unidade_duracao as curso_unidade_duracao',
+                'turmas.nome as turma_nome',
+                'users.name as cliente_nome',
+                'users.email as cliente_email',
+                'consultores.name as consultor_nome',
+                'posts.post_title as situacao'
+            )
+            ->find($enrollmentId);
         if (!$matricula) {
             return response()->json([
                 'valid' => false,
@@ -120,15 +141,70 @@ class CertificatesController extends Controller
             || str_contains($status, 'finaliz')
             || str_contains($status, 'complet');
 
+        $studentName = (string)($matricula->cliente_nome
+            ?? $matricula->aluno_nome
+            ?? $matricula->nome
+            ?? '');
+
+        $courseName = (string)($matricula->curso_nome
+            ?? $matricula->nome_curso
+            ?? ($matricula->curso_titulo ?? null)
+            ?? '');
+
+        $hours = (string)($matricula->curso_carga_horaria
+            ?? $matricula->carga_horaria
+            ?? ($matricula->curso_duracao ? ($matricula->curso_duracao . ' ' . ($matricula->curso_unidade_duracao ?? '')) : '')
+            ?? '');
+
+        $courseCompletedAt = null;
+        try {
+            $meta = Qlib::get_matriculameta($matricula->id, 'dt_conclusao_matricula');
+            if (!empty($meta)) {
+                $courseCompletedAt = Carbon::parse((string)$meta)->toIso8601String();
+            }
+        } catch (\Throwable $e) {
+            $courseCompletedAt = null;
+        }
+
+        $lastActivityAccessAt = null;
+        try {
+            $raw = DB::table('activity_progress')->where('id_matricula', $matricula->id)->max('updated_at');
+            if (!empty($raw)) {
+                $lastActivityAccessAt = Carbon::parse((string)$raw)->toIso8601String();
+            }
+        } catch (\Throwable $e) {
+            $lastActivityAccessAt = null;
+        }
+
+        // pt-BR: "Conclusão" pública pode ser exibida como último acesso da última atividade.
+        //        Também retornamos a data oficial de conclusão (100%) quando existir.
+        $completionDate = $lastActivityAccessAt ?: $courseCompletedAt;
+        $certificateIssuedAt = $courseCompletedAt ?: $lastActivityAccessAt;
+
         return response()->json([
             'valid' => (bool)$isConcluded,
             'enrollment' => [
                 'id' => $matricula->id,
-                'student_name' => $matricula->cliente_nome ?? null,
-                'course_name' => $matricula->curso_nome ?? null,
+                'student_id' => $matricula->id_cliente ?? null,
+                'course_id' => $matricula->id_curso ?? null,
+                'student_name' => $studentName ?: null,
+                'student_email' => $matricula->cliente_email ?? null,
+                'course_name' => $courseName ?: null,
+                'course_type' => $matricula->curso_tipo ?? null,
+                'class_id' => $matricula->id_turma ?? null,
+                'class_name' => $matricula->turma_nome ?? null,
+                'consultant_id' => $matricula->id_consultor ?? null,
+                'consultant_name' => $matricula->consultor_nome ?? null,
+                'situation' => $matricula->situacao ?? null,
+                'hours' => $hours ?: null,
+                'completion_date' => $completionDate ?: null,
+                'course_completed_at' => $courseCompletedAt,
+                'last_activity_access_at' => $lastActivityAccessAt,
+                'certificate_issued_at' => $certificateIssuedAt,
                 'status' => $matricula->status,
                 'preferencias' => $preferencias,
             ],
+            'validated_at' => now()->toIso8601String(),
         ]);
     }
 
