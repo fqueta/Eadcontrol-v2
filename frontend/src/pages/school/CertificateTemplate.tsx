@@ -222,51 +222,58 @@ export default function CertificateTemplate() {
         </div>
 
         {/* Live Preview Pane */}
-        <div className="xl:col-span-7 bg-muted/30 border rounded-xl overflow-hidden p-4 sm:p-8 flex flex-col items-center justify-center min-h-[500px]">
-          <div className="w-full max-w-[1000px]">
-            <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-3 ml-1 flex items-center justify-between">
-              <span>Pré-visualização do PDF Final</span>
-              <span>Proporção A4 (Paisagem)</span>
-            </div>
-            
-            {/* The A4 Canvas Simulation */}
-            <div 
-              className="bg-white shadow-xl relative w-full border overflow-hidden" 
-              style={{ aspectRatio: '297 / 210' }} // A4 landscape aspect ratio approx
-            >
-              {bgUrl && (
-                <div 
-                  className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat" 
-                  style={{ backgroundImage: `url(${bgUrl})` }} 
-                />
-              )}
-              
-              {/* Content layer */}
-              <div className="relative z-10 w-full h-full p-8 md:p-14 flex flex-col items-center justify-center text-center">
-                <h2 className="text-2xl md:text-5xl font-bold mb-6 md:mb-10 drop-shadow-sm" style={{ color: accentColor }}>
-                  {title || 'Sem Título'}
-                </h2>
-                
-                <div 
-                  className="text-sm md:text-xl md:leading-relaxed max-w-[85%] mx-auto w-full prose prose-sm md:prose-xl" 
-                  style={{ color: '#374151', textShadow: '0px 0.5px 1px rgba(255,255,255,0.7)' }}
-                  dangerouslySetInnerHTML={{ __html: preview }}
-                />
-                
-                <div className="absolute bottom-6 md:bottom-16 left-0 right-0 px-12 md:px-24 grid grid-cols-2 gap-12 md:gap-24">
-                  <div className="text-center flex flex-col justify-end items-center" style={{ minHeight: '80px' }}>
-                    {signatureLeftUrl && (
-                      <img src={signatureLeftUrl} className="h-[40px] md:h-[60px] object-contain mb-1" alt="Assinatura" />
-                    )}
-                    <div className="border-t border-gray-400 mb-2 md:mb-3 w-full"></div>
-                    <div className="text-[10px] md:text-sm font-medium text-gray-600">{footerLeft || ' '}</div>
+        <div className="xl:col-span-7">
+          <div className="sticky top-6">
+            <div className="bg-muted/30 border rounded-xl overflow-hidden p-4 sm:p-8 flex flex-col items-center justify-center min-h-[500px] shadow-inner">
+              <div className="w-full max-w-[1000px]">
+                <div className="text-xs text-muted-foreground font-semibold uppercase tracking-widest mb-4 ml-1 flex items-center justify-between opacity-70">
+                  <div className="flex items-center gap-2">
+                    <Layout className="h-3 w-3" />
+                    <span>Pré-visualização do PDF Final</span>
                   </div>
-                  <div className="text-center flex flex-col justify-end items-center" style={{ minHeight: '80px' }}>
-                    {signatureRightUrl && (
-                      <img src={signatureRightUrl} className="h-[40px] md:h-[60px] object-contain mb-1" alt="Assinatura" />
-                    )}
-                    <div className="border-t border-gray-400 mb-2 md:mb-3 w-full"></div>
-                    <div className="text-[10px] md:text-sm font-medium text-gray-600">{footerRight || ' '}</div>
+                  <span>A4 Paisagem</span>
+                </div>
+                
+                {/* The A4 Canvas Simulation */}
+                <div 
+                  className="bg-white shadow-xl relative w-full border overflow-hidden" 
+                  style={{ aspectRatio: '297 / 210' }} // A4 landscape aspect ratio approx
+                >
+                  {bgUrl && (
+                    <div 
+                      className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat" 
+                      style={{ backgroundImage: `url(${bgUrl})` }} 
+                    />
+                  )}
+                  
+                  {/* Content layer */}
+                  <div className="relative z-10 w-full h-full p-8 md:p-14 flex flex-col items-center justify-center text-center">
+                    <h2 className="text-2xl md:text-5xl font-bold mb-6 md:mb-10 drop-shadow-sm" style={{ color: accentColor }}>
+                      {title || 'Sem Título'}
+                    </h2>
+                    
+                    <div 
+                      className="text-sm md:text-xl md:leading-relaxed max-w-[85%] mx-auto w-full prose prose-sm md:prose-xl" 
+                      style={{ color: '#374151', textShadow: '0px 0.5px 1px rgba(255,255,255,0.7)' }}
+                      dangerouslySetInnerHTML={{ __html: preview }}
+                    />
+                    
+                    <div className="absolute bottom-6 md:bottom-16 left-0 right-0 px-12 md:px-24 grid grid-cols-2 gap-12 md:gap-24">
+                      <div className="text-center flex flex-col justify-end items-center" style={{ minHeight: '80px' }}>
+                        {signatureLeftUrl && (
+                          <img src={signatureLeftUrl} className="h-[40px] md:h-[60px] object-contain mb-1" alt="Assinatura" />
+                        )}
+                        <div className="border-t border-gray-400 mb-2 md:mb-3 w-full"></div>
+                        <div className="text-[10px] md:text-sm font-medium text-gray-600">{footerLeft || ' '}</div>
+                      </div>
+                      <div className="text-center flex flex-col justify-end items-center" style={{ minHeight: '80px' }}>
+                        {signatureRightUrl && (
+                          <img src={signatureRightUrl} className="h-[40px] md:h-[60px] object-contain mb-1" alt="Assinatura" />
+                        )}
+                        <div className="border-t border-gray-400 mb-2 md:mb-3 w-full"></div>
+                        <div className="text-[10px] md:text-sm font-medium text-gray-600">{footerRight || ' '}</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

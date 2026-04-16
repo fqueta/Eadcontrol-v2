@@ -1,4 +1,9 @@
 import React, { useEffect, useRef } from 'react';
+import { 
+  Bold, Italic, Underline, List, ListOrdered, 
+  AlignLeft, AlignCenter, AlignRight, AlignJustify,
+  Type
+} from 'lucide-react';
 
 /**
  * RichTextEditor
@@ -15,6 +20,31 @@ export interface RichTextEditorProps {
   /** Desabilita edição quando true */
   disabled?: boolean;
 }
+
+/**
+ * ToolbarButton
+ * pt-BR: Botão auxiliar para a toolbar do editor, garantindo estilo consistente.
+ * en-US: Helper button for the editor toolbar, ensuring consistent styling.
+ */
+const ToolbarButton: React.FC<{ 
+  onClick: () => void, 
+  title: string, 
+  disabled?: boolean, 
+  active?: boolean,
+  children: React.ReactNode 
+}> = ({ onClick, title, disabled, active, children }) => (
+  <button
+    type="button"
+    title={title}
+    onClick={onClick}
+    disabled={disabled}
+    className={`p-1.5 rounded-md transition-all border shadow-sm ${
+      active ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-accent border-input'
+    } disabled:opacity-50 disabled:pointer-events-none`}
+  >
+    {children}
+  </button>
+);
 
 /**
  * execCmd
@@ -76,19 +106,26 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange,
   return (
     <div className="border rounded-md">
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-1 p-1.5 border-b bg-muted/50">
-        <button type="button" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => execCmd('bold')} disabled={disabled}>B</button>
-        <button type="button" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => execCmd('italic')} disabled={disabled}>I</button>
-        <button type="button" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => execCmd('underline')} disabled={disabled}>U</button>
-        <button type="button" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => execCmd('insertUnorderedList')} disabled={disabled}>• Lista</button>
-        <button type="button" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => execCmd('insertOrderedList')} disabled={disabled}>1. Lista</button>
-        <button type="button" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => execCmd('formatBlock', 'p')} disabled={disabled}>Parágrafo</button>
-        {/* Alignment controls */}
-        <span className="mx-2 w-px bg-border" />
-        <button type="button" title="Alinhar à esquerda" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => applyAlignment('left')} disabled={disabled}>Esq</button>
-        <button type="button" title="Centralizar" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => applyAlignment('center')} disabled={disabled}>Centro</button>
-        <button type="button" title="Alinhar à direita" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => applyAlignment('right')} disabled={disabled}>Dir</button>
-        <button type="button" title="Justificar" className="text-xs px-2 py-1 rounded hover:bg-muted-foreground/10 border bg-background" onClick={() => applyAlignment('justify')} disabled={disabled}>Justificar</button>
+      <div className="flex flex-wrap items-center gap-1 p-1 border-b bg-muted/30">
+        <div className="flex items-center border-r pr-1 mr-1 gap-1">
+          <ToolbarButton onClick={() => execCmd('bold')} title="Negrito" disabled={disabled} active={document.queryCommandState?.('bold')}><Bold className="h-4 w-4" /></ToolbarButton>
+          <ToolbarButton onClick={() => execCmd('italic')} title="Itálico" disabled={disabled} active={document.queryCommandState?.('italic')}><Italic className="h-4 w-4" /></ToolbarButton>
+          <ToolbarButton onClick={() => execCmd('underline')} title="Sublinhado" disabled={disabled} active={document.queryCommandState?.('underline')}><Underline className="h-4 w-4" /></ToolbarButton>
+        </div>
+        
+        <div className="flex items-center border-r pr-1 mr-1 gap-1">
+          <ToolbarButton onClick={() => execCmd('insertUnorderedList')} title="Lista" disabled={disabled}><List className="h-4 w-4" /></ToolbarButton>
+          <ToolbarButton onClick={() => execCmd('insertOrderedList')} title="Lista Numerada" disabled={disabled}><ListOrdered className="h-4 w-4" /></ToolbarButton>
+        </div>
+
+        <div className="flex items-center border-r pr-1 mr-1 gap-1">
+          <ToolbarButton onClick={() => applyAlignment('left')} title="Alinhar à esquerda" disabled={disabled}><AlignLeft className="h-4 w-4" /></ToolbarButton>
+          <ToolbarButton onClick={() => applyAlignment('center')} title="Centralizar" disabled={disabled}><AlignCenter className="h-4 w-4" /></ToolbarButton>
+          <ToolbarButton onClick={() => applyAlignment('right')} title="Alinhar à direita" disabled={disabled}><AlignRight className="h-4 w-4" /></ToolbarButton>
+          <ToolbarButton onClick={() => applyAlignment('justify')} title="Justificar" disabled={disabled}><AlignJustify className="h-4 w-4" /></ToolbarButton>
+        </div>
+
+        <ToolbarButton onClick={() => execCmd('formatBlock', 'p')} title="Texto Normal" disabled={disabled}><Type className="h-4 w-4" /></ToolbarButton>
       </div>
       {/* Editable area */}
       <div

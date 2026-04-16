@@ -25,7 +25,8 @@
       { "title": "Todos módulos", "url": "/school/modules" },
       { "title": "Todos atividades", "url": "/school/activities" },
       { "title": "Comentários", "url": "/school/comments" },
-      { "title": "Situações", "url": "/school/enrollment-situation" }
+      { "title": "Situações", "url": "/school/enrollment-situation" },
+      { "title": "Certificados", "url": "/school/certificados/modelo" }
     ]
   },
   {
