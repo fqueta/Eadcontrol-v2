@@ -37,6 +37,7 @@ export default function CertificateTemplate() {
   const [bgUrl, setBgUrl] = useState('');
   const [accentColor, setAccentColor] = useState('#111827');
   const [qrPosition, setQrPosition] = useState('integrated');
+  const [logoPosition, setLogoPosition] = useState('integrated');
   
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
   const [mediaTarget, setMediaTarget] = useState<'bg' | 'sigLeft' | 'sigRight'>('bg');
@@ -56,6 +57,7 @@ export default function CertificateTemplate() {
       if (tpl.bgUrl !== undefined) setBgUrl(String(tpl.bgUrl || ''));
       if (tpl.accentColor) setAccentColor(String(tpl.accentColor));
       if (tpl.qrPosition) setQrPosition(String(tpl.qrPosition));
+      if (tpl.logoPosition) setLogoPosition(String(tpl.logoPosition));
     }
   }, [backendTemplate]);
 
@@ -64,6 +66,13 @@ export default function CertificateTemplate() {
     <div className={`flex flex-col items-center justify-center border-2 border-dashed border-gray-300 w-[90px] h-[90px] rounded-lg shadow-sm bg-white pointer-events-none ${className}`}>
       <span className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter leading-none">QR Code</span>
       <span className="text-[7px] text-gray-300 italic leading-none">dinâmico</span>
+    </div>
+  );
+
+  // Componente visual do Logo Placeholder
+  const LogoPlaceholder = ({ className }: { className?: string }) => (
+    <div className={`flex flex-col items-center justify-center border-2 border-dashed border-gray-300 w-[120px] h-[60px] rounded-lg shadow-sm bg-white/50 backdrop-blur-sm pointer-events-none ${className}`}>
+      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">LOGO</span>
     </div>
   );
 
@@ -76,12 +85,25 @@ export default function CertificateTemplate() {
       startDate: '01/01/2025',
       endDate: '01/02/2025',
       hours: '40 horas',
+      logo: logoPosition === 'integrated' ? `<div class="inline-flex items-center justify-center border-2 border-dashed border-gray-300 w-[100px] h-[40px] rounded shadow-sm bg-white/40 pointer-events-none align-middle mx-2 uppercase text-[8px] font-bold text-gray-500">LOGO</div>` : '',
       qrcode: qrPosition === 'integrated' ? `<div class="inline-flex flex-col items-center justify-center border-2 border-dashed border-gray-300 w-[80px] h-[80px] rounded-lg shadow-sm bg-white pointer-events-none align-middle my-2 mx-auto">
                 <span class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter leading-none">QR CODE</span>
                </div>` : ''
     } as Record<string, string>;
     return body.replace(/\{(.*?)\}/g, (_, key) => sample[key] ?? `{${key}}`);
-  }, [body, qrPosition]);
+  }, [body, qrPosition, logoPosition]);
+
+  const logoFixedStyles = useMemo(() => {
+    switch (logoPosition) {
+      case 'top-left':     return "absolute top-8 left-8 z-20";
+      case 'top-center':   return "absolute top-8 left-1/2 -translate-x-1/2 z-20";
+      case 'top-right':    return "absolute top-8 right-8 z-20";
+      case 'bottom-left':  return "absolute bottom-8 left-8 z-20";
+      case 'bottom-center':return "absolute bottom-32 left-1/2 -translate-x-1/2 z-20";
+      case 'bottom-right': return "absolute bottom-8 right-8 z-20";
+      default: return "";
+    }
+  }, [logoPosition]);
 
   const qrFixedStyles = useMemo(() => {
     switch (qrPosition) {
@@ -96,7 +118,7 @@ export default function CertificateTemplate() {
   }, [qrPosition]);
 
   async function handleSave() {
-    const payload = { title, body, footerLeft, footerRight, signatureLeftUrl, signatureRightUrl, bgUrl, accentColor, qrPosition };
+    const payload = { title, body, footerLeft, footerRight, signatureLeftUrl, signatureRightUrl, bgUrl, accentColor, qrPosition, logoPosition };
     try {
       await saveTemplate.mutateAsync(payload);
       toast({ title: 'Modelo salvo', description: 'Modelo de certificado salvo no backend com sucesso.' });
@@ -146,7 +168,7 @@ export default function CertificateTemplate() {
                 <CardHeader className="bg-muted/10 pb-4">
                   <CardTitle className="text-xl">Conteúdo do Certificado</CardTitle>
                   <CardDescription>
-                    O texto abaixo será renderizado com formatação HTML. Utilize: {'{studentName}'}, {'{courseName}'}, {'{startDate}'}, {'{endDate}'}, {'{completionDate}'}, {'{hours}'} e {'{qrcode}'}.
+                    O texto abaixo será renderizado com formatação HTML. Utilize: {'{logo}'}, {'{studentName}'}, {'{courseName}'}, {'{startDate}'}, {'{endDate}'}, {'{completionDate}'}, {'{hours}'} e {'{qrcode}'}.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6 pt-6">
@@ -226,6 +248,26 @@ export default function CertificateTemplate() {
 
                   <div className="space-y-3 pt-2 border-t">
                     <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                      <ImagePlus className="h-3 w-3" /> Posição da Logo
+                    </label>
+                    <Select value={logoPosition} onValueChange={setLogoPosition}>
+                      <SelectTrigger className="w-full h-11 bg-muted/20 border-2">
+                        <SelectValue placeholder="Escolha a posição" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="integrated">Integrada no texto (Shortcode)</SelectItem>
+                        <SelectItem value="top-left">Topo Esquerda</SelectItem>
+                        <SelectItem value="top-center">Topo Centralizado</SelectItem>
+                        <SelectItem value="top-right">Topo Direita</SelectItem>
+                        <SelectItem value="bottom-left">Rodapé Esquerda</SelectItem>
+                        <SelectItem value="bottom-center">Rodapé Centralizado</SelectItem>
+                        <SelectItem value="bottom-right">Rodapé Direita</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-3 pt-2 border-t">
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                       <QrCode className="h-3 w-3" /> Posição do QR Code
                     </label>
                     <Select value={qrPosition} onValueChange={setQrPosition}>
@@ -257,7 +299,7 @@ export default function CertificateTemplate() {
                   <div className="pt-6 border-t mt-6">
                     <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-4">Shortcodes Disponíveis</h4>
                     <div className="flex flex-wrap gap-2">
-                      {['studentName', 'courseName', 'completionDate', 'startDate', 'endDate', 'hours', 'qrcode'].map(tag => (
+                      {['logo', 'studentName', 'courseName', 'completionDate', 'startDate', 'endDate', 'hours', 'qrcode'].map(tag => (
                         <span key={tag} className="px-2 py-1 bg-accent/50 text-accent-foreground text-[10px] font-mono rounded border font-bold block transition-all hover:scale-105">
                           {'{'}{tag}{'}'}
                         </span>
@@ -285,6 +327,11 @@ export default function CertificateTemplate() {
                   {/* Fixed Position QR Code */}
                   {qrPosition !== 'integrated' && (
                     <QrPlaceholder className={qrFixedStyles} />
+                  )}
+
+                  {/* Fixed Position Logo */}
+                  {logoPosition !== 'integrated' && (
+                    <LogoPlaceholder className={logoFixedStyles} />
                   )}
 
                   <div className="relative z-10 w-full h-full p-12 md:p-24 flex flex-col items-center justify-center text-center">

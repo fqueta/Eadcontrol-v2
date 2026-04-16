@@ -42,12 +42,14 @@ class CertificatesController extends Controller
             $signatureRightUrl = $config['signatureRightUrl'] ?? '';
             $accentColor = $config['accentColor'] ?? '#111827';
             $qrPosition = $config['qrPosition'] ?? 'integrated';
+            $logoPosition = $config['logoPosition'] ?? 'integrated';
 
             // Prepara placeholders
             $studentName = $matricula->student ? ($matricula->student->name . ' ' . $matricula->student->lastname) : 'Aluno';
             $courseName = $matricula->course ? $matricula->course->nome : 'Curso';
             $completionDate = $matricula->data_conclusao ? date('d/m/Y', strtotime($matricula->data_conclusao)) : date('d/m/Y');
-            $hours = ($matricula->course && $matricula->course->carga_horaria) ? $matricula->course->carga_horaria . ' horas' : 'Carga horária não definida';
+            $hours = ($matricula->course->carga_horaria ?? $matricula->course->duracao) ?: 'Carga horária não definida';
+            if (is_numeric($hours)) $hours .= ' horas';
 
             // Busca Datas de Início e Fim (Primeira e Última atividade concluída)
             $progressData = \Illuminate\Support\Facades\DB::table('activity_progress')
@@ -63,15 +65,6 @@ class CertificatesController extends Controller
             $endDate = $progressData && $progressData->last_completed 
                 ? date('d/m/Y', strtotime($progressData->last_completed)) 
                 : $completionDate; // fallback
-
-            $placeholders = [
-                'studentName' => '<strong>' . $studentName . '</strong>',
-                'courseName' => '<strong>' . $courseName . '</strong>',
-                'completionDate' => $completionDate,
-                'startDate' => $startDate,
-                'endDate' => $endDate,
-                'hours' => $hours,
-            ];
 
             /**
              * imgToDataUri
@@ -101,12 +94,32 @@ class CertificatesController extends Controller
                 }
             };
 
+            $logoUrl = Qlib::get_logo_url();
+            $logoBase64 = $imgToDataUri($logoUrl);
+            $logoHtml = '<img src="' . ($logoBase64 ?: $logoUrl) . '" style="max-height: 60px;" />';
+
+            $placeholders = [
+                'studentName' => '<strong>' . $studentName . '</strong>',
+                'courseName' => '<strong>' . $courseName . '</strong>',
+                'completionDate' => $completionDate,
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'hours' => $hours,
+                'logo' => ($logoPosition === 'integrated') ? $logoHtml : '',
+            ];
+
             $bgBase64 = $imgToDataUri($bgUrl);
             $sigLeftBase64 = $imgToDataUri($signatureLeftUrl);
             $sigRightBase64 = $imgToDataUri($signatureRightUrl);
 
-            // Geração do QR Code
-            $validationUrl = url('/certificado/validar/' . urlencode($matricula->id));
+            // Geração do link de validação seguro (Apontando para o Frontend)
+            $hash = substr(hash_hmac('sha256', $matricula->id, config('app.key')), 0, 16);
+            $frontendUrl = env('FRONTEND_URL', 'eaddemo.localhost:4000');
+            // Garante o protocolo http://
+            if (!str_starts_with($frontendUrl, 'http')) {
+                $frontendUrl = 'http://' . $frontendUrl;
+            }
+            $validationUrl = $frontendUrl . '/certificado/validar/' . $matricula->id . '/' . $hash;
             $qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" . urlencode($validationUrl);
             $qrCodeBase64 = $imgToDataUri($qrCodeUrl);
             $qrImgHtml = '<img src="' . ($qrCodeBase64 ?: $qrCodeUrl) . '" style="width: 90px; height: 90px; display: block;" />';
@@ -136,6 +149,8 @@ class CertificatesController extends Controller
                 'validationUrl' => $validationUrl,
                 'qrPosition' => $qrPosition,
                 'qrImgHtml' => $qrImgHtml,
+                'logoPosition' => $logoPosition,
+                'logoHtml' => $logoHtml
             ])->render();
 
             Pdf::setOptions([
@@ -165,7 +180,7 @@ class CertificatesController extends Controller
             $data = $request->only([
                 'title', 'body', 'footerLeft', 'footerRight', 
                 'signatureLeftUrl', 'signatureRightUrl', 'bgUrl', 
-                'accentColor', 'qrPosition'
+                'accentColor', 'qrPosition', 'logoPosition'
             ]);
 
             Option::updateOrCreate(
@@ -190,5 +205,89 @@ class CertificatesController extends Controller
         return response()->json([
             'config' => $model ? json_decode($model->value, true) : []
         ]);
+    }
+
+    /**
+     * validateCertificate
+     * pt-BR: Valida um certificado publicamente através do QR Code.
+     *        Verifica se o hash de segurança é autêntico antes de retornar os dados.
+     */
+    public function validateCertificate($enrollmentId, $hash)
+    {
+        try {
+            // Verifica integridade do link
+            $expectedHash = substr(hash_hmac('sha256', $enrollmentId, config('app.key')), 0, 16);
+            
+            if ($hash !== $expectedHash) {
+                return response()->json(['error' => 'Link de validação inválido ou alterado.'], 403);
+            }
+
+            $matricula = Matricula::with(['student', 'course'])->find($enrollmentId);
+
+            if (!$matricula) {
+                return response()->json(['error' => 'Certificado não encontrado.'], 404);
+            }
+
+            // Busca Datas de Início e Fim (Primeira e Última atividade concluída)
+            $progressData = \Illuminate\Support\Facades\DB::table('activity_progress')
+                ->where('id_matricula', $enrollmentId)
+                ->where('completed', 1)
+                ->selectRaw('MIN(updated_at) as first_completed, MAX(updated_at) as last_completed')
+                ->first();
+
+            $completionDate = $matricula->data_conclusao 
+                ? $matricula->data_conclusao 
+                : ($progressData->last_completed ?? now()->toDateString());
+
+            $hours = ($matricula->course->carga_horaria ?? $matricula->course->duracao) ?: 'N/A';
+            if (is_numeric($hours)) $hours .= ' horas';
+
+            // Busca a logo da escola usando o helper Qlib
+            $logoUrl = Qlib::get_logo_url();
+
+            // Link seguro para abrir o PDF (Público, usando o hash)
+            $pdfUrl = url('/api/v1/certificates/public/view/' . $enrollmentId . '/' . $hash);
+
+            return response()->json([
+                'valid' => true,
+                'validated_at' => now()->toIso8601String(),
+                'logoUrl' => $logoUrl,
+                'enrollment' => [
+                    'id' => $matricula->id,
+                    'student_name' => $matricula->student ? ($matricula->student->name . ' ' . $matricula->student->lastname) : 'N/A',
+                    'student_email' => $matricula->student ? $matricula->student->email : '',
+                    'course_name' => $matricula->course ? $matricula->course->nome : 'N/A',
+                    'hours' => $hours,
+                    'completion_date' => substr($completionDate, 0, 10), // Apenas YYYY-MM-DD
+                    'status' => 'Concluído/Válido',
+                    'situation' => 'Ativa',
+                    'preferencias' => [
+                        'certificate_url' => $pdfUrl
+                    ]
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao validar certificado: ' . $e->getMessage());
+            return response()->json(['error' => 'Erro interno na validação.'], 500);
+        }
+    }
+
+    /**
+     * publicView
+     * pt-BR: Permite visualizar o PDF do certificado publicamente se o hash for válido.
+     */
+    public function publicView($enrollmentId, $hash)
+    {
+        try {
+            $expectedHash = substr(hash_hmac('sha256', $enrollmentId, config('app.key')), 0, 16);
+            if ($hash !== $expectedHash) {
+                return response()->json(['error' => 'Acesso não autorizado.'], 403);
+            }
+
+            return $this->generatePdf($enrollmentId);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Erro ao abrir certificado.'], 500);
+        }
     }
 }

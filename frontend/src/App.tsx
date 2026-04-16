@@ -538,7 +538,7 @@ const App = () => {
                 </ProtectedRoute>
               } />
               {/* Público / Validação de certificado por matrícula */}
-              <Route path="/certificado/validar/:enrollmentId" element={<CertificateValidate />} />
+              <Route path="/certificado/validar/:enrollmentId/:hash" element={<CertificateValidate />} />
               {/* Área do Aluno / Progresso do Curso (protegida) */}
               <Route path="/aluno/cursos/:slug/progresso" element={
                 <ProtectedRoute>

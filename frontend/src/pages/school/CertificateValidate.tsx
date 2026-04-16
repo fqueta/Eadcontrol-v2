@@ -12,12 +12,13 @@ import { CheckCircle2, XCircle, ExternalLink, ShieldCheck, User, BookOpen, Clock
  * en-US: Simple public page to validate a certificate by enrollment ID.
  */
 export default function CertificateValidate() {
-  const { enrollmentId } = useParams();
+  const { enrollmentId, hash } = useParams();
   const [searchParams] = useSearchParams();
   const id = String(enrollmentId || '');
+  const h = String(hash || '');
   const alunoIdParam = String(searchParams.get('alunoId') || '').trim();
 
-  const { data, isLoading, error } = useValidateCertificate(id, { enabled: !!id });
+  const { data, isLoading, error } = useValidateCertificate(id, h, { enabled: !!id && !!h });
   const enrollment = (data as any)?.enrollment;
 
   const hasCertificate = Boolean(enrollment?.preferencias?.certificate_url);
@@ -29,17 +30,23 @@ export default function CertificateValidate() {
 
   const formatDateBR = (value: string) => {
     if (!value) return '-';
-    const iso = value.includes('T') ? value.split('T')[0] : value;
-    const parts = iso.split('-');
+    // Remove qualquer informação de tempo (HH:mm:ss) se houver
+    const dateOnly = value.split(' ')[0].split('T')[0];
+    const parts = dateOnly.split('-');
     if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
     return value;
   };
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight flex items-center gap-2">
+      <div className="flex flex-col items-center justify-center gap-4 mb-8">
+        <div className="space-y-2 text-center">
+          {(data as any)?.logoUrl && (
+            <div className="mb-4 flex justify-center">
+               <img src={(data as any).logoUrl} alt="Logo" className="h-16 object-contain" />
+            </div>
+          )}
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight flex items-center justify-center gap-2">
             <ShieldCheck className="h-6 w-6 text-primary" />
             Validação de Certificado
           </h1>
@@ -47,15 +54,15 @@ export default function CertificateValidate() {
         </div>
         <Badge
           variant={isValidFinal ? 'default' : 'destructive'}
-          className={isValidFinal ? 'bg-green-500/10 text-green-700 border border-green-500/20' : 'bg-red-500/10 text-red-700 border border-red-500/20'}
+          className={isValidFinal ? 'bg-green-500/10 text-green-700 border border-green-500/20 py-1 px-4' : 'bg-red-500/10 text-red-700 border border-red-500/20 py-1 px-4'}
         >
           {isValidFinal ? (
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-2 font-bold">
               <CheckCircle2 className="h-4 w-4" />
               Válido
             </span>
           ) : (
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-2 font-bold">
               <XCircle className="h-4 w-4" />
               Inválido
             </span>

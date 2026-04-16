@@ -334,7 +334,8 @@ Route::name('api.')->prefix('v1')->middleware([
     Route::post('tracking/whatsapp-contact', [TrackingEventController::class, 'whatsappContact'])->name('tracking.whatsapp-contact');
     // Certificados - validação (pública)
     // EN: Certificate validation public endpoint
-    Route::get('certificates/validate/{enrollmentId}', [CertificatesController::class, 'validateCertificate'])->name('certificates.validate');
+    Route::get('certificates/validate/{enrollmentId}/{hash}', [CertificatesController::class, 'validateCertificate'])->name('certificates.validate');
+    Route::get('certificates/public/view/{enrollmentId}/{hash}', [CertificatesController::class, 'publicView'])->name('certificates.public.view');
     // Rotas para webhooks
     Route::any('webhook/{endp1}', [WebhookController::class, 'handleSingleEndpoint'])->name('webhook.single');
     Route::any('webhook/{endp1}/{endp2}', [WebhookController::class, 'handleDoubleEndpoint'])->name('webhook.double');

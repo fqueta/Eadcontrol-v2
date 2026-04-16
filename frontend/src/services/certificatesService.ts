@@ -29,8 +29,9 @@ class CertificatesService extends BaseApiService {
    * pt-BR: Valida certificado por ID de matrícula.
    * en-US: Validates certificate by enrollment id.
    */
-  async validateCertificate(enrollmentId: string | number): Promise<any> {
-    return this.get<any>(`/certificates/validate/${encodeURIComponent(String(enrollmentId))}`);
+  async validateCertificate(enrollmentId: string | number, hash?: string): Promise<any> {
+    const h = hash ? `/${encodeURIComponent(hash)}` : '';
+    return this.get<any>(`/certificates/validate/${encodeURIComponent(String(enrollmentId))}${h}`);
   }
 
   async generatePdf(enrollmentId: string | number): Promise<Blob> {

@@ -96,6 +96,21 @@
         .qr-bottom-left { bottom: 30px; left: 30px; }
         .qr-bottom-center { bottom: 120px; left: 50%; transform: translateX(-50%); }
         .qr-bottom-right { bottom: 30px; right: 30px; }
+
+        .logo-fixed {
+            position: absolute;
+            z-index: 50;
+        }
+        .logo-fixed img {
+            max-height: 80px;
+            max-width: 250px;
+        }
+        .logo-top-left { top: 30px; left: 30px; }
+        .logo-top-center { top: 30px; left: 50%; transform: translateX(-50%); }
+        .logo-top-right { top: 30px; right: 30px; }
+        .logo-bottom-left { bottom: 30px; left: 30px; }
+        .logo-bottom-center { bottom: 120px; left: 50%; transform: translateX(-50%); }
+        .logo-bottom-right { bottom: 30px; right: 30px; }
     </style>
 </head>
 <body>
@@ -106,6 +121,12 @@
     @if($qrPosition !== 'integrated')
         <div class="qr-fixed qr-{{ $qrPosition }}">
             {!! $qrImgHtml !!}
+        </div>
+    @endif
+
+    @if($logoPosition !== 'integrated')
+        <div class="logo-fixed logo-{{ $logoPosition }}">
+            {!! $logoHtml !!}
         </div>
     @endif
     

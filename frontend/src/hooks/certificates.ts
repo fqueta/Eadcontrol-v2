@@ -35,11 +35,11 @@ export function useSaveCertificateTemplate(options?: any) {
  * pt-BR: Hook para validar certificado por matrícula.
  * en-US: Hook to validate certificate by enrollment id.
  */
-export function useValidateCertificate(enrollmentId: string | number, options?: any) {
+export function useValidateCertificate(enrollmentId: string | number, hash?: string, options?: any) {
   return useQuery({
-    queryKey: ['certificate-validate', String(enrollmentId || '')],
-    queryFn: () => certificatesService.validateCertificate(enrollmentId),
-    enabled: Boolean(enrollmentId),
+    queryKey: ['certificate-validate', String(enrollmentId || ''), String(hash || '')],
+    queryFn: () => certificatesService.validateCertificate(enrollmentId, hash),
+    enabled: Boolean(enrollmentId) && Boolean(hash),
     ...(options || {}),
   });
 }
