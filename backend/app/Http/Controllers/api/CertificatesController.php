@@ -84,13 +84,32 @@ class CertificatesController extends Controller
                     }
                     
                     // Se for URL remota (ex: QR Server ou S3)
-                    $data = file_get_contents($url);
+                    $opts = [
+                        "http" => [
+                            "method" => "GET",
+                            "header" => "User-Agent: PHP\r\n"
+                        ]
+                    ];
+                    $context = stream_context_create($opts);
+                    $data = @file_get_contents($url, false, $context);
+                    
+                    if ($data === false && function_exists('curl_init')) {
+                        $ch = curl_init();
+                        curl_setopt($ch, CURLOPT_URL, $url);
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+                        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                        curl_setopt($ch, CURLOPT_USERAGENT, 'PHP');
+                        $data = curl_exec($ch);
+                        curl_close($ch);
+                    }
+
                     if ($data === false) return '';
                     $base64 = base64_encode($data);
                     return 'data:image/png;base64,' . $base64;
                 } catch (\Exception $e) {
                     Log::error('imgToDataUri failed: ' . $e->getMessage(), ['url' => $url]);
-                    return $url;
+                    return '';
                 }
             };
 
@@ -106,6 +125,8 @@ class CertificatesController extends Controller
                 'endDate' => $endDate,
                 'hours' => $hours,
                 'logo' => ($logoPosition === 'integrated') ? $logoHtml : '',
+                'startData' => $startDate,
+                'endData' => $endDate,
             ];
 
             $bgBase64 = $imgToDataUri($bgUrl);
