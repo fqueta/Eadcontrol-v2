@@ -48,8 +48,7 @@ class CertificatesController extends Controller
             $studentName = $matricula->student ? ($matricula->student->name . ' ' . $matricula->student->lastname) : 'Aluno';
             $courseName = $matricula->course ? $matricula->course->nome : 'Curso';
             $completionDate = $matricula->data_conclusao ? date('d/m/Y', strtotime($matricula->data_conclusao)) : date('d/m/Y');
-            $hours = ($matricula->course->carga_horaria ?? $matricula->course->duracao) ?: 'Carga horária não definida';
-            if (is_numeric($hours)) $hours .= ' horas';
+            $hours = ($matricula->course->carga_horaria ?? $matricula->course->duracao) ?: 'N/A';
 
             // Busca Datas de Início e Fim (Primeira e Última atividade concluída)
             $progressData = \Illuminate\Support\Facades\DB::table('activity_progress')
@@ -70,10 +69,28 @@ class CertificatesController extends Controller
              * imgToDataUri
              * pt-BR: Converte imagem (local ou remota) para base64 para evitar erros de renderização no DomPDF.
              */
-            $imgToDataUri = function ($url) {
+            $imgToDataUri = function ($url) use ($matriculaId) {
                 if (empty($url)) return '';
                 try {
-                    // Se for caminho local do storage
+                    // Tenta resolver caminho local para Tenancy (evita loop de request no localhost)
+                    if (str_contains($url, 'file-storage/') || str_contains($url, 'localhost')) {
+                        $filename = basename(parse_url($url, PHP_URL_PATH));
+                        // Busca no disco do tenant atual
+                        $paths = [
+                            storage_path('app/public/file-storage/' . $filename),
+                            storage_path('app/public/' . $filename),
+                        ];
+                        
+                        foreach ($paths as $path) {
+                            if (file_exists($path)) {
+                                $data = file_get_contents($path);
+                                $type = pathinfo($path, PATHINFO_EXTENSION);
+                                return 'data:image/' . $type . ';base64,' . base64_encode($data);
+                            }
+                        }
+                    }
+
+                    // Se for caminho local padrão do Laravel
                     if (str_contains($url, 'storage/')) {
                         $path = str_replace(url('/storage'), storage_path('app/public'), $url);
                         if (file_exists($path)) {
