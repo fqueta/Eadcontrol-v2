@@ -86,11 +86,27 @@
             display: block;
             margin: 0 auto 5px;
         }
+        .qr-fixed {
+            position: absolute;
+            z-index: 50;
+        }
+        .qr-top-left { top: 30px; left: 30px; }
+        .qr-top-center { top: 30px; left: 50%; transform: translateX(-50%); }
+        .qr-top-right { top: 30px; right: 30px; }
+        .qr-bottom-left { bottom: 30px; left: 30px; }
+        .qr-bottom-center { bottom: 120px; left: 50%; transform: translateX(-50%); }
+        .qr-bottom-right { bottom: 30px; right: 30px; }
     </style>
 </head>
 <body>
     @if(!empty($bgUrl))
         <img src="{{ $bgUrl }}" class="bg-img" />
+    @endif
+
+    @if($qrPosition !== 'integrated')
+        <div class="qr-fixed qr-{{ $qrPosition }}">
+            {!! $qrImgHtml !!}
+        </div>
     @endif
     
     <div class="content">
