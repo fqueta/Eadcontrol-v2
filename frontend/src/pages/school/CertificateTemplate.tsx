@@ -229,7 +229,7 @@ export default function CertificateTemplate() {
                   style={{ aspectRatio: '297 / 210' }}
                 >
                   {bgUrl && (
-                    <div className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${bgUrl})` }} />
+                    <div className="absolute inset-0 z-0 bg-no-repeat" style={{ backgroundImage: `url(${bgUrl})`, backgroundSize: '100% 100%' }} />
                   )}
                   
                   <div className="relative z-10 w-full h-full p-12 md:p-24 flex flex-col items-center justify-center text-center">
