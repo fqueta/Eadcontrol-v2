@@ -970,7 +970,7 @@ class ServiceOrderController extends Controller
             'tipo_pessoa' => 'pf', // pessoa física por padrão
             'status' => 'actived',
             'ativo' => 's',
-            'permission_id' => Qlib::qoption('permission_client_id') ?? 5, // ID da permissão de cliente
+            'permission_id' => Qlib::qoption('permission_client_id') ?: 7, // ID da permissão de cliente
             'token' => Qlib::token(),
             'config' => [
                 'celular' => $contactPhone
