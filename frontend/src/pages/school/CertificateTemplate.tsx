@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+// HMR Force Update: Refreshing editor components
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
