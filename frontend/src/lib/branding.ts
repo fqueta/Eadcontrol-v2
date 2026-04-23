@@ -195,6 +195,16 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
       const fontFamily = String(dataObj['app_font_family'] || '').trim();
       const heroTitle = String(dataObj['home_hero_title'] || '').trim();
       const heroImageUrl = String(dataObj['home_hero_image_url'] || '').trim();
+      const heroImages = typeof dataObj['home_hero_images'] === 'string' ? dataObj['home_hero_images'] : (dataObj['home_hero_images'] ? JSON.stringify(dataObj['home_hero_images']) : '');
+      const getVal = (k: string) => {
+        const v = dataObj[k];
+        return v === false ? 'false' : v === true ? 'true' : String(v ?? '').trim();
+      };
+      
+      const showOverlay = getVal('home_hero_show_overlay');
+      const showTexts = getVal('home_hero_show_texts');
+      const showButton = getVal('home_hero_show_button');
+      const autoplayInterval = getVal('home_hero_autoplay_interval');
       const hf1t = String(dataObj['home_feature_1_title'] || '').trim();
       const hf1d = String(dataObj['home_feature_1_desc'] || '').trim();
       const hf2t = String(dataObj['home_feature_2_title'] || '').trim();
@@ -225,6 +235,11 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
         setVal('app_font_family', fontFamily, '__APP_FONT_FAMILY__');
         setVal('home_hero_title', heroTitle, '__HOME_HERO_TITLE__');
         setVal('home_hero_image_url', heroImageUrl, '__HOME_HERO_IMAGE_URL__');
+        if (heroImages) setVal('home_hero_images', heroImages, '__HOME_HERO_IMAGES__');
+        if (showOverlay) setVal('home_hero_show_overlay', showOverlay, '__HOME_HERO_SHOW_OVERLAY__');
+        if (showTexts) setVal('home_hero_show_texts', showTexts, '__HOME_HERO_SHOW_TEXTS__');
+        if (showButton) setVal('home_hero_show_button', showButton, '__HOME_HERO_SHOW_BUTTON__');
+        if (autoplayInterval) setVal('home_hero_autoplay_interval', autoplayInterval, '__HOME_HERO_AUTOPLAY_INTERVAL__');
         
         notify();
 
@@ -232,7 +247,8 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
           if ((import.meta as any)?.env?.DEV) {
             const keys = [
               'app_institution_name','app_institution_slogan','app_institution_description',
-              'home_hero_title','home_hero_image_url',
+              'home_hero_title','home_hero_image_url','home_hero_images',
+              'home_hero_show_overlay','home_hero_show_texts','home_hero_show_button','home_hero_autoplay_interval',
               'home_feature_1_title','home_feature_1_desc',
               'home_feature_2_title','home_feature_2_desc',
               'home_feature_3_title','home_feature_3_desc',

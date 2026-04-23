@@ -67,6 +67,11 @@ class OptionController extends Controller
             // Home hero title (banner principal)
             'home_hero_title',
             'home_hero_image_url',
+            'home_hero_images',
+            'home_hero_show_overlay',
+            'home_hero_show_texts',
+            'home_hero_show_button',
+            'home_hero_autoplay_interval',
             'home_feature_1_title',
             'home_feature_1_desc',
             'home_feature_2_title',

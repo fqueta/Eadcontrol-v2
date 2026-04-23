@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BrandLogo from '@/components/branding/BrandLogo';
 import { bannerService, BannerSlide } from '@/services/bannerService';
@@ -8,32 +8,49 @@ import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription } f
 import HeroImageEditor from './HeroImageEditor';
 import { EditableOptionText } from '@/components/common/EditableOptionText';
 
+function useHeroSettings() {
+  const [showOverlay, setShowOverlay] = useState(() => localStorage.getItem('home_hero_show_overlay') !== 'false');
+  const [showTexts, setShowTexts] = useState(() => localStorage.getItem('home_hero_show_texts') !== 'false');
+  const [showButton, setShowButton] = useState(() => localStorage.getItem('home_hero_show_button') !== 'false');
+  const [autoplayInterval, setAutoplayInterval] = useState(() => Number(localStorage.getItem('home_hero_autoplay_interval') || 6) * 1000);
+
+  const updateSettings = useCallback(() => {
+    setShowOverlay(localStorage.getItem('home_hero_show_overlay') !== 'false');
+    setShowTexts(localStorage.getItem('home_hero_show_texts') !== 'false');
+    setShowButton(localStorage.getItem('home_hero_show_button') !== 'false');
+    setAutoplayInterval(Number(localStorage.getItem('home_hero_autoplay_interval') || 6) * 1000);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('hero_settings_updated', updateSettings);
+    return () => {
+      window.removeEventListener('hero_settings_updated', updateSettings);
+    };
+  }, [updateSettings]);
+
+  return { showOverlay, showTexts, showButton, autoplayInterval };
+}
+
 /**
  * HeroBannerProps
  */
 interface HeroBannerProps {
-  /** Fallback: nome da instituição para exibir quando não há banners */
   institutionName?: string;
-  /** Fallback: slogan para exibir quando não há banners */
   institutionSlogan?: string;
-  /** Fallback: descrição para exibir quando não há banners */
   institutionDescription?: string;
 }
 
 /**
  * HeroBanner
- * pt-BR: Componente de banner rotativo para a landing page.
- *        Busca slides do tipo 'banner_slide' via API pública.
- *        Exibe fallback estático caso não haja slides cadastrados.
- * en-US: Rotating banner component for the landing page.
- *        Fetches slides of type 'banner_slide' via public API.
- *        Shows a static fallback if no slides are registered.
+ * pt-BR: Componente de banner rotativo premium para a landing page.
+ *        Refatorado para não usar bibliotecas de terceiros complexas,
+ *        evitando erros de cache/hooks do React.
  */
 export function HeroBanner({ institutionName, institutionSlogan, institutionDescription }: HeroBannerProps) {
   const [slides, setSlides] = useState<BannerSlide[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [isPaused, setIsPaused] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const { showOverlay, showTexts, showButton, autoplayInterval } = useHeroSettings();
 
   // Resolve fallbacks from branding
   const name = institutionName || getInstitutionName() || '';
@@ -44,233 +61,267 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
     bannerService.getPublicBanners().then((data) => {
       setSlides(data);
       setIsLoading(false);
+    }).catch(() => {
+      setIsLoading(false);
     });
   }, []);
 
-  const goToNext = useCallback(() => {
-    setCurrentIndex((prev) => (prev + 1) % slides.length);
+  const scrollPrev = useCallback(() => {
+    setSelectedIndex((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
   }, [slides.length]);
 
-  const goToPrev = useCallback(() => {
-    setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length);
+  const scrollNext = useCallback(() => {
+    setSelectedIndex((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
   }, [slides.length]);
 
-  // Auto-advance timer
+  const scrollTo = useCallback((index: number) => {
+    setSelectedIndex(index);
+  }, []);
+
+  // Auto-play logic
   useEffect(() => {
-    if (slides.length <= 1 || isPaused) return;
-    const timer = setInterval(goToNext, 5000);
-    return () => clearInterval(timer);
-  }, [slides.length, isPaused, goToNext]);
+    if (slides.length <= 1) return;
+    const interval = setInterval(() => {
+      setSelectedIndex((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
+    }, autoplayInterval);
+    return () => clearInterval(interval);
+  }, [slides.length, autoplayInterval]);
 
-  // No slides registered → render the static fallback hero
+  // No slides registered from API → render the static fallback carousel
   if (!isLoading && slides.length === 0) {
-    return <StaticHero name={name} slogan={slogan} description={description} />;
+    return <StaticCarousel name={name} slogan={slogan} description={description} />;
   }
 
-  const current = slides[currentIndex];
-
   return (
-    <section
-      className="relative md:h-[85vh] min-h-[600px] flex items-center px-4 overflow-hidden"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-    >
-      {/* Background image with enhanced overlay */}
-      {current?.image_url && (
-        <div className="absolute inset-0 z-0">
-          <div
-            className="w-full h-full bg-cover bg-center bg-no-repeat bg-fixed transition-transform duration-1000 transform scale-105"
-            style={{ backgroundImage: `url(${current.image_url})` }}
-            role="img"
-            aria-label={current.title}
-          />
-          <div
-            className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60"
-            style={{ opacity: current.config?.overlay_opacity ?? 0.6 }}
-          />
-        </div>
-      )}
-
-      {/* Modernized Content Container (Glassmorphism) */}
-      <div className="container mx-auto relative z-10">
-        <div className="max-w-5xl mx-auto p-8 md:p-12 rounded-xl bg-black/20 backdrop-blur-xl border border-white/10 shadow-2xl animate-in fade-in zoom-in-95 duration-1000 text-center">
-          <div className="inline-block p-1 rounded-xl bg-white/5 border border-white/10 mb-6 group transition-transform hover:scale-110">
-            <BrandLogo alt="Logo" className="h-12 w-auto drop-shadow-2xl animate-pulse" />
-          </div>
-          
-          <p className="text-sm md:text-base text-blue-300 font-bold uppercase tracking-[0.3em] mb-4 drop-shadow-sm">{name}</p>
-
-          <h1
-            className="text-5xl md:text-8xl font-black mb-8 leading-[1.1] tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/70"
-            style={{ color: current?.config?.text_color ?? undefined }}
+    <section className="relative h-[45vh] sm:h-[60vh] md:h-[85vh] min-h-[320px] sm:min-h-[400px] md:min-h-[600px] w-full overflow-hidden bg-slate-900">
+      <div className="h-full w-full relative">
+        {slides.map((slide, index) => (
+          <div 
+            key={slide.id} 
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+              index === selectedIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+            }`}
           >
-            {current?.title}
-          </h1>
-
-          {current?.subtitle && (
-            <p
-              className="text-xl md:text-2xl mb-8 font-medium text-slate-200/90 leading-relaxed max-w-2xl mx-auto"
-            >
-              {current.subtitle}
-            </p>
-          )}
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
-            {current?.config?.cta_url ? (
-              <Button size="lg" asChild className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white rounded-lg h-14 px-10 text-lg font-bold transition-all shadow-xl hover:shadow-blue-500/20 active:scale-95">
-                <Link to={current.config.cta_url}>
-                  {current.config.cta_label || 'Saiba mais'}
-                  <ArrowRight className="ml-2 h-6 w-6" />
-                </Link>
-              </Button>
-            ) : (
-              <Button size="lg" asChild className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white rounded-lg h-14 px-10 text-lg font-bold transition-all shadow-xl hover:shadow-blue-500/20 active:scale-95">
-                <Link to="/cursos">Ver Cursos <ArrowRight className="ml-2 h-6 w-6" /></Link>
-              </Button>
+            {/* Background */}
+            <div 
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${slide.image_url})` }}
+            />
+            {/* Modern Overlay Gradient */}
+            {showOverlay && (
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/50 to-transparent z-10" />
             )}
             
-            <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer" className="w-full sm:w-auto">
-              <Button size="lg" variant="outline" className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-lg h-14 px-10 text-lg font-bold transition-all backdrop-blur-sm">
-                Conhecer o site
-                <ExternalLink className="ml-2 h-5 w-5" />
-              </Button>
-            </a>
+            <div className="container mx-auto h-full relative z-20 flex items-center px-6 md:px-12 pointer-events-none">
+              <div className={`max-w-3xl transition-all duration-1000 transform pointer-events-auto ${index === selectedIndex ? 'translate-x-0 opacity-100' : '-translate-x-12 opacity-0'}`}>
+                {showTexts && (
+                  <>
+                    <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold text-sm mb-8 backdrop-blur-md">
+                      <Play className="h-4 w-4 fill-current" />
+                      <span className="uppercase tracking-widest">{name}</span>
+                    </div>
+                    
+                    <h2 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white mb-4 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg">
+                      {slide.title || slogan}
+                    </h2>
+                    
+                    <p className="text-base sm:text-lg md:text-xl text-slate-300 mb-8 md:mb-10 max-w-xl leading-relaxed font-medium drop-shadow">
+                      {slide.subtitle || description}
+                    </p>
+                  </>
+                )}
 
-            <div className="w-full sm:w-auto">
-              <HeroImageEditor 
-                size="lg" 
-                className="w-full sm:w-auto bg-fuchsia-600 hover:bg-fuchsia-500 text-white border-transparent h-14 px-10 rounded-lg font-bold transition-all shadow-xl hover:shadow-fuchsia-500/20"
-              />
+                <div className="flex flex-col sm:flex-row items-center gap-5">
+                  {showButton && (
+                    <Button size="lg" className="w-full sm:w-auto h-16 px-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg shadow-xl shadow-blue-500/20 transition-all hover:scale-105 active:scale-95" asChild>
+                      <Link to="/cursos">
+                        Explorar Cursos
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        ))}
       </div>
 
-      {/* Pagination & Arrows - Minimalist */}
+      {/* Navigation Controls */}
       {slides.length > 1 && (
         <>
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-3 z-30">
+          <button 
+            onClick={scrollPrev}
+            className="absolute left-6 top-1/2 -translate-y-1/2 z-30 p-4 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white backdrop-blur-md transition-all active:scale-90"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <button 
+            onClick={scrollNext}
+            className="absolute right-6 top-1/2 -translate-y-1/2 z-30 p-4 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white backdrop-blur-md transition-all active:scale-90"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+
+          {/* Pagination Indicators */}
+          <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-3 z-30">
             {slides.map((_, idx) => (
               <button
                 key={idx}
-                onClick={() => setCurrentIndex(idx)}
-                className={`w-12 h-1 rounded-full transition-all duration-500 ${
-                  idx === currentIndex ? 'bg-blue-500' : 'bg-white/20 hover:bg-white/40'
+                onClick={() => scrollTo(idx)}
+                className={`h-2 rounded-full transition-all duration-500 ${
+                  idx === selectedIndex ? 'w-12 bg-primary shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'w-2 bg-white/30'
                 }`}
               />
             ))}
           </div>
-
-          <button
-            onClick={goToPrev}
-            className="absolute left-8 top-1/2 -translate-y-1/2 z-20 p-4 rounded-3xl bg-white/5 hover:bg-white/10 text-white transition-all backdrop-blur-md border border-white/10 group active:scale-90"
-          >
-            <ChevronLeft className="h-8 w-8 transition-transform group-hover:-translate-x-1" />
-          </button>
-          <button
-            onClick={goToNext}
-            className="absolute right-8 top-1/2 -translate-y-1/2 z-20 p-4 rounded-3xl bg-white/5 hover:bg-white/10 text-white transition-all backdrop-blur-md border border-white/10 group active:scale-90"
-          >
-            <ChevronRight className="h-8 w-8 transition-transform group-hover:translate-x-1" />
-          </button>
         </>
       )}
+
+      {/* Editor do Banner fora do loop para não quebrar layout */}
+      <HeroImageEditor 
+        className="absolute top-8 right-8 z-50 pointer-events-auto"
+      />
     </section>
   );
 }
 
-/**
- * StaticHero
- * pt-BR: Fallback estático para quando não há banners cadastrados.
- * en-US: Static fallback when no banners are registered.
- */
-function StaticHero({ name, slogan, description }: { name: string; slogan: string; description: string }) {
-  const [heroImage, setHeroImage] = useState(() => localStorage.getItem('home_hero_image_url') || '');
+type StaticSlide = {
+  url: string;
+  title?: string;
+  subtitle?: string;
+  buttonLabel?: string;
+  buttonUrl?: string;
+};
 
-  // Listen for image updates from HeroImageEditor
-  useEffect(() => {
-    const handleStorage = () => {
-      const updatedImage = localStorage.getItem('home_hero_image_url');
-      if (updatedImage !== heroImage) {
-        setHeroImage(updatedImage || '');
+/**
+ * StaticCarousel
+ * pt-BR: Fallback que suporta múltiplas imagens locais ou configurações de branding.
+ */
+function StaticCarousel({ name, slogan, description }: { name: string; slogan: string; description: string }) {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [displayImages, setDisplayImages] = useState<StaticSlide[]>([]);
+  const { showOverlay, showTexts, showButton, autoplayInterval } = useHeroSettings();
+
+  const updateImages = useCallback(() => {
+    try {
+      const stored = localStorage.getItem('home_hero_images');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setDisplayImages(parsed.map((item: any) => 
+            typeof item === 'string' ? { url: item } : item
+          ));
+          return;
+        }
       }
-    };
-    window.addEventListener('storage', handleStorage);
-    window.addEventListener('branding:updated', handleStorage);
+      // Fallback para imagem única ou default
+      const single = localStorage.getItem('home_hero_image_url') || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=2070&auto=format&fit=crop';
+      setDisplayImages([{ url: single }]);
+    } catch {
+      setDisplayImages([{ url: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=2070&auto=format&fit=crop' }]);
+    }
+  }, []);
+
+  useEffect(() => {
+    updateImages();
+    window.addEventListener('storage', updateImages);
+    window.addEventListener('hero_images_updated', updateImages);
     return () => {
-      window.removeEventListener('storage', handleStorage);
-      window.removeEventListener('branding:updated', handleStorage);
+      window.removeEventListener('storage', updateImages);
+      window.removeEventListener('hero_images_updated', updateImages);
     };
-  }, [heroImage]);
+  }, [updateImages]);
+
+  useEffect(() => {
+    if (displayImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setSelectedIndex((prev) => (prev === displayImages.length - 1 ? 0 : prev + 1));
+    }, autoplayInterval);
+    return () => clearInterval(interval);
+  }, [displayImages.length, autoplayInterval]);
 
   return (
-    <section className="relative md:h-[85vh] min-h-[600px] flex items-center px-4 overflow-hidden group">
-      {/* Background image with parallax effect */}
-      <div className="absolute inset-0 z-0">
-        {heroImage ? (
-          <div
-            className="w-full h-full bg-cover bg-center bg-no-repeat bg-fixed"
-            style={{ backgroundImage: `url(${heroImage})` }}
-            role="img"
-            aria-label="Hero Background"
-          />
-        ) : (
-          <div className="w-full h-full bg-slate-200" />
-        )}
-        <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] transition-all duration-700" />
-      </div>
-
-      <div className="container mx-auto relative z-10">
-        <div className="max-w-5xl mx-auto p-8 md:p-12 rounded-xl bg-white/30 backdrop-blur-md border border-white/40 shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-1000 text-center">
-          <div className="inline-block p-1 rounded-xl bg-white/40 border border-white/60 mb-8 shadow-sm animate-bounce-slow">
-            <BrandLogo alt="Logo" className="h-16 w-auto drop-shadow-sm" />
-          </div>
-          
-          <h1 className="text-4xl md:text-5xl font-black mb-10 tracking-tight leading-[1] bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
-            <EditableOptionText
-              optionKey="home_banner_title"
-              defaultValue={name === 'Eadcontrol' ? (slogan || 'Tecnologia que inclui. Educação que transforma!') : (slogan || name)}
-              as="span"
+    <section className="relative h-[45vh] sm:h-[60vh] md:h-[85vh] min-h-[320px] sm:min-h-[400px] md:min-h-[600px] w-full overflow-hidden bg-slate-900">
+      <div className="h-full w-full relative">
+        {displayImages.map((img, index) => (
+          <div 
+            key={index} 
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+              index === selectedIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
+            }`}
+          >
+            <div 
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${img.url})` }}
             />
-          </h1>
-          
-          <div className="text-lg md:text-xl text-slate-800/80 mb-12 max-w-3xl mx-auto font-medium leading-relaxed">
-            <EditableOptionText
-              optionKey="home_banner_desc"
-              defaultValue={description || 'Soluções educacionais inclusivas: plataformas pedagógicas, comunicação alternativa e mais.'}
-              as="span"
-              multiline
-            />
-          </div>
+            {showOverlay && (
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/50 to-transparent z-10" />
+            )}
+            
+            <div className="container mx-auto h-full relative z-20 flex items-center px-6 md:px-12 pointer-events-none">
+              <div className={`max-w-3xl transition-all duration-1000 transform pointer-events-auto ${index === selectedIndex ? 'translate-x-0 opacity-100' : '-translate-x-12 opacity-0'}`}>
+                {showTexts && (
+                  <>
+                    <div className="mb-8">
+                      <BrandLogo className="h-16 w-auto brightness-0 invert opacity-90 drop-shadow-lg" />
+                    </div>
+                    
+                    <h2 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white mb-4 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg">
+                      {img.title ? img.title : (
+                        <EditableOptionText 
+                          optionKey="home_hero_title" 
+                          defaultValue={slogan || 'Sua plataforma de ensino inclusiva.'} 
+                          multiline={false}
+                        />
+                      )}
+                    </h2>
+                    
+                    <p className="text-base sm:text-lg md:text-xl text-slate-300 mb-8 md:mb-10 max-w-xl leading-relaxed font-medium drop-shadow">
+                      {img.subtitle ? img.subtitle : (
+                        <EditableOptionText 
+                          optionKey="home_hero_description" 
+                          defaultValue={description || 'Soluções educacionais inclusivas: plataformas pedagógicas e mais.'} 
+                        />
+                      )}
+                    </p>
+                  </>
+                )}
 
-          <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
-            <Button size="lg" asChild className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg h-14 px-10 text-lg font-extrabold transition-all shadow-xl hover:shadow-primary/30 active:scale-95 border-none">
-              <Link to="/cursos">
-                Ver Cursos <ArrowRight className="ml-2 h-6 w-6" />
-              </Link>
-            </Button>
-
-            <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer" className="w-full sm:w-auto">
-              <Button size="lg" variant="outline" className="w-full bg-secondary hover:bg-secondary/90 border-transparent text-secondary-foreground rounded-lg h-14 px-10 text-lg font-extrabold transition-all shadow-xl hover:shadow-secondary/30 active:scale-95">
-                Conhecer o site <ArrowRight className="ml-2 h-6 w-6" />
-              </Button>
-            </a>
-
-            <Button size="lg" variant="outline" asChild className="w-full sm:w-auto bg-white/80 hover:bg-white border-slate-200 text-primary rounded-lg h-14 px-10 text-lg font-extrabold transition-all shadow-sm backdrop-blur-sm">
-              <Link to="/register">Cadastrar</Link>
-            </Button>
-
-            <div className="w-full sm:w-auto">
-              <HeroImageEditor 
-                size="lg" 
-                onChanged={(url) => setHeroImage(url)} 
-                className="w-full sm:w-auto bg-primary/20 hover:bg-primary/30 text-primary border-primary/20 h-14 px-10 rounded-lg font-extrabold transition-all shadow-sm active:scale-95 backdrop-blur-sm"
-              />
+                <div className="flex flex-col sm:flex-row items-center gap-5">
+                  {showButton && (
+                    <Button size="lg" className="w-full sm:w-auto h-16 px-10 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-lg shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95" asChild>
+                      <Link to={img.buttonUrl || "/cursos"}>
+                        {img.buttonLabel || "Conhecer Cursos"}
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        ))}
       </div>
+
+      {displayImages.length > 1 && (
+        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-3 z-30">
+          {displayImages.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setSelectedIndex(idx)}
+              className={`h-2 rounded-full transition-all duration-500 ${
+                idx === selectedIndex ? 'w-12 bg-primary shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'w-2 bg-slate-400/50 hover:bg-slate-300'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Editor do Banner fora do loop para não quebrar layout */}
+      <HeroImageEditor 
+        className="absolute top-8 right-8 z-50 pointer-events-auto"
+      />
     </section>
   );
 }

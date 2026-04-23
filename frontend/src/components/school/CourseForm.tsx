@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useForm, FormProvider, useFieldArray, useWatch, useFormContext } from 'react-hook-form';
+import { useForm, FormProvider, useFieldArray, useWatch, useFormContext, Controller } from 'react-hook-form';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -641,8 +641,18 @@ export function CourseForm({
     };
 
     const maskCurrencyIfNumeric = (v: any) => {
-      if (v === null || v === undefined) return '';
-      return typeof v === 'number' ? currencyApplyMask(String(v), 'pt-BR', 'BRL') : String(v);
+      if (v === null || v === undefined || v === '') return '';
+      const s = String(v).trim();
+      // Se já contém R$, assume que já está formatado
+      if (s.includes('R$')) return s;
+      // Se é um número ou string numérica (ex: "158.08"), aplica a máscara pt-BR
+      const num = Number(s.replace(',', '.'));
+      if (!isNaN(num)) {
+        // Normaliza para centavos para garantir que a máscara seja aplicada corretamente
+        const cents = Math.round(num * 100);
+        return currencyApplyMask(String(cents), 'pt-BR', 'BRL');
+      }
+      return s;
     };
 
     const normalized = {
@@ -699,9 +709,11 @@ export function CourseForm({
     // Enable auto slug only if it's empty or already derived from the name.
     const initialAuto = !normalized.slug || normalized.slug === toSlug(normalized.nome || '');
     setAutoSlugEnabled(!!initialAuto);
-    // Recalcula valor da parcela quando editando
-    recalcInstallment(normalized.valor, normalized.parcelas);
-  }, [initialData]);
+    // Recalcula valor da parcela apenas se estiver vazio (novo ou sem valor gravado)
+    if (!normalized.valor_parcela || normalized.valor_parcela === '') {
+      recalcInstallment(normalized.valor, normalized.parcelas);
+    }
+  }, [id]);
 
   // Removido: sincronização de título da imagem de capa. Campo oculto.
 
@@ -2724,11 +2736,20 @@ export function CourseForm({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-bold text-foreground/80">Valor da Parcela</Label>
-                    <Input
-                      placeholder="R$ 0,00"
-                      readOnly
-                      className="h-11 rounded-xl bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 font-semibold text-muted-foreground italic"
-                      value={form.watch('valor_parcela') || ''}
+                    <Controller
+                      control={form.control}
+                      name="valor_parcela"
+                      render={({ field }) => (
+                        <Input
+                          placeholder="R$ 0,00"
+                          className="h-11 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 font-bold text-primary"
+                          value={field.value || ''}
+                          onChange={(e) => {
+                            const v = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
+                            field.onChange(v);
+                          }}
+                        />
+                      )}
                     />
                   </div>
                 </div>
