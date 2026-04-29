@@ -1,17 +1,21 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEnrollmentsList } from '@/hooks/enrollments';
 import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
-import { BookOpen, Receipt, ShoppingCart, GraduationCap, UserCircle } from 'lucide-react';
+import { BookOpen, Receipt, ShoppingCart, GraduationCap, UserCircle, Play, Video, Search } from 'lucide-react';
 import { coursesService } from '@/services/coursesService';
 import { publicCoursesService } from '@/services/publicCoursesService';
 import { useToast } from '@/hooks/use-toast';
 import { certificatesService } from '@/services/certificatesService';
 import { getInstitutionWhatsApp } from '@/lib/branding';
+import { videoTipsService, VideoTip } from '@/services/videoTipsService';
+import VideoTipModal from '@/components/school/VideoTipModal';
+import { Input } from '@/components/ui/input';
 
 /**
  * StudentArea
@@ -30,6 +34,9 @@ export default function StudentArea() {
    */
   const [statusFilter, setStatusFilter] = useState<'todos' | 'em_andamento' | 'concluido'>('todos');
   const [turmaFilter, setTurmaFilter] = useState<string | 'todas'>('todas');
+  const [selectedTip, setSelectedTip] = useState<VideoTip | null>(null);
+  const [searchTip, setSearchTip] = useState('');
+  const [activeCategoryFilter, setActiveCategoryFilter] = useState('Todas');
   /**
    * activeCategory
    * pt-BR: Categoria de visualização: matriculado (mat) ou interesse (int).
@@ -93,6 +100,43 @@ export default function StudentArea() {
     { page: 1, per_page: 50, id_cliente: clientId, public: '1', situacao: activeCategory } as any,
     { enabled: !!clientId, staleTime: 5 * 60 * 1000 }
   );
+
+  /**
+   * Video tips — published tips from the school
+   * pt-BR: Busca dicas em vídeo publicadas pela escola para os alunos.
+   * en-US: Fetches published video tips from the school for students.
+   */
+  const { data: tipsResp } = useQuery({
+    queryKey: ['student', 'video-tips'],
+    queryFn: () => videoTipsService.getStudentTips({ per_page: 6 }),
+    staleTime: 5 * 60 * 1000,
+  });
+  const { videoTips, categories } = useMemo(() => {
+    const items = tipsResp?.data ?? tipsResp?.items ?? [];
+    const list = Array.isArray(items) ? items : [];
+    
+    // Extrai categorias únicas
+    const cats = ['Todas', ...Array.from(new Set(
+      list.map(t => (t.config as any)?.category).filter(Boolean) as string[]
+    ))];
+
+    let filtered = list;
+    
+    // Filtro por categoria
+    if (activeCategoryFilter !== 'Todas') {
+      filtered = filtered.filter(t => (t.config as any)?.category === activeCategoryFilter);
+    }
+
+    // Filtro por busca
+    if (searchTip.trim()) {
+      filtered = filtered.filter(tip => 
+        tip.title?.toLowerCase().includes(searchTip.toLowerCase()) ||
+        (tip.excerpt || tip.description)?.toLowerCase().includes(searchTip.toLowerCase())
+      );
+    }
+    
+    return { videoTips: filtered, categories: cats };
+  }, [tipsResp, searchTip, activeCategoryFilter]);
 
   /**
    * normalizeEnrollments
@@ -448,6 +492,7 @@ export default function StudentArea() {
   }
 
   return (
+    <>
     <InclusiveSiteLayout>
       <div className="container mx-auto p-6 space-y-8">
         {/* Header Personalizado (Banner) */}
@@ -590,6 +635,103 @@ export default function StudentArea() {
                         )}
                    </div>
                  </div>
+
+                  {/* Dicas em Vídeo - Seção Central */}
+                  <div className="pt-10">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-lg">
+                          <Video className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                        </div>
+                        <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100">Dicas em Vídeo</h2>
+                      </div>
+                      
+                      {/* Busca de vídeos */}
+                      <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Buscar dicas…"
+                          className="pl-9 h-9 text-sm bg-white/50 backdrop-blur-sm"
+                          value={searchTip}
+                          onChange={(e) => setSearchTip(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Filtros de Categoria */}
+                    {categories.length > 2 && (
+                      <div className="flex flex-wrap gap-2 mb-6">
+                        {categories.map((cat) => (
+                          <Button
+                            key={cat}
+                            variant={activeCategoryFilter === cat ? 'default' : 'outline'}
+                            size="sm"
+                            className="rounded-full h-8 px-4 text-xs"
+                            onClick={() => setActiveCategoryFilter(cat)}
+                          >
+                            {cat}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+
+                    {videoTips.length === 0 ? (
+                      <div className="bg-slate-50/50 border border-dashed rounded-xl py-12 flex flex-col items-center justify-center text-center">
+                        <Video className="w-10 h-10 text-slate-300 mb-3" />
+                        <p className="text-slate-500 text-sm">Nenhum vídeo encontrado para sua busca.</p>
+                        {searchTip && (
+                          <Button variant="link" size="sm" onClick={() => setSearchTip('')} className="mt-1">
+                            Limpar busca
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {videoTips.map((tip) => (
+                          <Card 
+                            key={tip.id} 
+                            className="overflow-hidden border-none shadow-sm hover:shadow-md transition-all group cursor-pointer bg-white/80 backdrop-blur-sm"
+                            onClick={() => setSelectedTip(tip)}
+                          >
+                            <div className="relative aspect-video overflow-hidden bg-slate-100">
+                              {tip.thumbnail ? (
+                                <img
+                                  src={tip.thumbnail}
+                                  alt={tip.title}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Video className="w-8 h-8 text-slate-300" />
+                                </div>
+                              )}
+                              {/* Overlay de Play */}
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-all">
+                                <div className="w-12 h-12 rounded-full bg-white/90 shadow-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                  <Play className="w-5 h-5 text-slate-800 ml-0.5" />
+                                </div>
+                              </div>
+                              {/* Provider Badge */}
+                              <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-black/60 text-white backdrop-blur-md">
+                                {tip.provider || 'Vídeo'}
+                              </span>
+                            </div>
+                            <CardContent className="p-4">
+                              <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
+                                {tip.title}
+                              </h3>
+                              {tip.excerpt && (
+                                <p className="text-xs text-muted-foreground line-clamp-2 mt-1.5 leading-relaxed">
+                                  {tip.excerpt}
+                                </p>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
             </div>
 
             {/* Sidebar - Suporte e Outros */}
@@ -619,7 +761,7 @@ export default function StudentArea() {
                          </Button>
                     </CardContent>
                 </Card>
-                
+
                 {/* Banner Promocional ou Aviso */}
                 <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl p-6 border border-primary/10">
                     <h3 className="font-semibold text-primary mb-2">Mantenha seu perfil atualizado</h3>
@@ -630,5 +772,14 @@ export default function StudentArea() {
         </div>
       </div>
     </InclusiveSiteLayout>
-  );
+
+    {/* Modal de reprodução de vídeo/dica */}
+    {selectedTip && (
+      <VideoTipModal
+        tip={selectedTip}
+        open={!!selectedTip}
+        onClose={() => setSelectedTip(null)}
+      />
+    )}
+  </>);
 }

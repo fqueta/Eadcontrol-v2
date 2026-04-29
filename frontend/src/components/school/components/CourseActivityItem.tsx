@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useFormContext, useWatch, useFieldArray } from 'react-hook-form';
-import { GripVertical, ChevronDown, ChevronUp, ChevronLeft, X, Plus, Loader2, PlayCircle, FileText, Layout, Download, CheckSquare, Clock } from 'lucide-react';
+import { GripVertical, ChevronDown, ChevronUp, ChevronLeft, X, Plus, Loader2, PlayCircle, FileText, Layout, Download, CheckSquare, Clock, Youtube, Play, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
+import { extractVideoMeta } from '@/services/videoTipsService';
 
 // Helper for keys
 const activityKey = (mIdx: number, aIdx: number) => `${mIdx}:${aIdx}`;
@@ -113,6 +114,15 @@ export function CourseActivityItem({
     const localUpdateQuizConfig = (fieldName: string, val: any) => {
         setValue(`modulos.${index}.atividades.${aIdx}.quiz_config.${fieldName}`, val);
     };
+
+    // Video Meta Preview
+    const videoMeta = (a.tipo === 'video' && a.video_url) ? (() => {
+        try {
+            return extractVideoMeta(a.video_url);
+        } catch {
+            return null;
+        }
+    })() : null;
 
     return (
        <div
@@ -271,11 +281,68 @@ export function CourseActivityItem({
                                          </div>
                                     </div>
                                 </div>
-                                {!import.meta.env.VITE_YOUTUBE_API_KEY && ((a as any).video_source === 'youtube') && (
+
+                                 {/* Video Preview Layer */}
+                                 {videoMeta && (
+                                    <div className="mt-3 p-3 rounded-xl border bg-white/60 backdrop-blur-sm shadow-sm flex flex-col sm:flex-row gap-4 animate-in zoom-in-95 fade-in duration-300">
+                                        {/* Thumbnail Container */}
+                                        <div className="relative w-full sm:w-[180px] aspect-video rounded-lg overflow-hidden bg-slate-100 group/preview">
+                                            {videoMeta.thumbnail ? (
+                                                <img 
+                                                    src={videoMeta.thumbnail} 
+                                                    alt="Preview" 
+                                                    className="w-full h-full object-cover group-hover/preview:scale-110 transition-transform duration-500"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <PlayCircle className="w-8 h-8 text-slate-300" />
+                                                </div>
+                                            )}
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                                                <div className="w-10 h-10 rounded-full bg-white/90 shadow-lg flex items-center justify-center">
+                                                    <Play className="h-4 w-4 text-slate-800 ml-0.5" />
+                                                </div>
+                                            </div>
+                                            <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md flex items-center gap-1">
+                                                {videoMeta.provider === 'youtube' ? (
+                                                    <Youtube className="h-3 w-3 text-red-500" />
+                                                ) : (
+                                                    <PlayCircle className="h-3 w-3 text-blue-400" />
+                                                )}
+                                                <span className="text-[9px] font-bold text-white uppercase">{videoMeta.provider}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Info & Meta */}
+                                        <div className="flex-1 space-y-2">
+                                            <div className="flex items-start justify-between">
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">Preview Confirmado</p>
+                                                    <p className="text-xs font-bold text-slate-700 mt-0.5 line-clamp-1">Vínculo com {videoMeta.provider === 'youtube' ? 'YouTube' : 'Vimeo'} estabelecido</p>
+                                                </div>
+                                                <Button 
+                                                    type="button" 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="h-7 text-[10px] font-bold uppercase hover:bg-primary/5 hover:text-primary"
+                                                    onClick={() => window.open(videoMeta.video_url, '_blank')}
+                                                >
+                                                    <ExternalLink className="h-3 w-3 mr-1" /> Testar Link
+                                                </Button>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                <Badge variant="outline" className="bg-white text-[9px] font-bold border-slate-200">ID: {videoMeta.video_id}</Badge>
+                                                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[9px] font-bold">PRONTO PARA STREAMING</Badge>
+                                            </div>
+                                        </div>
+                                    </div>
+                                 )}
+                                 
+                                 {!import.meta.env.VITE_YOUTUBE_API_KEY && ((a as any).video_source === 'youtube') && (
                                     <div className="flex items-center gap-2 text-[10px] text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-200/50 italic font-medium">
                                        Tip: Configure VITE_YOUTUBE_API_KEY para importar a duração automaticamente.
                                     </div>
-                                )}
+                                 )}
                              </div>
                          )}
                          

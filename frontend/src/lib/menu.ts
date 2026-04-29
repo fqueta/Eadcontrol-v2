@@ -153,6 +153,12 @@ export const defaultMenu: MenuItemDTO[] = [
         url: "/admin/school/certificados/modelo",
         permission: "school.view",
         can_view: true
+      },
+      {
+        title: "Vídeos / Dicas",
+        url: "/admin/school/video-tips",
+        permission: "school.view",
+        can_view: true
       }
     ]
   },

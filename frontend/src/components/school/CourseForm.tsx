@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Plus, X, GripVertical, ChevronDown, ChevronUp, ChevronLeft, Save, Loader2, Eye, ExternalLink, Copy, BookOpen, Users, Clock, PlayCircle, CheckCircle2, LayoutGrid, DollarSign, Settings2, HelpCircle, Image as ImageIcon, Check } from 'lucide-react';
+import { Plus, X, GripVertical, ChevronDown, ChevronUp, ChevronLeft, Save, Loader2, Eye, ExternalLink, Copy, BookOpen, Users, Clock, PlayCircle, CheckCircle2, LayoutGrid, DollarSign, Settings2, HelpCircle, Image as ImageIcon, Check, Youtube, Play } from 'lucide-react';
 import { ImageUpload } from '@/components/lib/ImageUpload';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { coursesService } from '@/services/coursesService';
@@ -34,6 +34,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { currencyApplyMask, currencyRemoveMaskToNumber, currencyRemoveMaskToString } from '@/lib/masks/currency';
+import { extractVideoMeta } from '@/services/videoTipsService';
 
 /**
  * CourseForm
@@ -2404,7 +2405,7 @@ export function CourseForm({
 
   return (
     <FormProvider {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit, onInvalid)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(handleSubmit, onInvalid)} className="space-y-8 pb-32">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)} className="w-full">
           <TabsList className="bg-slate-100/50 dark:bg-slate-800/50 p-1 mb-8 h-auto flex-wrap justify-start gap-1 border border-slate-200 dark:border-slate-700/50 rounded-2xl shadow-sm backdrop-blur-md sticky top-0 z-10">
             <TabsTrigger value="info" className="rounded-xl py-2.5 px-5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-md data-[state=active]:text-primary text-muted-foreground transition-all duration-300 font-semibold flex items-center gap-2">
@@ -2806,6 +2807,43 @@ export function CourseForm({
                   <div className="space-y-2 md:col-span-3">
                     <Label className="font-bold">Vídeo Demonstrativo (YouTube/Vimeo)</Label>
                     <Input placeholder="Link do vídeo de apresentação" className="rounded-xl border-slate-200" {...form.register('config.video')} />
+                    
+                    {/* Course Presentation Video Preview */}
+                    {(() => {
+                      const videoUrl = form.watch('config.video');
+                      if (!videoUrl) return null;
+                      try {
+                        const meta = extractVideoMeta(videoUrl);
+                        return (
+                          <div className="mt-3 p-3 rounded-2xl border bg-slate-50/50 flex flex-col sm:flex-row gap-4 animate-in zoom-in-95 duration-300">
+                             <div className="relative w-full sm:w-[160px] aspect-video rounded-xl overflow-hidden bg-white shadow-sm group">
+                                {meta.thumbnail ? (
+                                  <img src={meta.thumbnail} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="Preview" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center"><PlayCircle className="h-8 w-8 text-slate-200" /></div>
+                                )}
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/5 group-hover:bg-black/20 transition-colors">
+                                   <div className="h-10 w-10 rounded-full bg-white/90 shadow-md flex items-center justify-center scale-90 group-hover:scale-100 transition-transform">
+                                      <Play className="h-4 w-4 text-primary ml-0.5" />
+                                   </div>
+                                </div>
+                             </div>
+                             <div className="flex-1 py-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                   {meta.provider === 'youtube' ? <Youtube className="h-4 w-4 text-red-500" /> : <PlayCircle className="h-4 w-4 text-blue-500" />}
+                                   <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{meta.provider} detectado</span>
+                                </div>
+                                <p className="text-xs font-bold text-slate-600 line-clamp-1 mb-2">Vídeo de apresentação configurado com sucesso.</p>
+                                <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] font-bold rounded-lg bg-white border-slate-200" onClick={() => window.open(videoUrl, '_blank')}>
+                                   <ExternalLink className="h-3 w-3 mr-1.5" /> Testar Link
+                                </Button>
+                             </div>
+                          </div>
+                        );
+                      } catch {
+                        return null;
+                      }
+                    })()}
                   </div>
 
                   <div className="space-y-2 md:col-span-2"><Label className="font-bold">Página de Venda (Link Direto)</Label><Input placeholder="URL externa de checkout" className="rounded-xl border-slate-200" {...form.register('config.pagina_venda.link')} /></div>

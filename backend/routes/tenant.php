@@ -326,6 +326,10 @@ Route::name('api.')->prefix('api/v1')->middleware([
         Route::put('posts/{id}/restore', [PostController::class, 'restore'])->name('posts.restore');
         Route::delete('posts/{id}/force', [PostController::class, 'forceDelete'])->name('posts.forceDelete');
 
+        // Rotas para vídeos/dicas (video_tip) — canal da escola para alunos
+        // EN: Video tips routes — school channel for enrolled students
+        Route::get('video-tips', [PostController::class, 'studentVideoTips'])->name('video-tips.student');
+
         // Rotas para situações de matrícula (post_type=situacao_matricula)
         Route::apiResource('situacoes-matricula', SituacaoMatriculaController::class, ['parameters' => [
             'situacoes-matricula' => 'id'

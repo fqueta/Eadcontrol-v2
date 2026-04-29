@@ -26,7 +26,8 @@
       { "title": "Todos atividades", "url": "/school/activities" },
       { "title": "Comentários", "url": "/school/comments" },
       { "title": "Situações", "url": "/school/enrollment-situation" },
-      { "title": "Certificados", "url": "/school/certificados/modelo" }
+      { "title": "Certificados", "url": "/school/certificados/modelo" },
+      { "title": "Vídeos / Dicas", "url": "/school/video-tips" }
     ]
   },
   {

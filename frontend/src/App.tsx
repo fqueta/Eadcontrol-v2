@@ -125,6 +125,8 @@ const PageEdit = lazy(() => import("./pages/site/PageEdit"));
 const PublicPage = lazy(() => import("./pages/site/PublicPage"));
 const SiteComponents = lazy(() => import("./pages/site/Components"));
 const FastCheckout = lazy(() => import("./pages/school/FastCheckout"));
+const VideoTips = lazy(() => import("./pages/school/VideoTips"));
+const VideoTipForm = lazy(() => import("./pages/school/VideoTipForm"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -508,6 +510,28 @@ const App = () => {
                 <AdminProtectedRoute>
                   <AppLayout>
                     <CertificateGenerate />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              {/* Escola / Vídeos e Dicas — gerenciamento */}
+              <Route path="/admin/school/video-tips" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <VideoTips />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/school/video-tips/create" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <VideoTipForm mode="create" />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/school/video-tips/:id/edit" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <VideoTipForm mode="edit" />
                   </AppLayout>
                 </AdminProtectedRoute>
               } />
