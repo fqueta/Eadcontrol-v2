@@ -25,6 +25,7 @@ type StaticSlide = {
   subtitle?: string;
   buttonLabel?: string;
   buttonUrl?: string;
+  titleSize?: number;
 };
 
 /**
@@ -106,7 +107,7 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
     toast({ title: 'Banner removido' });
   };
 
-  const handleUpdateSlide = (index: number, field: 'title' | 'subtitle' | 'buttonLabel' | 'buttonUrl', value: string) => {
+  const handleUpdateSlide = (index: number, field: 'title' | 'subtitle' | 'buttonLabel' | 'buttonUrl' | 'titleSize', value: string | number) => {
     const newSlides = [...slides];
     newSlides[index] = { ...newSlides[index], [field]: value };
     setSlides(newSlides);
@@ -283,6 +284,16 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
                             placeholder="Ex: Soluções educacionais..." 
                             value={slide.subtitle || ''} 
                             onChange={(e) => handleUpdateSlide(index, 'subtitle', e.target.value)}
+                            className="h-9"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs font-bold text-slate-500 uppercase">Tam. Fonte Título (px)</Label>
+                          <Input 
+                            type="number"
+                            placeholder="Ex: 60" 
+                            value={slide.titleSize || ''} 
+                            onChange={(e) => handleUpdateSlide(index, 'titleSize', parseInt(e.target.value) || 0)}
                             className="h-9"
                           />
                         </div>

@@ -99,7 +99,7 @@ export default function Courses() {
   const goToEdit = (id: string | number) => navigate(`/admin/school/courses/${id}/edit`);
   const handleRowDoubleClick = (id: string | number) => goToEdit(id);
 
-  const handleToggleField = (course: CourseRecord, field: 'ativo' | 'publicar') => {
+  const handleToggleField = (course: CourseRecord, field: 'ativo' | 'publicar' | 'destaque') => {
     const newValue = course[field] === 's' ? 'n' : 's';
     updateStatusMutation.mutate({
       id: course.id,
@@ -187,6 +187,7 @@ export default function Courses() {
                   <TableHead className="font-bold text-xs uppercase tracking-wider text-slate-500">Título do Curso</TableHead>
                   <TableHead className="w-[100px] text-center font-bold text-xs uppercase tracking-wider text-slate-500">Ativo</TableHead>
                   <TableHead className="w-[100px] text-center font-bold text-xs uppercase tracking-wider text-slate-500">Publicar</TableHead>
+                  <TableHead className="w-[100px] text-center font-bold text-xs uppercase tracking-wider text-slate-500">Destaque</TableHead>
                   <TableHead className="w-[140px] font-bold text-xs uppercase tracking-wider text-slate-500">Valor</TableHead>
                   <TableHead className="w-[80px] text-right pr-6 font-bold text-xs uppercase tracking-wider text-slate-500">Ações</TableHead>
                 </TableRow>
@@ -232,6 +233,14 @@ export default function Courses() {
                           onCheckedChange={() => handleToggleField(c, 'publicar')} 
                           disabled={updateStatusMutation.isPending}
                           className="data-[state=checked]:bg-blue-500"
+                        />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Switch 
+                          checked={c.destaque === 's'} 
+                          onCheckedChange={() => handleToggleField(c, 'destaque')} 
+                          disabled={updateStatusMutation.isPending}
+                          className="data-[state=checked]:bg-amber-500"
                         />
                       </TableCell>
                       <TableCell>

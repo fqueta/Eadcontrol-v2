@@ -121,7 +121,10 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
                       <span className="uppercase tracking-widest">{name}</span>
                     </div>
                     
-                    <h2 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white mb-4 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg">
+                    <h2 
+                      className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg"
+                      style={slide.config?.titleSize ? { fontSize: `${slide.config.titleSize}px`, lineHeight: '1.2' } : {}}
+                    >
                       {slide.title || slogan}
                     </h2>
                     
@@ -192,6 +195,7 @@ type StaticSlide = {
   subtitle?: string;
   buttonLabel?: string;
   buttonUrl?: string;
+  titleSize?: number;
 };
 
 /**
@@ -267,7 +271,10 @@ function StaticCarousel({ name, slogan, description }: { name: string; slogan: s
                       <BrandLogo className="h-16 w-auto brightness-0 invert opacity-90 drop-shadow-lg" />
                     </div>
                     
-                    <h2 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white mb-4 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg">
+                    <h2 
+                      className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg"
+                      style={img.titleSize ? { fontSize: `${img.titleSize}px`, lineHeight: '1.2' } : {}}
+                    >
                       {img.title ? img.title : (
                         <EditableOptionText 
                           optionKey="home_hero_title" 

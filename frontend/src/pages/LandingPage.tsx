@@ -8,6 +8,8 @@ import BrandLogo from "@/components/branding/BrandLogo";
 import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription } from "@/lib/branding";
 import { EditableOptionText } from "@/components/common/EditableOptionText";
 import HeroBanner from "@/components/site/HeroBanner";
+import { FeaturedCoursesSection } from "@/components/site/FeaturedCoursesSection";
+import { PillarsSection } from "@/components/site/PillarsSection";
 
 /**
  * LandingPage
@@ -45,125 +47,9 @@ const LandingPage = ({ linkLoja }: { linkLoja?: string }) => {
         institutionDescription={institutionDescription}
       />
 
-      {/* Features Section with Modern Background Elements */}
-      <section className="relative py-32 px-4 overflow-hidden bg-white/40 dark:bg-slate-950/40">
-        {/* Decorative Blobs */}
-        <div className="absolute top-0 -left-20 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 -right-20 w-96 h-96 bg-indigo-400/10 rounded-full blur-3xl" />
-        
-        <div className="container mx-auto relative z-10">
-          <div className="text-center mb-16 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">Nossos Pilares</h2>
-            <div className="w-24 h-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 mx-auto rounded-full" />
-          </div>
+      <FeaturedCoursesSection />
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10">
-            <Card className="group border-slate-100 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] transition-all duration-500 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:-translate-y-2 cursor-default overflow-hidden">
-              <CardHeader className="text-center pb-2">
-                <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110 group-hover:rotate-3 duration-500 overflow-hidden relative">
-                  <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <BookOpen className="h-10 w-10 text-blue-600 dark:text-blue-400 relative z-10" />
-                </div>
-                <CardTitle className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-                  <EditableOptionText
-                    optionKey="home_feature_1_title"
-                    defaultValue="Plataforma Pedagógica"
-                    as="span"
-                  />
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-                  <EditableOptionText
-                    optionKey="home_feature_1_desc"
-                    defaultValue="Planos de aula e avaliações alinhados à BNCC."
-                    as="span"
-                    multiline={false}
-                  />
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="group border-slate-100 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] transition-all duration-500 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:-translate-y-2 cursor-default overflow-hidden">
-              <CardHeader className="text-center pb-2">
-                <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110 group-hover:-rotate-3 duration-500 overflow-hidden relative">
-                  <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <Plane className="h-10 w-10 text-blue-600 dark:text-blue-400 relative z-10" />
-                </div>
-                <CardTitle className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-                  <EditableOptionText
-                    optionKey="home_feature_2_title"
-                    defaultValue="Comunicação Alternativa"
-                    as="span"
-                  />
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-                  <EditableOptionText
-                    optionKey="home_feature_2_desc"
-                    defaultValue="Autonomia e autoestima através de linguagem acessível."
-                    as="span"
-                    multiline={false}
-                  />
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="group border-slate-100 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] transition-all duration-500 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:-translate-y-2 cursor-default overflow-hidden">
-              <CardHeader className="text-center pb-2">
-                <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110 group-hover:rotate-6 duration-500 overflow-hidden relative">
-                  <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <Wrench className="h-10 w-10 text-blue-600 dark:text-blue-400 relative z-10" />
-                </div>
-                <CardTitle className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-                  <EditableOptionText
-                    optionKey="home_feature_3_title"
-                    defaultValue="Suporte de Ponta a Ponta"
-                    as="span"
-                  />
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-                  <EditableOptionText
-                    optionKey="home_feature_3_desc"
-                    defaultValue="Acompanhamento completo de implantação à operação."
-                    as="span"
-                    multiline={false}
-                  />
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="group border-slate-100 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] transition-all duration-500 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:-translate-y-2 cursor-default overflow-hidden">
-              <CardHeader className="text-center pb-2">
-                <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110 group-hover:-rotate-6 duration-500 overflow-hidden relative">
-                  <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <Compass className="h-10 w-10 text-blue-600 dark:text-blue-400 relative z-10" />
-                </div>
-                <CardTitle className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-                  <EditableOptionText
-                    optionKey="home_feature_4_title"
-                    defaultValue="Soluções Personalizadas"
-                    as="span"
-                  />
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-                  <EditableOptionText
-                    optionKey="home_feature_4_desc"
-                    defaultValue="Respeito à individualidade de cada aluno."
-                    as="span"
-                    multiline={false}
-                  />
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
+      <PillarsSection />
 
       {/* CTA Section - Modernized */}
       <section className="relative py-32 px-4 overflow-hidden">

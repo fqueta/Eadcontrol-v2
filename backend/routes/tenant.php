@@ -97,6 +97,7 @@ Route::name('api.')->prefix('api/v1')->middleware([
     PreventAccessFromCentralDomains::class,
     'tenant.headers',
 ])->group(function () {
+
     /**
      * Handle CORS preflight requests for any tenant API path.
      * EN: Catch-all OPTIONS route to return 204 for CORS preflight.
@@ -115,17 +116,11 @@ Route::name('api.')->prefix('api/v1')->middleware([
 
     Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
         ->name('password.email');
-    Route::fallback(function () {
-        return response()->json(['message' => 'Rota não encontrada'], 404);
-    });
 
     // Cursos públicos sem autenticação (PT/EN)
-    Route::get('cursos/public', [CursoController::class, 'publicIndex'])->name('cursos.public.index');
-    Route::get('courses/public', [CursoController::class, 'publicIndex'])->name('courses.public.index');
-    Route::get('cursos/public/by-id/{id}', [CursoController::class, 'publicShowById'])->name('cursos.public.showById');
-    Route::get('courses/public/by-id/{id}', [CursoController::class, 'publicShowById'])->name('courses.public.showById');
-    Route::get('cursos/public/by-slug/{slug}', [CursoController::class, 'publicShowBySlug'])->name('cursos.public.showBySlug');
-    Route::get('courses/public/by-slug/{slug}', [CursoController::class, 'publicShowBySlug'])->name('courses.public.showBySlug');
+
+    // Cursos públicos sem autenticação (PT/EN)
+
 
     // Comentários aprovados públicos (listagem apenas)
     Route::get('courses/{id}/comments', [CommentController::class, 'indexForCourse'])->name('courses.comments.index');
@@ -134,6 +129,14 @@ Route::name('api.')->prefix('api/v1')->middleware([
     // Tokens para formulários públicos (sem autenticação)
     // Public form tokens (no authentication)
     Route::prefix('public')->group(function () {
+        // Cursos (PT/EN)
+        Route::get('courses', [CursoController::class, 'publicIndex'])->name('public.courses.index');
+        Route::get('cursos', [CursoController::class, 'publicIndex'])->name('public.cursos.index');
+        Route::get('courses/by-id/{id}', [CursoController::class, 'publicShowById'])->name('public.courses.showById');
+        Route::get('cursos/by-id/{id}', [CursoController::class, 'publicShowById'])->name('public.cursos.showById');
+        Route::get('courses/by-slug/{slug}', [CursoController::class, 'publicShowBySlug'])->name('public.courses.showBySlug');
+        Route::get('cursos/by-slug/{slug}', [CursoController::class, 'publicShowBySlug'])->name('public.cursos.showBySlug');
+
         // POST /api/v1/public/form-token → gerar token
         Route::post('form-token', [PublicFormTokenController::class, 'generate'])
             ->name('public.form-token')
@@ -611,4 +614,8 @@ Route::name('api.')->prefix('api/v1')->middleware([
     Route::post('webhooks/{provider}', [CheckoutController::class, 'handleWebhook'])->name('webhook.payment');
     Route::any('webhook/{endp1}', [WebhookController::class, 'handleSingleEndpoint'])->name('webhook.single');
     Route::any('webhook/{endp1}/{endp2}', [WebhookController::class, 'handleDoubleEndpoint'])->name('webhook.double');
+
+    Route::fallback(function () {
+        return response()->json(['message' => 'Rota não encontrada'], 404);
+    });
 });

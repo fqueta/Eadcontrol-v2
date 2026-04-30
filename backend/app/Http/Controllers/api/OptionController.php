@@ -80,6 +80,8 @@ class OptionController extends Controller
             'home_feature_3_desc',
             'home_feature_4_title',
             'home_feature_4_desc',
+            'featured_courses_config',
+            'pillars_config',
         ];
 
         // Fetch options for allowed keys only

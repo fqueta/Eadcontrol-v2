@@ -19,6 +19,7 @@ export interface BannerSlide {
     cta_url2?: string;
     overlay_opacity?: number;
     text_color?: string;
+    titleSize?: number;
   };
 }
 

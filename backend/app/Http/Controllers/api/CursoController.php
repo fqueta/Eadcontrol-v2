@@ -224,6 +224,14 @@ class CursoController extends Controller
             }
         }
 
+        // Filtro por destaque
+        if ($request->filled('destaque')) {
+            $v = strtolower($request->string('destaque')->toString());
+            if (in_array($v, ['s','n'])) {
+                $query->where('destaque', $v);
+            }
+        }
+
         $cursos = $query->orderByDesc('updated_at')->paginate($perPage);
         return response()->json($cursos);
     }
@@ -254,6 +262,7 @@ class CursoController extends Controller
         // en-US: Show only active and non-excluded courses (excluido='n'), per requirement.
         $query = Curso::query()
             ->where('ativo', 's')
+            ->where('publicar', 's')
             ->where('excluido', 'n');
 
         // Busca por nome/título
@@ -268,6 +277,14 @@ class CursoController extends Controller
         // Filtro por categoria
         if ($request->filled('categoria')) {
             $query->where('categoria', $request->string('categoria')->toString());
+        }
+
+        // Filtro por destaque
+        if ($request->filled('destaque')) {
+            $v = strtolower($request->string('destaque')->toString());
+            if (in_array($v, ['s','n'])) {
+                $query->where('destaque', $v);
+            }
         }
 
         $cursos = $query->orderByDesc('updated_at')->paginate($perPage);
