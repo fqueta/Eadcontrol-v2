@@ -225,6 +225,11 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
             <Button asChild variant="ghost" className="text-primary dark:text-blue-100 hover:bg-primary/5 hover:text-primary transition-all duration-300 rounded-lg">
               <Link to="/cursos">Cursos</Link>
             </Button>
+            {isAuthenticated && (
+              <Button asChild variant="ghost" className="text-primary dark:text-blue-100 hover:bg-primary/5 hover:text-primary transition-all duration-300 rounded-lg">
+                <Link to="/aluno">Área do Aluno</Link>
+              </Button>
+            )}
             <Button asChild variant="ghost" className="text-primary dark:text-blue-100 hover:bg-primary/5 hover:text-primary transition-all duration-300 rounded-lg">
               <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer">
                 <ExternalLink className="w-4 h-4 mr-2" />

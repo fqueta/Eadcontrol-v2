@@ -152,7 +152,7 @@ export default function VideoTipForm({ mode }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 p-6 max-w-4xl mx-auto">
+    <form onSubmit={handleSubmit} className="space-y-6 p-6 w-full">
       {/* ── Header ── */}
       <div className="flex items-center gap-3">
         <Button
