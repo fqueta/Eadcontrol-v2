@@ -298,14 +298,14 @@ export default function VideoTips() {
                   >
                     <Pencil className="w-4 h-4" />
                   </Button>
-                  {tip.video_url && (
+                   {tip.token && (
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      title="Abrir no YouTube/Vimeo"
-                      onClick={() => window.open(tip.video_url ?? '', '_blank')}
-                      id={`btn-open-${tip.id}`}
+                      title="Abrir página de visualização"
+                      onClick={() => window.open(`/dica/${tip.token}`, '_blank')}
+                      id={`btn-open-internal-${tip.id}`}
                     >
                       <ExternalLink className="w-4 h-4" />
                     </Button>
