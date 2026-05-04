@@ -33,13 +33,13 @@ export interface VideoTip {
   video_id: string | null;
   thumbnail: string | null;
   embed_url: string | null;
-  // Campos extras presentes na listagem admin
   post_title?: string;
   post_content?: string;
   post_excerpt?: string;
   post_status?: 'publish' | 'draft' | 'private' | 'pending';
   post_type?: string;
   ID?: number;
+  token?: string;
 }
 
 /**
@@ -195,11 +195,23 @@ class VideoTipsService extends BaseApiService {
    * pt-BR: Retorna vídeos/dicas publicados para o aluno autenticado.
    * en-US: Returns published video tips for the authenticated student.
    */
-  async getStudentTips(params: { per_page?: number; page?: number } = {}): Promise<any> {
+  async getStudentTips(params: { per_page?: number; page?: number; search?: string; category?: string } = {}): Promise<any> {
     return this.get(this.studentEndpoint, {
-      per_page: params.per_page ?? 20,
+      per_page: params.per_page ?? 12,
       page: params.page ?? 1,
+      search: params.search,
+      category: params.category,
     });
+  }
+
+  /**
+   * getPublicTipByToken
+   * pt-BR: Busca uma dica de vídeo pública via token para visualização sem login.
+   * en-US: Fetches a public video tip via token for viewing without login.
+   */
+  async getPublicTipByToken(token: string): Promise<VideoTip> {
+    const response = await this.get<any>(`/public/posts/video-tip/${token}`);
+    return response.data ?? response;
   }
 }
 

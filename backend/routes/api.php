@@ -41,6 +41,7 @@ use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 use App\Http\Controllers\Api\PermissionMenuController;
 use App\Http\Controllers\api\UserController;
+use App\Http\Controllers\api\LiveSessionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -279,6 +280,15 @@ Route::name('api.')->prefix('v1')->middleware([
         // Rotas para matriculas
         Route::apiResource('matriculas', \App\Http\Controllers\api\MatriculaController::class, ['parameters' => [
             'matriculas' => 'id'
+        ]]);
+
+        // Rotas para sessões ao vivo (agenda de aulas)
+        // EN: Live session scheduling routes (class calendar)
+        Route::get('live-sessions/reports/attendance', [LiveSessionController::class, 'attendanceReport'])->name('live-sessions.attendanceReport');
+        Route::post('live-sessions/clone', [LiveSessionController::class, 'clone'])->name('live-sessions.clone');
+        Route::put('live-sessions/{id}/absences', [LiveSessionController::class, 'syncAbsences'])->name('live-sessions.absences');
+        Route::apiResource('live-sessions', LiveSessionController::class, ['parameters' => [
+            'live-sessions' => 'id'
         ]]);
         // Rotas para situações de matrícula (posts: situacao_matricula)
         Route::apiResource('situacoes-matricula', SituacaoMatriculaController::class, ['parameters' => [

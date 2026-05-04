@@ -21,7 +21,7 @@ export interface TurmaRecord {
   nome?: string | null;
   inicio?: string | null; // ISO date string (YYYY-MM-DD)
   fim?: string | null; // ISO date string (YYYY-MM-DD)
-  professor: number;
+  professor?: string | number | null;
 
   // Pagamento e valores
   Pgto?: string | null;
@@ -97,7 +97,7 @@ export interface TurmaPayload {
   nome?: string | null;
   inicio?: string | null; // YYYY-MM-DD
   fim?: string | null; // YYYY-MM-DD
-  professor: number;
+  professor?: string | number | null;
 
   Pgto?: string | null;
   Valor?: number | null;

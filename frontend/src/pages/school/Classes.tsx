@@ -75,10 +75,19 @@ export default function Classes() {
   const handleRowDoubleClick = (id: string | number) => goToEdit(id);
 
   const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '-';
-    const [y, m, d] = dateStr.split('-');
-    if (y && m && d) return `${d}/${m}/${y}`;
-    return dateStr;
+    if (!dateStr) return null;
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      return date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        timeZone: 'UTC' // Importante para não mudar o dia devido ao fuso horário
+      });
+    } catch {
+      return dateStr;
+    }
   };
 
   return (
@@ -190,12 +199,19 @@ export default function Classes() {
                     <TableCell>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
                         <Clock className="h-3.5 w-3.5 opacity-70" />
-                        {formatDate(t.inicio)} {t.fim ? `até ${formatDate(t.fim)}` : ''}
+                        {t.inicio || t.fim ? (
+                          <>
+                            {formatDate(t.inicio)} 
+                            {t.fim && ` até ${formatDate(t.fim)}`}
+                          </>
+                        ) : (
+                          <span>Sem período</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
                       <span className="font-bold text-foreground/80">
-                        {t.Valor ? `R$ ${currencyApplyMask(String(t.Valor), 'pt-BR', 'BRL')}` : 'Grátis'}
+                        {t.Valor ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(t.Valor)) : 'Grátis'}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">

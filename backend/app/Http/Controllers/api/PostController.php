@@ -481,6 +481,13 @@ class PostController extends Controller
      * en-US: Returns published video tips for authenticated students.
      *        Filters post_type=video_tip and post_status=publish.
      */
+    /**
+     * studentVideoTips
+     * pt-BR: Retorna vídeos/dicas publicados para alunos autenticados.
+     *        Filtra post_type=video_tip e post_status=publish.
+     * en-US: Returns published video tips for authenticated students.
+     *        Filters post_type=video_tip and post_status=publish.
+     */
     public function studentVideoTips(Request $request): \Illuminate\Http\JsonResponse
     {
         $user = $request->user();
@@ -488,19 +495,28 @@ class PostController extends Controller
             return response()->json(['error' => 'Acesso negado'], 403);
         }
 
-        $perPage = $request->input('per_page', 20);
+        $perPage = $request->input('per_page', 12);
         $order   = $request->input('order', 'asc');
+        $search  = $request->input('search');
+        $category = $request->input('category');
 
-        $tips = Post::query()
+        $query = Post::query()
             ->where('post_type', 'video_tip')
-            ->where('post_status', 'publish')
-            ->where(function ($q) {
-                $q->whereNull('deletado')->orWhere('deletado', '!=', 's');
-            })
-            ->where(function ($q) {
-                $q->whereNull('excluido')->orWhere('excluido', '!=', 's');
-            })
-            ->orderBy('menu_order', $order)
+            ->where('post_status', 'publish');
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('post_title', 'like', '%' . $search . '%')
+                  ->orWhere('post_content', 'like', '%' . $search . '%')
+                  ->orWhere('post_excerpt', 'like', '%' . $search . '%');
+            });
+        }
+
+        if ($category && $category !== 'Todas') {
+            $query->where('config->category', $category);
+        }
+
+        $tips = $query->orderBy('menu_order', $order)
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
@@ -516,6 +532,7 @@ class PostController extends Controller
                 'excerpt'     => $post->post_excerpt,
                 'menu_order'  => $post->menu_order,
                 'created_at'  => $post->created_at,
+                'token'       => $post->token,
                 'config'      => $config,
                 'video_url'   => $config['video_url'] ?? null,
                 'provider'    => $config['provider'] ?? null,
@@ -526,5 +543,74 @@ class PostController extends Controller
         });
 
         return response()->json($tips);
+    }
+
+    /**
+     * publicShowByToken
+     * pt-BR: Exibe um post público via token (usado para compartilhamento de vídeos).
+     * en-US: Shows a public post via token (used for video sharing).
+     */
+    public function publicShowByToken(string $token)
+    {
+        // Usar Eloquent sem scopes globais para garantir que casts (como config) funcionem
+        $post = Post::withoutGlobalScopes()
+            ->where('token', trim($token))
+            ->where('post_status', 'publish')
+            ->where('post_type', 'video_tip')
+            ->first();
+
+        if (!$post) {
+            return response()->json(['error' => 'Vídeo não encontrado ou indisponível'], 404);
+        }
+
+        // Se config for string, decodifica (Eloquent deve fazer isso se estiver em $casts, mas garantimos aqui)
+        $config = $post->config;
+        if (is_string($config)) {
+            $config = json_decode($config, true) ?? [];
+        }
+        if (!is_array($config)) {
+            $config = [];
+        }
+        
+        $tipsData = [
+            'id'          => $post->ID,
+            'title'       => $post->post_title,
+            'description' => $post->post_content,
+            'excerpt'     => $post->post_excerpt,
+            'token'       => $post->token,
+            'created_at'  => $post->created_at,
+            'config'      => $config,
+        ];
+
+        // Mesclar dados do config no nível principal
+        foreach ($config as $key => $value) {
+            if (!isset($tipsData[$key])) {
+                $tipsData[$key] = $value;
+            }
+        }
+
+        // Se embed_url estiver vazio, tenta calcular a partir da video_url
+        if (empty($tipsData['embed_url']) && !empty($tipsData['video_url'])) {
+            $videoUrl = $tipsData['video_url'];
+            $embedUrl = '';
+            $provider = 'other';
+
+            if (str_contains($videoUrl, 'youtube.com') || str_contains($videoUrl, 'youtu.be')) {
+                $provider = 'youtube';
+                if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/', $videoUrl, $matches)) {
+                    $embedUrl = "https://www.youtube.com/embed/{$matches[1]}";
+                }
+            } elseif (str_contains($videoUrl, 'vimeo.com')) {
+                $provider = 'vimeo';
+                if (preg_match('/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:\w+\/)?|album\/(?:\d+\/)?video\/|video\/|)(\d+)(?:$|\/|\?)/', $videoUrl, $matches)) {
+                    $embedUrl = "https://player.vimeo.com/video/{$matches[1]}";
+                }
+            }
+
+            $tipsData['embed_url'] = $embedUrl;
+            $tipsData['provider'] = $provider;
+        }
+
+        return response()->json($tipsData, 200);
     }
 }

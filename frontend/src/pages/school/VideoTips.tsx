@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Play, Plus, Pencil, Trash2, Eye, EyeOff,
   Video, Search, RefreshCw, Youtube, ExternalLink,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Share2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -310,6 +310,23 @@ export default function VideoTips() {
                       <ExternalLink className="w-4 h-4" />
                     </Button>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title="Copiar link público"
+                    onClick={() => {
+                      const url = `${window.location.origin}/dica/${tip.token}`;
+                      navigator.clipboard.writeText(url);
+                      toast({ 
+                        title: 'Link copiado!', 
+                        description: 'O link público foi copiado para a área de transferência.' 
+                      });
+                    }}
+                    id={`btn-share-${tip.id}`}
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"

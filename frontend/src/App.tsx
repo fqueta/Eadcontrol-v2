@@ -119,6 +119,7 @@ const CertificateView = lazy(() => import("./pages/school/CertificateView"));
 const CertificateValidate = lazy(() => import("./pages/school/CertificateValidate"));
 const AdminCourseGrades = lazy(() => import("./pages/school/AdminCourseGrades"));
 const ContentAccessReport = lazy(() => import("./pages/reports/ContentAccessReport"));
+const LiveAttendanceReport = lazy(() => import("./pages/reports/LiveAttendanceReport"));
 const MenusSite = lazy(() => import("./pages/site/MenusSite"));
 const PageCreate = lazy(() => import("./pages/site/PageCreate"));
 const PageEdit = lazy(() => import("./pages/site/PageEdit"));
@@ -127,6 +128,9 @@ const SiteComponents = lazy(() => import("./pages/site/Components"));
 const FastCheckout = lazy(() => import("./pages/school/FastCheckout"));
 const VideoTips = lazy(() => import("./pages/school/VideoTips"));
 const VideoTipForm = lazy(() => import("./pages/school/VideoTipForm"));
+const LiveSessionsCalendar = lazy(() => import("./pages/school/LiveSessionsCalendar"));
+const StudentLiveCalendar = lazy(() => import("./pages/school/StudentLiveCalendar"));
+const PublicVideoTip = lazy(() => import("./pages/public/PublicVideoTip"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -228,6 +232,7 @@ const App = () => {
               } />
               <Route path="/form-client-active/:cpf" element={<PublicClientForm />} />
               <Route path="/public-client-form" element={<PublicClientForm />} />
+              <Route path="/dica/:token" element={<PublicVideoTip />} />
               
               {/* Rotas da loja - protegidas */}
               <Route path={link_loja} element={
@@ -535,6 +540,25 @@ const App = () => {
                   </AppLayout>
                 </AdminProtectedRoute>
               } />
+              {/* Escola / Agenda de Aulas ao Vivo — admin */}
+              <Route path="/admin/school/live-sessions" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <LiveSessionsCalendar />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              {/* Área do Aluno / Agenda ao Vivo */}
+              <Route path="/aluno/agenda-ao-vivo" element={
+                <ProtectedRoute>
+                  <StudentLiveCalendar />
+                </ProtectedRoute>
+              } />
+              <Route path="/aluno/agenda-ao-vivo/:courseId/:turmaId" element={
+                <ProtectedRoute>
+                  <StudentLiveCalendar />
+                </ProtectedRoute>
+              } />
               {/* Público / Lista de Cursos e Landing */}
               <Route path="/cursos" element={<CoursesPublicList />} />
               <Route path="/cursos/:id" element={<CourseLanding />} />
@@ -804,6 +828,13 @@ const App = () => {
                 <AdminProtectedRoute>
                   <AppLayout>
                     <ContentAccessReport />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/reports/live-attendance" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <LiveAttendanceReport />
                   </AppLayout>
                 </AdminProtectedRoute>
               } />

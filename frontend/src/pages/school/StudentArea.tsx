@@ -16,6 +16,9 @@ import { getInstitutionWhatsApp } from '@/lib/branding';
 import { videoTipsService, VideoTip } from '@/services/videoTipsService';
 import VideoTipModal from '@/components/school/VideoTipModal';
 import { Input } from '@/components/ui/input';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { useDebounce } from 'use-debounce';
+import { useEffect, useRef } from 'react';
 
 /**
  * StudentArea
@@ -102,41 +105,67 @@ export default function StudentArea() {
   );
 
   /**
-   * Video tips — published tips from the school
-   * pt-BR: Busca dicas em vídeo publicadas pela escola para os alunos.
-   * en-US: Fetches published video tips from the school for students.
+   * Video tips — published tips from the school with infinite scroll and server-side search
+   * pt-BR: Busca dicas em vídeo publicadas pela escola com scroll infinito e busca no servidor.
+   * en-US: Fetches published video tips from the school with infinite scroll and server-side search.
    */
-  const { data: tipsResp } = useQuery({
-    queryKey: ['student', 'video-tips'],
-    queryFn: () => videoTipsService.getStudentTips({ per_page: 6 }),
+  const [debouncedSearchTip] = useDebounce(searchTip, 500);
+
+  const {
+    data: infiniteTipsData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: isLoadingTips,
+  } = useInfiniteQuery({
+    queryKey: ['student', 'video-tips', debouncedSearchTip, activeCategoryFilter],
+    queryFn: ({ pageParam = 1 }) => 
+      videoTipsService.getStudentTips({ 
+        page: pageParam as number, 
+        per_page: 12, 
+        search: debouncedSearchTip,
+        category: activeCategoryFilter
+      }),
+    getNextPageParam: (lastPage) => {
+      const current = lastPage.current_page || lastPage.meta?.current_page;
+      const last = lastPage.last_page || lastPage.meta?.last_page;
+      return current < last ? current + 1 : undefined;
+    },
+    initialPageParam: 1,
     staleTime: 5 * 60 * 1000,
   });
+
+  const observerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!observerRef.current || !hasNextPage || isFetchingNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(observerRef.current);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   const { videoTips, categories } = useMemo(() => {
-    const items = tipsResp?.data ?? tipsResp?.items ?? [];
-    const list = Array.isArray(items) ? items : [];
+    const pages = infiniteTipsData?.pages ?? [];
+    const list = pages.flatMap(page => page.data ?? page.items ?? []) as VideoTip[];
     
-    // Extrai categorias únicas
+    // Extrai categorias únicas (idealmente viria de um endpoint separado, mas mantendo lógica original)
+    // Para garantir que todas as categorias apareçam, poderíamos ter um fetch separado,
+    // mas aqui extraímos do que foi carregado até agora.
     const cats = ['Todas', ...Array.from(new Set(
       list.map(t => (t.config as any)?.category).filter(Boolean) as string[]
     ))];
 
-    let filtered = list;
-    
-    // Filtro por categoria
-    if (activeCategoryFilter !== 'Todas') {
-      filtered = filtered.filter(t => (t.config as any)?.category === activeCategoryFilter);
-    }
-
-    // Filtro por busca
-    if (searchTip.trim()) {
-      filtered = filtered.filter(tip => 
-        tip.title?.toLowerCase().includes(searchTip.toLowerCase()) ||
-        (tip.excerpt || tip.description)?.toLowerCase().includes(searchTip.toLowerCase())
-      );
-    }
-    
-    return { videoTips: filtered, categories: cats };
-  }, [tipsResp, searchTip, activeCategoryFilter]);
+    return { videoTips: list, categories: cats };
+  }, [infiniteTipsData]);
 
   /**
    * normalizeEnrollments
@@ -675,7 +704,7 @@ export default function StudentArea() {
                       </div>
                     )}
 
-                    {videoTips.length === 0 ? (
+                    {videoTips.length === 0 && !isLoadingTips ? (
                       <div className="bg-slate-50/50 border border-dashed rounded-xl py-12 flex flex-col items-center justify-center text-center">
                         <Video className="w-10 h-10 text-slate-300 mb-3" />
                         <p className="text-slate-500 text-sm">Nenhum vídeo encontrado para sua busca.</p>
@@ -686,50 +715,67 @@ export default function StudentArea() {
                         )}
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {videoTips.map((tip) => (
-                          <Card 
-                            key={tip.id} 
-                            className="overflow-hidden border-none shadow-sm hover:shadow-md transition-all group cursor-pointer bg-white/80 backdrop-blur-sm"
-                            onClick={() => setSelectedTip(tip)}
-                          >
-                            <div className="relative aspect-video overflow-hidden bg-slate-100">
-                              {tip.thumbnail ? (
-                                <img
-                                  src={tip.thumbnail}
-                                  alt={tip.title}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <Video className="w-8 h-8 text-slate-300" />
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                          {videoTips.map((tip) => (
+                            <Card 
+                              key={tip.id} 
+                              className="overflow-hidden border-none shadow-sm hover:shadow-md transition-all group cursor-pointer bg-white/80 backdrop-blur-sm"
+                              onClick={() => setSelectedTip(tip)}
+                            >
+                              <div className="relative aspect-video overflow-hidden bg-slate-100">
+                                {tip.thumbnail ? (
+                                  <img
+                                    src={tip.thumbnail}
+                                    alt={tip.title}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Video className="w-8 h-8 text-slate-300" />
+                                  </div>
+                                )}
+                                {/* Overlay de Play */}
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-all">
+                                  <div className="w-12 h-12 rounded-full bg-white/90 shadow-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <Play className="w-5 h-5 text-slate-800 ml-0.5" />
+                                  </div>
                                 </div>
-                              )}
-                              {/* Overlay de Play */}
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-all">
-                                <div className="w-12 h-12 rounded-full bg-white/90 shadow-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                                  <Play className="w-5 h-5 text-slate-800 ml-0.5" />
-                                </div>
+                                {/* Provider Badge */}
+                                <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-black/60 text-white backdrop-blur-md">
+                                  {tip.provider || 'Vídeo'}
+                                </span>
                               </div>
-                              {/* Provider Badge */}
-                              <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-black/60 text-white backdrop-blur-md">
-                                {tip.provider || 'Vídeo'}
-                              </span>
+                              <CardContent className="p-4">
+                                <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
+                                  {tip.title}
+                                </h3>
+                                {tip.excerpt && (
+                                  <p className="text-xs text-muted-foreground line-clamp-2 mt-1.5 leading-relaxed">
+                                    {tip.excerpt}
+                                  </p>
+                                )}
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+
+                        {/* Loader / Observer para scroll infinito */}
+                        <div ref={observerRef} className="py-8 flex justify-center">
+                          {isFetchingNextPage && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
+                              <div className="w-4 h-4 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+                              Carregando mais dicas...
                             </div>
-                            <CardContent className="p-4">
-                              <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
-                                {tip.title}
-                              </h3>
-                              {tip.excerpt && (
-                                <p className="text-xs text-muted-foreground line-clamp-2 mt-1.5 leading-relaxed">
-                                  {tip.excerpt}
-                                </p>
-                              )}
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
+                          )}
+                          {!hasNextPage && videoTips.length > 0 && (
+                            <span className="text-xs text-muted-foreground font-light">
+                              Você chegou ao fim das dicas.
+                            </span>
+                          )}
+                        </div>
+                      </>
                     )}
                   </div>
             </div>

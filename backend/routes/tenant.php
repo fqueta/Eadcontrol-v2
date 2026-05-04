@@ -159,6 +159,11 @@ Route::name('api.')->prefix('api/v1')->middleware([
             ->name('posts.public.banners')
             ->middleware('throttle:60,1');
 
+        // Endpoint público: vídeos/dicas por token (compartilhamento)
+        Route::get('posts/video-tip/{token}', [PostController::class, 'publicShowByToken'])
+            ->name('posts.public.video-tip')
+            ->middleware('throttle:60,1');
+
     });
 
     // Cadastro de cliente com matrícula automática (sem prefixo "public")

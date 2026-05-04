@@ -131,6 +131,12 @@ class TurmaController extends Controller
         $data['min_alunos'] = $this->normalizeIntegerInput($data['min_alunos'] ?? null);
         $data['duracao'] = $this->normalizeIntegerInput($data['duracao'] ?? null);
         $data['unidade_duracao'] = isset($data['unidade_duracao']) ? $this->normalizeStringInput($data['unidade_duracao']) : null;
+        $data['professor'] = $this->normalizeStringInput($data['professor'] ?? null);
+        if ($data['professor'] === '0') $data['professor'] = null;
+        $data['hora_inicio'] = $this->normalizeTimeInput($data['hora_inicio'] ?? null);
+        $data['hora_fim'] = $this->normalizeTimeInput($data['hora_fim'] ?? null);
+        if (isset($data['Valor']) && $data['Valor'] === '') $data['Valor'] = null;
+        if (isset($data['Matricula']) && $data['Matricula'] === '') $data['Matricula'] = null;
 
         // PT: Se 'id' vier preenchido, consulta por ID; se encontrar, atualiza; caso contrário, cria com o ID informado.
         // EN: If 'id' is provided, look up by ID; if found, update; otherwise, create with the given ID.
@@ -206,6 +212,12 @@ class TurmaController extends Controller
         if (array_key_exists('unidade_duracao', $data)) {
             $data['unidade_duracao'] = $this->normalizeStringInput($data['unidade_duracao']);
         }
+        $data['professor'] = $this->normalizeStringInput($data['professor'] ?? null);
+        if ($data['professor'] === '0') $data['professor'] = null;
+        $data['hora_inicio'] = $this->normalizeTimeInput($data['hora_inicio'] ?? null);
+        $data['hora_fim'] = $this->normalizeTimeInput($data['hora_fim'] ?? null);
+        if (isset($data['Valor']) && $data['Valor'] === '') $data['Valor'] = null;
+        if (isset($data['Matricula']) && $data['Matricula'] === '') $data['Matricula'] = null;
 
         $turma->update($data);
         return response()->json($turma);

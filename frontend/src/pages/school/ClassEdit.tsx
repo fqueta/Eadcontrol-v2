@@ -67,6 +67,7 @@ export default function ClassEdit() {
         </div>
       ) : (
         <ClassForm 
+          key={turmaQuery.data?.id || 'edit'}
           initialData={turmaQuery.data} 
           onSubmit={handleSubmit} 
           isSubmitting={updateMutation.isPending} 

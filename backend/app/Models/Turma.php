@@ -43,7 +43,6 @@ class Turma extends Model
         'duracao' => 'integer',
         'ordenar' => 'integer',
         'CodGrade' => 'integer',
-        'autor' => 'integer',
         'max_alunos' => 'integer',
         'min_alunos' => 'integer',
     ];

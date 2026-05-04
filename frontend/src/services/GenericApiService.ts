@@ -30,6 +30,19 @@ export class GenericApiService<T = any, CreateInput = any, UpdateInput = any> ex
   }
 
   /**
+   * Normaliza a resposta de um único objeto
+   * pt-BR: Garante que não confundamos um campo 'data' do objeto com o wrapper da API.
+   * en-US: Ensures we don't confuse an object's 'data' field with the API wrapper.
+   */
+  protected normalizeResponse<R = T>(response: any): R {
+    if (!response || typeof response !== 'object') return response;
+    
+    // Se houver 'data' mas também houver 'id', o objeto é o próprio registro
+    const isWrapper = 'data' in response && !('id' in response);
+    return isWrapper ? response.data : response;
+  }
+
+  /**
    * Lista todos os registros com paginação e filtros
    * @param params - Parâmetros de filtro e paginação
    */
@@ -43,18 +56,8 @@ export class GenericApiService<T = any, CreateInput = any, UpdateInput = any> ex
    * @param id - ID do registro
    */
   async getById(id: string | number): Promise<T> {
-    /**
-     * Fallback de normalização de resposta
-     * pt-BR: Alguns endpoints retornam o objeto diretamente (sem wrapper { data }).
-     *        Para evitar `undefined` no React Query, retornamos `response.data ?? response`.
-     * en-US: Some endpoints return the object directly (without { data } wrapper).
-     *        To avoid `undefined` in React Query, we return `response.data ?? response`.
-     */
     const response = await this.get<any>(`${this.endpoint}/${id}`);
-    const normalized = (response && typeof response === 'object' && 'data' in response)
-      ? (response.data as T)
-      : (response as T);
-    return normalized;
+    return this.normalizeResponse<T>(response);
   }
 
   /**
@@ -62,8 +65,8 @@ export class GenericApiService<T = any, CreateInput = any, UpdateInput = any> ex
    * @param data - Dados do registro
    */
   async create(data: CreateInput): Promise<T> {
-    const response = await this.post<ApiResponse<T>>(this.endpoint, data);
-    return response.data;
+    const response = await this.post<any>(this.endpoint, data);
+    return this.normalizeResponse<T>(response);
   }
 
   /**
@@ -72,8 +75,8 @@ export class GenericApiService<T = any, CreateInput = any, UpdateInput = any> ex
    * @param data - Dados para atualização
    */
   async update(id: string | number, data: UpdateInput): Promise<T> {
-    const response = await this.put<ApiResponse<T>>(`${this.endpoint}/${id}`, data);
-    return response.data;
+    const response = await this.put<any>(`${this.endpoint}/${id}`, data);
+    return this.normalizeResponse<T>(response);
   }
 
   /**
@@ -158,8 +161,8 @@ export class GenericApiService<T = any, CreateInput = any, UpdateInput = any> ex
    * @param statsEndpoint - Endpoint específico para estatísticas (ex: '/stats')
    */
   async getStats<StatsType = any>(statsEndpoint: string = '/stats'): Promise<StatsType> {
-    const response = await this.get<ApiResponse<StatsType>>(`${this.endpoint}${statsEndpoint}`);
-    return response.data;
+    const response = await this.get<any>(`${this.endpoint}${statsEndpoint}`);
+    return this.normalizeResponse<StatsType>(response);
   }
 
   /**
@@ -170,8 +173,8 @@ export class GenericApiService<T = any, CreateInput = any, UpdateInput = any> ex
    */
   async updateField(id: string | number, field: string, value: any): Promise<T> {
     const data = { [field]: value };
-    const response = await this.put<ApiResponse<T>>(`${this.endpoint}/${id}/${field}`, data);
-    return response.data;
+    const response = await this.put<any>(`${this.endpoint}/${id}/${field}`, data);
+    return this.normalizeResponse<T>(response);
   }
 
   /**
@@ -179,8 +182,8 @@ export class GenericApiService<T = any, CreateInput = any, UpdateInput = any> ex
    * @param id - ID do registro a ser duplicado
    */
   async duplicate(id: string | number): Promise<T> {
-    const response = await this.post<ApiResponse<T>>(`${this.endpoint}/${id}/duplicate`);
-    return response.data;
+    const response = await this.post<any>(`${this.endpoint}/${id}/duplicate`);
+    return this.normalizeResponse<T>(response);
   }
 
   /**

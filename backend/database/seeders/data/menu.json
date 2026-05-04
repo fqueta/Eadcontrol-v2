@@ -22,6 +22,7 @@
       { "title": "Convites", "url": "/school/invites" },
       { "title": "Todos cursos", "url": "/school/courses" },
       { "title": "Todas turmas", "url": "/school/classes" },
+      { "title": "Agenda de Aulas", "url": "/school/live-sessions" },
       { "title": "Todos módulos", "url": "/school/modules" },
       { "title": "Todos atividades", "url": "/school/activities" },
       { "title": "Comentários", "url": "/school/comments" },
@@ -46,7 +47,8 @@
     "submenu": [
       { "title": "Geral", "url": "/reports/relatorio-geral" },
       { "title": "Acesso de conteudo", "url": "/reports/content-access" },
-      { "title": "Turmas", "url": "/reports/relatorio-turmas" }
+      { "title": "Turmas", "url": "/reports/relatorio-turmas" },
+      { "title": "Frequência ao Vivo", "url": "/reports/live-attendance" }
     ]
   },
   {
