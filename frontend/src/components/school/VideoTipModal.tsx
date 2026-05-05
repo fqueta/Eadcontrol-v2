@@ -68,7 +68,16 @@ export default function VideoTipModal({ tip, open, onClose }: VideoTipModalProps
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white/60">
               <Video className="w-16 h-16" />
               <p className="text-sm">URL de incorporação não disponível.</p>
-              {videoUrl && (
+              {tip.token ? (
+                <a
+                  href={`/dica/${tip.token}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 underline text-sm"
+                >
+                  Abrir página de visualização
+                </a>
+              ) : videoUrl && (
                 <a
                   href={videoUrl}
                   target="_blank"
@@ -86,7 +95,17 @@ export default function VideoTipModal({ tip, open, onClose }: VideoTipModalProps
         <div className="p-5 space-y-2">
           <div className="flex items-start justify-between gap-3">
             <h2 className="text-lg font-semibold leading-snug">{title}</h2>
-            {videoUrl && (
+            {tip.token ? (
+              <a
+                href={`/dica/${tip.token}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground"
+                title="Abrir página de visualização"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            ) : videoUrl && (
               <a
                 href={videoUrl}
                 target="_blank"
