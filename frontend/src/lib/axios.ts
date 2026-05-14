@@ -15,10 +15,22 @@ const api = axios.create({
   },
 });
 
-// Interceptor para debugging (opcional, pode remover em produção)
 api.interceptors.request.use((config) => {
-  // console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      window.dispatchEvent(new CustomEvent('auth:invalid_token'));
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default api;

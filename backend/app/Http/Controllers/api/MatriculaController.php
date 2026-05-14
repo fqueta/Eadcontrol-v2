@@ -84,7 +84,7 @@ class MatriculaController extends Controller
             ->leftJoin('turmas', 'matriculas.id_turma', '=', 'turmas.id')
             ->leftJoin('users', 'matriculas.id_cliente', '=', 'users.id')
             ->leftJoin('posts', 'matriculas.situacao_id', '=', 'posts.id')
-           ->select('matriculas.*', 'cursos.nome as curso_nome','cursos.tipo as curso_tipo', 'turmas.nome as turma_nome', 'users.name as cliente_nome', 'posts.post_title as situacao','cursos.slug as curso_slug','cursos.config as curso_config')
+           ->select('matriculas.*', 'cursos.nome as curso_nome','cursos.tipo as curso_tipo', 'turmas.nome as turma_nome', 'users.name as cliente_nome', 'users.email as email', 'posts.post_title as situacao','cursos.slug as curso_slug','cursos.config as curso_config')
             ->orderBy($orderByQualified, $order);
         // pt-BR: Reforça o escopo para segurança e acesso universal na área do aluno (public=1).
         // en-US: Reinforce scope for security and universal access in the student area (public=1).
@@ -585,6 +585,7 @@ class MatriculaController extends Controller
                 'cursos.tipo as curso_tipo', 
                 'turmas.nome as turma_nome', 
                 'users.name as cliente_nome',
+                'users.email as email',
                 'consultores.name as consultor_nome',
                 'posts.post_title as situacao'
             )

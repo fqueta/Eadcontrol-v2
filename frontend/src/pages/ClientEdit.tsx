@@ -352,9 +352,11 @@ export default function ClientEdit() {
       email: data.email,
       ...(data.password && data.password.trim() !== '' && { password: data.password }),
       name: data.name,
-      cpf: data.tipo_pessoa === 'pf' ? data.cpf : undefined,
-      cnpj: data.tipo_pessoa === 'pj' ? data.cnpj : undefined,
-      razao: data.tipo_pessoa === 'pj' ? data.razao : undefined,
+      // pt-BR: Garante que o campo do documento anterior seja limpo ao trocar o tipo de pessoa
+      // en-US: Ensures the previous document field is cleared when switching person type
+      cpf: data.tipo_pessoa === 'pf' ? data.cpf : null as any,
+      cnpj: data.tipo_pessoa === 'pj' ? data.cnpj : null as any,
+      razao: data.tipo_pessoa === 'pj' ? data.razao : null as any,
       genero: data.genero,
       status: data.status,
       autor: data.autor,

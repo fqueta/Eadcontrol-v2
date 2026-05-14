@@ -58,7 +58,7 @@
         { "title": "Usuários", "url": "/settings/users" },
         { "title": "Biblioteca de mídia", "url": "/settings/media-library-demo" },
         { "title": "Permissões", "url": "/settings/permissions" },
-        { "title": "Cupom de desconto", "url": "/settings/cupom_desconto" },
+        { "title": "Cupom de desconto", "url": "/settings/cupom-desconto" },
         { "title": "Funil e etapas", "url": "/settings/stages" },
         { "title": "Categorias", "url": "/categories" },        
         { "title": "Integrações", "url": "/settings/integrations" },

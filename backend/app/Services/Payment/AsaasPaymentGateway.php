@@ -49,7 +49,6 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
 
         // 2. Criar uma cobrança (Payment) no Asaas
         $dueDate = now()->addDays(3)->format('Y-m-d');
-        
         $response = Http::withHeaders([
             'access_token' => $this->apiKey,
         ])->post("{$this->apiUrl}/payments", [

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\api;
 use App\Http\Controllers\Controller;
 use App\Models\Curso;
 use App\Models\Client;
+use App\Models\Cupom;
 use App\Services\Payment\PaymentGatewayFactory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -26,7 +27,6 @@ class CheckoutController extends Controller
             return response()->json(['error' => 'Curso não encontrado ou inativo.'], 404);
         }
 
-        // Return only necessary data for checkout
         return response()->json([
             'id' => $course->id,
             'titulo' => $course->titulo,
@@ -39,6 +39,53 @@ class CheckoutController extends Controller
     }
 
     /**
+     * Validate and preview a coupon code.
+     */
+    public function applyCoupon(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'codigo' => 'required|string|max:50',
+            'course_id' => 'required|integer|exists:cursos,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $courseId = (int) $request->input('course_id');
+        $course = Curso::findOrFail($courseId);
+
+        $cupom = Cupom::where('codigo', $request->input('codigo'))->first();
+
+        if (!$cupom) {
+            return response()->json(['message' => 'Cupom inválido.'], 400);
+        }
+
+        $courseValor = (float) $course->valor;
+        $validacao = $cupom->validar($courseValor, $courseId);
+
+        if (!$validacao['valido']) {
+            return response()->json(['message' => $validacao['mensagem']], 400);
+        }
+
+        $desconto = $cupom->calcularDesconto($courseValor);
+        $totalComDesconto = max(0, $courseValor - $desconto);
+
+        return response()->json([
+            'valido' => true,
+            'codigo' => $cupom->codigo,
+            'tipo' => $cupom->tipo,
+            'valor_desconto' => (float) $cupom->valor_desconto,
+            'desconto_aplicado' => round($desconto, 2),
+            'valor_original' => $courseValor,
+            'valor_final' => round($totalComDesconto, 2),
+            'mensagem' => $cupom->tipo === 'percentual'
+                ? "Cupom de {$cupom->valor_desconto}% aplicado!"
+                : "Desconto de R\$ {$cupom->valor_desconto} aplicado!",
+        ]);
+    }
+
+    /**
      * Process checkout payment.
      */
     public function process(Request $request)
@@ -47,11 +94,12 @@ class CheckoutController extends Controller
             'course_id' => 'required|integer|exists:cursos,id',
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
-            'cpfCnpj' => 'required|string|max:18', // Generic validation, specific in gateway if needed
+            'cpfCnpj' => 'required|string|max:18',
             'phone' => 'nullable|string|max:20',
             'payment_method' => 'required|in:credit_card,pix,boleto',
             'credit_card' => 'required_if:payment_method,credit_card|array',
             'credit_card_holder' => 'required_if:payment_method,credit_card|array',
+            'coupon_code' => 'nullable|string|max:50',
         ]);
 
         if ($validator->fails()) {
@@ -62,7 +110,28 @@ class CheckoutController extends Controller
             $courseId = (int) $request->input('course_id');
             $course = Curso::findOrFail($courseId);
 
-            // 1. Resolve or create Client
+            $courseValor = (float) $course->valor;
+            $discountValue = 0;
+            $cupom = null;
+
+            if ($request->filled('coupon_code')) {
+                $cupom = Cupom::where('codigo', $request->input('coupon_code'))->first();
+
+                if (!$cupom) {
+                    return response()->json(['message' => 'Cupom inválido.'], 400);
+                }
+
+                $validacao = $cupom->validar($courseValor, $courseId);
+
+                if (!$validacao['valido']) {
+                    return response()->json(['message' => $validacao['mensagem']], 400);
+                }
+
+                $discountValue = $cupom->calcularDesconto($courseValor);
+            }
+
+            $totalComDesconto = max(0, $courseValor - $discountValue);
+
             $client = Client::getOrCreate([
                 'name' => $request->input('name'),
                 'email' => $request->input('email'),
@@ -70,7 +139,6 @@ class CheckoutController extends Controller
                 'phone' => $request->input('phone'),
             ]);
 
-            // 2. Create Matricula with initial status 'interessado' (int)
             $situacao_id_int = \App\Services\Qlib::buscaValorDb('posts', 'post_name', 'int', 'ID');
             $matricula = \App\Models\Matricula::create([
                 'id_cliente' => $client->id,
@@ -79,17 +147,56 @@ class CheckoutController extends Controller
                 'situacao_id' => $situacao_id_int,
                 'data_matricula' => now()->toDateString(),
                 'tipo' => 'curso',
-                'subtotal' => $course->valor,
-                'total' => $course->valor,
+                'subtotal' => $courseValor,
+                'desconto' => $discountValue,
+                'total' => $totalComDesconto,
             ]);
 
             \App\Services\Qlib::logMatriculaEvent($matricula->id, 'enrollment_intent', "Interesse em curso registrado (Matrícula criada)", [
                 'course_id' => $courseId,
                 'client_id' => $client->id,
-                'price' => $course->valor
+                'price' => $courseValor,
+                'discount' => $discountValue,
+                'total' => $totalComDesconto,
+                'coupon' => $cupom?->codigo,
             ]);
 
-            // 3. Determine provider and gateway
+            if ($cupom) {
+                $cupom->incrementarUso();
+                // Persistir o cupom na matrícula para relatórios
+                \App\Services\Qlib::update_matriculameta($matricula->id, 'cupom_codigo', $cupom->codigo);
+                \App\Services\Qlib::update_matriculameta($matricula->id, 'cupom_id', $cupom->id);
+            }
+
+            if ($totalComDesconto <= 0) {
+                $situacao_id_mat = \App\Services\Qlib::buscaValorDb('posts', 'post_name', 'mat', 'ID');
+                $matricula->situacao_id = $situacao_id_mat;
+                $matricula->save();
+
+                \App\Services\Qlib::logMatriculaEvent($matricula->id, 'payment_approved', "Pagamento aprovado (Desconto 100%)", []);
+
+                $authResponse = null;
+                $user = \App\Models\User::where('email', $client->email)->first();
+                if ($user) {
+                    $token = $user->createToken('auth_token')->plainTextToken;
+                    $authResponse = [
+                        'user' => $user,
+                        'token' => $token,
+                    ];
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'payment' => [
+                        'payment' => [
+                            'billingType' => 'FREE',
+                            'status' => 'RECEIVED',
+                        ]
+                    ],
+                    'auth_response' => $authResponse
+                ]);
+            }
+
             $provider = $request->input('provider', 'asaas');
             $gateway = PaymentGatewayFactory::create($provider);
 
@@ -102,7 +209,6 @@ class CheckoutController extends Controller
                 $paymentData['creditCardHolderInfo'] = $request->input('credit_card_holder');
             }
 
-            // 4. Process payment passing the Matricula object
             $response = $gateway->processPayment($matricula, $paymentData);
 
             return response()->json([
@@ -134,5 +240,37 @@ class CheckoutController extends Controller
             'boleto' => 'BOLETO',
             default => 'UNDEFINED',
         };
+    }
+
+    /**
+     * Check if a user with the given email or CPF/CNPJ already exists.
+     */
+    public function checkUser(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'nullable|email',
+            'cpfCnpj' => 'nullable|string',
+        ]);
+
+        if ($validator->fails() || (!$request->filled('email') && !$request->filled('cpfCnpj'))) {
+            return response()->json(['error' => 'Email ou CPF/CNPJ inválido.'], 422);
+        }
+
+        $exists = \App\Models\User::where(function ($q) use ($request) {
+            if ($request->filled('email')) {
+                $q->orWhere('email', $request->email);
+            }
+            if ($request->filled('cpfCnpj')) {
+                $cpfOriginal = $request->cpfCnpj;
+                $cpfClean = preg_replace('/\D/', '', $cpfOriginal);
+
+                $q->orWhere('cpf', $cpfOriginal)
+                  ->orWhere('cpf', $cpfClean)
+                  ->orWhere('cnpj', $cpfOriginal)
+                  ->orWhere('cnpj', $cpfClean);
+            }
+        })->exists();
+
+        return response()->json(['exists' => $exists]);
     }
 }

@@ -612,6 +612,24 @@ Route::name('api.')->prefix('api/v1')->middleware([
             Route::get('enrolled-monthly', [DashboardChartController::class, 'enrolledMonthly'])
                 ->name('dashboard.charts.enrolled-monthly');
         });
+
+        // Rotas para api-credentials
+        Route::get('api-credentials/trash/list', [\App\Http\Controllers\api\ApiCredentialController::class, 'trash'])->name('api-credentials.trash');
+        Route::put('api-credentials/{id}/restore', [\App\Http\Controllers\api\ApiCredentialController::class, 'restore'])->name('api-credentials.restore');
+        Route::delete('api-credentials/{id}/force', [\App\Http\Controllers\api\ApiCredentialController::class, 'forceDelete'])->name('api-credentials.forceDelete');
+        Route::apiResource('api-credentials', \App\Http\Controllers\api\ApiCredentialController::class,['parameters' => [
+            'api-credentials' => 'id'
+        ]]);
+
+        // Rotas para cupons de desconto
+        Route::get('cupons/{id}/usages', [\App\Http\Controllers\api\CupomController::class, 'usages'])->name('cupons.usages');
+        Route::get('cupons/cursos-disponiveis', [\App\Http\Controllers\api\CupomController::class, 'cursosDisponiveis'])->name('cupons.cursos-disponiveis');
+        Route::get('cupons/trash', [\App\Http\Controllers\api\CupomController::class, 'trash'])->name('cupons.trash');
+        Route::put('cupons/{id}/restore', [\App\Http\Controllers\api\CupomController::class, 'restore'])->name('cupons.restore');
+        Route::delete('cupons/{id}/force', [\App\Http\Controllers\api\CupomController::class, 'forceDelete'])->name('cupons.forceDelete');
+        Route::apiResource('cupons', \App\Http\Controllers\api\CupomController::class, ['parameters' => [
+            'cupons' => 'id'
+        ]]);
     });
     // Rotas para tracking events
     Route::post('tracking/whatsapp-contact', [TrackingEventController::class, 'whatsappContact'])->name('tracking.whatsapp-contact');

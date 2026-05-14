@@ -1,4 +1,4 @@
-import { Controller, Control } from "react-hook-form";
+import { Controller, Control, useWatch } from "react-hook-form";
 import { FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { InputMask, format } from "@react-input/mask";
@@ -35,6 +35,11 @@ export function SmartDocumentInput({
   const [inputLabel, setInputLabel] = useState("");
   const [isValid, setIsValid] = useState<boolean | null>(null);
   const [currentValue, setCurrentValue] = useState("");
+
+  const watchedValue = useWatch({
+    control,
+    name,
+  });
 
   /**
    * Atualiza a máscara e placeholder baseado no tipo de pessoa
@@ -166,6 +171,24 @@ export function SmartDocumentInput({
   };
 
   /**
+   * Validação inicial e quando o valor externo muda
+   */
+  useEffect(() => {
+    if (watchedValue) {
+      const valStr = String(watchedValue);
+      const cleanValue = valStr.replace(/\D/g, '');
+      const expectedLength = tipoPessoa === 'pf' ? 11 : 14;
+      if (cleanValue.length === expectedLength) {
+        setIsValid(validateDocument(valStr));
+      } else {
+        setIsValid(null);
+      }
+    } else {
+      setIsValid(null);
+    }
+  }, [tipoPessoa, watchedValue]);
+
+  /**
    * Função para lidar com o evento onBlur e validação
    * @param event Evento de blur
    * @param fieldOnBlur Função onBlur do field
@@ -206,18 +229,20 @@ export function SmartDocumentInput({
             control={control}
             render={({ field }) => (
               <InputMask
-                mask={mask}
-                replacement={{ d: /\d/ }}
-                value={field.value && mask && typeof field.value === 'string' && field.value.trim() !== '' ? format(field.value, { mask, replacement: { d: /\d/ } }) : ""}
-                onChange={(e) => {
-                  field.onChange(e);
-                  handleValueChange(e.target.value);
-                }}
-                onBlur={(e) => handleBlur(e, field.onBlur)}
-                disabled={disabled}
-                placeholder={inputPlaceholder}
-                ref={field.ref}
-                className="h-11 pr-10 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                {...({
+                  mask,
+                  replacement: { d: /\d/ },
+                  value: field.value && mask && typeof field.value === 'string' && field.value.trim() !== '' ? format(field.value, { mask, replacement: { d: /\d/ } }) : "",
+                  onChange: (e) => {
+                    field.onChange(e);
+                    handleValueChange(e.target.value);
+                  },
+                  onBlur: (e) => handleBlur(e, field.onBlur),
+                  disabled: disabled,
+                  placeholder: inputPlaceholder,
+                  ref: field.ref,
+                  className: "h-11 pr-10 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                } as any)}
               />
             )}
           />

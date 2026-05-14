@@ -50,6 +50,10 @@ const SystemSettings = lazy(() => import("./pages/settings/SystemSettings"));
 const IntegrationsList = lazy(() => import("./pages/settings/IntegrationsList"));
 const Stages = lazy(() => import("./pages/settings/Stages"));
 const TableInstallment = lazy(() => import("./pages/settings/TableInstallment"));
+const CupomDesconto = lazy(() => import("./pages/settings/CupomDesconto"));
+const CupomDescontoCreate = lazy(() => import("./pages/settings/CupomDescontoCreate"));
+const CupomDescontoEdit = lazy(() => import("./pages/settings/CupomDescontoEdit"));
+const CupomDescontoView = lazy(() => import("./pages/settings/CupomDescontoView"));
 import Login from "./pages/auth/Login";
 const Metrics = lazy(() => import("./pages/settings/Metrics"));
 const AircraftsSettings = lazy(() => import("./pages/settings/AircraftsSettings"));
@@ -566,6 +570,7 @@ const App = () => {
               {/* Página pública publicada por slug */}
               <Route path="/pagina/:slug" element={<PublicPage />} />
               <Route path="/checkout/:courseSlug" element={<FastCheckout />} />
+              <Route path="/checkout/:courseSlug/obrigado-pela-compra" element={<FastCheckout />} />
               {/**
                * pt-BR: Página pública de convite de matrícula via link do curso.
                * en-US: Public invitation enrollment page via course link.
@@ -946,6 +951,34 @@ const App = () => {
                 <AdminProtectedRoute>
                   <AppLayout>
                     <UserProfiles />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/settings/cupom-desconto" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <CupomDesconto />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/settings/cupom-desconto/create" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <CupomDescontoCreate />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/settings/cupom-desconto/:id" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <CupomDescontoView />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/settings/cupom-desconto/:id/edit" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <CupomDescontoEdit />
                   </AppLayout>
                 </AdminProtectedRoute>
               } />

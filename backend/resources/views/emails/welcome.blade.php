@@ -18,15 +18,19 @@
         <p style="margin: 0; color: #15803d; font-size: 15px;"><strong>Senha Padrão: </strong> Seu CPF (apenas os números, sem pontos ou traços).</p>
     </div>
 
-    @if (!empty($loginUrl))
+    @if (!empty($courseUrl))
+        <div style="margin: 32px 0 24px; text-align: center;">
+            <a href="{{ $courseUrl }}" target="_blank" rel="noopener" style="display: inline-block; padding: 14px 24px; background-color: {{ $primaryColor ?? '#1b1b18' }}; color: {{ $primaryTextColor ?? '#ffffff' }}; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Acessar o Curso</a>
+        </div>
+    @elseif (!empty($loginUrl))
         <div style="margin: 32px 0 24px; text-align: center;">
             <a href="{{ $loginUrl }}" target="_blank" rel="noopener" style="display: inline-block; padding: 14px 24px; background-color: {{ $primaryColor ?? '#1b1b18' }}; color: {{ $primaryTextColor ?? '#ffffff' }}; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">Acessar Plataforma</a>
         </div>
     @endif
     
-    @if (!empty($courseUrl))
+    @if (!empty($courseUrl) && !empty($loginUrl))
         <div style="text-align: center; margin-top: 16px; font-size: 14px; color: #475569;">
-            Ou acesse diretamente: <a href="{{ $courseUrl }}" target="_blank" rel="noopener" style="color: {{ $primaryColor ?? '#1b1b18' }}; text-decoration: none; font-weight: 600;">Página do Curso</a>
+            Ou acesse o painel geral: <a href="{{ $loginUrl }}" target="_blank" rel="noopener" style="color: {{ $primaryColor ?? '#1b1b18' }}; text-decoration: none; font-weight: 600;">Área do Aluno</a>
         </div>
     @endif
 

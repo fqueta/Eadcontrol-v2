@@ -56,8 +56,8 @@ class DatabaseSeeder extends Seeder
                     ProductUnitsSeeder::class,
                     EnrollmentSituationsSeeder::class,
                     FunnelStageSeeder::class,
-                    AircraftAttendanceSeeder::class,
-                    AeronavesSeeder::class,
+                    // AircraftAttendanceSeeder::class,
+                    // AeronavesSeeder::class,
                     StripeCredentialSeeder::class,
                     AsaasCredentialSeeder::class,
             ];

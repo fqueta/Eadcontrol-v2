@@ -96,6 +96,8 @@ Route::name('api.')->prefix('v1')->middleware([
     // Rotas de Checkout Público
     Route::get('public/checkout/course/{id}', [\App\Http\Controllers\api\CheckoutController::class, 'getCourse'])->name('public.checkout.course');
     Route::post('public/checkout/pay', [\App\Http\Controllers\api\CheckoutController::class, 'process'])->name('public.checkout.pay');
+    Route::post('public/checkout/check-user', [\App\Http\Controllers\api\CheckoutController::class, 'checkUser'])->name('public.checkout.checkUser');
+    Route::post('public/checkout/apply-coupon', [\App\Http\Controllers\api\CheckoutController::class, 'applyCoupon'])->name('public.checkout.apply-coupon');
 
     Route::get('pages/public/{slug}', [PageController::class, 'publicShowBySlug'])->name('pages.public.show');
     
@@ -332,13 +334,6 @@ Route::name('api.')->prefix('v1')->middleware([
             // Route::post('{id}/menus', [PermissionMenuController::class, 'update']);
         });
 
-        // Rotas para api-credentials
-        Route::get('api-credentials/trash/list', [\App\Http\Controllers\api\ApiCredentialController::class, 'trash'])->name('api-credentials.trash');
-        Route::put('api-credentials/{id}/restore', [\App\Http\Controllers\api\ApiCredentialController::class, 'restore'])->name('api-credentials.restore');
-        Route::delete('api-credentials/{id}/force', [\App\Http\Controllers\api\ApiCredentialController::class, 'forceDelete'])->name('api-credentials.forceDelete');
-        Route::apiResource('api-credentials', \App\Http\Controllers\api\ApiCredentialController::class,['parameters' => [
-            'api-credentials' => 'id'
-        ]]);
     });
     // Rotas para tracking events
     Route::post('tracking/whatsapp-contact', [TrackingEventController::class, 'whatsappContact'])->name('tracking.whatsapp-contact');

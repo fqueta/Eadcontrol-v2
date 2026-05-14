@@ -1,10 +1,10 @@
-import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Check, CreditCard, QrCode, FileText, Lock, ShieldCheck, Star, ShoppingBag, Info, MapPin } from "lucide-react";
+import { Check, CreditCard, QrCode, FileText, Lock, ShieldCheck, Star, ShoppingBag, Info, MapPin, Tag, X, Loader2, Sparkles, TrendingDown, Gift, FileCheck, ScrollText } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,12 +12,23 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { checkoutService } from "@/services/checkoutService";
+import { checkoutService, CouponResponse } from "@/services/checkoutService";
 import { useToast } from "@/components/ui/use-toast";
 import InclusiveSiteLayout from "@/components/layout/InclusiveSiteLayout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { phoneApplyMask } from "@/lib/masks/phone-apply-mask";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Form Validation Schema
 const checkoutSchema = z.object({
@@ -70,19 +81,114 @@ const checkoutSchema = z.object({
 
 type CheckoutValues = z.infer<typeof checkoutSchema>;
 
+// Masking functions
+const maskCPF = (value: string) => {
+  return value
+    .replace(/\D/g, "")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})/, "$1-$2")
+    .replace(/(-\d{2})\d+?$/, "$1");
+};
+
+const maskCEP = (value: string) => {
+  return value
+    .replace(/\D/g, "")
+    .replace(/(\d{5})(\d)/, "$1-$2")
+    .replace(/(-\d{3})\d+?$/, "$1");
+};
+
+const maskMonth = (value: string) => {
+  let clean = value.replace(/\D/g, "");
+  if (clean.length === 2) {
+    const month = parseInt(clean, 10);
+    if (month < 1) clean = "01";
+    if (month > 12) clean = "12";
+  }
+  return clean;
+};
+
+const maskYear = (value: string) => {
+  return value.replace(/\D/g, "");
+};
+
+const maskCardNumber = (value: string) => {
+  return value
+    .replace(/\D/g, "")
+    .replace(/(\d{4})(\d)/, "$1 $2")
+    .replace(/(\d{4})(\d)/, "$1 $2")
+    .replace(/(\d{4})(\d)/, "$1 $2")
+    .replace(/(\d{4})\d+?$/, "$1");
+};
+
 const FastCheckout = () => {
   const { courseSlug } = useParams<{ courseSlug: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
-  const { loginWithResponse } = useAuth();
-  const [paymentResult, setPaymentResult] = useState<any>(null);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const { loginWithResponse, user } = useAuth();
 
   const { data: course, isLoading: isCourseLoading } = useQuery({
     queryKey: ["checkout", "course", courseSlug],
     queryFn: () => checkoutService.getCourse(courseSlug!),
     enabled: !!courseSlug,
   });
+  const [paymentResult, setPaymentResult] = useState<any>(location.state?.paymentResult || null);
+  const isSuccess = location.pathname.endsWith('/obrigado-pela-compra');
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
+  // Coupon state
+  const [couponCode, setCouponCode] = useState("");
+  const [couponResult, setCouponResult] = useState<CouponResponse | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState("");
+  const couponDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const couponInputRef = useRef<HTMLInputElement>(null);
+
+  const doApplyCoupon = useCallback(async (code: string) => {
+    if (!code.trim() || !course?.id) return;
+    setCouponLoading(true);
+    setCouponError("");
+    setCouponResult(null);
+    try {
+      const result = await checkoutService.applyCoupon(code.trim(), course.id);
+      setCouponResult(result);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || "Cupom inválido ou expirado.";
+      setCouponError(msg);
+      setCouponResult(null);
+    } finally {
+      setCouponLoading(false);
+    }
+  }, [course?.id]);
+
+  const handleCouponChange = (value: string) => {
+    const upper = value.toUpperCase();
+    setCouponCode(upper);
+    setCouponError("");
+    if (couponDebounceRef.current) clearTimeout(couponDebounceRef.current);
+    if (upper.trim().length >= 3) {
+      couponDebounceRef.current = setTimeout(() => doApplyCoupon(upper), 600);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (couponDebounceRef.current) clearTimeout(couponDebounceRef.current);
+    };
+  }, []);
+
+  // Auto-apply coupon from URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const urlCupom = params.get('cupom');
+    if (urlCupom && course?.id && !couponResult && !couponLoading && !couponError) {
+      setCouponCode(urlCupom.toUpperCase());
+      doApplyCoupon(urlCupom.toUpperCase());
+    }
+  }, [location.search, course?.id, doApplyCoupon, couponResult, couponLoading, couponError]);
+
 
   const form = useForm<CheckoutValues>({
     resolver: zodResolver(checkoutSchema),
@@ -90,6 +196,43 @@ const FastCheckout = () => {
       payment_method: "credit_card",
     },
   });
+
+  React.useEffect(() => {
+    if (user) {
+      form.setValue("name", user.name || "");
+      form.setValue("email", user.email || "");
+      const cpfToMask = user.cpf || (user as any).cnpj || "";
+      form.setValue("cpfCnpj", cpfToMask ? maskCPF(cpfToMask) : "");
+      if (user.celular) form.setValue("phone", user.celular);
+    }
+  }, [user, form]);
+
+  const handleCheckUser = async (field: 'email' | 'cpfCnpj', value: string) => {
+    if (user) return; 
+    if (!value || value.length < 5) return;
+    try {
+      const { exists } = await checkoutService.checkUser({ [field]: value });
+      if (exists) {
+        setShowLoginPrompt(true);
+      }
+    } catch (err) {
+      console.error("Check user error", err);
+    }
+  };
+
+  const handleApplyCoupon = async () => {
+    if (couponDebounceRef.current) clearTimeout(couponDebounceRef.current);
+    await doApplyCoupon(couponCode);
+  };
+
+  const handleRemoveCoupon = () => {
+    setCouponCode("");
+    setCouponResult(null);
+    setCouponError("");
+    if (couponInputRef.current) couponInputRef.current.focus();
+  };
+
+  const displayPrice = couponResult ? couponResult.valor_final : (course?.valor ? Number(course.valor) : 0);
 
   const paymentMethod = form.watch("payment_method");
 
@@ -101,6 +244,10 @@ const FastCheckout = () => {
             cpfCnpj: data.cpfCnpj.replace(/\D/g, ''),
             phone: data.phone.replace(/\D/g, ''),
         };
+
+        if (couponResult?.valido) {
+            payload.coupon_code = couponResult.codigo;
+        }
 
         if (data.payment_method === 'credit_card' && data.credit_card) {
             payload.credit_card = {
@@ -130,17 +277,15 @@ const FastCheckout = () => {
         description: "Pedido processado com sucesso.",
       });
 
-      // Se for Cartão e tiver resposta de auth, logar e redirecionar
+      // Se tiver resposta de auth, logar silenciosamente
       if (data.auth_response) {
           await loginWithResponse(data.auth_response);
-          if (data.course_slug) {
-              navigate(`/aluno/cursos/${data.course_slug}`);
-              return;
-          }
       }
 
-      setIsSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      navigate(`/checkout/${courseSlug}/obrigado-pela-compra`, { 
+          state: { paymentResult: data.payment } 
+      });
     },
     onError: (error: any) => {
       console.error("Payment Error:", error.response?.data);
@@ -151,47 +296,6 @@ const FastCheckout = () => {
       });
     },
   });
-
-  // Masking functions
-  const maskCPF = (value: string) => {
-    return value
-      .replace(/\D/g, "")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d{1,2})/, "$1-$2")
-      .replace(/(-\d{2})\d+?$/, "$1");
-  };
-
-  const maskCEP = (value: string) => {
-    return value
-      .replace(/\D/g, "")
-      .replace(/(\d{5})(\d)/, "$1-$2")
-      .replace(/(-\d{3})\d+?$/, "$1");
-  };
-
-  const maskMonth = (value: string) => {
-    let clean = value.replace(/\D/g, "");
-    if (clean.length === 2) {
-      const month = parseInt(clean, 10);
-      if (month < 1) clean = "01";
-      if (month > 12) clean = "12";
-    }
-    return clean;
-  };
-
-  const maskYear = (value: string) => {
-    return value.replace(/\D/g, "");
-  };
-
-  const maskCardNumber = (value: string) => {
-    return value
-      .replace(/\D/g, "")
-      .replace(/(\d{4})(\d)/, "$1 $2")
-      .replace(/(\d{4})(\d)/, "$1 $2")
-      .replace(/(\d{4})(\d)/, "$1 $2")
-      .replace(/(\d{4})\d+?$/, "$1");
-  };
-
   const onSubmit = (data: CheckoutValues) => {
     mutation.mutate(data);
   };
@@ -217,23 +321,49 @@ const FastCheckout = () => {
                     <div>
                       <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Obrigado pela compra!</h2>
                       <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-3 font-medium text-lg leading-relaxed">
-                        {paymentResult?.billingType === "PIX" 
-                          ? "Escaneie o código PIX abaixo para liberar seu acesso instantaneamente." 
+                        {(paymentResult?.payment?.billingType === "PIX" || paymentResult?.payment?.billingType === "BOLETO")
+                          ? "Seu pedido foi registrado! Aguarde a confirmação do pagamento para ter acesso ao curso."
                           : "Seu pedido foi registrado com sucesso. Verifique seu e-mail para os próximos passos."}
                       </p>
                     </div>
 
-                    {paymentResult?.billingType === "PIX" && paymentResult?.pix && (
+                    {(paymentResult?.payment?.billingType === "PIX" || paymentResult?.payment?.billingType === "BOLETO") && (
+                      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-xl text-left max-w-sm w-full">
+                        <div className="flex items-start gap-3">
+                          <div className="bg-amber-100 dark:bg-amber-900/40 p-2 rounded-lg shrink-0">
+                            <Loader2 className="w-5 h-5 text-amber-600 dark:text-amber-400 animate-spin" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-amber-800 dark:text-amber-300 text-sm">Aguardando pagamento</h4>
+                            <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                              {paymentResult?.payment?.billingType === "PIX" 
+                                ? "O pagamento via PIX leva alguns segundos para ser confirmado. Assim que recebermos, você receberá o acesso por e-mail."
+                                : "O boleto pode levar até 48 horas úteis para ser compensado. Você receberá o acesso por e-mail após a confirmação bancária."}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="bg-green-50 border border-green-200 p-4 rounded-xl text-left max-w-sm w-full space-y-2">
+                        <h4 className="font-bold text-green-800 text-sm">Como acessar a plataforma:</h4>
+                        <div className="text-sm text-green-700">
+                           <p><strong>E-mail:</strong> o mesmo informado na compra</p>
+                           <p><strong>Senha inicial:</strong> seu CPF (apenas os números, sem pontos ou traços)</p>
+                        </div>
+                    </div>
+
+                    {paymentResult?.payment?.billingType === "PIX" && paymentResult?.payment?.pix && (
                         <div className="bg-slate-50 dark:bg-slate-800/50 p-8 border rounded-3xl w-full max-w-sm space-y-6 shadow-sm">
                             <div className="bg-white p-4 rounded-2xl shadow-inner inline-block relative group">
-                                 <img src={`data:image/png;base64,${paymentResult.pix.encodedImage}`} alt="QR Code PIX" className="w-56 h-56" />
+                                 <img src={`data:image/png;base64,${paymentResult.payment.pix.encodedImage}`} alt="QR Code PIX" className="w-56 h-56" />
                             </div>
                             <div className="space-y-3 text-left">
                                 <Label className="text-[10px] uppercase text-slate-400 font-black tracking-widest">Código Copia e Cola</Label>
                                 <div className="flex gap-2">
-                                    <Input value={paymentResult.pix.payload} readOnly className="bg-white dark:bg-slate-900 text-xs h-10 rounded-lg border-slate-200" />
+                                    <Input value={paymentResult.payment.pix.payload} readOnly className="bg-white dark:bg-slate-900 text-xs h-10 rounded-lg border-slate-200" />
                                     <Button size="sm" className="bg-slate-900 dark:bg-slate-700 font-bold" onClick={() => {
-                                        navigator.clipboard.writeText(paymentResult.pix.payload);
+                                        navigator.clipboard.writeText(paymentResult.payment.pix.payload);
                                         toast({ title: "Copiado!", description: "Código PIX copiado com sucesso." });
                                     }}>Copiar</Button>
                                 </div>
@@ -241,18 +371,22 @@ const FastCheckout = () => {
                         </div>
                     )}
 
-                    {paymentResult?.billingType === "BOLETO" && (
+                    {paymentResult?.payment?.billingType === "BOLETO" && (
                          <Button asChild className="w-full max-w-sm h-14 text-lg font-black rounded-xl" variant="default">
-                             <a href={paymentResult.bankSlipUrl} target="_blank" rel="noopener noreferrer">
+                             <a href={paymentResult.payment.bankSlipUrl} target="_blank" rel="noopener noreferrer">
                                  <FileText className="mr-2 h-6 w-6" />
                                  Baixar Boleto Bancário
                              </a>
                          </Button>
                     )}
 
-                    <Button variant="link" onClick={() => navigate("/")} className="text-primary font-black hover:no-underline text-lg">
-                        Começar a estudar agora
-                    </Button>
+                    {paymentResult?.payment?.billingType === "CREDIT_CARD" && (
+                        <Button asChild variant="link" className="text-primary font-black hover:no-underline text-lg mt-6">
+                            <Link to={`/aluno/cursos/${courseSlug}`}>
+                                Começar a estudar agora
+                            </Link>
+                        </Button>
+                    )}
                   </CardContent>
                 </Card>
             </div>
@@ -301,9 +435,27 @@ const FastCheckout = () => {
                    </div>
                    <div className="text-right">
                       <p className="text-xs uppercase font-black text-slate-400 tracking-widest">Valor à vista</p>
-                      <p className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">R$ {course?.valor}</p>
+                      <div className="relative">
+                        {couponResult ? (
+                          <>
+                            <p className="text-sm text-slate-400 line-through transition-all duration-300">R$ {Number(course?.valor || 0).toFixed(2)}</p>
+                            <div className="flex items-center gap-2 justify-end">
+                              <Badge className="bg-green-500 hover:bg-green-600 text-white border-none font-bold text-xs animate-in zoom-in duration-300">
+                                {couponResult.tipo === 'percentual'
+                                  ? `-${couponResult.valor_desconto}%`
+                                  : `-R$ ${couponResult.desconto_aplicado.toFixed(2)}`}
+                              </Badge>
+                              <p className="text-3xl font-black text-green-600 dark:text-green-400 tracking-tighter">
+                                R$ {displayPrice.toFixed(2)}
+                              </p>
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">R$ {Number(course?.valor || 0).toFixed(2)}</p>
+                        )}
+                      </div>
                    </div>
-               </div>
+                </div>
 
                <div className="p-6 md:p-10 space-y-12">
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
@@ -332,7 +484,9 @@ const FastCheckout = () => {
                                     id="email" 
                                     type="email" 
                                     placeholder="exemplo@email.com" 
-                                    {...form.register("email")}
+                                    {...form.register("email", {
+                                        onBlur: (e) => handleCheckUser('email', e.target.value)
+                                    })}
                                     className="h-14 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                                 />
                                 {form.formState.errors.email && <p className="text-xs text-red-500 font-bold mt-1">{form.formState.errors.email.message}</p>}
@@ -346,7 +500,8 @@ const FastCheckout = () => {
                                         onChange: (e) => {
                                             const val = maskCPF(e.target.value);
                                             form.setValue("cpfCnpj", val);
-                                        }
+                                        },
+                                        onBlur: (e) => handleCheckUser('cpfCnpj', e.target.value)
                                     })}
                                     className="h-14 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                                 />
@@ -372,10 +527,86 @@ const FastCheckout = () => {
 
                     <Separator className="opacity-50" />
 
-                    {/* Section 2: Forma de Pagamento */}
-                    <div className="space-y-8">
+                    {/* Section 2: Cupom de Desconto */}
+                    <div className="space-y-6">
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm">2</div>
+                            <h3 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Cupom de Desconto</h3>
+                        </div>
+
+                        <div className="space-y-3">
+                            {couponResult ? (
+                                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-2xl animate-in slide-in-from-bottom-2 duration-500">
+                                    <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg animate-in zoom-in duration-500">
+                                        <Sparkles className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-bold text-green-800 dark:text-green-300">{couponResult.mensagem}</p>
+                                        <p className="text-xs text-green-600 dark:text-green-500 flex items-center gap-1">
+                                          <TrendingDown className="w-3 h-3" />
+                                          Economia de <strong>R$ {couponResult.desconto_aplicado.toFixed(2)}</strong>
+                                        </p>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleRemoveCoupon}
+                                        className="text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <div className="flex-1 relative">
+                                        <Input
+                                          ref={couponInputRef}
+                                          placeholder="Código do cupom"
+                                          value={couponCode}
+                                          onChange={(e) => handleCouponChange(e.target.value)}
+                                          onKeyDown={(e) => {
+                                              if (e.key === "Enter") {
+                                                  e.preventDefault();
+                                                  handleApplyCoupon();
+                                              }
+                                          }}
+                                          className={`h-14 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 focus:bg-white uppercase font-bold tracking-wider pr-10 transition-all ${couponError ? 'border-red-500 ring-1 ring-red-200 bg-red-50/50' : ''}`}
+                                        />
+                                        {couponLoading && (
+                                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                                          </div>
+                                        )}
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        onClick={handleApplyCoupon}
+                                        disabled={couponLoading || !couponCode.trim()}
+                                        className="h-14 px-6 rounded-xl font-bold bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 text-white"
+                                    >
+                                        {couponLoading ? "Verificando..." : "Aplicar"}
+                                    </Button>
+                                </div>
+                            )}
+                            {couponError && (
+                              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl animate-in slide-in-from-top-1 duration-200">
+                                  <X className="w-4 h-4 text-red-500 shrink-0" />
+                                  <p className="text-xs font-bold text-red-600 dark:text-red-400">{couponError}</p>
+                              </div>
+                            )}
+                            {!couponResult && !couponError && couponCode.length > 0 && couponCode.length < 3 && (
+                              <p className="text-xs text-slate-400">Digite ao menos 3 caracteres</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <Separator className="opacity-50" />
+
+                    {/* Section 3: Forma de Pagamento */}
+                    <div className="space-y-8">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm">3</div>
                             <h3 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Pagamento</h3>
                         </div>
 
@@ -571,15 +802,87 @@ const FastCheckout = () => {
                              )}
                         </div>
 
+                        {/* Order Summary */}
+                        <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-5 space-y-3 ring-1 ring-slate-100 dark:ring-slate-800">
+                          <div className="flex items-center gap-2 mb-1">
+                            <ShoppingBag className="w-4 h-4 text-slate-400" />
+                            <span className="text-xs font-black uppercase text-slate-400 tracking-widest">Resumo do Pedido</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600 dark:text-slate-400">Subtotal</span>
+                            <span className="font-bold text-slate-900 dark:text-white">R$ {Number(course?.valor || 0).toFixed(2)}</span>
+                          </div>
+                          {couponResult && (
+                            <div className="flex justify-between text-sm animate-in slide-in-from-top-1 duration-300">
+                              <span className="text-green-600 dark:text-green-400 font-bold flex items-center gap-1">
+                                <Tag className="w-3 h-3" /> Desconto ({couponResult.codigo})
+                              </span>
+                              <span className="font-bold text-green-600 dark:text-green-400">
+                                - R$ {couponResult.desconto_aplicado.toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+                          <Separator className="opacity-50" />
+                          <div className="flex justify-between text-base">
+                            <span className="font-black text-slate-900 dark:text-white">Total</span>
+                            <span className={`font-black text-xl ${couponResult ? 'text-green-600 dark:text-green-400' : 'text-slate-900 dark:text-white'}`}>
+                              R$ {(couponResult ? displayPrice : Number(course?.valor || 0)).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Section 4: Contrato / Termos de Adesão */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm">4</div>
+                                <h3 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">Contrato</h3>
+                            </div>
+
+                            <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-5 space-y-4 ring-1 ring-slate-100 dark:ring-slate-800">
+                                <div className="flex items-start gap-3">
+                                    <ScrollText className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                                    <div className="space-y-2">
+                                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Termos de Adesão e Prestação de Serviço</p>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                            Ao concluir esta compra, você declara que leu e concorda com os termos de uso da plataforma, 
+                                            a política de privacidade e as condições de prestação de serviço educacional. 
+                                            O acesso ao conteúdo será liberado conforme a confirmação do pagamento.
+                                        </p>
+                                    </div>
+                                </div>
+                                <Separator className="opacity-50" />
+                                <div className="flex items-center space-x-3">
+                                    <Checkbox 
+                                        id="terms" 
+                                        checked={termsAccepted}
+                                        onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                                        className="h-5 w-5 rounded border-2 border-slate-300 dark:border-slate-600 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                    />
+                                    <Label htmlFor="terms" className="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer leading-snug">
+                                        Li e aceito os <Link to="/pagina/termos" target="_blank" className="text-primary font-bold underline underline-offset-2 hover:text-primary/80 transition-colors">Termos de Uso</Link> e a <Link to="/pagina/politica-de-privacidade" target="_blank" className="text-primary font-bold underline underline-offset-2 hover:text-primary/80 transition-colors">Política de Privacidade</Link>
+                                    </Label>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="space-y-6 pt-4">
-                             <Button 
-                                type="submit" 
-                                disabled={mutation.isPending}
-                                className="w-full bg-primary hover:bg-primary/90 h-16 text-xl font-black rounded-2xl shadow-2xl shadow-primary/30 transition-all active:scale-[0.98] group"
-                             >
-                                <ShoppingBag className="mr-3 h-6 w-6 group-hover:rotate-12 transition-transform" />
-                                {mutation.isPending ? "Processando..." : "Comprar agora"}
-                             </Button>
+                              <Button 
+                                 type="submit" 
+                                 disabled={mutation.isPending || !termsAccepted}
+                                 className={`w-full h-16 text-xl font-black rounded-2xl shadow-2xl transition-all active:scale-[0.98] group relative overflow-hidden ${termsAccepted ? 'bg-primary hover:bg-primary/90 shadow-primary/30' : 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed shadow-none'}`}
+                              >
+                                 {couponResult && (
+                                   <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                                 )}
+                                 <ShoppingBag className="mr-3 h-6 w-6 group-hover:rotate-12 transition-transform" />
+                                 {mutation.isPending ? "Processando..." : couponResult ? `Comprar por R$ ${displayPrice.toFixed(2)}` : "Comprar agora"}
+                              </Button>
+                              {couponResult && (
+                                <p className="text-center text-xs text-green-600 dark:text-green-400 font-bold flex items-center justify-center gap-1 animate-in fade-in duration-500">
+                                  <Sparkles className="w-3 h-3" />
+                                  Você está economizando <strong>R$ {couponResult.desconto_aplicado.toFixed(2)}</strong> neste curso!
+                                </p>
+                              )}
 
                              <div className="flex flex-col md:flex-row justify-center items-center gap-6 opacity-60">
                                 <div className="flex items-center gap-2">
@@ -603,6 +906,25 @@ const FastCheckout = () => {
             </CardContent>
           </Card>
         </div>
+
+        <AlertDialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Você já possui um cadastro!</AlertDialogTitle>
+              <AlertDialogDescription>
+                Identificamos que esse E-mail ou CPF/CNPJ já está registrado em nosso sistema.
+                Por favor, faça login para continuar a compra com segurança e ter os cursos na mesma conta.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Continuar mesmo assim</AlertDialogCancel>
+              <AlertDialogAction onClick={() => navigate(`/login?redirect=/checkout/${courseSlug}`)}>
+                Fazer Login
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       </div>
     </InclusiveSiteLayout>
   );

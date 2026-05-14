@@ -313,13 +313,17 @@ class ClientController extends Controller
                 ], 422);
             }
         }
-        //remover a mascara do celular
+        // Remover máscaras de celular e documentos e normalizar campos opcionais
         if ($request->filled('celular')) {
-            $request->merge([
-                'celular' => preg_replace('/\D/', '', $request->celular),
-            ]);
+            $request->merge(['celular' => preg_replace('/\D/', '', $request->celular)]);
         }
-        // Normalizar campos opcionais para null quando vazios (evita unique com "")
+        if ($request->filled('cpf')) {
+            $request->merge(['cpf' => preg_replace('/\D/', '', $request->cpf)]);
+        }
+        if ($request->filled('cnpj')) {
+            $request->merge(['cnpj' => preg_replace('/\D/', '', $request->cnpj)]);
+        }
+
         $request->merge([
             'email'   => $this->normalizeOptionalString($request->get('email')),
             'cpf'     => $this->normalizeOptionalString($request->get('cpf')),
@@ -457,7 +461,17 @@ class ClientController extends Controller
 
         $clientToUpdate = Client::findOrFail($id);
 
-        // Normalizar campos opcionais para null quando vazios (evita unique com "")
+        // Remover máscaras e normalizar campos opcionais para null quando vazios
+        if ($request->filled('celular')) {
+            $request->merge(['celular' => preg_replace('/\D/', '', $request->celular)]);
+        }
+        if ($request->filled('cpf')) {
+            $request->merge(['cpf' => preg_replace('/\D/', '', $request->cpf)]);
+        }
+        if ($request->filled('cnpj')) {
+            $request->merge(['cnpj' => preg_replace('/\D/', '', $request->cnpj)]);
+        }
+
         $request->merge([
             'email'   => $this->normalizeOptionalString($request->get('email')),
             'cpf'     => $this->normalizeOptionalString($request->get('cpf')),
