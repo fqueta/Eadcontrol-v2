@@ -20,7 +20,7 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
     {
         $credential = \App\Http\Controllers\api\ApiCredentialController::get('asaas');
         
-        $this->apiKey = $credential ? ($credential->config['pass'] ?? $credential->config['api_key'] ?? null) : env('ASAAS_API_KEY');
+        $this->apiKey = (string) ($credential ? ($credential->config['pass'] ?: $credential->config['api_key'] ?: '') : (env('ASAAS_API_KEY') ?: ''));
         $this->webhookSecret = $credential ? ($credential->config['webhook_secret'] ?? $credential->getMeta('webhook_secret')) : env('ASAAS_WEBHOOK_SECRET');
         
         // Sandbox ou Produção
@@ -30,6 +30,10 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
             : 'https://sandbox.asaas.com/api/v3';
 
         if (!$this->apiKey) {
+            \Log::error("AsaasPaymentGateway: API Key is missing.", [
+                'has_credential' => !!$credential,
+                'config_keys' => $credential ? array_keys($credential->config ?? []) : [],
+            ]);
             throw new \Exception("Credenciais do Asaas não configuradas. Verifique a integração 'asaas' no painel.");
         }
     }

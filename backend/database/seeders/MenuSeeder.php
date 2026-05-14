@@ -119,6 +119,9 @@ class MenuSeeder extends Seeder
 
         // Restaura verificação de FKs
         try { DB::statement('SET FOREIGN_KEY_CHECKS=1'); } catch (\Throwable $e) {}
+
+        // Garante que as permissões do Administrador (ID 2) sejam aplicadas
+        $this->call(AdminMenuPermissionSeeder::class);
     }
 
     /**
