@@ -18,7 +18,8 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
 
     public function __construct()
     {
-        $credential = \App\Http\Controllers\api\ApiCredentialController::get('asaas');
+        $credential = \App\Http\Controllers\api\ApiCredentialController::get('asaas-payments')
+                   ?? \App\Http\Controllers\api\ApiCredentialController::get('asaas');
         
         $this->apiKey = (string) ($credential ? ($credential->config['pass'] ?: $credential->config['api_key'] ?: '') : (env('ASAAS_API_KEY') ?: ''));
         $this->webhookSecret = $credential ? ($credential->config['webhook_secret'] ?? $credential->getMeta('webhook_secret')) : env('ASAAS_WEBHOOK_SECRET');
