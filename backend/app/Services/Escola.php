@@ -180,7 +180,7 @@ class Escola
 				{historico}
 			</div>
 		</div>
-		<?
+		<?php
 		$ret = ob_get_clean();
 		$ret = str_replace('{historico}', $historico, $ret);
 		return $ret;
@@ -279,7 +279,7 @@ class Escola
 			</div>
 		</div>
 
-		<?
+		<?php
 		$conteudo_modulos = false;
 		$conteudo_provas = false;
 		$tema2 = '
@@ -406,7 +406,7 @@ class Escola
 				</div>
 			</div>
 		</div>
-		<?
+		<?php
 		$ret = ob_get_clean();
 		$ret = str_replace('{conteudo}',$conteudo,$ret);
 		$ret = str_replace('{header}',$header,$ret);
@@ -748,7 +748,7 @@ class Escola
 				{opcoes}
 			</div>
 		</div>
-		<?
+		<?php
 		$ret = ob_get_clean();
 		foreach ($dp as $kp => $vp) {
 			$ret = str_replace('{'.$kp.'}',$vp,$ret);
@@ -1265,7 +1265,7 @@ class Escola
 				{tbody}
 			</tbody>
 		</table>
-		<?
+		<?php
 		$tema = '<tr class=" tr-turma turma-{id_turma}">
 					<td>
 						<input type="checkbox" class="check_presenca" name="dados_cliente[]" id="cliente_{id_cliente}" onclick="cursos_atualizar_presenca(this);" {checked} value="{dados_cliente}" />
@@ -1332,12 +1332,12 @@ class Escola
 		?>
 		<div class="row mb-3 mt-3 ml-0 mr-0">
 			<div class="col-md-12 mb-4">
-				<?=formCampos($config['campos_consulta'])?>
+				<?php echo formCampos($config['campos_consulta'])?>
 			</div>
 		</div>
 		<script>
 			function select_curso(obj){
-				link = RAIZ+'/<?=$pagina?>?sec='+btoa('<?=$sec?>')+'&id_curso='+obj.value;
+				link = RAIZ+'/<?php echo $pagina?>?sec='+btoa('<?php echo $sec?>')+'&id_curso='+obj.value;
 				if(link){
 					window.location = link;
 				}
@@ -1350,7 +1350,7 @@ class Escola
 				}
 			}
 		</script>
-		<?
+		<?php
 		$ret = ob_get_clean();
 		return $ret;
 	}
@@ -1412,17 +1412,17 @@ class Escola
 		ob_start();
 		?>
 		<style>
-			<?=$style?>
+			<?php echo $style?>
 		</style>
 		<div class="row mb-3 mt-3 ml-0 mr-0">
 			<div class="col-md-12 mb-4 text-center">
-				<h1>Cronograma do curso: <?=$dc['nome'] ?> </h1>
+				<h1>Cronograma do curso: <?php echo $dc['nome'] ?> </h1>
 			</div>
 			<div class="col-md-12">
-			<?=$btn_add_novo?>
+			<?php echo $btn_add_novo?>
 			<hr>
 			</div>
-			<input type="hidden" value="<?=$is_admin?>" id="is_admin">
+			<input type="hidden" value="<?php echo $is_admin?>" id="is_admin">
 			<div class="col-md-12" style="margin-bottom: 20px;" id='calendar'></div>
 		</div>
 		<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js'></script>
@@ -1441,7 +1441,7 @@ class Escola
 						center: 'title',
 						end: 'prevYear,nextYear'
 					},
-					events: '/admin/app/cursos/acao.php?ajax=s&opc=cronograma_curso&id_curso=<?=$id_curso?>', // URL do arquivo PHP que retorna os eventos
+					events: '/admin/app/cursos/acao.php?ajax=s&opc=cronograma_curso&id_curso=<?php echo $id_curso?>', // URL do arquivo PHP que retorna os eventos
 					eventColor: '#378006', // Cor dos eventos
 					locale: 'pt-custom',
 					buttonText: {
@@ -1850,8 +1850,8 @@ class Escola
 													</span>
 												</h5>
 											</div>
-											<?=$select_turma?>
-											<?=$select_modulos?>
+											<?php echo $select_turma?>
+											<?php echo $select_modulos?>
 											<div class="col-md-12 mb-2">
 												<label for="">Nome da Aula</label>
 												<input type="text" required class="form-control" name="nome" value="" />
@@ -1875,7 +1875,7 @@ class Escola
 											</div>
 											<div class="col-md-12 mb-4">
 												@csrf
-												<input type="hidden" name="id_curso" value="<?=$id_curso?>" />
+												<input type="hidden" name="id_curso" value="<?php echo $id_curso?>" />
 												<label for="">Descrição</label>
 												<textarea class="form-control" required style="height: 100px;" name="descricao" id="descricao"></textarea>
 											</div>
@@ -2018,7 +2018,7 @@ class Escola
 				}
 			}
 		</script>
-		<?
+		<?php
 		$ret = ob_get_clean();
 		$csrf = '<input type="hidden" name="_token" value="'.session_id().'" />';
 		$ret = str_replace('{modal_header}','Atividade ao vivo',$ret);
@@ -2113,7 +2113,7 @@ class Escola
 		<head>
 			<meta charset="UTF-8">
 			<meta name="viewport" content="width=device-width, initial-scale=1.0">
-			<title><?=__translate('Verificação de Certificado',true)?></title>
+			<title><?php echo __translate('Verificação de Certificado',true)?></title>
 			<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
 			{favicon}
 		</head>
@@ -2121,7 +2121,7 @@ class Escola
 			<div class="container">
 				<div class="row">
 					<div class="col-md-12 text-center mb-4 mt-4">
-					<?=verImagemSlim_SERVER("WHERE token='".$GLOBALS['tk_conta']."'",'imagem_logo','',3)?>
+					<?php echo verImagemSlim_SERVER("WHERE token='".$GLOBALS['tk_conta']."'",'imagem_logo','',3)?>
 					</div>
 				</div>
 				<div class="row">
@@ -2131,7 +2131,7 @@ class Escola
 
 		</body>
 		</html>
-		<?
+		<?php
 		$ret = ob_get_clean();
 		$ret = str_replace('{conteudo}',$conteudo,$ret);
 		$ret = str_replace('{favicon}',$favicon,$ret);

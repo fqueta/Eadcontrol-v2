@@ -1,4 +1,4 @@
-<?
+<?php
 namespace App\Helpers;
 
 use App\Services\Qlib;
@@ -1060,15 +1060,15 @@ class Ead {
 					//print_r($selec);
 				?>
 				<div class="col-md-12">
-				<?
+				<?php
 				if(!empty($label)){
 				?>
-				 <label class="control-label" for="select"><?=__translate($label,true)?>:</label><br>
-					<?
+				 <label class="control-label" for="select"><?php echo __translate($label,true)?>:</label><br>
+					<?php
 				}
 					?>
-					<select multiple name="<?=$name?>[]" data-live-search="true" class="<?=$selectpicker?>" data-width="100%" title="<?=$title?>">
-						<?
+					<select multiple name="<?php echo $name?>[]" data-live-search="true" class="<?php echo $selectpicker?>" data-width="100%" title="<?php echo $title?>">
+						<?php
 						if($acao == 'gerenciar'){
 							$input = "<option value=\"\" selected=\"selected\">".$sele_obs."</option>";
 							$input .= "<option value=\"cad\" >Cadastrar ".__translate($label,true)."</option>";
@@ -1085,14 +1085,14 @@ class Ead {
 											}
 									}
 								?>
-									<option value="<?=$value[$keySele]?>" <?=$selected?>><?=$value['nome']?></option>
-								<?
+									<option value="<?php echo $value[$keySele]?>" <?php echo $selected?>><?php echo $value['nome']?></option>
+								<?php
 
 						}
 						  ?>
 					</select>
 				</div>
-				<?
+				<?php
 
 		}
 		$ret .= ob_get_clean();

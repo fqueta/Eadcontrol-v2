@@ -1,4 +1,4 @@
-<?
+<?php
 namespace App\Helpers;
 class TemaEAD {
 	public $urPrincipal;
@@ -549,7 +549,7 @@ class TemaEAD {
 						//submitFormCliente2('#form_logar_user');
 					});
 				</script>
-			<?
+			<?php
 				$ret .= ob_get_clean();
 
 		return $ret;
@@ -3396,14 +3396,14 @@ class TemaEAD {
 						player = new YT.Player('js-media-player', {
 							height: 450, // qualquer altura desejada
 							width: '100%', // qualquer largura desejada
-							videoId: '<?=$id_video?>',
+							videoId: '<?php echo $id_video?>',
 							playerVars: { // adicionando algumas variáveis
 								rel: 0, // não exibir videos relacionados ao final
 								showinfo: 0, // ocultar informações do video
-								//autoplay: <?=$autoplay?>, // play automático
+								//autoplay: <?php echo $autoplay?>, // play automático
 								modestbranding: 1, // Não exibe logotipo youtube
 								iv_load_policy: 3, // Não exibe logotipo youtube
-								start:'<?=$start?>'
+								start:'<?php echo $start?>'
 							},
 							events: {
 								'onReady': onPlayerReady,
@@ -3441,7 +3441,7 @@ class TemaEAD {
 							clearInterval(interval);
 						}
 					}
-					var config = JSON.parse('<?=json_encode($configAula)?>');
+					var config = JSON.parse('<?php echo json_encode($configAula)?>');
 					function onPlayerStateChange(event) {
 						var data ={seconds:player.getCurrentTime(),duration:player.getDuration()};
 						//var duracao = player.getDuration();
@@ -3467,7 +3467,7 @@ class TemaEAD {
 						console.log(event);
 					}
 			</script> -->
-			<?
+			<?php
 			*/
 			$ret['html'] = '<iframe  class="embed-responsive-item" id="Eadcontrol"  width="100%" height="315" src="https://www.youtube.com/embed/'.$id_video.'" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture '.$start.'" allowfullscreen></iframe>';
 			$ret['html'] .= ob_get_clean();
@@ -3541,14 +3541,14 @@ class TemaEAD {
 						player = new YT.Player('js-media-player', {
 							height: 450, // qualquer altura desejada
 							width: '100%', // qualquer largura desejada
-							videoId: '<?=$id_video?>',
+							videoId: '<?php echo $id_video?>',
 							playerVars: { // adicionando algumas variáveis
 								rel: 0, // não exibir videos relacionados ao final
 								showinfo: 0, // ocultar informações do video
-								//autoplay: <?=$autoplay?>, // play automático
+								//autoplay: <?php echo $autoplay?>, // play automático
 								modestbranding: 1, // Não exibe logotipo youtube
 								iv_load_policy: 3, // Não exibe logotipo youtube
-								start:'<?=$start?>'
+								start:'<?php echo $start?>'
 							},
 							events: {
 								'onReady': onPlayerReady,
@@ -3586,7 +3586,7 @@ class TemaEAD {
 							clearInterval(interval);
 						}
 					}
-					var config = JSON.parse('<?=json_encode($configAula)?>');
+					var config = JSON.parse('<?php echo json_encode($configAula)?>');
 					function onPlayerStateChange(event) {
 						var data ={seconds:player.getCurrentTime(),duration:player.getDuration()};
 						//var duracao = player.getDuration();
@@ -3612,7 +3612,7 @@ class TemaEAD {
 						console.log(event);
 					}
 			</script>
-			<?
+			<?php
 			$ret['html'] = ob_get_clean();
 		}
 		return $ret;
@@ -5137,25 +5137,25 @@ class TemaEAD {
 			}
 
 	</style>
-	<div class="modal left fade" id="<?=$id?>" tabindex="" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+	<div class="modal left fade" id="<?php echo $id?>" tabindex="" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-					<h5 class="modal-title"><?=$titulo?></h5>
+					<h5 class="modal-title"><?php echo $titulo?></h5>
 					<button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
 					  <span aria-hidden="true">&times;</span>
 					</button>
 				</div>
 				<div class="modal-body">
-                    <?=$conteudo?>
+                    <?php echo $conteudo?>
                 </div>
                 <div class="modal-footer">
-                   <?=$btn_fechar?>
+                   <?php echo $btn_fechar?>
                 </div>
             </div>
         </div>
     </div>
-	<?
+	<?php
 		$ret = ob_get_clean();
 		/*$ret .= '
 		<div class="modal left fade" tabindex="-1" role="dialog" id="'.$id.'">
@@ -5588,22 +5588,22 @@ class TemaEAD {
 								$dadosPQuest = dados_tab($GLOBALS['tab27'],'*',"WHERE `token_prova`='".$config['token']."' AND ".compleDelete()." ORDER BY id ASC");
 								if($dadosPQuest){
 							 ?>
-							  <div class="text-subhead-2"><?=__translate('Opções (Lembre-se, Clique somente quando tiver certeza da resposta!)')?></div>
+							  <div class="text-subhead-2"><?php echo __translate('Opções (Lembre-se, Clique somente quando tiver certeza da resposta!)')?></div>
 							  	<form name="resp_prova" id="resp_prova">
-									<input type="hidden" name="pagpr" value="<?=$pag?>"/>
-									<input type="hidden" name="token" value="<?=$config['token']?>"/>
-									<input type="hidden" name="token_questao" value="<?=$dadosPQuest[$pag]['token']?>"/>
+									<input type="hidden" name="pagpr" value="<?php echo $pag?>"/>
+									<input type="hidden" name="token" value="<?php echo $config['token']?>"/>
+									<input type="hidden" name="token_questao" value="<?php echo $dadosPQuest[$pag]['token']?>"/>
 									<!-- <button type="button" onclick="ead_changeBtnConfirm()">T</button> -->
-									<?
+									<?php
 									if(isset($config_gabarito_arr)){
 										echo '<input type="hidden" name="config_gabarito_arr" value="'.encodeArray($config_gabarito_arr).'">';
 									}
 									if(isset($config['configAula'])){
 										?>
-										<input type="hidden" name="configAula[id_cliente]" value="<?=$config['configAula']['id_cliente']?>"/>
-										<input type="hidden" name="configAula[id_matricula]" value="<?=$config['configAula']['id_matricula']?>"/>
-										<input type="hidden" name="configAula[id_atividade]" value="<?=$config['configAula']['id_atividade']?>"/>
-										<?
+										<input type="hidden" name="configAula[id_cliente]" value="<?php echo $config['configAula']['id_cliente']?>"/>
+										<input type="hidden" name="configAula[id_matricula]" value="<?php echo $config['configAula']['id_matricula']?>"/>
+										<input type="hidden" name="configAula[id_atividade]" value="<?php echo $config['configAula']['id_atividade']?>"/>
+										<?php
 									}
 									$checked = false;$checkedcer = false;
 									//TIPO DE ALTERNATIVA l PARA LETRAS n PARA NÚMEROS.
@@ -5642,18 +5642,18 @@ class TemaEAD {
 												}
 											}
 											?>
-											<div class="checkbox checkbox-<?=$color_resp?> checkbox-circle <?=$border?> " >
-												<input type="checkbox" disabled="" name="<?=$radioName?>" id="<?=$iq?>" value="<?=$iq?>" <?=$checkedcer?> <?=$checked?> >
-												<label for="<?=$iq?>">
-													<span class="lista-questao"><?=$a?>)</span>
+											<div class="checkbox checkbox-<?php echo $color_resp?> checkbox-circle <?php echo $border?> " >
+												<input type="checkbox" disabled="" name="<?php echo $radioName?>" id="<?php echo $iq?>" value="<?php echo $iq?>" <?php echo $checkedcer?> <?php echo $checked?> >
+												<label for="<?php echo $iq?>">
+													<span class="lista-questao"><?php echo $a?>)</span>
 													<span class="resp">
-														<?=$val?>
+														<?php echo $val?>
 													</span>
 											</label>
-												<?=$labRespCerta?>
+												<?php echo $labRespCerta?>
 											</div>
 
-											<?
+											<?php
 												 $border = false;
 												 $labRespCerta = false;
 										}if($opcao == 3){
@@ -5673,27 +5673,27 @@ class TemaEAD {
 												}
 											}
 											?>
-											<div class="checkbox checkbox-<?=$color_resp?> checkbox-circle <?=$border?> " >
-												<input type="checkbox" disabled="" name="<?=$radioName?>" id="<?=$iq?>" value="<?=$iq?>" <?=$checkedcer?> <?=$checked?> >
-												<label for="<?=$iq?>">
-													<span class="lista-questao"><?=$a?>)</span>
+											<div class="checkbox checkbox-<?php echo $color_resp?> checkbox-circle <?php echo $border?> " >
+												<input type="checkbox" disabled="" name="<?php echo $radioName?>" id="<?php echo $iq?>" value="<?php echo $iq?>" <?php echo $checkedcer?> <?php echo $checked?> >
+												<label for="<?php echo $iq?>">
+													<span class="lista-questao"><?php echo $a?>)</span>
 													<span class="resp">
-														<?=$val?>
+														<?php echo $val?>
 													</span>
 												</label>
-												<?=$labRespCerta?>
+												<?php echo $labRespCerta?>
 											</div>
 
-											<?
+											<?php
 												 $border = false;
 												 $labRespCerta = false;
 										}if($opcao == 1){
 											?>
-											<div class="radio radio-info" data-toggle="tooltip" title="Marque aqui a Opção <?=$val?>.">
-												<input type="radio" name="<?=$radioName?>" id="<?=$iq?>" value="<?=$iq?>">
-												<label for="<?=$iq?>"><span class="lista-questao"><?=$a?>)</span> <?=$val?></label>
+											<div class="radio radio-info" data-toggle="tooltip" title="Marque aqui a Opção <?php echo $val?>.">
+												<input type="radio" name="<?php echo $radioName?>" id="<?php echo $iq?>" value="<?php echo $iq?>">
+												<label for="<?php echo $iq?>"><span class="lista-questao"><?php echo $a?>)</span> <?php echo $val?></label>
 											</div>
-											<?
+											<?php
 										}
 									}
 								}else{
@@ -5719,10 +5719,10 @@ class TemaEAD {
 												// jQuery('#conf_resp').click(function() {
 												// 	corretorProva();
 												// });
-												<?=$hiddenBtnConfirmar?>
+												<?php echo $hiddenBtnConfirmar?>
 											});
 									</script>
-									<?
+									<?php
 									if($opcao == 1 && !is_adminstrator()){
 										$ret['dados_questao']['bt_confirm'] = '<button type="button" id="conf_resp" onclick="corretorProva();" title="'.__translate('Confirmar a resposta acima',true).'" class="btn btn-outline-secondary"><i class="fa fa-check" aria-hidden="true"></i> '.__translate('Confirmar',true).'</button>';
 									}
@@ -7550,8 +7550,8 @@ class TemaEAD {
 				  }
 				}
 				</style>
-				<div id="btn_wzap"><?=$label?><a href="https://api.whatsapp.com/send?phone=<?=$telefone?>&text=<?=$mensagemZap?>" target="_blank"><i class="fa fa-whatsapp"></i></a></div>
-			<?
+				<div id="btn_wzap"><?php echo $label?><a href="https://api.whatsapp.com/send?phone=<?php echo $telefone?>&text=<?php echo $mensagemZap?>" target="_blank"><i class="fa fa-whatsapp"></i></a></div>
+			<?php
 			$ret = ob_get_clean();
 		}
 		return $ret;

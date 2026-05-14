@@ -84,7 +84,12 @@ class CheckoutController extends Controller
             \Log::error("Webhook routing error for provider [{$provider}]: " . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
-            return response()->json(['error' => 'Webhook routing failed', 'message' => $e->getMessage()], 400);
+            return response()->json([
+                'error' => 'Webhook routing failed', 
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 400);
         }
     }
 }
