@@ -80,9 +80,11 @@ class CheckoutController extends Controller
         try {
             $gateway = PaymentGatewayFactory::create($provider);
             return $gateway->handleWebhook($request);
-        } catch (\Exception $e) {
-            \Log::error("Webhook routing error for provider [{$provider}]: " . $e->getMessage());
-            return response()->json(['error' => 'Webhook routing failed'], 400);
+        } catch (\Throwable $e) {
+            \Log::error("Webhook routing error for provider [{$provider}]: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'Webhook routing failed', 'message' => $e->getMessage()], 400);
         }
     }
 }

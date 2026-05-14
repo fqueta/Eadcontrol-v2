@@ -24,7 +24,7 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
         $this->webhookSecret = $credential ? ($credential->config['webhook_secret'] ?? $credential->getMeta('webhook_secret')) : env('ASAAS_WEBHOOK_SECRET');
         
         // Sandbox ou Produção
-        $environment = $credential->config['environment'] ?? 'sandbox';
+        $environment = $credential ? ($credential->config['environment'] ?? 'sandbox') : 'sandbox';
         $this->apiUrl = $environment === 'production' 
             ? 'https://api.asaas.com/v3' 
             : 'https://sandbox.asaas.com/api/v3';
@@ -109,25 +109,31 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
                         try {
                             $client = $matricula->student;
                             $course = $matricula->course;
-                            $client->notify(new \App\Notifications\WelcomeEmailNotification(
-                                $client->name,
-                                $course->titulo,
-                                $course->id,
-                                $course->slug
-                            ));
-                            Log::info("Welcome email (Success) sent to {$client->email} via Webhook confirmation.");
-                        } catch (\Exception $e) {
+                            
+                            if ($client && $course) {
+                                $client->notify(new \App\Notifications\WelcomeEmailNotification(
+                                    $client->name,
+                                    $course->titulo,
+                                    $course->id,
+                                    $course->slug
+                                ));
+                                Log::info("Welcome email (Success) sent to {$client->email} via Webhook confirmation.");
+                            } else {
+                                Log::warning("Asaas Webhook: Could not send welcome email. Client or Course not found for Matricula {$matricula->id}.");
+                            }
+                        } catch (\Throwable $e) {
                             Log::error("Failed to send welcome email via Webhook: " . $e->getMessage());
                         }
 
                         // Notificar administradores da nova venda
                         try {
+                            // Assumindo que permissões menores que 3 são administradores (1 e 2)
                             $admins = \App\Models\User::where('permission_id', '<', 3)->get();
                             if ($admins->isNotEmpty()) {
                                 \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\NewSaleAdminNotification($matricula));
                                 Log::info("Admin sale notification sent for Matricula {$matricula->id} via Webhook.");
                             }
-                        } catch (\Exception $e) {
+                        } catch (\Throwable $e) {
                             Log::error("Failed to send admin sale notification via Webhook: " . $e->getMessage());
                         }
                     }
