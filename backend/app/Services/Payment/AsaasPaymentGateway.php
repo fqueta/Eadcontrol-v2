@@ -30,11 +30,10 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
             : 'https://sandbox.asaas.com/api/v3';
 
         if (!$this->apiKey) {
-            \Log::error("AsaasPaymentGateway: API Key is missing.", [
-                'has_credential' => !!$credential,
-                'config_keys' => $credential ? array_keys($credential->config ?? []) : [],
-            ]);
-            throw new \Exception("Credenciais do Asaas não configuradas. Verifique a integração 'asaas' no painel.");
+            $hasCredential = !!$credential;
+            $configKeys = $credential ? implode(', ', array_keys($credential->config ?? [])) : 'N/A';
+            \Log::error("AsaasPaymentGateway: API Key is missing. Has Credential: " . ($hasCredential ? 'Yes' : 'No') . ", Keys: " . $configKeys);
+            throw new \Exception("Credenciais do Asaas não configuradas. (Encontrado: " . ($hasCredential ? 'Sim' : 'Não') . ", Chaves: " . $configKeys . "). Verifique a integração 'asaas' no painel.");
         }
     }
 
