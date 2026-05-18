@@ -360,7 +360,7 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
     /**
      * Garante que o cliente existe no Asaas e retorna seu ID do Asaas.
      */
-    protected function ensureAsaasCustomer(\App\Models\User $client): string
+    public function ensureAsaasCustomer(\App\Models\User $client): string
     {
         $email = $client->email;
         $customerId = \App\Services\Qlib::get_usermeta($client->id, 'id_asaas', true);

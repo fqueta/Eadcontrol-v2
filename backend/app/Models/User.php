@@ -118,4 +118,28 @@ class User extends Authenticatable
     {
         $this->notify(new ResetPasswordNotification($token));
     }
+
+    /**
+     * Registra eventos do ciclo de vida do modelo para sincronização automática com o Asaas.
+     */
+    protected static function booted()
+    {
+        static::updated(function ($user) {
+            // Só sincroniza se o usuário estiver integrado com o Asaas (possui id_asaas nos metadados)
+            $idAsaas = \App\Services\Qlib::get_usermeta($user->id, 'id_asaas', true);
+            if (!empty($idAsaas)) {
+                // Só dispara sincronização se houver alteração em campos cadastrais relevantes para o Asaas
+                if ($user->wasChanged(['name', 'email', 'cpf', 'cnpj', 'celular'])) {
+                    try {
+                        $gateway = \App\Services\Payment\PaymentGatewayFactory::create('asaas');
+                        if (method_exists($gateway, 'ensureAsaasCustomer')) {
+                            $gateway->ensureAsaasCustomer($user);
+                        }
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error("Erro ao sincronizar atualização de usuário com Asaas (ID: {$user->id}): " . $e->getMessage());
+                    }
+                }
+            }
+        });
+    }
 }

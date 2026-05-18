@@ -137,6 +137,7 @@ const FastCheckout = () => {
   const [paymentResult, setPaymentResult] = useState<any>(location.state?.paymentResult || null);
   const isSuccess = location.pathname.endsWith('/obrigado-pela-compra');
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [duplicateField, setDuplicateField] = useState<'email' | 'cpfCnpj' | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   // Coupon state
@@ -215,10 +216,23 @@ const FastCheckout = () => {
     try {
       const { exists } = await checkoutService.checkUser({ [field]: value });
       if (exists) {
+        setDuplicateField(field);
         setShowLoginPrompt(true);
       }
     } catch (err) {
       console.error("Check user error", err);
+    }
+  };
+
+  const handleCancelPrompt = () => {
+    setShowLoginPrompt(false);
+    if (duplicateField) {
+      setTimeout(() => {
+        const element = document.getElementById(duplicateField);
+        if (element) {
+          element.focus();
+        }
+      }, 50);
     }
   };
 
@@ -946,7 +960,7 @@ const FastCheckout = () => {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Continuar mesmo assim</AlertDialogCancel>
+              <AlertDialogCancel onClick={handleCancelPrompt}>Continuar mesmo assim</AlertDialogCancel>
               <AlertDialogAction onClick={() => navigate(`/login?redirect=/checkout/${courseSlug}`)}>
                 Fazer Login
               </AlertDialogAction>

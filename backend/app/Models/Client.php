@@ -79,6 +79,47 @@ class Client extends User
                 'ativo' => 's',
                 'tipo_pessoa' => (isset($data['cpfCnpj']) && strlen($cpfCnpjClean) > 11) ? 'pj' : 'pf',
             ]);
+        } else {
+            // Se o cliente existe, atualizamos os dados que foram preenchidos ou modificados no checkout
+            $updated = false;
+            $cpfCnpjClean = preg_replace('/\D/', '', $data['cpfCnpj'] ?? '');
+
+            // Atualiza CPF se estiver vazio no cadastro e foi informado
+            if (empty($client->cpf) && empty($client->cnpj) && !empty($cpfCnpjClean)) {
+                $cpfOriginal = $data['cpfCnpj'];
+                $cpfExists = self::where('id', '!=', $client->id)
+                                 ->where(function($q) use ($cpfOriginal, $cpfCnpjClean) {
+                                     $q->where('cpf', $cpfOriginal)
+                                       ->orWhere('cpf', $cpfCnpjClean)
+                                       ->orWhere('cnpj', $cpfOriginal)
+                                       ->orWhere('cnpj', $cpfCnpjClean);
+                                 })
+                                 ->first();
+                
+                if ($cpfExists) {
+                    throw new \Exception("O CPF/CNPJ informado já está cadastrado em outra conta (" . $cpfExists->email . ").");
+                }
+
+                $client->cpf = $data['cpfCnpj'];
+                $client->tipo_pessoa = (strlen($cpfCnpjClean) > 11) ? 'pj' : 'pf';
+                $updated = true;
+            }
+
+            // Atualiza o celular se foi informado e é diferente
+            if (!empty($data['phone']) && $client->celular !== $data['phone']) {
+                $client->celular = $data['phone'];
+                $updated = true;
+            }
+
+            // Atualiza o nome se foi informado e é diferente
+            if (!empty($data['name']) && $client->name !== $data['name']) {
+                $client->name = $data['name'];
+                $updated = true;
+            }
+
+            if ($updated) {
+                $client->save();
+            }
         }
 
         return $client;

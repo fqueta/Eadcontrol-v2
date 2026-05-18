@@ -180,7 +180,8 @@ export default function ClientView() {
   function handleViewEnrollment(enroll: any) {
     const id = String(enroll?.id || '');
     if (!id) return;
-    navigate(`/admin/sales/proposals/view/${id}`);
+    const returnTo = `${location.pathname}${location.search || ''}`;
+    navigate(`/admin/school/enrollments/view/${id}`, { state: { returnTo } });
   }
 
   /**
@@ -188,10 +189,12 @@ export default function ClientView() {
    * pt-BR: Navega para edição da proposta/matrícula.
    * en-US: Navigates to proposal/enrollment edit.
    */
-  function handleEditEnrollment(enroll: any) {
+  function handleEditEnrollment(enroll: any, tab?: string) {
     const id = String(enroll?.id || '');
     if (!id) return;
-    navigate(`/admin/sales/proposals/edit/${id}`);
+    const query = tab ? `?tab=${tab}` : '';
+    const returnTo = `${location.pathname}${location.search || ''}`;
+    navigate(`/admin/sales/proposals/edit/${id}${query}`, { state: { returnTo } });
   }
 
   /**

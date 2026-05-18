@@ -250,19 +250,20 @@ export default function Interested() {
               resolveAmountBRL={(item) => resolveAmountBRL(item)}
               /**
                * onView
-               * pt-BR: Abre a visualização de proposta baseada na matrícula (id).
-               * en-US: Opens proposal view page based on enrollment (id).
+               * pt-BR: Abre a visualização da matrícula (id).
+               * en-US: Opens enrollment view page based on enrollment (id).
               */
               onView={(enroll: any) => {
-                navigate(`/admin/sales/proposals/view/${String(enroll.id)}`, { state: { returnTo } });
+                navigate(`/admin/school/enrollments/view/${String(enroll.id)}`, { state: { returnTo } });
               }}
               /**
                * onEdit
                * pt-BR: Abre a edição de proposta baseada na matrícula (id).
                * en-US: Opens proposal edit page based on enrollment (id).
               */
-              onEdit={(enroll: any) => {
-                navigate(`/admin/sales/proposals/edit/${String(enroll.id)}`, { state: { returnTo } });
+              onEdit={(enroll: any, tab?: string) => {
+                const query = tab ? `?tab=${tab}` : '';
+                navigate(`/admin/sales/proposals/edit/${String(enroll.id)}${query}`, { state: { returnTo } });
               }}
               onDelete={() => {}}
             />
