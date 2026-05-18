@@ -8,6 +8,7 @@ export interface CheckoutCourse {
   valor_parcela?: number | string;
   imagem_url: string | null;
   descricao: string | null;
+  config?: any;
 }
 
 export interface CouponResponse {

@@ -599,6 +599,14 @@ class MatriculaController extends Controller
             ->select('parcelamentos.*')
             ->get()
             ->toArray();
+
+        // Buscar faturas locais no contas a receber associadas a esta matrícula
+        $data['financial_invoices'] = \App\Models\FinancialAccount::withoutGlobalScopes()
+            ->where('config->matricula_id', $matricula->id)
+            ->orderBy('due_date', 'asc')
+            ->get()
+            ->toArray();
+
         return response()->json($data);
     }
 

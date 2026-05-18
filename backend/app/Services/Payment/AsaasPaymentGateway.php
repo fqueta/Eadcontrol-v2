@@ -98,6 +98,49 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
                 $matricula = Matricula::find($externalReference);
                 
                 if ($matricula) {
+                    // 1. Atualizar faturas locais (Contas a Receber)
+                    try {
+                        $hasLocalInvoices = \App\Models\FinancialAccount::where('config->matricula_id', $matricula->id)->exists();
+                        if (!$hasLocalInvoices) {
+                            $installments = isset($payment['installmentCount']) ? (int) $payment['installmentCount'] : 1;
+                            $totalAmount = isset($payment['value']) ? (float) $payment['value'] : (float) $matricula->total;
+                            $this->createLocalInvoices($matricula, $payment, $payment['billingType'] ?? 'UNDEFINED', $installments, $totalAmount, $payment['dueDate'] ?? now()->toDateString());
+                        }
+
+                        // Atualizar a fatura correspondente para paga
+                        $installmentNumber = $payment['installmentNumber'] ?? null;
+                        $localInvoice = null;
+
+                        if ($installmentNumber) {
+                            $localInvoice = \App\Models\FinancialAccount::where('config->matricula_id', $matricula->id)
+                                ->where('config->installment_index', (int) $installmentNumber)
+                                ->first();
+                        }
+
+                        if (!$localInvoice) {
+                            $localInvoice = \App\Models\FinancialAccount::where('config->asaas_payment_id', $payment['id'])
+                                ->first();
+                        }
+
+                        if (!$localInvoice) {
+                            $localInvoice = \App\Models\FinancialAccount::where('config->matricula_id', $matricula->id)
+                                ->where('status', 'pending')
+                                ->orderBy('due_date', 'asc')
+                                ->first();
+                        }
+
+                        if ($localInvoice && $localInvoice->status !== 'paid') {
+                            $localInvoice->status = 'paid';
+                            $localInvoice->paid_amount = $localInvoice->amount;
+                            $localInvoice->payment_date = now()->toDateString();
+                            $localInvoice->save();
+                            Log::info("Local accounts receivable updated to 'paid' via webhook: Invoice {$localInvoice->invoice_number}");
+                        }
+                    } catch (\Throwable $ex) {
+                        Log::error("Failed to process local financial account update in webhook for Matricula {$matricula->id}: " . $ex->getMessage());
+                    }
+
+                    // 2. Atualizar status da matrícula e notificar
                     $situacao_id_mat = \App\Services\Qlib::buscaValorDb('posts', 'post_name', 'mat', 'ID');
                     if ($matricula->situacao_id != $situacao_id_mat) {
                         $matricula->situacao_id = $situacao_id_mat;
@@ -177,7 +220,6 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
         $payload = [
             'customer' => $customerId,
             'billingType' => $billingType,
-            'value' => $price,
             'dueDate' => $dueDate,
             'description' => "Pagamento do curso {$courseTitle}",
             'externalReference' => (string) $matricula->id,
@@ -188,6 +230,13 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
             $payload['creditCard'] = $paymentData['creditCard'];
             $payload['creditCardHolderInfo'] = $paymentData['creditCardHolderInfo'];
             $payload['remoteIp'] = request()->ip();
+        }
+
+        if (!empty($paymentData['installmentCount']) && (int) $paymentData['installmentCount'] > 1) {
+            $payload['installmentCount'] = (int) $paymentData['installmentCount'];
+            $payload['totalValue'] = $price;
+        } else {
+            $payload['value'] = $price;
         }
 
         // Gravar requisição nos logs
@@ -215,6 +264,14 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
         if ($response->failed()) {
             Log::error('Asaas Direct Payment Failed', $payment);
             throw new \Exception("Falha ao processar pagamento no Asaas. " . ($payment['errors'][0]['description'] ?? ''));
+        }
+
+        // 4.5. Criar faturas locais em "contas a receber" (financial_accounts)
+        try {
+            $installments = (int) ($paymentData['installmentCount'] ?? $payment['installmentCount'] ?? 1);
+            $this->createLocalInvoices($matricula, $payment, $billingType, $installments, (float) $price, $dueDate);
+        } catch (\Throwable $ex) {
+            Log::error("Failed to create local financial accounts for Matricula {$matricula->id}: " . $ex->getMessage());
         }
 
         // 5. Se a resposta foi sucesso e o pagamento for cartão, mudar status para matriculado (mat)
@@ -308,31 +365,42 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
         $email = $client->email;
         $customerId = \App\Services\Qlib::get_usermeta($client->id, 'id_asaas', true);
 
-        if ($customerId) {
-            return $customerId;
+        // Se não tiver localmente, buscar por email no Asaas
+        if (!$customerId) {
+            $response = Http::withHeaders([
+                'access_token' => $this->apiKey,
+            ])->get("{$this->apiUrl}/customers", [
+                'email' => $email
+            ]);
+
+            $customers = $response->json('data') ?? [];
+
+            if (count($customers) > 0) {
+                $customerId = $customers[0]['id'];
+            }
         }
 
-        // Buscar por email no Asaas
-        $response = Http::withHeaders([
-            'access_token' => $this->apiKey,
-        ])->get("{$this->apiUrl}/customers", [
-            'email' => $email
-        ]);
+        $payload = [
+            'name' => $client->name,
+            'email' => $email,
+            'cpfCnpj' => $client->cpf ?? $client->cnpj ?? null,
+            'phone' => $client->celular ?? null,
+            'mobilePhone' => $client->celular ?? null,
+        ];
 
-        $customers = $response->json('data') ?? [];
+        if ($customerId) {
+            // Atualizar cadastro existente no Asaas para sincronizar dados
+            $updateResponse = Http::withHeaders([
+                'access_token' => $this->apiKey,
+            ])->put("{$this->apiUrl}/customers/{$customerId}", $payload);
 
-        if (count($customers) > 0) {
-            $customerId = $customers[0]['id'];
+            if ($updateResponse->failed()) {
+                Log::warning("Asaas: Falha ao atualizar dados do cliente {$customerId}. " . ($updateResponse->json('errors')[0]['description'] ?? ''));
+            } else {
+                Log::info("Asaas: Dados do cliente {$customerId} atualizados com sucesso.");
+            }
         } else {
-            // Criar no Asaas
-            $payload = [
-                'name' => $client->name,
-                'email' => $email,
-                'cpfCnpj' => $client->cpf ?? $client->cnpj ?? null,
-                'phone' => $client->celular ?? null,
-                'mobilePhone' => $client->celular ?? null,
-            ];
-
+            // Criar novo cliente no Asaas
             $createResponse = Http::withHeaders([
                 'access_token' => $this->apiKey,
             ])->post("{$this->apiUrl}/customers", $payload);
@@ -342,6 +410,7 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
             }
 
             $customerId = $createResponse->json('id');
+            Log::info("Asaas: Novo cliente criado com ID {$customerId}.");
         }
 
         // Atualizar meta local
@@ -388,5 +457,61 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
             'tipo' => 'curso', 
         ]);
         Log::info("Fallback: New 'mat' enrollment created for client {$client->id} and course {$courseId}");
+    }
+
+    /**
+     * Cria faturas locais no Contas a Receber (financial_accounts) correspondente ao número de parcelas.
+     */
+    protected function createLocalInvoices(\App\Models\Matricula $matricula, array $payment, string $billingType, int $installments, float $totalAmount, string $dueDate): void
+    {
+        // Deletar faturas anteriores desta matrícula para evitar duplicados
+        \App\Models\FinancialAccount::where('config->matricula_id', $matricula->id)->delete();
+
+        $client = $matricula->student;
+        $course = $matricula->course;
+        $courseTitle = $course ? $course->titulo : '';
+
+        $installmentAmount = round($totalAmount / $installments, 2);
+
+        $paymentMethodMap = [
+            'CREDIT_CARD' => 'credit_card',
+            'PIX' => 'pix',
+            'BOLETO' => 'bank_transfer',
+        ];
+        $localPaymentMethod = $paymentMethodMap[$billingType] ?? 'other';
+
+        // Determinar status padrão
+        $isPaid = ($billingType === 'CREDIT_CARD' && isset($payment['status']) && in_array($payment['status'], ['CONFIRMED', 'RECEIVED']));
+
+        for ($i = 1; $i <= $installments; $i++) {
+            $amount = ($i === $installments) ? ($totalAmount - ($installmentAmount * ($installments - 1))) : $installmentAmount;
+            $due_date = \Carbon\Carbon::parse($dueDate)->addMonths($i - 1)->toDateString();
+
+            \App\Models\FinancialAccount::create([
+                'amount' => $amount,
+                'type' => 'receivable',
+                'customer_name' => $client ? $client->name : '',
+                'installments' => $installments,
+                'invoice_number' => "{$matricula->id}-{$i}",
+                'discount_amount' => 0,
+                'interest_amount' => 0,
+                'paid_amount' => $isPaid ? $amount : 0,
+                'payment_date' => $isPaid ? now()->toDateString() : null,
+                'client_id' => $client ? $client->id : null,
+                'description' => "Parcela {$i}/{$installments} - Curso: {$courseTitle}",
+                'due_date' => $due_date,
+                'payment_method' => $localPaymentMethod,
+                'status' => $isPaid ? 'paid' : 'pending',
+                'notes' => "Matrícula ID: {$matricula->id}. ID Asaas: " . ($payment['id'] ?? '') . " (Parcela {$i}/{$installments})",
+                'config' => [
+                    'matricula_id' => $matricula->id,
+                    'installment_index' => $i,
+                    'asaas_payment_id' => $payment['id'] ?? null,
+                    'asaas_installment_id' => $payment['installment'] ?? null,
+                ]
+            ]);
+        }
+
+        Log::info("Local accounts receivable created: {$installments} invoice(s) for Matricula {$matricula->id}");
     }
 }

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Check, CreditCard, QrCode, FileText, Lock, ShieldCheck, Star, ShoppingBag, Info, MapPin, Tag, X, Loader2, Sparkles, TrendingDown, Gift, FileCheck, ScrollText } from "lucide-react";
@@ -37,6 +37,7 @@ const checkoutSchema = z.object({
   cpfCnpj: z.string().min(14, "Documento inválido"), // 000.000.000-00
   phone: z.string().min(10, "Telefone inválido"),
   payment_method: z.enum(["credit_card", "pix", "boleto"]),
+  installmentCount: z.coerce.number().optional(),
   credit_card: z.object({
     holderName: z.string().optional(),
     number: z.string().optional(),
@@ -194,6 +195,7 @@ const FastCheckout = () => {
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
       payment_method: "credit_card",
+      installmentCount: 1,
     },
   });
 
@@ -234,6 +236,24 @@ const FastCheckout = () => {
 
   const displayPrice = couponResult ? couponResult.valor_final : (course?.valor ? Number(course.valor) : 0);
 
+  const maxInstallments = course?.parcelas ? Number(course.parcelas) : 1;
+  const showAllInstallments = course?.config?.incluir_opcao_cartao_parcelas === 's';
+
+  const installmentOptions = React.useMemo(() => {
+      if (maxInstallments <= 1) {
+          return [1];
+      }
+      if (showAllInstallments) {
+          return Array.from({ length: maxInstallments }, (_, i) => i + 1);
+      }
+      return [1, maxInstallments];
+  }, [maxInstallments, showAllInstallments]);
+
+  const getInstallmentLabel = (count: number) => {
+      const valuePerInstallment = displayPrice / count;
+      return `${String(count).padStart(2, '0')}x de R$ ${valuePerInstallment.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Sem Juros)`;
+  };
+
   const paymentMethod = form.watch("payment_method");
 
   const mutation = useMutation({
@@ -243,6 +263,7 @@ const FastCheckout = () => {
             course_id: course?.id,
             cpfCnpj: data.cpfCnpj.replace(/\D/g, ''),
             phone: data.phone.replace(/\D/g, ''),
+            installmentCount: data.installmentCount || 1,
         };
 
         if (couponResult?.valido) {
@@ -720,19 +741,27 @@ const FastCheckout = () => {
                                         </div>
                                         <div className="space-y-2">
                                             <Label className="text-xs font-bold text-slate-500">Parcelamento</Label>
-                                            <Select defaultValue="1">
-                                                <SelectTrigger className="h-14 rounded-xl font-bold bg-white">
-                                                    <SelectValue placeholder="Selecione as parcelas" />
-                                                </SelectTrigger>
-                                                <SelectContent className="rounded-xl">
-                                                    <SelectItem value="1" className="font-bold">01x de R$ {course?.valor} (Sem Juros)</SelectItem>
-                                                    {course?.parcelas && Number(course.parcelas) > 1 && (
-                                                        <SelectItem value={String(course.parcelas)} className="font-bold">
-                                                            {course.parcelas}x de R$ {course.valor_parcela} (Sem Juros)
-                                                        </SelectItem>
-                                                    )}
-                                                </SelectContent>
-                                            </Select>
+                                            <Controller
+                                                control={form.control}
+                                                name="installmentCount"
+                                                render={({ field }) => (
+                                                    <Select
+                                                        value={String(field.value || 1)}
+                                                        onValueChange={(val) => field.onChange(Number(val))}
+                                                    >
+                                                        <SelectTrigger className="h-14 rounded-xl font-bold bg-white">
+                                                            <SelectValue placeholder="Selecione as parcelas" />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="rounded-xl">
+                                                            {installmentOptions.map((opt) => (
+                                                                <SelectItem key={opt} value={String(opt)} className="font-bold">
+                                                                    {getInstallmentLabel(opt)}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
+                                            />
                                         </div>
                                     </div>
 

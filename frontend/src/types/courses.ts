@@ -56,6 +56,7 @@ export interface CourseConfig {
   pagina_venda: CourseSalePage;
   adc: CourseADCConfig;
   ead: CourseEADConfig;
+  incluir_opcao_cartao_parcelas?: 's' | 'n';
   cover?: {
     url: string;
     file_id?: number | string;

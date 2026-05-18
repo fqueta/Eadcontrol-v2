@@ -35,6 +35,7 @@ class CheckoutController extends Controller
             'valor_parcela' => $course->valor_parcela,
             'imagem_url' => $course->config['cover']['url'] ?? null,
             'descricao' => $course->descricao,
+            'config' => $course->config,
         ]);
     }
 
@@ -100,6 +101,7 @@ class CheckoutController extends Controller
             'credit_card' => 'required_if:payment_method,credit_card|array',
             'credit_card_holder' => 'required_if:payment_method,credit_card|array',
             'coupon_code' => 'nullable|string|max:50',
+            'installmentCount' => 'nullable|integer',
         ]);
 
         if ($validator->fails()) {
@@ -207,6 +209,9 @@ class CheckoutController extends Controller
             if ($request->input('payment_method') === 'credit_card') {
                 $paymentData['creditCard'] = $request->input('credit_card');
                 $paymentData['creditCardHolderInfo'] = $request->input('credit_card_holder');
+                if ($request->has('installmentCount')) {
+                    $paymentData['installmentCount'] = (int) $request->input('installmentCount');
+                }
             }
 
             $response = $gateway->processPayment($matricula, $paymentData);

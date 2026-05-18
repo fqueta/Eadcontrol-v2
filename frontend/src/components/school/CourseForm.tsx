@@ -527,6 +527,7 @@ export function CourseForm({
         pagina_venda: { link: '', label: '' },
         adc: { recheck: 'n', recorrente: 'n', cor: 'FFFFFF' },
         ead: { id_eadcontrol: '' },
+        incluir_opcao_cartao_parcelas: 'n',
         cover: { url: '', file_id: undefined as any, title: '' },
       },
       inscricao: '0,00',
@@ -681,6 +682,7 @@ export function CourseForm({
         pagina_venda: c.config?.pagina_venda ?? { link: '', label: '' },
         adc: c.config?.adc ?? { recheck: 'n', recorrente: 'n', cor: 'FFFFFF' },
         ead: c.config?.ead ?? { id_eadcontrol: '' },
+        incluir_opcao_cartao_parcelas: c.config?.incluir_opcao_cartao_parcelas ?? 'n',
         cover: {
           url: String(c.config?.cover?.url || '').trim(),
           file_id: c.config?.cover?.file_id,
@@ -2753,6 +2755,22 @@ export function CourseForm({
                       )}
                     />
                   </div>
+                </div>
+
+                <div className="flex items-center justify-between rounded-2xl border-2 p-4 transition-all duration-300 border-slate-200 dark:border-slate-800 bg-white/30 mt-6">
+                  <div className="space-y-1">
+                    <Label className="text-base font-bold text-foreground/90">
+                      Oferecer todas as parcelas intermediárias no checkout
+                    </Label>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      Se ativo, o aluno poderá selecionar parcelas menores (ex: 1x, 2x, 3x... até a quantidade máxima). Se desativado, exibirá apenas 1x e a parcela máxima configurada.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={form.watch('config.incluir_opcao_cartao_parcelas') === 's'}
+                    onCheckedChange={(checked) => form.setValue('config.incluir_opcao_cartao_parcelas', checked ? 's' : 'n')}
+                    className="data-[state=checked]:bg-primary scale-110"
+                  />
                 </div>
               </CardContent>
             </Card>

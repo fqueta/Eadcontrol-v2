@@ -292,6 +292,10 @@ export default function EnrollmentView() {
     return (enrollment as any)?.ativo === 's' || (enrollment as any)?.ativo === 1;
   }, [enrollment]);
 
+  const invoices = useMemo(() => {
+    return ((enrollment as any)?.financial_invoices ?? []) as any[];
+  }, [enrollment]);
+
   // Progress Calculations
   const { total, completed, percent } = useMemo(() => {
     const mods: any[] = Array.isArray((curriculum as any)?.curriculum) ? (curriculum as any).curriculum : [];
@@ -912,6 +916,77 @@ export default function EnrollmentView() {
             <div className="space-y-8 pt-10">
               <InstallmentPreviewCard title="Condições de Parcelamento" parcelamento={parcelamento} />
             </div>
+
+            {/* Faturas Locais (Contas a Receber) */}
+            {invoices.length > 0 && (
+              <Card className="shadow-sm border-muted/60 overflow-hidden lg:col-span-2">
+                <CardHeader className="bg-muted/10 border-b py-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-5 w-5 text-primary" />
+                      <CardTitle className="text-lg">Faturas Locais (Contas a Receber)</CardTitle>
+                    </div>
+                    <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-0 font-bold px-3 py-1">
+                      {invoices.length} {invoices.length === 1 ? 'Parcela' : 'Parcelas'}
+                    </Badge>
+                  </div>
+                  <CardDescription>Sincronização em tempo real das parcelas geradas com o financeiro local.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-muted/30 border-b text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                          <th className="py-3 px-6">Fatura</th>
+                          <th className="py-3 px-6">Descrição</th>
+                          <th className="py-3 px-6">Vencimento</th>
+                          <th className="py-3 px-6 text-right">Valor</th>
+                          <th className="py-3 px-6">Método</th>
+                          <th className="py-3 px-6">Status</th>
+                          <th className="py-3 px-6">Data Pagto</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y text-sm text-foreground/80">
+                        {invoices.map((inv: any) => {
+                          const paymentMethodLabel = inv.payment_method === 'credit_card' ? 'Cartão de Crédito' 
+                            : inv.payment_method === 'pix' ? 'Pix' 
+                            : inv.payment_method === 'bank_transfer' ? 'Boleto' 
+                            : 'Outro';
+
+                          const statusColorClass = inv.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-50'
+                            : inv.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-50'
+                            : 'bg-red-50 text-red-700 border-red-100 hover:bg-red-50';
+
+                          const statusLabel = inv.status === 'paid' ? 'Pago'
+                            : inv.status === 'pending' ? 'Pendente'
+                            : 'Vencido';
+
+                          return (
+                            <tr key={inv.id} className="hover:bg-muted/10 transition-colors">
+                              <td className="py-4 px-6 font-mono font-bold text-primary">{inv.invoice_number}</td>
+                              <td className="py-4 px-6 font-medium max-w-[250px] truncate" title={inv.description}>{inv.description}</td>
+                              <td className="py-4 px-6 font-medium">{formatDate(inv.due_date)}</td>
+                              <td className="py-4 px-6 text-right font-bold text-foreground">{formatCurrencyBRL(inv.amount)}</td>
+                              <td className="py-4 px-6">
+                                <span className="bg-muted px-2.5 py-1 rounded text-xs font-semibold">{paymentMethodLabel}</span>
+                              </td>
+                              <td className="py-4 px-6">
+                                <Badge variant="outline" className={`${statusColorClass} font-bold px-2 py-0.5 text-xs`}>
+                                  {statusLabel}
+                                </Badge>
+                              </td>
+                              <td className="py-4 px-6 font-medium text-muted-foreground">
+                                {inv.payment_date ? formatDate(inv.payment_date) : '---'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
 
