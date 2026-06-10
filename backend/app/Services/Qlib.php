@@ -6,7 +6,7 @@
 namespace App\Services;
 use App\Http\Controllers\admin\EventController;
 use App\Http\Controllers\api\ProductController;
-use App\Http\Controllers\Api\ProductUnitController;
+use App\Http\Controllers\api\ProductUnitController;
 // use App\Http\Controllers\admin\PostController;
 // use App\Http\Controllers\LeilaoController;
 use App\Http\Controllers\MatriculasController;
@@ -2929,9 +2929,10 @@ class Qlib
      * retorna os dados de uma unidade de medida
      */
     static function get_unit_by_id($id){
+        if (!$id) return null;
         $unit = ProductUnit::find($id);
+        if (!$unit) return null;
         $unitMap = (new ProductUnitController())->map_product_unit($unit);
-        // dd($unitMap);
         return $unitMap;
     }
     static function get_client_by_id($id){

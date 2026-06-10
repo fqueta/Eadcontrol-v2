@@ -28,6 +28,8 @@ const Products = lazy(() => import("./pages/Products"));
 const ProductView = lazy(() => import("./pages/ProductView"));
 const ProductCreate = lazy(() => import("./pages/ProductCreate"));
 const ProductEdit = lazy(() => import("./pages/ProductEdit"));
+const ProductsPublicList = lazy(() => import("./pages/ProductsPublicList"));
+const ProductPublicDetails = lazy(() => import("./pages/ProductPublicDetails"));
 const Services = lazy(() => import("./pages/Services"));
 const EmailSend = lazy(() => import("./pages/EmailSend"));
 const CommentsModeration = lazy(() => import("./pages/school/CommentsModeration"));
@@ -567,6 +569,9 @@ const App = () => {
               <Route path="/cursos" element={<CoursesPublicList />} />
               <Route path="/cursos/:id" element={<CourseLanding />} />
               <Route path="/cursos/:id/detalhes" element={<CourseDetails />} />
+              {/* Público / Catálogo de Produtos */}
+              <Route path="/produtos" element={<ProductsPublicList />} />
+              <Route path="/produtos/:slug" element={<ProductPublicDetails />} />
               {/* Página pública publicada por slug */}
               <Route path="/pagina/:slug" element={<PublicPage />} />
               <Route path="/checkout/:courseSlug" element={<FastCheckout />} />

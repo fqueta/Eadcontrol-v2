@@ -177,6 +177,11 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           document.documentElement.style.setProperty('--secondary-hover', hslSecondaryHover);
         }
 
+        // Aplica cor final do gradiente
+        if (appearanceSettings.gradientToColor) {
+          document.documentElement.style.setProperty('--gradient-to', appearanceSettings.gradientToColor);
+        }
+
         // Aplica configurações de sidebar
         if (appearanceSettings.sidebarCollapsed !== undefined) {
           // Esta configuração será aplicada pelo UserPrefsContext

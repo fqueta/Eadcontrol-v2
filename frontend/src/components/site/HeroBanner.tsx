@@ -134,7 +134,10 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
                   </>
                 )}
 
-                <div className="flex flex-col sm:flex-row items-center gap-5">
+                <div className={`flex flex-col sm:flex-row items-center gap-5 w-full ${
+                  slide.config?.buttonAlign === 'center' ? 'justify-center' :
+                  slide.config?.buttonAlign === 'right' ? 'justify-end' : 'justify-start'
+                }`}>
                   {showButton && (
                     <Button size="lg" className="w-full sm:w-auto h-16 px-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg shadow-xl shadow-blue-500/20 transition-all hover:scale-105 active:scale-95" asChild>
                       <Link to="/cursos">
@@ -196,6 +199,7 @@ type StaticSlide = {
   buttonLabel?: string;
   buttonUrl?: string;
   titleSize?: number;
+  buttonAlign?: 'left' | 'center' | 'right';
 };
 
 /**
@@ -295,7 +299,10 @@ function StaticCarousel({ name, slogan, description }: { name: string; slogan: s
                   </>
                 )}
 
-                <div className="flex flex-col sm:flex-row items-center gap-5">
+                <div className={`flex flex-col sm:flex-row items-center gap-5 w-full ${
+                  img.buttonAlign === 'center' ? 'justify-center' :
+                  img.buttonAlign === 'right' ? 'justify-end' : 'justify-start'
+                }`}>
                   {showButton && (
                     <Button size="lg" className="w-full sm:w-auto h-16 px-10 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-lg shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95" asChild>
                       <Link to={img.buttonUrl || "/cursos"}>

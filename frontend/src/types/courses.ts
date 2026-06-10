@@ -62,6 +62,12 @@ export interface CourseConfig {
     file_id?: number | string;
     title?: string;
   };
+  banner?: {
+    url: string;
+    file_id?: number | string;
+    title?: string;
+  };
+  product_ids?: string[];
 }
 
 /**

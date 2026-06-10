@@ -25,6 +25,7 @@ export interface AdvancedSystemSettings {
   backupRetention: string;
   url_api_aeroclube: string;
   token_api_aeroclube: string;
+  app_top_menu?: string;
 }
 
 /**
@@ -38,7 +39,7 @@ class SystemSettingsService extends BaseApiService {
    * Salva as configurações avançadas do sistema
    * @param settings - Configurações avançadas para salvar
    */
-  async saveAdvancedSettings(settings: AdvancedSystemSettings): Promise<void> {
+  async saveAdvancedSettings(settings: Partial<AdvancedSystemSettings>): Promise<void> {
     await this.post<ApiResponse<void>>(this.endpoint, settings);
   }
 

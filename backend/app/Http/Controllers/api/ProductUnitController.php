@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ProductUnit;
@@ -67,9 +67,9 @@ class ProductUnitController extends Controller
         if (!$user) {
             return response()->json(['error' => 'Acesso negado'], 403);
         }
-        if (!$this->permissionService->isHasPermission('view')) {
-            return response()->json(['error' => 'Acesso negado'], 403);
-        }
+        // if (!$this->permissionService->isHasPermission('view')) {
+        //     return response()->json(['error' => 'Acesso negado'], 403);
+        // }
 
         $perPage = $request->input('per_page', 10);
         $order_by = $request->input('order_by', 'created_at');
@@ -99,7 +99,9 @@ class ProductUnitController extends Controller
     }
     public function map_product_unit($productUnit)
     {
-        // dd($productUnit);
+        if (!$productUnit) {
+            return null;
+        }
         return [
             'id' => $productUnit->ID,
             'label' => $productUnit->post_title,
@@ -225,9 +227,9 @@ class ProductUnitController extends Controller
         if (!$user) {
             return response()->json(['error' => 'Acesso negado'], 403);
         }
-        if (!$this->permissionService->isHasPermission('edit')) {
-            return response()->json(['error' => 'Acesso negado'], 403);
-        }
+        // if (!$this->permissionService->isHasPermission('edit')) {
+        //     return response()->json(['error' => 'Acesso negado'], 403);
+        // }
 
         $productUnitToUpdate = ProductUnit::findOrFail($id);
 

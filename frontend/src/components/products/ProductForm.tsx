@@ -1,11 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
-import { useState } from "react";
+import { X, ImageIcon } from "lucide-react";
+import { useState, useCallback } from "react";
+import { currencyApplyMask, currencyRemoveMaskToNumber } from "@/lib/masks/currency";
+import { fileStorageService, type FileStorageItem } from "@/services/fileStorageService";
+import MediaLibraryModal from "@/components/media/MediaLibraryModal";
+import { ImageUpload } from "@/components/lib/ImageUpload";
 import {
   Form,
   FormControl,
@@ -41,7 +45,7 @@ const productSchema = z.object({
   availability: z.enum(["available", "limited", "unavailable"], {
     required_error: "Disponibilidade é obrigatória",
   }),
-  terms: z.array(z.string()).min(1, "Pelo menos um termo deve ser adicionado"),
+  terms: z.array(z.string()).optional(),
   validUntil: z.string().optional(),
 });
 
@@ -86,7 +90,7 @@ export function ProductForm({
   onCancel,
   isEditing
 }: ProductFormProps) {
-  // console.log('categories', categories);
+  const [mediaOpen, setMediaOpen] = useState(false);
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -112,10 +116,10 @@ export function ProductForm({
               <FormItem className="col-span-2">
                 <FormLabel>Descrição</FormLabel>
                 <FormControl>
-                  <Textarea 
-                    placeholder="Descrição do produto (opcional)" 
-                    className="resize-none"
-                    {...field} 
+                  <RichTextEditor
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                    placeholder="Descrição do produto (opcional)"
                   />
                 </FormControl>
                 <FormMessage />
@@ -129,7 +133,7 @@ export function ProductForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Categoria</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingCategories || !!categoriesError}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingCategories || !!categoriesError}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione uma categoria" />
@@ -167,13 +171,57 @@ export function ProductForm({
             name="image"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Link da Imagem</FormLabel>
+                <FormLabel>Imagem do Produto</FormLabel>
                 <FormControl>
-                  <Input 
-                    type="url"
-                    placeholder="https://exemplo.com/imagem.jpg (opcional)" 
-                    {...field} 
-                  />
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setMediaOpen(true)}
+                        className="rounded-xl font-bold bg-primary/5 text-primary hover:bg-primary/10 border-primary/20"
+                      >
+                        <ImageIcon className="h-4 w-4 mr-2" />
+                        Abrir Biblioteca
+                      </Button>
+                      {field.value && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="rounded-xl font-semibold text-muted-foreground hover:text-red-500"
+                          onClick={() => field.onChange('')}
+                        >
+                          Remover
+                        </Button>
+                      )}
+                    </div>
+                    <div className="p-1 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-950/30">
+                      <ImageUpload
+                        name="image"
+                        label=""
+                        value={field.value || ''}
+                        onChange={(val) => field.onChange(val || '')}
+                        onUpload={async (file: File) => {
+                          const resp: any = await fileStorageService.upload(file);
+                          const url = typeof resp === 'string' ? resp : (resp?.url ?? resp?.data?.url ?? resp?.data?.data?.url);
+                          if (!url) throw new Error('URL não retornada');
+                          field.onChange(url);
+                          return url;
+                        }}
+                        maxSize={5}
+                        className="border-none shadow-none bg-transparent"
+                      />
+                    </div>
+                    {field.value && (
+                      <div className="aspect-video rounded-2xl border-2 border-slate-100 dark:border-slate-800 overflow-hidden bg-slate-100 dark:bg-slate-900 flex items-center justify-center shadow-inner relative group max-w-xs">
+                        <img
+                          src={field.value}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -188,11 +236,17 @@ export function ProductForm({
                 <FormLabel>Preço de Venda</FormLabel>
                 <FormControl>
                   <Input 
-                    type="number" 
-                    step="0.01"
-                    placeholder="0.00" 
-                    {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    type="text"
+                    placeholder="R$ 0,00"
+                    value={field.value ? currencyApplyMask(String(field.value), 'pt-BR', 'BRL') : ''}
+                    onChange={(e) => {
+                      const masked = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
+                      field.onChange(currencyRemoveMaskToNumber(masked));
+                    }}
+                    onBlur={(e) => {
+                      const masked = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
+                      field.onChange(currencyRemoveMaskToNumber(masked));
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
@@ -208,11 +262,17 @@ export function ProductForm({
                 <FormLabel>Preço de Custo</FormLabel>
                 <FormControl>
                   <Input 
-                    type="number" 
-                    step="0.01"
-                    placeholder="0.00" 
-                    {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    type="text"
+                    placeholder="R$ 0,00"
+                    value={field.value ? currencyApplyMask(String(field.value), 'pt-BR', 'BRL') : ''}
+                    onChange={(e) => {
+                      const masked = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
+                      field.onChange(currencyRemoveMaskToNumber(masked));
+                    }}
+                    onBlur={(e) => {
+                      const masked = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
+                      field.onChange(currencyRemoveMaskToNumber(masked));
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
@@ -245,7 +305,7 @@ export function ProductForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Unidade</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingUnits || !!unitsError}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingUnits || !!unitsError}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione uma unidade" />
@@ -344,7 +404,7 @@ export function ProductForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Disponibilidade</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione a disponibilidade" />
@@ -461,6 +521,17 @@ export function ProductForm({
           </Button>
         </div>
       </form>
+
+      <MediaLibraryModal
+        open={mediaOpen}
+        onClose={() => setMediaOpen(false)}
+        onSelect={(item: FileStorageItem) => {
+          const finalUrl = item?.file?.url || item?.url || fileStorageService.downloadUrl(item.id);
+          form.setValue('image', finalUrl || '');
+          setMediaOpen(false);
+        }}
+        defaultFilters={{ mime: 'image' }}
+      />
     </Form>
   );
 }

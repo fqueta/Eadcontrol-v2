@@ -248,7 +248,9 @@ const FastCheckout = () => {
     if (couponInputRef.current) couponInputRef.current.focus();
   };
 
-  const displayPrice = couponResult ? couponResult.valor_final : (course?.valor ? Number(course.valor) : 0);
+  const courseInscricao = course?.inscricao ? Number(course.inscricao) : 0;
+  const courseValorTotal = (course?.valor ? Number(course.valor) : 0) + courseInscricao;
+  const displayPrice = couponResult ? couponResult.valor_final : courseValorTotal;
 
   const maxInstallments = course?.parcelas ? Number(course.parcelas) : 1;
   const showAllInstallments = course?.config?.incluir_opcao_cartao_parcelas === 's';
@@ -468,28 +470,33 @@ const FastCheckout = () => {
                          {course?.parcelas && <p className="text-primary text-sm font-black">{course.parcelas}x de R$ {course.valor_parcela}</p>}
                       </div>
                    </div>
-                   <div className="text-right">
-                      <p className="text-xs uppercase font-black text-slate-400 tracking-widest">Valor à vista</p>
-                      <div className="relative">
-                        {couponResult ? (
-                          <>
-                            <p className="text-sm text-slate-400 line-through transition-all duration-300">R$ {Number(course?.valor || 0).toFixed(2)}</p>
-                            <div className="flex items-center gap-2 justify-end">
-                              <Badge className="bg-green-500 hover:bg-green-600 text-white border-none font-bold text-xs animate-in zoom-in duration-300">
-                                {couponResult.tipo === 'percentual'
-                                  ? `-${couponResult.valor_desconto}%`
-                                  : `-R$ ${couponResult.desconto_aplicado.toFixed(2)}`}
-                              </Badge>
-                              <p className="text-3xl font-black text-green-600 dark:text-green-400 tracking-tighter">
-                                R$ {displayPrice.toFixed(2)}
-                              </p>
-                            </div>
-                          </>
-                        ) : (
-                          <p className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">R$ {Number(course?.valor || 0).toFixed(2)}</p>
-                        )}
-                      </div>
-                   </div>
+                    <div className="text-right">
+                       <p className="text-xs uppercase font-black text-slate-400 tracking-widest">Valor à vista</p>
+                       <div className="relative">
+                         {couponResult ? (
+                           <>
+                             <p className="text-sm text-slate-400 line-through transition-all duration-300">R$ {courseValorTotal.toFixed(2)}</p>
+                             <div className="flex items-center gap-2 justify-end">
+                               <Badge className="bg-green-500 hover:bg-green-600 text-white border-none font-bold text-xs animate-in zoom-in duration-300">
+                                 {couponResult.tipo === 'percentual'
+                                   ? `-${couponResult.valor_desconto}%`
+                                   : `-R$ ${couponResult.desconto_aplicado.toFixed(2)}`}
+                               </Badge>
+                               <p className="text-3xl font-black text-green-600 dark:text-green-400 tracking-tighter">
+                                 R$ {displayPrice.toFixed(2)}
+                               </p>
+                             </div>
+                           </>
+                         ) : (
+                           <p className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">R$ {courseValorTotal.toFixed(2)}</p>
+                         )}
+                       </div>
+                       {courseInscricao > 0 && !couponResult && (
+                         <p className="text-xs text-slate-400 mt-1">
+                           Curso R$ {Number(course?.valor || 0).toFixed(2)} + Taxa R$ {courseInscricao.toFixed(2)}
+                         </p>
+                       )}
+                    </div>
                 </div>
 
                <div className="p-6 md:p-10 space-y-12">
@@ -852,9 +859,15 @@ const FastCheckout = () => {
                             <span className="text-xs font-black uppercase text-slate-400 tracking-widest">Resumo do Pedido</span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-slate-600 dark:text-slate-400">Subtotal</span>
+                            <span className="text-slate-600 dark:text-slate-400">Curso</span>
                             <span className="font-bold text-slate-900 dark:text-white">R$ {Number(course?.valor || 0).toFixed(2)}</span>
                           </div>
+                          {courseInscricao > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-slate-600 dark:text-slate-400">Taxa de inscrição</span>
+                              <span className="font-bold text-slate-900 dark:text-white">R$ {courseInscricao.toFixed(2)}</span>
+                            </div>
+                          )}
                           {couponResult && (
                             <div className="flex justify-between text-sm animate-in slide-in-from-top-1 duration-300">
                               <span className="text-green-600 dark:text-green-400 font-bold flex items-center gap-1">
@@ -869,7 +882,7 @@ const FastCheckout = () => {
                           <div className="flex justify-between text-base">
                             <span className="font-black text-slate-900 dark:text-white">Total</span>
                             <span className={`font-black text-xl ${couponResult ? 'text-green-600 dark:text-green-400' : 'text-slate-900 dark:text-white'}`}>
-                              R$ {(couponResult ? displayPrice : Number(course?.valor || 0)).toFixed(2)}
+                              R$ {(couponResult ? displayPrice : courseValorTotal).toFixed(2)}
                             </span>
                           </div>
                         </div>

@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Plus, X, GripVertical, ChevronDown, ChevronUp, ChevronLeft, Save, Loader2, Eye, ExternalLink, Copy, BookOpen, Users, Clock, PlayCircle, CheckCircle2, LayoutGrid, DollarSign, Settings2, HelpCircle, Image as ImageIcon, Check, Youtube, Play } from 'lucide-react';
+import { Plus, X, GripVertical, ChevronDown, ChevronUp, ChevronLeft, Save, Loader2, Eye, ExternalLink, Copy, BookOpen, Users, Clock, PlayCircle, CheckCircle2, LayoutGrid, DollarSign, Settings2, HelpCircle, Image as ImageIcon, Check, Youtube, Play, ShoppingCart } from 'lucide-react';
 import { ImageUpload } from '@/components/lib/ImageUpload';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { coursesService } from '@/services/coursesService';
@@ -25,6 +25,7 @@ import { activitiesService } from '@/services/activitiesService';
 import EnrollmentTable from '@/components/enrollments/EnrollmentTable';
 import { useEnrollmentsList, useDeleteEnrollment } from '@/hooks/enrollments';
 import { usersService } from '@/services/usersService';
+import { productsService } from '@/services/productsService';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -35,6 +36,108 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { currencyApplyMask, currencyRemoveMaskToNumber, currencyRemoveMaskToString } from '@/lib/masks/currency';
 import { extractVideoMeta } from '@/services/videoTipsService';
+
+/**
+ * ProductSelect
+ * pt-BR: Seletor multi-select de produtos para associar ao curso.
+ * en-US: Multi-select product picker to associate with the course.
+ */
+function ProductSelect({ value, onChange }: { value: string[]; onChange: (ids: string[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+
+  const { data: productsData } = useQuery({
+    queryKey: ['products', 'list', 200],
+    queryFn: () => productsService.list({ page: 1, per_page: 200 }),
+  });
+
+  const products = useMemo(() => {
+    const d = productsData as any;
+    return d?.data || d?.items || [];
+  }, [productsData]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter((p: any) => p.name?.toLowerCase().includes(q));
+  }, [query, products]);
+
+  const label = value.length
+    ? products
+        .filter((p: any) => value.includes(String(p.id)))
+        .map((p: any) => p.name)
+        .join(', ')
+    : 'Selecione os produtos';
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className="justify-between w-full rounded-xl border-slate-200 h-10 font-normal"
+        >
+          <span className="truncate text-sm">{label}</span>
+          <ChevronDown className="h-4 w-4 ml-2 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[420px] p-2" align="start">
+        <div className="space-y-2">
+          <Input
+            placeholder="Buscar produto..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="rounded-lg"
+          />
+          <ScrollArea className="h-52">
+            {filtered.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4">Nenhum produto encontrado.</p>
+            )}
+            {filtered.map((p: any) => {
+              const checked = value.includes(String(p.id));
+              return (
+                <label
+                  key={p.id}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted cursor-pointer"
+                >
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={(c) => {
+                      const next = new Set(value);
+                      if (c) next.add(String(p.id));
+                      else next.delete(String(p.id));
+                      onChange(Array.from(next));
+                    }}
+                  />
+                  <span className="text-sm">{p.name}</span>
+                  {p.salePrice && (
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      R$ {p.salePrice}
+                    </span>
+                  )}
+                </label>
+              );
+            })}
+          </ScrollArea>
+          {value.length > 0 && (
+            <div className="flex justify-between items-center pt-1 border-t border-slate-100">
+              <span className="text-xs text-muted-foreground">{value.length} selecionado(s)</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-xs h-7 text-muted-foreground hover:text-red-500"
+                onClick={() => onChange([])}
+              >
+                Limpar
+              </Button>
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 /**
  * CourseForm
@@ -58,6 +161,7 @@ export function CourseForm({
    * en-US: Controls loading state of save buttons (spinner).
    */
   const [saving, setSaving] = useState<'stay' | 'exit' | null>(null);
+  const [createdCourseId, setCreatedCourseId] = useState<string | number | null>(null);
   /**
    * autoSlugEnabled
    * pt-BR: Controla se o slug deve ser gerado automaticamente a partir do nome.
@@ -159,11 +263,17 @@ export function CourseForm({
     setSaving('stay');
     const normalized = normalizePayload(form.getValues());
     try {
-      if ((initialData as any)?.id) {
-        await coursesService.updateCourse(String((initialData as any).id), normalized);
-        queryClient.invalidateQueries({ queryKey: ['courses', 'detail', String((initialData as any).id)] });
+      const courseId = (initialData as any)?.id ?? createdCourseId;
+      if (courseId) {
+        await coursesService.updateCourse(String(courseId), normalized);
+        queryClient.invalidateQueries({ queryKey: ['courses', 'detail', String(courseId)] });
       } else {
-        await coursesService.createCourse(normalized);
+        const result = await coursesService.createCourse(normalized);
+        const newId = (result as any)?.id ?? (result as any)?.data?.id;
+        if (newId) {
+          setCreatedCourseId(newId);
+          form.setValue('id' as any, newId);
+        }
       }
       queryClient.invalidateQueries({ queryKey: ['courses', 'list'] });
       toast({ title: 'Salvo', description: 'Curso salvo. Você permanece na página.' });
@@ -184,11 +294,17 @@ export function CourseForm({
     setSaving('exit');
     const normalized = normalizePayload(form.getValues());
     try {
-      if ((initialData as any)?.id) {
-        await coursesService.updateCourse(String((initialData as any).id), normalized);
-        queryClient.invalidateQueries({ queryKey: ['courses', 'detail', String((initialData as any).id)] });
+      const courseId = (initialData as any)?.id ?? createdCourseId;
+      if (courseId) {
+        await coursesService.updateCourse(String(courseId), normalized);
+        queryClient.invalidateQueries({ queryKey: ['courses', 'detail', String(courseId)] });
       } else {
-        await coursesService.createCourse(normalized);
+        const result = await coursesService.createCourse(normalized);
+        const newId = (result as any)?.id ?? (result as any)?.data?.id;
+        if (newId) {
+          setCreatedCourseId(newId);
+          form.setValue('id' as any, newId);
+        }
       }
       queryClient.invalidateQueries({ queryKey: ['courses', 'list'] });
       navigate('/admin/school/courses');
@@ -280,12 +396,29 @@ export function CourseForm({
    */
   const handleSelectImageFromLibrary = (item: FileStorageItem) => {
     const finalUrl = item?.file?.url || item?.url || fileStorageService.downloadUrl(item.id);
-    // pt-BR: Armazena exclusivamente em `config.cover.*`.
-    // en-US: Store exclusively under `config.cover.*`.
     form.setValue('config.cover.url', finalUrl || '', { shouldValidate: true });
     form.setValue('config.cover.file_id', item.id as any, { shouldValidate: true });
     form.setValue('config.cover.title', (item.title || item.name || form.getValues('titulo') || '') as any, { shouldValidate: false });
     setMediaOpen(false);
+  };
+
+  const uploadCourseBanner = async (file: File): Promise<string> => {
+    const resp: any = await fileStorageService.upload(file);
+    const url = typeof resp === 'string' ? resp : (resp?.url ?? resp?.data?.url ?? resp?.data?.data?.url);
+    if (!url) {
+      throw new Error('URL não retornada pelo upload de banner');
+    }
+    return url;
+  };
+
+  const [mediaBannerOpen, setMediaBannerOpen] = useState(false);
+
+  const handleSelectBannerFromLibrary = (item: FileStorageItem) => {
+    const finalUrl = item?.file?.url || item?.url || fileStorageService.downloadUrl(item.id);
+    form.setValue('config.banner.url', finalUrl || '', { shouldValidate: true });
+    form.setValue('config.banner.file_id', item.id as any, { shouldValidate: true });
+    form.setValue('config.banner.title', (item.title || item.name || '') as any, { shouldValidate: false });
+    setMediaBannerOpen(false);
   };
 
   /**
@@ -529,6 +662,8 @@ export function CourseForm({
         ead: { id_eadcontrol: '' },
         incluir_opcao_cartao_parcelas: 'n',
         cover: { url: '', file_id: undefined as any, title: '' },
+        banner: { url: '', file_id: undefined as any, title: '' },
+        product_ids: [],
       },
       inscricao: '0,00',
       valor: '0,00',
@@ -688,6 +823,12 @@ export function CourseForm({
           file_id: c.config?.cover?.file_id,
           title: c.config?.cover?.title || (c as any).titulo || (c as any).nome || '',
         },
+        banner: {
+          url: String(c.config?.banner?.url || '').trim(),
+          file_id: c.config?.banner?.file_id,
+          title: c.config?.banner?.title || '',
+        },
+        product_ids: c.config?.product_ids ?? [],
       },
       aeronaves: c.aeronaves ?? [],
       modulos: (c.modulos ?? []).map((m: any) => ({
@@ -2029,6 +2170,13 @@ export function CourseForm({
           if (!url && !fileId && !title) return raw?.config?.cover;
           return { url, file_id: fileId, title } as any;
         })(),
+        banner: (() => {
+          const url = String(raw?.config?.banner?.url || '').trim();
+          const fileId = raw?.config?.banner?.file_id ?? undefined;
+          const title = raw?.config?.banner?.title || '';
+          if (!url && !fileId && !title) return raw?.config?.banner;
+          return { url, file_id: fileId, title } as any;
+        })(),
       },
       /**
        * modulos
@@ -2663,6 +2811,68 @@ export function CourseForm({
                     </p>
                   </div>
                 </div>
+
+                <Separator className="my-6" />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-bold text-foreground/80">Banner do curso</Label>
+                      <p className="text-xs text-muted-foreground">Imagem de destaque no topo da página de detalhes do curso.</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <Button type="button" variant="secondary" onClick={() => setMediaBannerOpen(true)} className="rounded-xl font-bold bg-primary/5 text-primary hover:bg-primary/10 border-primary/20 transition-all">
+                          <ImageIcon className="h-4 w-4 mr-2" /> 
+                          Abrir Biblioteca
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="rounded-xl font-semibold text-muted-foreground hover:text-red-500 transition-all"
+                          onClick={() => {
+                            form.setValue('config.banner.url', '', { shouldValidate: true });
+                            form.setValue('config.banner.file_id', undefined as any, { shouldValidate: true });
+                          }}
+                        >
+                          Remover
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="p-1 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-950/30">
+                      <ImageUpload
+                        name="config.banner.url"
+                        label=""
+                        value={form.watch('config.banner.url') || ''}
+                        onChange={(val) => form.setValue('config.banner.url', val || '', { shouldValidate: true })}
+                        onUpload={uploadCourseBanner}
+                        maxSize={5}
+                        className="border-none shadow-none bg-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label className="text-sm font-bold text-foreground/80">Visualização prévia do banner</Label>
+                    <div className="aspect-video rounded-2xl border-2 border-slate-100 dark:border-slate-800 overflow-hidden bg-slate-100 dark:bg-slate-900 flex items-center justify-center shadow-inner relative group">
+                      {form.watch('config.banner.url') ? (
+                        <>
+                          <img src={form.watch('config.banner.url')!} alt="Pré-visualização banner" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="bg-white/90 dark:bg-slate-900/90 py-2 px-4 rounded-full text-xs font-bold shadow-xl">Banner Selecionado</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center gap-3 text-muted-foreground/40">
+                          <ImageIcon className="h-12 w-12" />
+                          <span className="text-xs font-bold uppercase tracking-widest">Sem banner vinculado</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground italic text-center">
+                      Recomendado: 1920x480px (4:1) em formato JPG ou PNG até 5MB.
+                    </p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
             
@@ -2670,6 +2880,12 @@ export function CourseForm({
               open={mediaOpen}
               onClose={() => setMediaOpen(false)}
               onSelect={handleSelectImageFromLibrary}
+              defaultFilters={{ mime: 'image' }}
+            />
+            <MediaLibraryModal
+              open={mediaBannerOpen}
+              onClose={() => setMediaBannerOpen(false)}
+              onSelect={handleSelectBannerFromLibrary}
               defaultFilters={{ mime: 'image' }}
             />
           </TabsContent>
@@ -2882,6 +3098,17 @@ export function CourseForm({
                     </Select>
                   </div>
                   <div className="space-y-2"><Label className="font-bold">ID Externo (EADControl)</Label><Input className="rounded-xl border-slate-200" {...form.register('config.ead.id_eadcontrol')} /></div>
+                </div>
+
+                <Separator className="my-4" />
+
+                <div className="space-y-3">
+                  <Label className="font-bold">Produtos associados</Label>
+                  <p className="text-xs text-muted-foreground">Selecione os produtos que aparecerão na página pública de detalhes do curso.</p>
+                  <ProductSelect
+                    value={form.watch('config.product_ids') ?? []}
+                    onChange={(ids) => form.setValue('config.product_ids', ids, { shouldValidate: true })}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -3124,6 +3351,23 @@ export function CourseForm({
                       </a>
                     </div>
                   ) : null;
+                })()}
+                {(() => {
+                  const slug = (initialData as any)?.slug || (initialData as any)?.token;
+                  if (!slug) return null;
+                  const href = `/cursos/${slug}/detalhes`;
+                  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                  const absolute = `${origin}${href}`;
+                  return (
+                    <div className="flex items-center gap-2 group bg-slate-100/50 dark:bg-slate-800/50 p-1.5 rounded-xl pr-3 border border-slate-200/50 dark:border-slate-700/50">
+                      <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-lg bg-white dark:bg-slate-900 shadow-sm text-primary/60 hover:text-primary transition-all" onClick={() => copyText(absolute)} title="Copiar link da página de detalhes">
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <a href={href} target="_blank" rel="noreferrer" className="text-xs font-black text-muted-foreground hover:text-primary transition-colors flex items-center gap-2">
+                        PÁGINA DO CURSO <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  );
                 })()}
               </div>
             </div>

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Settings, Save, Palette, Link, Image as ImageIcon, Building2, ShieldCheck, Layers, Plus, MonitorPlay, Clock } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription, getInstitutionUrl, syncBrandingToMetaTags } from "@/lib/branding";
 import { predefinedThemes } from "@/lib/themes";
 import { systemSettingsService, AdvancedSystemSettings } from "@/services/systemSettingsService";
@@ -18,6 +19,7 @@ import { useFunnelsList, useStagesList } from "@/hooks/funnels";
 import { fileStorageService, type FileStorageItem, extractFileStorageUrl } from "@/services/fileStorageService";
 import { ImageUpload } from "@/components/lib/ImageUpload";
 import { useAuth } from "@/contexts/AuthContext";
+import { MenuBuilder } from "@/components/settings/MenuBuilder";
 
 /**
  * Página de configurações do sistema
@@ -113,6 +115,7 @@ export default function SystemSettings() {
       secondaryColor: "#4b89cd",
       secondaryTextColor: "#ffffff",
       hoverColor: "#0056b3",
+      gradientToColor: "#4f46e5",
       fontSize: "medium",
       theme: "default",
       compactMode: true,
@@ -153,6 +156,7 @@ export default function SystemSettings() {
     token_api_aeroclube: "",
     import_users_url: "", // New state for import URL
     import_type: "users", // New state for import type
+    top_menu_links: "", // JSON config for top navigation menu
   });
 
   /**
@@ -553,6 +557,9 @@ export default function SystemSettings() {
       const hsl = hexToHsl(settings.hoverColor);
       root.style.setProperty('--primary-hover', hsl);
     }
+    if (settings.gradientToColor) {
+      root.style.setProperty('--gradient-to', settings.gradientToColor);
+    }
     
     // Aplicar tamanho da fonte
     const fontSizes = {
@@ -597,6 +604,7 @@ export default function SystemSettings() {
         app_secondary_color: appearanceSettings.secondaryColor,
         app_secondary_text_color: appearanceSettings.secondaryTextColor,
         app_hover_color: appearanceSettings.hoverColor,
+        app_gradient_to_color: appearanceSettings.gradientToColor,
         app_dark_mode_default: appearanceSettings.darkMode ? 'true' : 'false',
         app_theme: siteTheme,
       };
@@ -754,6 +762,7 @@ export default function SystemSettings() {
         backupRetention: advancedInputSettings.backupRetention,
         url_api_aeroclube: advancedInputSettings.url_api_aeroclube,
         token_api_aeroclube: advancedInputSettings.token_api_aeroclube,
+        app_top_menu: advancedInputSettings.top_menu_links || '',
       };
 
       // Envia as configurações avançadas para a API na rota /options
@@ -823,8 +832,13 @@ export default function SystemSettings() {
         backupRetention: data.backupRetention || "",
         url_api_aeroclube: data.url_api_aeroclube || "",
         token_api_aeroclube: data.token_api_aeroclube || "",
-        import_users_url: "", // Not saved in backend settings typically, reset to empty
+        import_users_url: "",
         import_type: "users",
+        top_menu_links: (() => {
+          const v = data['app_top_menu'];
+          if (!v) return '';
+          return typeof v === 'string' ? v : JSON.stringify(v, null, 2);
+        })(),
       });
       
       // Também atualiza as outras configurações se necessário
@@ -1098,6 +1112,26 @@ export default function SystemSettings() {
                       value={appearanceSettings.hoverColor}
                       onChange={(e) => handleAppearanceChange('hoverColor', e.target.value)}
                       placeholder="#0056b3"
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="gradientToColor">Cor final do gradiente</Label>
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      id="gradientToColor"
+                      type="color"
+                      value={appearanceSettings.gradientToColor}
+                      onChange={(e) => handleAppearanceChange('gradientToColor', e.target.value)}
+                      className="w-16 h-10 p-1 border rounded"
+                    />
+                    <Input
+                      type="text"
+                      value={appearanceSettings.gradientToColor}
+                      onChange={(e) => handleAppearanceChange('gradientToColor', e.target.value)}
+                      placeholder="#4f46e5"
                       className="flex-1"
                     />
                   </div>
@@ -1844,6 +1878,45 @@ export default function SystemSettings() {
               <p className="text-xs text-muted-foreground">
                 Selecione o tipo de entidade (Usuários, Cursos, Comentários ou Matrículas) e forneça a URL correspondente.
               </p>
+            </CardContent>
+          </Card>
+
+          {/* Card - Menu do Topo */}
+          <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden">
+            <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 shadow-sm">
+                  <Layers className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-black tracking-tight">Menu do Topo (Site Público)</CardTitle>
+                  <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mt-1">
+                    Configure os links do menu de navegação do site público
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6 p-8">
+              <MenuBuilder
+                value={advancedInputSettings.top_menu_links}
+                onChange={(val) => handleAdvancedInputChange('top_menu_links', val)}
+              />
+              <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
+                <Button onClick={async () => {
+                  try {
+                    const menu = JSON.parse(advancedInputSettings.top_menu_links || '[]');
+                    await systemSettingsService.saveAdvancedSettings({
+                      app_top_menu: JSON.stringify(menu)
+                    });
+                    toast.success('Menu salvo com sucesso!');
+                  } catch (e) {
+                    toast.error('JSON inválido. Verifique o formato.');
+                  }
+                }}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar Menu
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

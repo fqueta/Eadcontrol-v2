@@ -4,6 +4,7 @@ export interface CheckoutCourse {
   id: number;
   titulo: string;
   valor: number | string;
+  inscricao?: number | string;
   parcelas?: number | string;
   valor_parcela?: number | string;
   imagem_url: string | null;

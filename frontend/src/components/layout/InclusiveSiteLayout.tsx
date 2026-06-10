@@ -17,6 +17,7 @@ import { User, LogOut, ChevronDown, Monitor, ExternalLink, Moon, Sun, Menu, Home
 import { BrandLogo } from "@/components/branding/BrandLogo";
 
 import { applyBrandingFavicon, hydrateBrandingFromPublicApi, getInstitutionName, getInstitutionSlogan, getInstitutionDescription } from "@/lib/branding";
+import { getTenantApiUrl, getVersionApi } from "@/lib/qlib";
 import { ForceChangePasswordModal } from "@/components/auth/ForceChangePasswordModal";
 
 type InclusiveSiteLayoutProps = {
@@ -41,6 +42,17 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
   const [institutionSlogan, setInstitutionSlogan] = useState(() => getInstitutionSlogan() || '');
   const [institutionDescription, setInstitutionDescription] = useState(() => getInstitutionDescription() || '');
   const [isAdminImpersonating, setIsAdminImpersonating] = useState(false);
+
+  const [topMenuItems, setTopMenuItems] = useState<any[] | null>(() => {
+    try {
+      const raw = localStorage.getItem('app_top_menu');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  });
   /**
    * BrandLogo usage
    * pt-BR: Substitui lógica manual por componente BrandLogo para resolver a URL
@@ -62,16 +74,30 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
       try {
         await hydrateBrandingFromPublicApi({ persist: true });
         if (!cancelled) {
-          // Atualiza os valores de branding dinâmicos após hidratação
           setInstitutionName(getInstitutionName() || 'Instituição');
           setInstitutionSlogan(getInstitutionSlogan() || '');
           setInstitutionDescription(getInstitutionDescription() || '');
-          // Re-aplica o tema agora que o localStorage foi populado com os dados do banco
           applyThemeSettings();
           applyBrandingFavicon('/favicon.ico');
         }
       } catch {
         if (!cancelled) applyBrandingFavicon('/favicon.ico');
+      }
+
+      // Busca menu do topo diretamente do endpoint público
+      if (!cancelled) {
+        try {
+          const publicUrl = `${getTenantApiUrl()}${getVersionApi()}/public/options/branding`;
+          const res = await fetch(publicUrl, { cache: 'no-store' });
+          if (res.ok) {
+            const json = await res.json();
+            const raw = json?.data?.app_top_menu;
+            if (raw) {
+              const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+              setTopMenuItems(Array.isArray(parsed) ? parsed : null);
+            }
+          }
+        } catch {}
       }
     })();
     return () => { cancelled = true; };
@@ -202,10 +228,10 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
             <BrandLogo
               alt="Marca"
               fallbackSrc="https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=375,fit=crop,q=95/AQExkVPy2aUDzpqL/sem-nome-250-x-125-px-4-AzGMXn77KQTvDXrP.png"
-              className="h-10 rounded-xl ring-1 ring-primary/10 dark:ring-primary/20 p-1.5 bg-white dark:bg-slate-900 shadow-sm"
+              className="h-10 p-1.5"
             />
             <div className="hidden md:block">
-              <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-indigo-600 dark:from-blue-400 dark:to-indigo-400">{institutionName}</h1>
+              <h1 className="text-xl font-bold bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(to right, hsl(var(--primary)), var(--gradient-to, #4f46e5))' }}>{institutionName}</h1>
                {institutionSlogan && <p className="text-[10px] uppercase tracking-wider font-bold text-primary/80 dark:text-blue-300/70">{institutionSlogan}</p>}
             </div>
           </div>
@@ -219,23 +245,28 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
             </Button>
           </div>
           <div className="hidden md:flex space-x-3 items-center">
-            <Button asChild variant="ghost" className="text-primary dark:text-blue-100 hover:bg-primary/5 hover:text-primary transition-all duration-300 rounded-lg">
-              <Link to="/">Início</Link>
-            </Button>
-            <Button asChild variant="ghost" className="text-primary dark:text-blue-100 hover:bg-primary/5 hover:text-primary transition-all duration-300 rounded-lg">
-              <Link to="/cursos">Cursos</Link>
-            </Button>
-            {isAuthenticated && (
-              <Button asChild variant="ghost" className="text-primary dark:text-blue-100 hover:bg-primary/5 hover:text-primary transition-all duration-300 rounded-lg">
-                <Link to="/aluno">Área do Aluno</Link>
-              </Button>
-            )}
-            <Button asChild variant="ghost" className="text-primary dark:text-blue-100 hover:bg-primary/5 hover:text-primary transition-all duration-300 rounded-lg">
-              <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Site institucional
-              </a>
-            </Button>
+            {(topMenuItems ?? [
+              { label: 'Início', url: '/', auth: false },
+              { label: 'Cursos', url: '/cursos', auth: false },
+              { label: 'Produtos', url: '/produtos', auth: false },
+              { label: 'Área do Aluno', url: '/aluno', auth: true },
+              { label: 'Site institucional', url: 'https://incluireeducar.com.br/', auth: false, external: true },
+            ]).map((item: any) => {
+              if (item.auth && !isAuthenticated) return null;
+              const isExternal = item.external || item.url?.startsWith('http');
+              return (
+                <Button key={item.label + item.url} asChild variant="ghost" className="text-primary dark:text-blue-100 hover:bg-primary/5 hover:text-primary transition-all duration-300 rounded-lg">
+                  {isExternal ? (
+                    <a href={item.url} target="_blank" rel="noreferrer">
+                      {item.external && <ExternalLink className="w-4 h-4 mr-2" />}
+                      {item.label}
+                    </a>
+                  ) : (
+                    <Link to={item.url}>{item.label}</Link>
+                  )}
+                </Button>
+              );
+            })}
             {/* Theme toggle (desktop only) */}
             <Button variant="outline" className="border-primary/20 text-primary dark:text-blue-100 dark:border-blue-800/50 hover:bg-primary/5 transition-all duration-300 rounded-lg shadow-sm" onClick={toggleDarkMode}>
               {isDark ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
@@ -245,7 +276,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="border-primary/20 text-primary dark:text-blue-100 dark:border-blue-800/50 hover:bg-primary/5 rounded-xl shadow-sm pl-2">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-white font-bold mr-2 text-xs">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold mr-2 text-xs" style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), var(--gradient-to, #4f46e5))' }}>
                       {user.name?.substring(0, 1).toUpperCase()}
                     </div>
                     <span className="max-w-[100px] truncate">{user.name}</span>
@@ -348,22 +379,32 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
           <div className="p-4 space-y-6 overflow-y-auto max-h-[80vh]">
             <div className="space-y-1">
               <p className="px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Navegação Principal</p>
-              <Button asChild variant="ghost" className="w-full justify-start h-12 rounded-xl px-4 hover:bg-primary/5 transition-all" onClick={() => setMobileNavOpen(false)}>
-                <Link to="/" className="flex items-center">
-                  <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center mr-3">
-                    <Home className="w-4 h-4 text-slate-600" />
-                  </div>
-                  <span className="font-semibold text-slate-700 dark:text-slate-200">Início</span>
-                </Link>
-              </Button>
-              <Button asChild variant="ghost" className="w-full justify-start h-12 rounded-xl px-4 hover:bg-primary/5 transition-all" onClick={() => setMobileNavOpen(false)}>
-                <Link to="/cursos" className="flex items-center">
-                  <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center mr-3">
-                    <BookOpen className="w-4 h-4 text-slate-600" />
-                  </div>
-                  <span className="font-semibold text-slate-700 dark:text-slate-200">Nossos Cursos</span>
-                </Link>
-              </Button>
+              {(topMenuItems ?? [
+                { label: 'Início', url: '/', auth: false },
+                { label: 'Cursos', url: '/cursos', auth: false },
+              ]).map((item: any) => {
+                if (item.auth && !isAuthenticated) return null;
+                const isExternal = item.external || item.url?.startsWith('http');
+                return (
+                  <Button key={item.label + item.url} asChild variant="ghost" className="w-full justify-start h-12 rounded-xl px-4 hover:bg-primary/5 transition-all" onClick={() => setMobileNavOpen(false)}>
+                    {isExternal ? (
+                      <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center">
+                        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center mr-3">
+                          <BookOpen className="w-4 h-4 text-slate-600" />
+                        </div>
+                        <span className="font-semibold text-slate-700 dark:text-slate-200">{item.label}</span>
+                      </a>
+                    ) : (
+                      <Link to={item.url} className="flex items-center">
+                        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center mr-3">
+                          <BookOpen className="w-4 h-4 text-slate-600" />
+                        </div>
+                        <span className="font-semibold text-slate-700 dark:text-slate-200">{item.label}</span>
+                      </Link>
+                    )}
+                  </Button>
+                );
+              })}
             </div>
             
             <div className="space-y-1">
@@ -438,7 +479,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
             <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
             <button 
               onClick={() => setMobileNavOpen(true)}
-              className="relative w-14 h-14 rounded-full bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-primary/30 border-4 border-white dark:border-slate-950 transition-transform active:scale-90"
+              className="relative w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg shadow-primary/30 border-4 border-white dark:border-slate-950 transition-transform active:scale-90" style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), var(--gradient-to, #4f46e5))' }}
             >
               <Menu className="w-6 h-6" />
             </button>

@@ -232,7 +232,7 @@ export default function ProductsTable({
                 </TableRow>
               ) : (
                 filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
+                  <TableRow key={product.id} onDoubleClick={() => onEditProduct(product)} className="cursor-pointer">
                     <TableCell>
                       <div className="w-16 h-16 rounded-md overflow-hidden bg-muted flex items-center justify-center">
                         {product.image ? (
@@ -261,7 +261,7 @@ export default function ProductsTable({
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{product.category}</Badge>
+                      <Badge variant="outline">{(product as any).categoryData?.name || product.category}</Badge>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm font-medium">
@@ -324,18 +324,18 @@ export default function ProductsTable({
                             <Eye className="mr-2 h-4 w-4" />
                             Visualizar
                           </DropdownMenuItem>
-                          {/* <DropdownMenuItem onClick={() => onEditProduct(product)}>
+                          <DropdownMenuItem onClick={() => onEditProduct(product)}>
                             <Edit className="mr-2 h-4 w-4" />
                             Editar
-                          </DropdownMenuItem> */}
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          {/* <DropdownMenuItem 
+                          <DropdownMenuItem 
                             className="text-destructive"
                             onClick={() => onDeleteProduct(product)}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Excluir
-                          </DropdownMenuItem> */}
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

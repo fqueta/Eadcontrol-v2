@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { MediaLibraryModal } from '@/components/media/MediaLibraryModal';
 import { createGenericService } from '@/services/GenericApiService';
 import { toast } from '@/hooks/use-toast';
-import { Settings, ImagePlus, Trash2, Pencil, GripVertical } from 'lucide-react';
+import { Settings, ImagePlus, Trash2, Pencil, GripVertical, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -26,6 +26,7 @@ type StaticSlide = {
   buttonLabel?: string;
   buttonUrl?: string;
   titleSize?: number;
+  buttonAlign?: 'left' | 'center' | 'right';
 };
 
 /**
@@ -107,9 +108,9 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
     toast({ title: 'Banner removido' });
   };
 
-  const handleUpdateSlide = (index: number, field: 'title' | 'subtitle' | 'buttonLabel' | 'buttonUrl' | 'titleSize', value: string | number) => {
+  const handleUpdateSlide = (index: number, field: 'title' | 'subtitle' | 'buttonLabel' | 'buttonUrl' | 'titleSize' | 'buttonAlign', value: string | number) => {
     const newSlides = [...slides];
-    newSlides[index] = { ...newSlides[index], [field]: value };
+    newSlides[index] = { ...newSlides[index], [field]: value } as any;
     setSlides(newSlides);
   };
 
@@ -299,7 +300,7 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                           <Label className="text-xs font-bold text-slate-500 uppercase">Texto do Botão</Label>
                           <Input 
@@ -317,6 +318,28 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
                             onChange={(e) => handleUpdateSlide(index, 'buttonUrl', e.target.value)}
                             className="h-9"
                           />
+                        </div>
+                        <div>
+                          <Label className="text-xs font-bold text-slate-500 uppercase">Alinhamento Botão</Label>
+                          <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg h-9">
+                            {(['left', 'center', 'right'] as const).map((align) => (
+                              <button
+                                key={align}
+                                type="button"
+                                onClick={() => handleUpdateSlide(index, 'buttonAlign', align)}
+                                className={`flex-1 flex items-center justify-center rounded-md transition-all ${
+                                  (slide.buttonAlign || 'left') === align 
+                                    ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-white' 
+                                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                                }`}
+                                title={align === 'left' ? 'Esquerda' : align === 'center' ? 'Centro' : 'Direita'}
+                              >
+                                {align === 'left' && <AlignLeft className="h-4 w-4" />}
+                                {align === 'center' && <AlignCenter className="h-4 w-4" />}
+                                {align === 'right' && <AlignRight className="h-4 w-4" />}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>

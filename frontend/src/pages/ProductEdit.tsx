@@ -11,7 +11,6 @@ import { ProductForm } from '@/components/products/ProductForm';
 import { productSchema } from '@/components/products/ProductForm';
 import { UpdateProductInput } from '@/types/products';
 import { toast } from '@/hooks/use-toast';
-import { FormActionBar } from '@/components/common/FormActionBar';
 
 /**
  * Página dedicada para edição de produtos existentes
@@ -66,15 +65,15 @@ export default function ProductEdit() {
         name: product.name || '',
         description: product.description || '',
         category: product.category || '',
-        salePrice: product.salePrice || 0,
-        costPrice: product.costPrice || 0,
-        stock: product.stock || 0,
+        salePrice: Number(product.salePrice) || 0,
+        costPrice: Number(product.costPrice) || 0,
+        stock: Number(product.stock) || 0,
         unit: product.unit || '',
         active: product.active ?? true,
         image: product.image || '',
-        points: product.points || 0,
-        rating: product.rating || 0,
-        reviews: product.reviews || 0,
+        points: Number(product.points) || 0,
+        rating: Number(product.rating) || 0,
+        reviews: Number(product.reviews) || 0,
         availability: product.availability || 'available',
         terms: product.terms || [],
         validUntil: product.validUntil,
@@ -203,30 +202,19 @@ export default function ProductEdit() {
           <CardTitle>Informações do Produto</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <ProductForm 
-              form={form}
-              onSubmit={onSubmit}
-              isSubmitting={updateProductMutation.isPending}
-              categories={categories}
-              units={units}
-              isLoadingCategories={isLoadingCategories}
-              isLoadingUnits={isLoadingUnits}
-              categoriesError={categoriesError}
-              unitsError={unitsError}
-              onCancel={handleCancel}
-              isEditing={true}
-            />
-            
-            {/* Action Buttons (reusable component) */}
-            <FormActionBar
-              mode="edit"
-              fixed={false}
-              onCancel={handleCancel}
-              isLoading={updateProductMutation.isPending}
-              labels={{ saveEdit: 'Salvar Alterações' }}
-            />
-          </form>
+          <ProductForm 
+            form={form}
+            onSubmit={onSubmit}
+            isSubmitting={updateProductMutation.isPending}
+            categories={categories}
+            units={units}
+            isLoadingCategories={isLoadingCategories}
+            isLoadingUnits={isLoadingUnits}
+            categoriesError={categoriesError}
+            unitsError={unitsError}
+            onCancel={handleCancel}
+            isEditing={true}
+          />
         </CardContent>
       </Card>
     </div>

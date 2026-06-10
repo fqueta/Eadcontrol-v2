@@ -1,0 +1,120 @@
+import { useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { publicProductsService } from '@/services/publicProductsService';
+import { ArrowLeft, ShoppingBag, Loader2, AlertCircle } from 'lucide-react';
+
+export default function ProductPublicDetails() {
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+
+  const { data: product, isLoading, error } = useQuery({
+    queryKey: ['public-product', slug],
+    queryFn: () => (slug ? publicProductsService.getProductBySlug(slug) : null),
+    enabled: !!slug,
+  });
+
+  if (isLoading) {
+    return (
+      <InclusiveSiteLayout>
+        <div className="flex items-center justify-center py-32">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </InclusiveSiteLayout>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <InclusiveSiteLayout>
+        <div className="container mx-auto px-4 py-16">
+          <Button variant="ghost" onClick={() => navigate('/produtos')} className="mb-6">
+            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+          </Button>
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <AlertCircle className="h-16 w-16 text-destructive mb-4" />
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Produto não encontrado</h1>
+            <p className="text-muted-foreground mb-6">O produto que você procura não está disponível.</p>
+            <Button onClick={() => navigate('/produtos')}>Ver todos os produtos</Button>
+          </div>
+        </div>
+      </InclusiveSiteLayout>
+    );
+  }
+
+  return (
+    <InclusiveSiteLayout>
+      <div className="container mx-auto px-4 py-8">
+        <Button variant="ghost" onClick={() => navigate('/produtos')} className="mb-6">
+          <ArrowLeft className="h-4 w-4 mr-2" /> Voltar ao catálogo
+        </Button>
+
+        <div className="grid md:grid-cols-2 gap-8">
+          <div className="rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            {product.image ? (
+              <img
+                src={product.image}
+                alt={product.name}
+                className="w-full h-full object-cover aspect-square"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+            ) : (
+              <div className="aspect-square flex items-center justify-center text-slate-300 dark:text-slate-700">
+                <ShoppingBag className="h-24 w-24" />
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              {product.categoryData?.name && (
+                <span className="inline-block text-xs uppercase tracking-wider font-bold text-primary bg-primary/5 px-3 py-1 rounded-full mb-3">
+                  {product.categoryData.name}
+                </span>
+              )}
+              <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900 dark:text-white">
+                {product.name}
+              </h1>
+            </div>
+
+            <Separator />
+
+            <div>
+              <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Preço</div>
+              <div className="text-4xl font-extrabold text-primary">
+                {product.salePrice ? `R$ ${product.salePrice}` : 'Consultar'}
+              </div>
+              {product.stock !== null && product.stock !== undefined && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {product.stock > 0 ? `${product.stock} em estoque` : 'Indisponível'}
+                </p>
+              )}
+            </div>
+
+            <Separator />
+
+            {product.description && (
+              <div>
+                <h3 className="text-sm font-bold text-foreground/80 mb-2">Descrição</h3>
+                <div
+                  className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: product.description }}
+                />
+              </div>
+            )}
+
+            {product.unitData?.label && (
+              <p className="text-xs text-muted-foreground">
+                Unidade: <span className="font-medium">{product.unitData.label}</span>
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </InclusiveSiteLayout>
+  );
+}

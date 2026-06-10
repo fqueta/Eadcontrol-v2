@@ -164,6 +164,20 @@ Route::name('api.')->prefix('api/v1')->middleware([
             ->name('posts.public.video-tip')
             ->middleware('throttle:60,1');
 
+        // Catálogo público de produtos (sem autenticação)
+        Route::get('products', [ProductController::class, 'publicIndex'])
+            ->name('public.products.index')
+            ->middleware('throttle:60,1');
+        Route::get('produtos', [ProductController::class, 'publicIndex'])
+            ->name('public.produtos.index')
+            ->middleware('throttle:60,1');
+        Route::get('products/by-slug/{slug}', [ProductController::class, 'publicShowBySlug'])
+            ->name('public.products.showBySlug')
+            ->middleware('throttle:60,1');
+        Route::get('produtos/by-slug/{slug}', [ProductController::class, 'publicShowBySlug'])
+            ->name('public.produtos.showBySlug')
+            ->middleware('throttle:60,1');
+
     });
 
     // Cadastro de cliente com matrícula automática (sem prefixo "public")

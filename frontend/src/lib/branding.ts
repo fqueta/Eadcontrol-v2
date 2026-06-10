@@ -281,8 +281,9 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
           const secondary = String(dataObj['app_secondary_color'] || '').trim();
           const secondaryText = String(dataObj['app_secondary_text_color'] || '').trim();
           const hover = String(dataObj['app_hover_color'] || '').trim();
+          const gradientTo = String(dataObj['app_gradient_to_color'] || '').trim();
 
-          if (primary || primaryText || secondary || secondaryText || hover) {
+          if (primary || primaryText || secondary || secondaryText || hover || gradientTo) {
             const stored = localStorage.getItem('appearanceSettings');
             let settings = stored ? JSON.parse(stored) : {};
             
@@ -307,6 +308,10 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
               settings.hoverColor = hover;
               changed = true;
             }
+            if (gradientTo && settings.gradientToColor !== gradientTo) {
+              settings.gradientToColor = gradientTo;
+              changed = true;
+            }
 
             if (changed) {
               localStorage.setItem('appearanceSettings', JSON.stringify(settings));
@@ -315,6 +320,17 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
           }
         } catch (e) {
           console.error('Failed to hydrate appearance settings:', e);
+        }
+
+        // Salva menu do topo se existir
+        try {
+          const raw = dataObj['app_top_menu'];
+          if (raw) {
+            const json = typeof raw === 'string' ? raw : JSON.stringify(raw);
+            localStorage.setItem('app_top_menu', json);
+          }
+        } catch (e) {
+          console.error('Failed to save top menu:', e);
         }
       }
     }

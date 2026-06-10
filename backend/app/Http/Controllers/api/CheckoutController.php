@@ -31,6 +31,7 @@ class CheckoutController extends Controller
             'id' => $course->id,
             'titulo' => $course->titulo,
             'valor' => $course->valor,
+            'inscricao' => $course->inscricao,
             'parcelas' => $course->parcelas,
             'valor_parcela' => $course->valor_parcela,
             'imagem_url' => $course->config['cover']['url'] ?? null,
@@ -63,14 +64,16 @@ class CheckoutController extends Controller
         }
 
         $courseValor = (float) $course->valor;
-        $validacao = $cupom->validar($courseValor, $courseId);
+        $courseInscricao = (float) ($course->inscricao ?? 0);
+        $totalBase = $courseValor + $courseInscricao;
+        $validacao = $cupom->validar($totalBase, $courseId);
 
         if (!$validacao['valido']) {
             return response()->json(['message' => $validacao['mensagem']], 400);
         }
 
-        $desconto = $cupom->calcularDesconto($courseValor);
-        $totalComDesconto = max(0, $courseValor - $desconto);
+        $desconto = $cupom->calcularDesconto($totalBase);
+        $totalComDesconto = max(0, $totalBase - $desconto);
 
         return response()->json([
             'valido' => true,
@@ -78,7 +81,7 @@ class CheckoutController extends Controller
             'tipo' => $cupom->tipo,
             'valor_desconto' => (float) $cupom->valor_desconto,
             'desconto_aplicado' => round($desconto, 2),
-            'valor_original' => $courseValor,
+            'valor_original' => $totalBase,
             'valor_final' => round($totalComDesconto, 2),
             'mensagem' => $cupom->tipo === 'percentual'
                 ? "Cupom de {$cupom->valor_desconto}% aplicado!"
@@ -113,6 +116,8 @@ class CheckoutController extends Controller
             $course = Curso::findOrFail($courseId);
 
             $courseValor = (float) $course->valor;
+            $courseInscricao = (float) ($course->inscricao ?? 0);
+            $totalBase = $courseValor + $courseInscricao;
             $discountValue = 0;
             $cupom = null;
 
@@ -123,16 +128,16 @@ class CheckoutController extends Controller
                     return response()->json(['message' => 'Cupom inválido.'], 400);
                 }
 
-                $validacao = $cupom->validar($courseValor, $courseId);
+                $validacao = $cupom->validar($totalBase, $courseId);
 
                 if (!$validacao['valido']) {
                     return response()->json(['message' => $validacao['mensagem']], 400);
                 }
 
-                $discountValue = $cupom->calcularDesconto($courseValor);
+                $discountValue = $cupom->calcularDesconto($totalBase);
             }
 
-            $totalComDesconto = max(0, $courseValor - $discountValue);
+            $totalComDesconto = max(0, $totalBase - $discountValue);
 
             $client = Client::getOrCreate([
                 'name' => $request->input('name'),
@@ -149,9 +154,10 @@ class CheckoutController extends Controller
                 'situacao_id' => $situacao_id_int,
                 'data_matricula' => now()->toDateString(),
                 'tipo' => 'curso',
-                'subtotal' => $courseValor,
+                'subtotal' => $totalBase,
                 'desconto' => $discountValue,
                 'total' => $totalComDesconto,
+                'config' => ['inscricao' => $courseInscricao],
             ]);
 
             \App\Services\Qlib::logMatriculaEvent($matricula->id, 'enrollment_intent', "Interesse em curso registrado (Matrícula criada)", [

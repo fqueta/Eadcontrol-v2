@@ -285,7 +285,7 @@ export function AppSidebar() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <div className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer hover:bg-accent transition-colors duration-200 ${collapsed ? 'justify-center' : ''}`}>
-                  <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-white font-bold shadow-sm ring-2 ring-white dark:ring-slate-950">
+                  <div className="h-9 w-9 rounded-lg flex items-center justify-center text-white font-bold shadow-sm ring-2 ring-white dark:ring-slate-950" style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), var(--gradient-to, #4f46e5))' }}>
                     <User className="h-5 w-5" />
                   </div>
                   {!collapsed && (

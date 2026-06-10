@@ -60,6 +60,8 @@ class OptionController extends Controller
             'app_secondary_color',
             'app_secondary_text_color',
             'app_hover_color',
+            'app_gradient_to_color',
+            'app_top_menu',
             'app_dark_mode_default',
             'app_whatsapp',
             'app_theme',
@@ -82,6 +84,7 @@ class OptionController extends Controller
             'home_feature_4_desc',
             'featured_courses_config',
             'pillars_config',
+            'cta_config',
         ];
 
         // Fetch options for allowed keys only

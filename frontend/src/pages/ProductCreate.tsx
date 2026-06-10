@@ -11,7 +11,6 @@ import { ProductForm } from '@/components/products/ProductForm';
 import { productSchema } from '@/components/products/ProductForm';
 import { CreateProductInput } from '@/types/products';
 import { toast } from '@/hooks/use-toast';
-import { FormActionBar } from '@/components/common/FormActionBar';
 
 /**
  * Página dedicada para criação de novos produtos
@@ -127,30 +126,19 @@ export default function ProductCreate() {
           <CardTitle>Informações do Produto</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <ProductForm 
-              form={form}
-              onSubmit={onSubmit}
-              isSubmitting={createProductMutation.isPending}
-              categories={categories}
-              units={units}
-              isLoadingCategories={isLoadingCategories}
-              isLoadingUnits={isLoadingUnits}
-              categoriesError={categoriesError}
-              unitsError={unitsError}
-              onCancel={handleCancel}
-              isEditing={false}
-            />
-            
-            {/* Action Buttons (reusable component) */}
-            <FormActionBar
-              mode="edit"
-              fixed={false}
-              onCancel={handleCancel}
-              isLoading={createProductMutation.isPending}
-              labels={{ saveEdit: 'Salvar Produto' }}
-            />
-          </form>
+          <ProductForm 
+            form={form}
+            onSubmit={onSubmit}
+            isSubmitting={createProductMutation.isPending}
+            categories={categories}
+            units={units}
+            isLoadingCategories={isLoadingCategories}
+            isLoadingUnits={isLoadingUnits}
+            categoriesError={categoriesError}
+            unitsError={unitsError}
+            onCancel={handleCancel}
+            isEditing={false}
+          />
         </CardContent>
       </Card>
     </div>

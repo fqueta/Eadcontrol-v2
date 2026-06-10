@@ -23,6 +23,8 @@ import { phoneApplyMask } from '@/lib/masks/phone-apply-mask';
 import { ValidationConflictModal } from '@/components/modals/ValidationConflictModal';
 import { PublicCourseComments } from '@/components/school/PublicCourseComments';
 import { checkoutService } from '@/services/checkoutService';
+import { publicProductsService } from '@/services/publicProductsService';
+import { Edit } from 'lucide-react';
 
 /**
  * CourseDetails
@@ -135,12 +137,19 @@ export default function CourseDetails() {
     return url;
   }, [course]);
 
+  const bannerUrl = useMemo(() => {
+    const c: any = course || {};
+    const url = String(c?.config?.banner?.url || '').trim();
+    return url;
+  }, [course]);
+
   const priceBox = useMemo(() => {
     const c: any = course || {};
     const valor = String(c?.valor || '').trim();
     const parcelas = String(c?.parcelas || '').trim();
     const valorParcela = String(c?.valor_parcela || '').trim();
-    return { valor, parcelas, valorParcela };
+    const inscricao = String(c?.inscricao || '').trim();
+    return { valor, parcelas, valorParcela, inscricao };
   }, [course]);
 
   const highlights: string[] = useMemo(() => {
@@ -178,6 +187,26 @@ export default function CourseDetails() {
     const c: any = course || {};
     return Array.isArray(c?.modulos) ? c.modulos : [];
   }, [course]);
+
+  const productIds = useMemo(() => {
+    const c: any = course || {};
+    return c?.config?.product_ids || [];
+  }, [course]);
+
+  const { data: productsData } = useQuery({
+    queryKey: ['public-products', 'by-ids', productIds],
+    queryFn: async () => {
+      if (!productIds.length) return { data: [] };
+      return publicProductsService.listPublicProducts({ ids: productIds.join(',') });
+    },
+    enabled: productIds.length > 0,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const products = useMemo(() => {
+    const d = productsData as any;
+    return d?.data || d?.items || [];
+  }, [productsData]);
 
   /**
    * Contact form state
@@ -398,31 +427,53 @@ export default function CourseDetails() {
            * pt-BR: Usa as mesmas cores do layout (gradiente azul brand) e mantém a identidade visual com a logo via InclusiveSiteLayout.
            * en-US: Uses the same layout colors (brand blue gradient) and keeps visual identity with the logo via InclusiveSiteLayout.
            */}
-          {/* Header area - Mesh Gradient Style */}
-          <div className="relative overflow-hidden rounded-2xl bg-slate-900 border border-white/5 shadow-2xl mb-8">
-             {/* Mesh Gradient Background Elements */}
-             <div className="absolute inset-0 z-0 bg-primary/5">
-                <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-primary/20 blur-[120px] rounded-full animate-pulse" />
-                <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-secondary/20 blur-[120px] rounded-full" />
-                <div className="absolute top-[20%] right-[10%] w-[40%] h-[40%] bg-primary/10 blur-[100px] rounded-full" />
-            </div>
-            
-            <div className="relative z-10 px-8 py-12 md:py-20">
-               <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-md text-primary-foreground/90 text-xs font-bold uppercase tracking-widest mb-6">
-                Curso Disponível
-              </div>
-              <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-white mb-4 drop-shadow-sm max-w-4xl">{title}</h1>
-              {error && (
-                <p className="mt-2 text-sm text-white/90 bg-red-500/20 inline-block px-3 py-1 rounded-md">Falha ao carregar informações do curso.</p>
+           {/* Header area - Mesh Gradient Style + Banner Background */}
+           <div className="relative overflow-hidden rounded-lg bg-slate-900 border border-white/5 shadow-2xl mb-8">
+              {/* Banner como fundo */}
+              {bannerUrl && (
+                <img
+                  src={bannerUrl}
+                  alt=""
+                  className="absolute inset-0 z-0 w-full h-full object-cover"
+                />
               )}
-            </div>
-          </div>
+              {/* Overlay escuro para legibilidade */}
+              <div className="absolute inset-0 z-[1] bg-gradient-to-t from-slate-900/90 via-slate-900/60 to-slate-900/40" />
+              {/* Mesh Gradient Background Elements */}
+              <div className="absolute inset-0 z-[2] bg-primary/5 mix-blend-overlay">
+                 <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-primary/20 blur-[120px] rounded-full animate-pulse" />
+                 <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-secondary/20 blur-[120px] rounded-full" />
+                 <div className="absolute top-[20%] right-[10%] w-[40%] h-[40%] bg-primary/10 blur-[100px] rounded-full" />
+             </div>
+             
+             <div className="relative z-10 px-8 py-12 md:py-20">
+                <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-md text-primary-foreground/90 text-xs font-bold uppercase tracking-widest mb-6">
+                 Curso Disponível
+               </div>
+               <div className="flex items-start justify-between gap-4">
+                 <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-white mb-4 drop-shadow-sm max-w-4xl">{title}</h1>
+                 {permissionId < 3 && (course as any)?.id && (
+                   <a
+                     href={`/admin/school/courses/${(course as any).id}/edit?tab=info`}
+                     className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 backdrop-blur-md text-white/80 hover:text-white hover:bg-white/20 text-xs font-semibold transition-all"
+                     title="Editar curso"
+                   >
+                     <Edit className="h-3.5 w-3.5" />
+                     Editar
+                   </a>
+                 )}
+               </div>
+               {error && (
+                 <p className="mt-2 text-sm text-white/90 bg-red-500/20 inline-block px-3 py-1 rounded-md">Falha ao carregar informações do curso.</p>
+               )}
+             </div>
+           </div>
 
           {/* Main grid */}
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Left: description and highlights */}
             <div className="lg:col-span-2 space-y-8">
-              <Card className="border border-slate-200/50 dark:border-white/5 shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md overflow-hidden rounded-2xl">
+              <Card className="border border-slate-200/50 dark:border-white/5 shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md overflow-hidden rounded-lg">
                 <CardHeader className="bg-primary/5 dark:bg-primary/10 border-b border-primary/10 dark:border-primary/20 pb-6">
                   <CardTitle className="text-2xl text-primary font-bold">Por que realizar este curso?</CardTitle>
                   <CardDescription className="text-base">
@@ -449,7 +500,7 @@ export default function CourseDetails() {
                 </CardContent>
               </Card>
 
-              <Card className="border border-slate-200/50 dark:border-white/5 shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl">
+              <Card className="border border-slate-200/50 dark:border-white/5 shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-lg">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-xl">O que você vai aprender?</CardTitle>
                 </CardHeader>
@@ -475,7 +526,7 @@ export default function CourseDetails() {
                 </CardContent>
               </Card>
 
-              <div className="rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 text-white p-8 shadow-xl relative overflow-hidden border border-white/10">
+              <div className="rounded-lg bg-gradient-to-r from-slate-900 to-slate-800 text-white p-8 shadow-xl relative overflow-hidden border border-white/10">
                  <div className="absolute top-0 right-0 p-8 opacity-10 font-bold text-9xl leading-none transform translate-x-10 -translate-y-10">
                    %
                  </div>
@@ -487,7 +538,7 @@ export default function CourseDetails() {
                 </div>
               </div>
 
-              <Card className="border border-slate-200/50 dark:border-white/5 shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl">
+              <Card className="border border-slate-200/50 dark:border-white/5 shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-lg">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <span>📧</span> Interessados e contato
@@ -584,7 +635,7 @@ export default function CourseDetails() {
             {/* Right: cover and price box */}
             <div className="lg:col-span-1 space-y-6">
               <div className="sticky top-24 space-y-6">
-                <Card className="border-0 shadow-2xl overflow-hidden rounded-2xl bg-white dark:bg-slate-900 h-auto">
+                <Card className="border-0 shadow-2xl overflow-hidden rounded-lg bg-white dark:bg-slate-900 h-auto">
                     {coverUrl ? (
                         <div className="relative">
                             <img src={coverUrl} alt={title} className="w-full h-auto object-cover aspect-video" />
@@ -597,7 +648,7 @@ export default function CourseDetails() {
                     )}
                 </Card>
 
-                <Card className="border border-slate-200/50 dark:border-white/5 shadow-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl overflow-hidden relative">
+                <Card className="border border-slate-200/50 dark:border-white/5 shadow-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-lg overflow-hidden relative">
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary to-secondary" />
                     <CardContent className="p-6">
                     <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Preço do curso</div>
@@ -605,6 +656,15 @@ export default function CourseDetails() {
                          <span className="text-lg font-normal text-muted-foreground">R$</span>
                         {priceBox.valor || 'Consultar'}
                     </div>
+
+                    {priceBox.inscricao && priceBox.inscricao !== '0' && priceBox.inscricao !== '0,00' && (
+                      <div className="flex items-center gap-2 mb-3 text-sm text-slate-600 dark:text-slate-300">
+                        <div className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-amber-600">📋</div>
+                        <div>
+                          Taxa de inscrição: <span className="font-bold">R$ {priceBox.inscricao}</span>
+                        </div>
+                      </div>
+                    )}
                     
                     <Separator className="my-4 bg-slate-100 dark:bg-slate-800" />
                     
@@ -670,6 +730,110 @@ export default function CourseDetails() {
              if(emailInput) setTimeout(() => emailInput.focus(), 150);
           }}
         />
+
+        {(products.length > 0 || permissionId < 3) && (
+          <div className="container mx-auto px-4 mt-12 mb-12">
+            <Card className="border border-slate-200/50 dark:border-white/5 shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-lg overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5 border-b border-primary/10 pb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-2xl font-bold flex items-center gap-3">
+                      <span className="text-3xl">🛍️</span>
+                      Catálogo de Produtos
+                    </CardTitle>
+                    <CardDescription className="text-base">
+                      Confira nossos produtos disponíveis
+                    </CardDescription>
+                  </div>
+                  {permissionId < 3 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate('/admin/products')}
+                      className="rounded-xl text-xs"
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      Gerenciar
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {products.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-muted-foreground">
+                    Nenhum produto associado a este curso.
+                    {permissionId < 3 && (
+                      <div className="mt-2">
+                        <Button variant="link" onClick={() => navigate('/admin/products')}>
+                          Gerenciar produtos no admin
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {products.map((product: any) => (
+                      <div
+                        key={product.id}
+                        className="group relative rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:shadow-lg hover:border-primary/30 transition-all duration-300 overflow-hidden"
+                      >
+                        {permissionId < 3 && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); navigate(`/admin/products/${product.id}/edit`); }}
+                            className="absolute bottom-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg bg-slate-900/80 text-white hover:bg-slate-700 shadow-md"
+                            title="Editar produto"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        <div className="aspect-video w-full bg-slate-100 dark:bg-slate-900 overflow-hidden">
+                          {product.image ? (
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-700">
+                              <span className="text-3xl">🛍️</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-4">
+                        <div className="font-semibold text-sm text-slate-900 dark:text-white mb-1 line-clamp-2">
+                          {product.name}
+                        </div>
+                        {product.categoryData?.name && (
+                          <span className="inline-block text-[10px] uppercase tracking-wider font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-full mb-2">
+                            {product.categoryData.name}
+                          </span>
+                        )}
+                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3 min-h-[2rem]">
+                          {product.description || 'Sem descrição'}
+                        </p>
+                        <div className="flex items-center justify-between mt-auto">
+                          <span className="text-lg font-bold text-primary">
+                            {product.salePrice
+                              ? `R$ ${product.salePrice}`
+                              : 'Consultar'}
+                          </span>
+                          {product.stock !== null && product.stock !== undefined && (
+                            <span className="text-[10px] text-slate-400">
+                              {product.stock > 0 ? `${product.stock} em estoque` : 'Indisponível'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {courseNumericId && (
           <div className="container mx-auto px-4 mt-12 mb-12">

@@ -285,12 +285,14 @@ export function MediaLibraryModal({ open, onClose, onSelect, defaultFilters }: M
               <div className="col-span-full text-center text-sm text-muted-foreground">Nenhum item encontrado.</div>
             )}
             {!isLoading && items.map((item) => (
-              <button
+              <div
                 key={String(item.id)}
-                type="button"
                 onClick={() => onSelect(item)}
-                className="relative border rounded-md overflow-hidden hover:shadow focus:outline-none"
+                className="relative border rounded-md overflow-hidden hover:shadow focus:outline-none cursor-pointer"
                 title={item.title || item.file?.original || String(item.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter') onSelect(item); }}
               >
                 {/* Botão excluir (overlay) */}
                 <div className="absolute top-2 right-2 z-10">
@@ -306,7 +308,7 @@ export function MediaLibraryModal({ open, onClose, onSelect, defaultFilters }: M
                   </Button>
                 </div>
 
-                <div className="aspect-square bg-muted flex items-center justify-center">
+                <div className="aspect-square bg-muted flex items-center justify-center pointer-events-none">
                   {isImage(item) ? (
                     <img
                       src={item.file?.url || item.url || ''}
@@ -319,11 +321,11 @@ export function MediaLibraryModal({ open, onClose, onSelect, defaultFilters }: M
                     </div>
                   )}
                 </div>
-                <div className="p-2 text-left">
+                <div className="p-2 text-left pointer-events-none">
                   <div className="text-xs font-medium truncate">{item.title || item.file?.original || `#${item.id}`}</div>
                   <div className="text-[10px] text-muted-foreground truncate">{item.file?.mime || item.mime || 'arquivo'}</div>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
 

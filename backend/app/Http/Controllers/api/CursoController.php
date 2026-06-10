@@ -598,6 +598,28 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
             unset($data['imagem_url'], $data['imagem_file_id'], $data['imagem_titulo']);
         }
 
+        /**
+         * Banner image normalization
+         * pt-BR: Move campos de banner (top-level) para `config.banner`.
+         * en-US: Move top-level banner fields into `config.banner`.
+         */
+        if (
+            array_key_exists('banner_url', $data) ||
+            array_key_exists('banner_file_id', $data) ||
+            array_key_exists('banner_titulo', $data)
+        ) {
+            $cfg = is_array($data['config'] ?? null) ? $data['config'] : [];
+            $banner = is_array($cfg['banner'] ?? null) ? $cfg['banner'] : [];
+            $banner = array_merge($banner, [
+                'url' => $data['banner_url'] ?? ($banner['url'] ?? null),
+                'file_id' => $data['banner_file_id'] ?? ($banner['file_id'] ?? null),
+                'title' => $data['banner_titulo'] ?? ($banner['title'] ?? null),
+            ]);
+            $cfg['banner'] = $banner;
+            $data['config'] = $cfg;
+            unset($data['banner_url'], $data['banner_file_id'], $data['banner_titulo']);
+        }
+
         return $data;
     }
 
