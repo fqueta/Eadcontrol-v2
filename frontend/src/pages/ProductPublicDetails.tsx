@@ -32,14 +32,14 @@ export default function ProductPublicDetails() {
     return (
       <InclusiveSiteLayout>
         <div className="container mx-auto px-4 py-16">
-          <Button variant="ghost" onClick={() => navigate('/produtos')} className="mb-6">
+          <Button variant="ghost" onClick={() => navigate('/produtos')} className="mb-6 rounded-lg">
             <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
           </Button>
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <AlertCircle className="h-16 w-16 text-destructive mb-4" />
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Produto não encontrado</h1>
             <p className="text-muted-foreground mb-6">O produto que você procura não está disponível.</p>
-            <Button onClick={() => navigate('/produtos')}>Ver todos os produtos</Button>
+            <Button onClick={() => navigate('/produtos')} className="btn-themed-primary">Ver todos os produtos</Button>
           </div>
         </div>
       </InclusiveSiteLayout>
@@ -49,12 +49,12 @@ export default function ProductPublicDetails() {
   return (
     <InclusiveSiteLayout>
       <div className="container mx-auto px-4 py-8">
-        <Button variant="ghost" onClick={() => navigate('/produtos')} className="mb-6">
+        <Button variant="ghost" onClick={() => navigate('/produtos')} className="mb-6 rounded-lg">
           <ArrowLeft className="h-4 w-4 mr-2" /> Voltar ao catálogo
         </Button>
 
         <div className="grid md:grid-cols-2 gap-8">
-          <div className="rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+          <div className="product-image-themed">
             {product.image ? (
               <img
                 src={product.image}
@@ -72,7 +72,7 @@ export default function ProductPublicDetails() {
           <div className="space-y-6">
             <div>
               {product.categoryData?.name && (
-                <span className="inline-block text-xs uppercase tracking-wider font-bold text-primary bg-primary/5 px-3 py-1 rounded-full mb-3">
+                <span className="category-badge-themed px-3 py-1 mb-3">
                   {product.categoryData.name}
                 </span>
               )}

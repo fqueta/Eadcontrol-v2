@@ -21,12 +21,14 @@ type Props = {
 
 type StaticSlide = {
   url: string;
+  mobileUrl?: string;
   title?: string;
   subtitle?: string;
   buttonLabel?: string;
   buttonUrl?: string;
   titleSize?: number;
   buttonAlign?: 'left' | 'center' | 'right';
+  buttonPosY?: 'top' | 'center' | 'bottom';
 };
 
 /**
@@ -39,6 +41,7 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [managerOpen, setManagerOpen] = useState(false);
   const [slides, setSlides] = useState<StaticSlide[]>([]);
+  const [mobileEditIndex, setMobileEditIndex] = useState<number | null>(null);
   
   // Settings state
   const [showOverlay, setShowOverlay] = useState(() => localStorage.getItem('home_hero_show_overlay') !== 'false');
@@ -94,9 +97,18 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
   const handleSelectMedia = async (item: any) => {
     const url = item?.file?.url || item?.url || '';
     if (!url) return;
-    const newSlides = [...slides, { url }];
-    await saveSlides(newSlides);
-    toast({ title: 'Banner adicionado', description: 'O carrossel agora possui ' + newSlides.length + ' imagens.' });
+    
+    if (mobileEditIndex !== null) {
+      const newSlides = [...slides];
+      newSlides[mobileEditIndex] = { ...newSlides[mobileEditIndex], mobileUrl: url };
+      await saveSlides(newSlides);
+      toast({ title: 'Imagem mobile vinculada com sucesso!' });
+      setMobileEditIndex(null);
+    } else {
+      const newSlides = [...slides, { url }];
+      await saveSlides(newSlides);
+      toast({ title: 'Banner adicionado', description: 'O carrossel agora possui ' + newSlides.length + ' imagens.' });
+    }
     setMediaOpen(false);
   };
 
@@ -108,7 +120,14 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
     toast({ title: 'Banner removido' });
   };
 
-  const handleUpdateSlide = (index: number, field: 'title' | 'subtitle' | 'buttonLabel' | 'buttonUrl' | 'titleSize' | 'buttonAlign', value: string | number) => {
+  const handleRemoveMobileUrl = async (index: number) => {
+    const newSlides = [...slides];
+    newSlides[index] = { ...newSlides[index], mobileUrl: undefined };
+    await saveSlides(newSlides);
+    toast({ title: 'Imagem mobile removida' });
+  };
+
+  const handleUpdateSlide = (index: number, field: 'title' | 'subtitle' | 'buttonLabel' | 'buttonUrl' | 'titleSize' | 'buttonAlign' | 'buttonPosY' | 'mobileUrl', value: string | number) => {
     const newSlides = [...slides];
     newSlides[index] = { ...newSlides[index], [field]: value } as any;
     setSlides(newSlides);
@@ -265,8 +284,23 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
                     <div className="hidden sm:flex items-center justify-center cursor-grab active:cursor-grabbing px-1 text-slate-400 hover:text-slate-600">
                       <GripVertical className="h-5 w-5" />
                     </div>
-                    <div className="w-full sm:w-48 h-32 flex-shrink-0 rounded-md overflow-hidden bg-slate-200">
-                      <img src={slide.url} alt={`Banner ${index + 1}`} className="w-full h-full object-cover" />
+                    <div className="flex gap-2 w-full sm:w-56 h-32 flex-shrink-0">
+                      <div className="flex-1 rounded-md overflow-hidden bg-slate-200 relative">
+                        <img src={slide.url} alt={`Desktop ${index + 1}`} className="w-full h-full object-cover" />
+                        <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-1 py-0.5 rounded font-mono uppercase">Desktop</span>
+                      </div>
+                      <div className="flex-1 rounded-md overflow-hidden bg-slate-100 dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-700 relative flex flex-col items-center justify-center text-center p-1">
+                        {slide.mobileUrl ? (
+                          <>
+                            <img src={slide.mobileUrl} alt={`Mobile ${index + 1}`} className="w-full h-full object-cover" />
+                            <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-1 py-0.5 rounded font-mono uppercase">Mobile</span>
+                          </>
+                        ) : (
+                          <div className="text-[9px] text-slate-400 font-medium">
+                            Sem Mobile<br/>(Usa Desktop)
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="flex-1 space-y-3 mt-2 sm:mt-0">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -300,7 +334,7 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <Label className="text-xs font-bold text-slate-500 uppercase">Texto do Botão</Label>
                           <Input 
@@ -319,8 +353,43 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
                             className="h-9"
                           />
                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <Label className="text-xs font-bold text-slate-500 uppercase">Alinhamento Botão</Label>
+                          <Label className="text-xs font-bold text-slate-500 uppercase">Imagem Mobile (Opcional)</Label>
+                          <div className="flex gap-2 mt-1">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 text-xs h-9"
+                              onClick={() => {
+                                setMobileEditIndex(index);
+                                setMediaOpen(true);
+                              }}
+                            >
+                              {slide.mobileUrl ? 'Alterar Mobile' : 'Selecionar Mobile'}
+                            </Button>
+                            {slide.mobileUrl && (
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="destructive"
+                                className="h-9 w-9 shrink-0"
+                                onClick={() => handleRemoveMobileUrl(index)}
+                                title="Remover Imagem Mobile"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs font-bold text-slate-500 uppercase">Alinhamento Botão (Horizontal)</Label>
                           <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg h-9">
                             {(['left', 'center', 'right'] as const).map((align) => (
                               <button
@@ -337,6 +406,25 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
                                 {align === 'left' && <AlignLeft className="h-4 w-4" />}
                                 {align === 'center' && <AlignCenter className="h-4 w-4" />}
                                 {align === 'right' && <AlignRight className="h-4 w-4" />}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs font-bold text-slate-500 uppercase">Posição Botão (Vertical)</Label>
+                          <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg h-9">
+                            {(['top', 'center', 'bottom'] as const).map((pos) => (
+                              <button
+                                key={pos}
+                                type="button"
+                                onClick={() => handleUpdateSlide(index, 'buttonPosY', pos)}
+                                className={`flex-1 flex items-center justify-center rounded-md text-xs font-black transition-all ${
+                                  (slide.buttonPosY || 'center') === pos 
+                                    ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-white' 
+                                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                                }`}
+                              >
+                                {pos === 'top' ? 'Topo' : pos === 'center' ? 'Centro' : 'Base'}
                               </button>
                             ))}
                           </div>
@@ -382,7 +470,10 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
 
       <MediaLibraryModal
         open={mediaOpen}
-        onClose={() => setMediaOpen(false)}
+        onClose={() => {
+          setMediaOpen(false);
+          setMobileEditIndex(null);
+        }}
         onSelect={handleSelectMedia}
         defaultFilters={{ mime: 'image/' }}
       />

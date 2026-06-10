@@ -127,3 +127,95 @@ All colors MUST be HSL.
     animation: bounce-slow 3s infinite;
   }
 }
+
+/* Custom layouts (rounded vs squared) and theme support */
+.product-card-themed {
+  @apply rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden hover:shadow-lg hover:border-primary/30 transition-all duration-300;
+}
+
+.category-badge-themed {
+  @apply inline-block text-[10px] uppercase tracking-wider font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-full mb-2;
+}
+
+.bullet-themed {
+  @apply w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600;
+}
+
+.product-image-themed {
+  @apply rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800;
+}
+
+.btn-themed-outline {
+  @apply rounded-lg text-xs;
+}
+
+.btn-themed-primary {
+  @apply rounded-md;
+}
+
+.price-icon-themed-amber {
+  @apply w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-amber-600;
+}
+
+.price-icon-themed-primary {
+  @apply w-8 h-8 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary;
+}
+
+.price-icon-themed-slate {
+  @apply w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center;
+}
+
+.price-icon-themed-emerald {
+  @apply w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600;
+}
+
+/* Squared Layout Overrides */
+.layout-squared .rounded-xl,
+.layout-squared .rounded-lg,
+.layout-squared .rounded-md,
+.layout-squared .rounded-sm,
+.layout-squared .rounded-full,
+.layout-squared .rounded-2xl,
+.layout-squared .rounded-3xl {
+  border-radius: 0px !important;
+}
+
+.layout-squared .product-card-themed {
+  @apply rounded-none hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[4px_4px_0px_hsl(var(--primary))] hover:border-primary/50 transition-all duration-200;
+}
+
+.layout-squared .category-badge-themed {
+  @apply rounded-none text-[9px] tracking-widest font-semibold border border-primary/20;
+}
+
+.layout-squared .bullet-themed {
+  @apply rounded-none bg-primary;
+}
+
+.layout-squared .product-image-themed {
+  @apply rounded-none shadow-[8px_8px_0px_hsl(var(--primary)/0.15)];
+}
+
+.layout-squared .btn-themed-outline {
+  @apply rounded-none text-xs uppercase tracking-wider font-bold transition-colors hover:bg-primary hover:text-primary-foreground hover:border-primary;
+}
+
+.layout-squared .btn-themed-primary {
+  @apply rounded-none uppercase tracking-wider font-bold hover:bg-primary/95 transition-all;
+}
+
+.layout-squared .price-icon-themed-amber {
+  @apply rounded-none border border-amber-500/20;
+}
+
+.layout-squared .price-icon-themed-primary {
+  @apply rounded-none border border-primary/20;
+}
+
+.layout-squared .price-icon-themed-slate {
+  @apply rounded-none border border-slate-200 dark:border-slate-700;
+}
+
+.layout-squared .price-icon-themed-emerald {
+  @apply rounded-none border border-emerald-500/20;
+}

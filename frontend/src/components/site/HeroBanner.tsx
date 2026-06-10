@@ -8,6 +8,18 @@ import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription } f
 import HeroImageEditor from './HeroImageEditor';
 import { EditableOptionText } from '@/components/common/EditableOptionText';
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 768px)');
+    const listener = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    setIsMobile(media.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, []);
+  return isMobile;
+}
+
 function useHeroSettings() {
   const [showOverlay, setShowOverlay] = useState(() => localStorage.getItem('home_hero_show_overlay') !== 'false');
   const [showTexts, setShowTexts] = useState(() => localStorage.getItem('home_hero_show_texts') !== 'false');
@@ -51,6 +63,7 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
   const [isLoading, setIsLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const { showOverlay, showTexts, showButton, autoplayInterval } = useHeroSettings();
+  const isMobile = useIsMobile();
 
   // Resolve fallbacks from branding
   const name = institutionName || getInstitutionName() || '';
@@ -93,7 +106,7 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
   }
 
   return (
-    <section className="relative h-[45vh] sm:h-[60vh] md:h-[85vh] min-h-[320px] sm:min-h-[400px] md:min-h-[600px] w-full overflow-hidden bg-slate-900">
+    <section className="relative h-[calc(100vh-128px)] sm:h-[calc(100vh-64px)] md:h-[calc(100vh-64px)] min-h-[450px] sm:min-h-[550px] md:min-h-[700px] w-full overflow-hidden bg-slate-900">
       <div className="h-full w-full relative">
         {slides.map((slide, index) => (
           <div 
@@ -105,14 +118,24 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
             {/* Background */}
             <div 
               className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${slide.image_url})` }}
+              style={{ 
+                backgroundImage: `url(${
+                  isMobile && (slide.config?.mobile_image_url || (slide as any).image_mobile_url)
+                    ? (slide.config.mobile_image_url || (slide as any).image_mobile_url)
+                    : slide.image_url
+                })` 
+              }}
             />
             {/* Modern Overlay Gradient */}
             {showOverlay && (
               <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/50 to-transparent z-10" />
             )}
             
-            <div className="container mx-auto h-full relative z-20 flex items-center px-6 md:px-12 pointer-events-none">
+            <div className={`container mx-auto h-full relative z-20 flex px-6 md:px-12 pointer-events-none ${
+              slide.config?.buttonPosY === 'top' ? 'items-start pt-20 sm:pt-32' :
+              slide.config?.buttonPosY === 'bottom' ? 'items-end pb-24 sm:pb-36' :
+              'items-center'
+            }`}>
               <div className={`max-w-3xl transition-all duration-1000 transform pointer-events-auto ${index === selectedIndex ? 'translate-x-0 opacity-100' : '-translate-x-12 opacity-0'}`}>
                 {showTexts && (
                   <>
@@ -194,12 +217,14 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
 
 type StaticSlide = {
   url: string;
+  mobileUrl?: string;
   title?: string;
   subtitle?: string;
   buttonLabel?: string;
   buttonUrl?: string;
   titleSize?: number;
   buttonAlign?: 'left' | 'center' | 'right';
+  buttonPosY?: 'top' | 'center' | 'bottom';
 };
 
 /**
@@ -210,6 +235,7 @@ function StaticCarousel({ name, slogan, description }: { name: string; slogan: s
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [displayImages, setDisplayImages] = useState<StaticSlide[]>([]);
   const { showOverlay, showTexts, showButton, autoplayInterval } = useHeroSettings();
+  const isMobile = useIsMobile();
 
   const updateImages = useCallback(() => {
     try {
@@ -250,7 +276,7 @@ function StaticCarousel({ name, slogan, description }: { name: string; slogan: s
   }, [displayImages.length, autoplayInterval]);
 
   return (
-    <section className="relative h-[45vh] sm:h-[60vh] md:h-[85vh] min-h-[320px] sm:min-h-[400px] md:min-h-[600px] w-full overflow-hidden bg-slate-900">
+    <section className="relative h-[calc(100vh-128px)] sm:h-[calc(100vh-64px)] md:h-[calc(100vh-64px)] min-h-[450px] sm:min-h-[550px] md:min-h-[700px] w-full overflow-hidden bg-slate-900">
       <div className="h-full w-full relative">
         {displayImages.map((img, index) => (
           <div 
@@ -261,13 +287,19 @@ function StaticCarousel({ name, slogan, description }: { name: string; slogan: s
           >
             <div 
               className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${img.url})` }}
+              style={{ 
+                backgroundImage: `url(${isMobile && img.mobileUrl ? img.mobileUrl : img.url})` 
+              }}
             />
             {showOverlay && (
               <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/50 to-transparent z-10" />
             )}
             
-            <div className="container mx-auto h-full relative z-20 flex items-center px-6 md:px-12 pointer-events-none">
+            <div className={`container mx-auto h-full relative z-20 flex px-6 md:px-12 pointer-events-none ${
+              img.buttonPosY === 'top' ? 'items-start pt-20 sm:pt-32' :
+              img.buttonPosY === 'bottom' ? 'items-end pb-24 sm:pb-36' :
+              'items-center'
+            }`}>
               <div className={`max-w-3xl transition-all duration-1000 transform pointer-events-auto ${index === selectedIndex ? 'translate-x-0 opacity-100' : '-translate-x-12 opacity-0'}`}>
                 {showTexts && (
                   <>

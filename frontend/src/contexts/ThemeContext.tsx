@@ -126,6 +126,18 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       if (savedAppearanceSettings) {
         const appearanceSettings = JSON.parse(savedAppearanceSettings);
         
+        // Aplica estilo de layout
+        const layoutStyle = appearanceSettings.layoutStyle || 'rounded';
+        if (layoutStyle === 'squared') {
+          document.documentElement.classList.add('layout-squared');
+          document.documentElement.classList.remove('layout-rounded');
+          document.documentElement.style.setProperty('--radius', '0px');
+        } else {
+          document.documentElement.classList.add('layout-rounded');
+          document.documentElement.classList.remove('layout-squared');
+          document.documentElement.style.setProperty('--radius', '0.3rem');
+        }
+        
         // Aplica modo escuro
         const isDarkMode = appearanceSettings.darkMode;
         if (isDarkMode) {

@@ -64,7 +64,7 @@ export default function ProductsGrid() {
             <div
               key={product.id}
               onClick={() => navigate(`/produtos/${product.slug}`)}
-              className="group cursor-pointer rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden hover:shadow-lg hover:border-primary/30 transition-all duration-300"
+              className="group cursor-pointer product-card-themed"
             >
               <div className="aspect-[4/3] bg-slate-100 dark:bg-slate-900 overflow-hidden">
                 {product.image ? (
@@ -85,7 +85,7 @@ export default function ProductsGrid() {
                   {product.name}
                 </h3>
                 {product.categoryData?.name && (
-                  <span className="inline-block text-[10px] uppercase tracking-wider font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-full mb-2">
+                  <span className="category-badge-themed">
                     {product.categoryData.name}
                   </span>
                 )}
@@ -96,7 +96,7 @@ export default function ProductsGrid() {
                   <span className="text-lg font-bold text-primary">
                     {product.salePrice ? `R$ ${product.salePrice}` : 'Consultar'}
                   </span>
-                  <Button size="sm" variant="outline" className="rounded-lg text-xs">
+                  <Button size="sm" variant="outline" className="btn-themed-outline">
                     Ver detalhes
                   </Button>
                 </div>

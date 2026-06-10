@@ -76,12 +76,15 @@ export function PillarsSection() {
               >
                 {config.title}
               </h2>
-              <div className={`w-24 h-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full ${config.textAlign === 'center' ? 'mx-auto' : config.textAlign === 'right' ? 'ml-auto' : ''}`} />
+              <div 
+                className={`w-24 h-1.5 rounded-full ${config.textAlign === 'center' ? 'mx-auto' : config.textAlign === 'right' ? 'ml-auto' : ''}`}
+                style={{ background: 'linear-gradient(to right, hsl(var(--primary)), var(--gradient-to, hsl(var(--primary-hover, var(--primary)))))' }}
+              />
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10">
               <PillarCard 
-                icon={<BookOpen className="h-10 w-10 text-blue-600 dark:text-blue-400 relative z-10" />}
+                icon={<BookOpen className="h-10 w-10 text-primary relative z-10" />}
                 titleKey="home_feature_1_title"
                 defaultTitle="Plataforma Pedagógica"
                 descKey="home_feature_1_desc"
@@ -89,7 +92,7 @@ export function PillarsSection() {
               />
 
               <PillarCard 
-                icon={<Plane className="h-10 w-10 text-blue-600 dark:text-blue-400 relative z-10" />}
+                icon={<Plane className="h-10 w-10 text-primary relative z-10" />}
                 titleKey="home_feature_2_title"
                 defaultTitle="Comunicação Alternativa"
                 descKey="home_feature_2_desc"
@@ -97,7 +100,7 @@ export function PillarsSection() {
               />
 
               <PillarCard 
-                icon={<Wrench className="h-10 w-10 text-blue-600 dark:text-blue-400 relative z-10" />}
+                icon={<Wrench className="h-10 w-10 text-primary relative z-10" />}
                 titleKey="home_feature_3_title"
                 defaultTitle="Suporte de Ponta a Ponta"
                 descKey="home_feature_3_desc"
@@ -105,7 +108,7 @@ export function PillarsSection() {
               />
 
               <PillarCard 
-                icon={<Compass className="h-10 w-10 text-blue-600 dark:text-blue-400 relative z-10" />}
+                icon={<Compass className="h-10 w-10 text-primary relative z-10" />}
                 titleKey="home_feature_4_title"
                 defaultTitle="Soluções Personalizadas"
                 descKey="home_feature_4_desc"
@@ -126,10 +129,10 @@ export function PillarsSection() {
 
 function PillarCard({ icon, titleKey, defaultTitle, descKey, defaultDesc }: any) {
   return (
-    <Card className="group border-slate-100 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] transition-all duration-500 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:-translate-y-2 cursor-default overflow-hidden">
+    <Card className="group border-slate-100 dark:border-slate-800 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 transition-all duration-500 rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:-translate-y-2 cursor-default overflow-hidden">
       <CardHeader className="text-center pb-2">
-        <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110 group-hover:rotate-3 duration-500 overflow-hidden relative">
-          <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="w-20 h-20 bg-primary/10 dark:bg-primary/20 rounded-xl flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110 group-hover:rotate-3 duration-500 overflow-hidden relative">
+          <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity" />
           {icon}
         </div>
         <CardTitle className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">

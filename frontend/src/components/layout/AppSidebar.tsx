@@ -313,6 +313,12 @@ export function AppSidebar() {
                     <span>Configurações</span>
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild className="rounded-lg cursor-pointer focus:bg-primary/5 focus:text-primary">
+                  <Link to="/admin/ajuda" className="flex items-center gap-2 py-2">
+                    <GraduationCap className="h-4 w-4" />
+                    <span>Manual do Usuário</span>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={logout} className="rounded-lg cursor-pointer text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30 focus:text-red-700 mt-1">
                   <ChevronUp className="h-4 w-4 mr-2 rotate-90" />
                   <span>Sair</span>

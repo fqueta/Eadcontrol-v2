@@ -356,7 +356,12 @@ export default function StudentCourses() {
         <div className="container mx-auto px-4 space-y-8">
         
         {/* Premium Header */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-primary via-blue-600 to-indigo-700 text-white shadow-xl">
+         <div 
+           className="relative overflow-hidden rounded-lg text-white shadow-xl"
+           style={{
+             background: 'linear-gradient(135deg, hsl(var(--primary)), var(--gradient-to, hsl(var(--primary-hover, var(--primary)))))'
+           }}
+         >
            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent" />
            <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-blue-400/20 blur-3xl" />
            <div className="relative z-10 px-8 py-10 md:py-12 flex flex-col md:flex-row items-center md:items-end justify-between gap-6">

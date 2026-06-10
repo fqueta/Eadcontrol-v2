@@ -30,8 +30,8 @@ export const CookieConsent = () => {
         <div className="fixed bottom-0 left-0 right-0 z-[9999] p-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] animate-in slide-in-from-bottom duration-500">
             <div className="container mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-start sm:items-center gap-4">
-                    <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full shrink-0">
-                        <Cookie className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                    <div className="p-3 bg-primary/10 dark:bg-primary/20 rounded-full shrink-0">
+                        <Cookie className="w-6 h-6 text-primary" />
                     </div>
                     <div className="text-sm text-slate-600 dark:text-slate-300">
                         <p className="font-semibold text-slate-900 dark:text-white mb-1">
@@ -53,7 +53,7 @@ export const CookieConsent = () => {
                     </Button>
                     <Button 
                         onClick={acceptCookies} 
-                        className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+                        className="w-full sm:w-auto"
                     >
                         Aceitar e fechar
                     </Button>

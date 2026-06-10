@@ -137,6 +137,7 @@ const VideoTipForm = lazy(() => import("./pages/school/VideoTipForm"));
 const LiveSessionsCalendar = lazy(() => import("./pages/school/LiveSessionsCalendar"));
 const StudentLiveCalendar = lazy(() => import("./pages/school/StudentLiveCalendar"));
 const PublicVideoTip = lazy(() => import("./pages/public/PublicVideoTip"));
+const UserManual = lazy(() => import("./pages/help/UserManual"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -278,6 +279,13 @@ const App = () => {
                   <AppLayout>
                     {/* <Dashboard2 /> */}
                     <Dashboard />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/ajuda" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <UserManual />
                   </AppLayout>
                 </AdminProtectedRoute>
               } />

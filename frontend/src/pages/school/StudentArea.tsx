@@ -525,11 +525,16 @@ export default function StudentArea() {
     <InclusiveSiteLayout>
       <div className="container mx-auto p-6 space-y-8">
         {/* Header Personalizado (Banner) */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 p-8 shadow-lg text-white">
+        <div 
+          className="relative overflow-hidden rounded-2xl p-8 shadow-lg text-white"
+          style={{
+            background: 'linear-gradient(to right, hsl(var(--primary)), var(--gradient-to, hsl(var(--primary-hover, var(--primary)))))'
+          }}
+        >
           <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Olá, {user?.name?.split(' ')[0]}! 👋</h1>
-              <p className="text-blue-100 text-lg font-light">Bem-vindo de volta ao seu painel de estudos.</p>
+              <p className="text-primary-foreground/90 text-lg font-light">Bem-vindo de volta ao seu painel de estudos.</p>
             </div>
             <div className="flex gap-2">
               <Button onClick={() => navigate('/aluno/cursos')} className="bg-white/20 hover:bg-white/30 text-white border border-white/20 backdrop-blur-sm transition-all shadow-sm">

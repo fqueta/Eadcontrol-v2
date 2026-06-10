@@ -11,6 +11,7 @@ export interface BannerSlide {
   subtitle: string | null;
   content: string | null;
   image_url: string | null;
+  image_mobile_url?: string | null;
   menu_order: number;
   config: {
     cta_label?: string;
@@ -21,6 +22,8 @@ export interface BannerSlide {
     text_color?: string;
     titleSize?: number;
     buttonAlign?: 'left' | 'center' | 'right';
+    buttonPosY?: 'top' | 'center' | 'bottom';
+    mobile_image_url?: string;
   };
 }
 

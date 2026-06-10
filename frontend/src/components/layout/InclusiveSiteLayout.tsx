@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useToast } from "@/hooks/use-toast";
@@ -43,6 +43,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
   const [institutionDescription, setInstitutionDescription] = useState(() => getInstitutionDescription() || '');
   const [isAdminImpersonating, setIsAdminImpersonating] = useState(false);
 
+  const location = useLocation();
   const [topMenuItems, setTopMenuItems] = useState<any[] | null>(() => {
     try {
       const raw = localStorage.getItem('app_top_menu');
@@ -255,7 +256,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
               if (item.auth && !isAuthenticated) return null;
               const isExternal = item.external || item.url?.startsWith('http');
               return (
-                <Button key={item.label + item.url} asChild variant="ghost" className="text-primary dark:text-blue-100 hover:bg-primary/5 hover:text-primary transition-all duration-300 rounded-lg">
+                <Button key={item.label + item.url} asChild variant="ghost" className={`transition-all duration-300 rounded-lg ${(() => { const p = location.pathname; const u = item.url; if (u === '/' && p === '/') return 'bg-primary/10 text-primary font-bold'; if (u !== '/' && p.startsWith(u)) return 'bg-primary/10 text-primary font-bold'; return 'text-primary dark:text-blue-100 hover:bg-primary/5 hover:text-primary'; })()}`}>
                   {isExternal ? (
                     <a href={item.url} target="_blank" rel="noreferrer">
                       {item.external && <ExternalLink className="w-4 h-4 mr-2" />}
@@ -386,7 +387,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
                 if (item.auth && !isAuthenticated) return null;
                 const isExternal = item.external || item.url?.startsWith('http');
                 return (
-                  <Button key={item.label + item.url} asChild variant="ghost" className="w-full justify-start h-12 rounded-xl px-4 hover:bg-primary/5 transition-all" onClick={() => setMobileNavOpen(false)}>
+                  <Button key={item.label + item.url} asChild variant="ghost" className={`w-full justify-start h-12 rounded-xl px-4 hover:bg-primary/5 transition-all ${(() => { const p = location.pathname; const u = item.url; if (u === '/' && p === '/') return 'bg-primary/10'; if (u !== '/' && p.startsWith(u)) return 'bg-primary/10'; return ''; })()}`} onClick={() => setMobileNavOpen(false)}>
                     {isExternal ? (
                       <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center">
                         <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center mr-3">

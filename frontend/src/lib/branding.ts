@@ -274,7 +274,7 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
           if ((import.meta as any)?.env?.DEV) console.debug('[branding] resolved name/logo', { name, logoUrl });
         } catch {}
 
-        // Hydrate Appearance Settings (Colors)
+        // Hydrate Appearance Settings (Colors & Layout)
         try {
           const primary = String(dataObj['app_primary_color'] || '').trim();
           const primaryText = String(dataObj['app_primary_text_color'] || '').trim();
@@ -282,8 +282,9 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
           const secondaryText = String(dataObj['app_secondary_text_color'] || '').trim();
           const hover = String(dataObj['app_hover_color'] || '').trim();
           const gradientTo = String(dataObj['app_gradient_to_color'] || '').trim();
+          const layoutStyle = String(dataObj['app_layout_style'] || '').trim();
 
-          if (primary || primaryText || secondary || secondaryText || hover || gradientTo) {
+          if (primary || primaryText || secondary || secondaryText || hover || gradientTo || layoutStyle) {
             const stored = localStorage.getItem('appearanceSettings');
             let settings = stored ? JSON.parse(stored) : {};
             
@@ -310,6 +311,10 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
             }
             if (gradientTo && settings.gradientToColor !== gradientTo) {
               settings.gradientToColor = gradientTo;
+              changed = true;
+            }
+            if (layoutStyle && settings.layoutStyle !== layoutStyle) {
+              settings.layoutStyle = layoutStyle;
               changed = true;
             }
 

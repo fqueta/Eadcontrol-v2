@@ -120,6 +120,7 @@ export default function SystemSettings() {
       theme: "default",
       compactMode: true,
       showAnimations: true,
+      layoutStyle: "rounded",
     };
   });
 
@@ -532,6 +533,18 @@ export default function SystemSettings() {
       document.body.classList.remove('dark');
     }
     
+    // Aplicar estilo de layout (arredondado ou reto)
+    const layoutStyle = settings.layoutStyle || 'rounded';
+    if (layoutStyle === 'squared') {
+      document.documentElement.classList.add('layout-squared');
+      document.documentElement.classList.remove('layout-rounded');
+      root.style.setProperty('--radius', '0px');
+    } else {
+      document.documentElement.classList.add('layout-rounded');
+      document.documentElement.classList.remove('layout-squared');
+      root.style.setProperty('--radius', '0.3rem');
+    }
+    
     // Aplicar cores personalizadas (Variáveis Legadas e Shadcn)
     if (settings.primaryColor) {
       const hsl = hexToHsl(settings.primaryColor);
@@ -607,6 +620,7 @@ export default function SystemSettings() {
         app_gradient_to_color: appearanceSettings.gradientToColor,
         app_dark_mode_default: appearanceSettings.darkMode ? 'true' : 'false',
         app_theme: siteTheme,
+        app_layout_style: appearanceSettings.layoutStyle || 'rounded',
       };
       if (siteFont) payload.app_font_family = siteFont;
       
@@ -1191,6 +1205,22 @@ export default function SystemSettings() {
                       <SelectItem value="medium">Média</SelectItem>
                       <SelectItem value="large">Grande</SelectItem>
                       <SelectItem value="extra-large">Extra Grande</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="layoutStyle">Estilo de Cantos & Bordas</Label>
+                  <Select
+                    value={appearanceSettings.layoutStyle || 'rounded'}
+                    onValueChange={(value) => handleAppearanceChange('layoutStyle', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o estilo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="rounded">Padrão (Arredondado)</SelectItem>
+                      <SelectItem value="squared">Minimalista Arquitetônico (Cantos Retos)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

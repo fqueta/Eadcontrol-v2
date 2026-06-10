@@ -428,7 +428,7 @@ export default function CourseDetails() {
            * en-US: Uses the same layout colors (brand blue gradient) and keeps visual identity with the logo via InclusiveSiteLayout.
            */}
            {/* Header area - Mesh Gradient Style + Banner Background */}
-           <div className="relative overflow-hidden rounded-lg bg-slate-900 border border-white/5 shadow-2xl mb-8">
+            <div className="relative overflow-hidden rounded-lg bg-slate-900 border border-white/5 shadow-2xl mb-8">
               {/* Banner como fundo */}
               {bannerUrl && (
                 <img
@@ -515,7 +515,7 @@ export default function CourseDetails() {
                         <ul className="space-y-1.5 ml-1">
                           {m.atividades.map((a: any, j: number) => (
                             <li key={j} className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2">
-                               <div className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
+                               <div className="bullet-themed" />
                                {a?.titulo || a?.name || `Aula ${j + 1}`}
                             </li>
                           ))}
@@ -612,7 +612,7 @@ export default function CourseDetails() {
                       
                       <div className="md:col-span-2 flex flex-col items-center gap-4 mt-2">
                         <div className="w-full flex justify-end">
-                          <Button type="submit" className="bg-primary hover:bg-blue-700 text-white rounded-md px-8 shadow-md hover:shadow-lg transition-all" disabled={isSubmitting}>
+                          <Button type="submit" className="btn-themed-primary bg-primary hover:bg-blue-700 text-white rounded-md px-8 py-3 shadow-md hover:shadow-lg transition-all" disabled={isSubmitting}>
                             {isSubmitting ? 'Enviando...' : 'Enviar interesse'}
                           </Button>
                         </div>
@@ -635,7 +635,7 @@ export default function CourseDetails() {
             {/* Right: cover and price box */}
             <div className="lg:col-span-1 space-y-6">
               <div className="sticky top-24 space-y-6">
-                <Card className="border-0 shadow-2xl overflow-hidden rounded-lg bg-white dark:bg-slate-900 h-auto">
+                <Card className="border-0 shadow-2xl overflow-hidden card-cover-themed bg-white dark:bg-slate-900 h-auto">
                     {coverUrl ? (
                         <div className="relative">
                             <img src={coverUrl} alt={title} className="w-full h-auto object-cover aspect-video" />
@@ -659,7 +659,7 @@ export default function CourseDetails() {
 
                     {priceBox.inscricao && priceBox.inscricao !== '0' && priceBox.inscricao !== '0,00' && (
                       <div className="flex items-center gap-2 mb-3 text-sm text-slate-600 dark:text-slate-300">
-                        <div className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-amber-600">📋</div>
+                        <div className="price-icon-themed-amber">📋</div>
                         <div>
                           Taxa de inscrição: <span className="font-bold">R$ {priceBox.inscricao}</span>
                         </div>
@@ -671,19 +671,19 @@ export default function CourseDetails() {
                     <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
                         {priceBox.parcelas && priceBox.valorParcela ? (
                         <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary">💳</div>
+                            <div className="price-icon-themed-primary">💳</div>
                             <div>
                                 Até <span className="font-bold ml-0.5">{priceBox.parcelas}x</span> de <span className="font-bold ml-0.5">R$ {priceBox.valorParcela}</span>
                             </div>
                         </div>
                         ) : (
                         <div className="flex items-center gap-2">
-                             <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center">💬</div>
+                             <div className="price-icon-themed-slate">💬</div>
                             <span>Entre em contato para condições</span>
                         </div>
                         )}
                          <div className="flex items-center gap-2">
-                             <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">🔒</div>
+                             <div className="price-icon-themed-emerald">🔒</div>
                              <span>Pagamento 100% seguro</span>
                         </div>
                     </div>
@@ -691,15 +691,15 @@ export default function CourseDetails() {
                     <div className="mt-6 flex flex-col gap-3">
                         {isAlreadyEnrolled ? (
                         <>
-                            <Button disabled className="w-full bg-slate-100 text-slate-400 border-0 rounded-md" variant="outline">
+                            <Button disabled className="btn-themed-primary w-full bg-slate-100 text-slate-400 border-0 rounded-md" variant="outline">
                                 ✅ Você já está matriculado
                             </Button>
-                            <Button onClick={() => navigate(`/aluno/cursos/${String(id)}`)} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-md rounded-md">
+                            <Button onClick={() => navigate(`/aluno/cursos/${String(id)}`)} className="btn-themed-primary w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-md rounded-md">
                                 Acessar Curso
                             </Button>
                         </>
                         ) : (
-                        <Button onClick={handleBuy} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all rounded-md">
+                        <Button onClick={handleBuy} className="btn-themed-primary w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-12 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all rounded-md">
                             Comprar agora
                         </Button>
                         )}
@@ -775,7 +775,7 @@ export default function CourseDetails() {
                     {products.map((product: any) => (
                       <div
                         key={product.id}
-                        className="group relative rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:shadow-lg hover:border-primary/30 transition-all duration-300 overflow-hidden"
+                        className="group relative product-card-themed"
                       >
                         {permissionId < 3 && (
                           <button
@@ -806,7 +806,7 @@ export default function CourseDetails() {
                           {product.name}
                         </div>
                         {product.categoryData?.name && (
-                          <span className="inline-block text-[10px] uppercase tracking-wider font-medium text-primary bg-primary/5 px-2 py-0.5 rounded-full mb-2">
+                          <span className="category-badge-themed">
                             {product.categoryData.name}
                           </span>
                         )}
