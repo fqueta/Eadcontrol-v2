@@ -20,6 +20,7 @@ export interface BannerSlide {
     overlay_opacity?: number;
     text_color?: string;
     titleSize?: number;
+    buttonAlign?: 'left' | 'center' | 'right';
   };
 }
 
