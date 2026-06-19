@@ -398,7 +398,7 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
                                 onClick={() => handleUpdateSlide(index, 'buttonAlign', align)}
                                 className={`flex-1 flex items-center justify-center rounded-md transition-all ${
                                   (slide.buttonAlign || 'left') === align 
-                                    ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-white' 
+                                    ? 'bg-white dark:bg-slate-700 shadow-sm text-primary' 
                                     : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                                 }`}
                                 title={align === 'left' ? 'Esquerda' : align === 'center' ? 'Centro' : 'Direita'}
@@ -420,7 +420,7 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
                                 onClick={() => handleUpdateSlide(index, 'buttonPosY', pos)}
                                 className={`flex-1 flex items-center justify-center rounded-md text-xs font-black transition-all ${
                                   (slide.buttonPosY || 'center') === pos 
-                                    ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-white' 
+                                    ? 'bg-white dark:bg-slate-700 shadow-sm text-primary' 
                                     : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                                 }`}
                               >

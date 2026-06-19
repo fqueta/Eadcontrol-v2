@@ -42,8 +42,36 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
   const [institutionSlogan, setInstitutionSlogan] = useState(() => getInstitutionSlogan() || '');
   const [institutionDescription, setInstitutionDescription] = useState(() => getInstitutionDescription() || '');
   const [isAdminImpersonating, setIsAdminImpersonating] = useState(false);
+  const [headerTransparent, setHeaderTransparent] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const location = useLocation();
+
+  useEffect(() => {
+    const checkHeaderStyle = () => {
+      try {
+        const saved = localStorage.getItem('appearanceSettings');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setHeaderTransparent(!!parsed.headerTransparent);
+        }
+      } catch {}
+    };
+    checkHeaderStyle();
+    window.addEventListener('storage', checkHeaderStyle);
+    return () => window.removeEventListener('storage', checkHeaderStyle);
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const isHomePage = location.pathname === '/';
+  const isTransparentActive = headerTransparent && isHomePage && !scrolled;
   const [topMenuItems, setTopMenuItems] = useState<any[] | null>(() => {
     try {
       const raw = localStorage.getItem('app_top_menu');
@@ -223,7 +251,11 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
       )}
 
       {/* Header */}
-      <header className="bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-white/20 dark:border-slate-800/50 relative md:sticky md:top-0 z-50 shadow-[0_2px_20px_-2px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_30px_-5px_rgba(0,0,0,0.3)] transition-all duration-300">
+      <header className={`z-50 transition-all duration-300 ${
+        isTransparentActive
+          ? "absolute top-0 left-0 right-0 bg-transparent border-transparent shadow-none"
+          : "sticky top-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-white/20 dark:border-slate-800/50 shadow-[0_2px_20px_-2px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_30px_-5px_rgba(0,0,0,0.3)]"
+      }`}>
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-3 group cursor-pointer transition-transform duration-300 hover:scale-[1.02]">
             <BrandLogo
@@ -232,16 +264,28 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
               className="h-10 p-1.5"
             />
             <div className="hidden md:block">
-              <h1 className="text-xl font-bold bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(to right, hsl(var(--primary)), var(--gradient-to, #4f46e5))' }}>{institutionName}</h1>
-               {institutionSlogan && <p className="text-[10px] uppercase tracking-wider font-bold text-primary/80 dark:text-blue-300/70">{institutionSlogan}</p>}
+              <h1 className={`text-xl font-bold ${isTransparentActive ? 'text-white' : 'bg-clip-text text-transparent'}`} style={isTransparentActive ? {} : { backgroundImage: 'linear-gradient(to right, hsl(var(--primary)), var(--gradient-to, #4f46e5))' }}>{institutionName}</h1>
+               {institutionSlogan && <p className={`text-[10px] uppercase tracking-wider font-bold ${isTransparentActive ? 'text-white/70' : 'text-primary/80 dark:text-blue-300/70'}`}>{institutionSlogan}</p>}
             </div>
           </div>
           {/* Mobile actions: theme toggle + menu */}
           <div className="flex md:hidden items-center gap-2">
-            <Button variant="outline" size="icon" className="border-primary/20 text-primary hover:bg-blue-50 dark:text-blue-100 dark:border-blue-800" onClick={toggleDarkMode} aria-label="Alternar tema">
+            <Button 
+              variant={isTransparentActive ? "ghost" : "outline"} 
+              size="icon" 
+              className={`hover:bg-white/10 ${isTransparentActive ? 'border border-white/20 text-white hover:text-white' : 'border-primary/20 text-primary hover:bg-blue-50 dark:text-blue-100 dark:border-blue-800'}`} 
+              onClick={toggleDarkMode} 
+              aria-label="Alternar tema"
+            >
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
-            <Button variant="outline" size="icon" className="border-primary/20 text-primary hover:bg-blue-50 dark:text-blue-100 dark:border-blue-800" onClick={() => setMobileNavOpen(true)} aria-label="Abrir menu">
+            <Button 
+              variant={isTransparentActive ? "ghost" : "outline"} 
+              size="icon" 
+              className={`hover:bg-white/10 ${isTransparentActive ? 'border border-white/20 text-white hover:text-white' : 'border-primary/20 text-primary hover:bg-blue-50 dark:text-blue-100 dark:border-blue-800'}`} 
+              onClick={() => setMobileNavOpen(true)} 
+              aria-label="Abrir menu"
+            >
               <Menu className="w-4 h-4" />
             </Button>
           </div>
@@ -256,7 +300,15 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
               if (item.auth && !isAuthenticated) return null;
               const isExternal = item.external || item.url?.startsWith('http');
               return (
-                <Button key={item.label + item.url} asChild variant="ghost" className={`transition-all duration-300 rounded-lg ${(() => { const p = location.pathname; const u = item.url; if (u === '/' && p === '/') return 'bg-primary/10 text-primary font-bold'; if (u !== '/' && p.startsWith(u)) return 'bg-primary/10 text-primary font-bold'; return 'text-primary dark:text-blue-100 hover:bg-primary/5 hover:text-primary'; })()}`}>
+                <Button key={item.label + item.url} asChild variant="ghost" className={`transition-all duration-300 rounded-lg ${(() => {
+                  const p = location.pathname;
+                  const u = item.url;
+                  const isActive = (u === '/' && p === '/') || (u !== '/' && p.startsWith(u));
+                  if (isActive) {
+                    return isTransparentActive ? 'bg-white/20 text-white font-bold' : 'bg-primary/10 text-primary font-bold';
+                  }
+                  return isTransparentActive ? 'text-white/80 hover:bg-white/10 hover:text-white' : 'text-primary dark:text-blue-100 hover:bg-primary/5 hover:text-primary';
+                })()}`}>
                   {isExternal ? (
                     <a href={item.url} target="_blank" rel="noreferrer">
                       {item.external && <ExternalLink className="w-4 h-4 mr-2" />}
@@ -269,14 +321,21 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
               );
             })}
             {/* Theme toggle (desktop only) */}
-            <Button variant="outline" className="border-primary/20 text-primary dark:text-blue-100 dark:border-blue-800/50 hover:bg-primary/5 transition-all duration-300 rounded-lg shadow-sm" onClick={toggleDarkMode}>
+            <Button 
+              variant={isTransparentActive ? "ghost" : "outline"} 
+              className={`transition-all duration-300 rounded-lg shadow-sm ${isTransparentActive ? 'border border-white/20 text-white hover:bg-white/10 hover:text-white' : 'border-primary/20 text-primary dark:text-blue-100 dark:border-blue-800/50 hover:bg-primary/5'}`} 
+              onClick={toggleDarkMode}
+            >
               {isDark ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
               {isDark ? 'Modo claro' : 'Modo escuro'}
             </Button>
             {isAuthenticated && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="border-primary/20 text-primary dark:text-blue-100 dark:border-blue-800/50 hover:bg-primary/5 rounded-xl shadow-sm pl-2">
+                  <Button 
+                    variant={isTransparentActive ? "ghost" : "outline"} 
+                    className={`rounded-xl shadow-sm pl-2 ${isTransparentActive ? 'border border-white/20 text-white hover:bg-white/10 hover:text-white' : 'border-primary/20 text-primary dark:text-blue-100 dark:border-blue-800/50 hover:bg-primary/5'}`}
+                  >
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold mr-2 text-xs" style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), var(--gradient-to, #4f46e5))' }}>
                       {user.name?.substring(0, 1).toUpperCase()}
                     </div>
@@ -359,7 +418,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
               </DropdownMenu>
             ) : (
               <div className="flex items-center gap-2">
-                <Button variant="ghost" asChild className="text-primary dark:text-blue-100 hover:bg-primary/5 rounded-lg">
+                <Button variant="ghost" asChild className={`rounded-lg ${isTransparentActive ? 'text-white hover:bg-white/10 hover:text-white' : 'text-primary dark:text-blue-100 hover:bg-primary/5'}`}>
                   <Link to="/login">Entrar</Link>
                 </Button>
                 <Button asChild className="bg-primary hover:bg-primary/90 text-white shadow-md shadow-primary/20 rounded-lg px-6 transition-all duration-300 hover:scale-[1.02]">

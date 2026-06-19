@@ -83,6 +83,10 @@ class ProductController extends Controller
             $query->where('post_title', 'like', '%' . $request->input('search') . '%');
         }
 
+        if ($request->input('destaque') === 's') {
+            $query->where('config->destaque', 's');
+        }
+
         if ($request->filled('ids')) {
             $ids = explode(',', $request->input('ids'));
             $query->whereIn('ID', $ids);
@@ -139,6 +143,9 @@ class ProductController extends Controller
         if ($request->filled('category')) {
             $query->where('guid', $request->input('category'));
         }
+        if ($request->input('destaque') === 's') {
+            $query->where('config->destaque', 's');
+        }
         $products = $query->paginate($perPage);
         // dd($products);
         // Transformar dados para o formato do frontend
@@ -175,6 +182,7 @@ class ProductController extends Controller
             'categoryData' => Qlib::get_category_by_id($product->guid),
             'unitData' => Qlib::get_unit_by_id($product->config['unit'] ?? null),
             'unit' => $product->config['unit'] ?? null,
+            'destaque' => $product->config['destaque'] ?? 'n',
             'created_at' => $product->created_at,
             'updated_at' => $product->updated_at,
         ];
@@ -190,6 +198,7 @@ class ProductController extends Controller
             'stock' => 'nullable|integer|min:0',
             'unit' => 'nullable|string|max:100',
             'image' => 'nullable|string|max:500',
+            'destaque' => 'nullable|string|in:s,n',
         ];
     }
     /**
@@ -268,7 +277,7 @@ class ProductController extends Controller
             'comment_count' => $validated['stock'] ?? 0, // stock -> comment_count
         ];
 
-        // Configurar unidade e imagem no campo config
+        // Configurar unidade, imagem e destaque no campo config
         $configData = [];
         if (isset($validated['unit'])) {
             $configData['unit'] = $validated['unit'];
@@ -276,9 +285,8 @@ class ProductController extends Controller
         if (isset($validated['image'])) {
             $configData['image'] = $validated['image'];
         }
-        if (!empty($configData)) {
-            $mappedData['config'] = $configData;
-        }
+        $configData['destaque'] = $validated['destaque'] ?? 'n';
+        $mappedData['config'] = $configData;
 
         // Gerar slug automaticamente
         $mappedData['post_name'] = (new Product())->generateSlug($validated['name']);
@@ -361,6 +369,7 @@ class ProductController extends Controller
             'stock' => 'nullable|integer|min:0',
             'unit' => 'nullable|string|max:100',
             'image' => 'nullable|string|max:500',
+            'destaque' => 'nullable|string|in:s,n',
         ]);
 
         if ($validator->fails()) {
@@ -399,7 +408,7 @@ class ProductController extends Controller
             $mappedData['post_status'] = $this->get_status($validated['active']); // active -> post_status
         }
 
-        // Configurar unidade e imagem no campo config
+        // Configurar unidade, imagem e destaque no campo config
         $config = is_array($productToUpdate->config ?? null) ? $productToUpdate->config : [];
         $hasConfigChange = false;
         if (isset($validated['unit'])) {
@@ -408,6 +417,10 @@ class ProductController extends Controller
         }
         if (isset($validated['image'])) {
             $config['image'] = $validated['image'];
+            $hasConfigChange = true;
+        }
+        if (isset($validated['destaque'])) {
+            $config['destaque'] = $validated['destaque'];
             $hasConfigChange = true;
         }
         if ($hasConfigChange) {

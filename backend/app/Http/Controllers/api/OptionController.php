@@ -66,6 +66,8 @@ class OptionController extends Controller
             'app_whatsapp',
             'app_theme',
             'app_font_family',
+            'app_layout_style',
+            'app_header_transparent',
             // Home hero title (banner principal)
             'home_hero_title',
             'home_hero_image_url',
@@ -83,6 +85,7 @@ class OptionController extends Controller
             'home_feature_4_title',
             'home_feature_4_desc',
             'featured_courses_config',
+            'featured_products_config',
             'pillars_config',
             'cta_config',
         ];

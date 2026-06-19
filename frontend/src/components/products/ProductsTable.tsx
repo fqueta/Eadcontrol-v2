@@ -35,6 +35,7 @@ import type { Product } from "@/types/products";
 import { useUpdateProduct } from "@/hooks/products";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
 
 interface ProductsTableProps {
   products: Product[];
@@ -65,7 +66,7 @@ export default function ProductsTable({
    * Determina se o usuário pode editar o estoque.
    * Rule: only users with permission_id <= 5.
    */
-  const canEditStock = (user?.permission_id ?? Infinity) <= 5;
+  const canEditStock = Number(user?.permission_id ?? 9999) <= 5;
 
   /**
    * Estado para controlar edição inline do estoque na tabela.
@@ -119,6 +120,24 @@ export default function ProductsTable({
   };
 
   /**
+   * Alterna a marcação de destaque do produto.
+   * @param product Produto a ser atualizado
+   */
+  const handleToggleDestaque = async (product: Product) => {
+    try {
+      const newDestaque = product.destaque === 's' ? 'n' : 's';
+      await updateProductMutation.mutateAsync({
+        id: product.id,
+        data: { destaque: newDestaque },
+      });
+      toast({ title: 'Destaque atualizado', description: `Produto "${product.name}" ${newDestaque === 's' ? 'marcado' : 'desmarcado'} como destaque.` });
+      onRefetch();
+    } catch (err: any) {
+      toast({ title: 'Erro ao atualizar destaque', description: err?.message || 'Tente novamente.', variant: 'destructive' });
+    }
+  };
+
+  /**
    * Navega para a página de visualização do produto
    */
   const handleViewProduct = (product: Product) => {
@@ -163,6 +182,7 @@ export default function ProductsTable({
                 <TableHead>Pontos</TableHead>
                 <TableHead>Estoque</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Destaque</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -242,7 +262,8 @@ export default function ProductsTable({
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
-                              e.currentTarget.nextElementSibling.style.display = 'flex';
+                              const next = e.currentTarget.nextElementSibling as HTMLElement | null;
+                              if (next) next.style.display = 'flex';
                             }}
                           />
                         ) : null}
@@ -309,6 +330,13 @@ export default function ProductsTable({
                       <Badge variant={product.active ? "default" : "destructive"}>
                         {product.active ? "Ativo" : "Inativo"}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={product.destaque === 's'}
+                        onCheckedChange={() => handleToggleDestaque(product)}
+                        disabled={updateProductMutation.isPending}
+                      />
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>

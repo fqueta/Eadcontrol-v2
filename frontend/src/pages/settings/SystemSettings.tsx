@@ -121,6 +121,7 @@ export default function SystemSettings() {
       compactMode: true,
       showAnimations: true,
       layoutStyle: "rounded",
+      headerTransparent: false,
     };
   });
 
@@ -261,9 +262,64 @@ export default function SystemSettings() {
 
       const optHover = getOpt('app_hover_color');
       const valHover = (optHover && (optHover.value ?? '')) || '';
-      if (valHover && valHover !== appearanceSettings.hoverColor) {
-        setAppearanceSettings((prev: any) => ({ ...prev, hoverColor: valHover }));
-        localStorage.setItem('appearanceSettings', JSON.stringify({ ...appearanceSettings, hoverColor: valHover }));
+
+      // Sync all appearance options from API to local state and localStorage
+      const optPrimary = getOpt('app_primary_color');
+      const valPrimary = optPrimary ? (optPrimary.value ?? '') : '';
+
+      const optPrimaryText = getOpt('app_primary_text_color');
+      const valPrimaryText = optPrimaryText ? (optPrimaryText.value ?? '') : '';
+
+      const optSecondary = getOpt('app_secondary_color');
+      const valSecondary = optSecondary ? (optSecondary.value ?? '') : '';
+
+      const optSecondaryText = getOpt('app_secondary_text_color');
+      const valSecondaryText = optSecondaryText ? (optSecondaryText.value ?? '') : '';
+
+      const optGradientTo = getOpt('app_gradient_to_color');
+      const valGradientTo = optGradientTo ? (optGradientTo.value ?? '') : '';
+
+      const optDarkMode = getOpt('app_dark_mode_default');
+      const valDarkMode = optDarkMode ? optDarkMode.value === 'true' : false;
+
+      const optLayoutStyle = getOpt('app_layout_style');
+      const valLayoutStyle = optLayoutStyle ? (optLayoutStyle.value ?? 'rounded') : 'rounded';
+
+      const optHeaderTransparent = getOpt('app_header_transparent');
+      const valHeaderTransparent = optHeaderTransparent ? optHeaderTransparent.value === 'true' : false;
+
+      setAppearanceSettings((prev: any) => {
+        let changed = false;
+        const next = { ...prev };
+        if (valPrimary && valPrimary !== next.primaryColor) { next.primaryColor = valPrimary; changed = true; }
+        if (valPrimaryText && valPrimaryText !== next.primaryTextColor) { next.primaryTextColor = valPrimaryText; changed = true; }
+        if (valSecondary && valSecondary !== next.secondaryColor) { next.secondaryColor = valSecondary; changed = true; }
+        if (valSecondaryText && valSecondaryText !== next.secondaryTextColor) { next.secondaryTextColor = valSecondaryText; changed = true; }
+        if (valHover && valHover !== next.hoverColor) { next.hoverColor = valHover; changed = true; }
+        if (valGradientTo && valGradientTo !== next.gradientToColor) { next.gradientToColor = valGradientTo; changed = true; }
+        if (optDarkMode && valDarkMode !== next.darkMode) { next.darkMode = valDarkMode; changed = true; }
+        if (optLayoutStyle && valLayoutStyle !== next.layoutStyle) { next.layoutStyle = valLayoutStyle; changed = true; }
+        if (optHeaderTransparent && valHeaderTransparent !== next.headerTransparent) { next.headerTransparent = valHeaderTransparent; changed = true; }
+
+        if (changed) {
+          localStorage.setItem('appearanceSettings', JSON.stringify(next));
+          try { window.dispatchEvent(new Event('storage')); } catch {}
+        }
+        return next;
+      });
+
+      const optTheme = getOpt('app_theme');
+      const valTheme = optTheme ? (optTheme.value ?? 'default') : 'default';
+      if (optTheme && valTheme !== siteTheme) {
+        setSiteTheme(valTheme);
+        localStorage.setItem('app_theme', valTheme);
+      }
+
+      const optFont = getOpt('app_font_family');
+      const valFont = optFont ? (optFont.value ?? '') : '';
+      if (optFont && valFont !== siteFont) {
+        setSiteFont(valFont);
+        localStorage.setItem('app_font_family', valFont);
       }
 
       const optLogo = getOpt('app_logo_url');
@@ -528,9 +584,9 @@ export default function SystemSettings() {
     
     // Aplicar modo escuro
     if (settings.darkMode) {
-      document.body.classList.add('dark');
+      document.documentElement.classList.add('dark');
     } else {
-      document.body.classList.remove('dark');
+      document.documentElement.classList.remove('dark');
     }
     
     // Aplicar estilo de layout (arredondado ou reto)
@@ -621,6 +677,7 @@ export default function SystemSettings() {
         app_dark_mode_default: appearanceSettings.darkMode ? 'true' : 'false',
         app_theme: siteTheme,
         app_layout_style: appearanceSettings.layoutStyle || 'rounded',
+        app_header_transparent: appearanceSettings.headerTransparent ? 'true' : 'false',
       };
       if (siteFont) payload.app_font_family = siteFont;
       
@@ -1221,6 +1278,22 @@ export default function SystemSettings() {
                     <SelectContent>
                       <SelectItem value="rounded">Padrão (Arredondado)</SelectItem>
                       <SelectItem value="squared">Minimalista Arquitetônico (Cantos Retos)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="headerTransparent">Cabeçalho (Header) do Site</Label>
+                  <Select
+                    value={appearanceSettings.headerTransparent ? 'transparent' : 'solid'}
+                    onValueChange={(value) => handleAppearanceChange('headerTransparent', value === 'transparent')}
+                  >
+                    <SelectTrigger id="headerTransparent">
+                      <SelectValue placeholder="Selecione o estilo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="solid">Sólido com Blur (Padrão)</SelectItem>
+                      <SelectItem value="transparent">Transparente no Topo da Home</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

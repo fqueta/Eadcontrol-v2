@@ -551,7 +551,7 @@ export default function StudentArea() {
         {/* Acesso rápido / Resumo */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Meus cursos */}
-            <Card className="hover:shadow-lg hover:border-violet-300 dark:hover:border-violet-700 transition-all cursor-pointer group bg-white/95 backdrop-blur-sm border-white/20" onClick={() => navigate('/aluno/cursos')}>
+            <Card className="hover:shadow-lg hover:border-violet-300 dark:hover:border-violet-700 transition-all cursor-pointer group bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-white/20 dark:border-slate-800" onClick={() => navigate('/aluno/cursos')}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-lg group-hover:scale-110 transition-transform">
@@ -564,7 +564,7 @@ export default function StudentArea() {
             </Card>
 
             {/* Minhas faturas */}
-            <Card className="hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700 transition-all cursor-pointer group bg-white/95 backdrop-blur-sm border-white/20" onClick={() => navigate('/aluno/faturas')}>
+            <Card className="hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700 transition-all cursor-pointer group bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-white/20 dark:border-slate-800" onClick={() => navigate('/aluno/faturas')}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg group-hover:scale-110 transition-transform">
@@ -577,7 +577,7 @@ export default function StudentArea() {
             </Card>
 
             {/* Meus pedidos */}
-            <Card className="hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 transition-all cursor-pointer group bg-white/95 backdrop-blur-sm border-white/20" onClick={() => navigate('/aluno/pedidos')}>
+            <Card className="hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 transition-all cursor-pointer group bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-white/20 dark:border-slate-800" onClick={() => navigate('/aluno/pedidos')}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                     <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg group-hover:scale-110 transition-transform">
@@ -590,7 +590,7 @@ export default function StudentArea() {
             </Card>
 
             {/* Perfil */}
-            <Card className="hover:shadow-lg hover:border-amber-300 dark:hover:border-amber-700 transition-all cursor-pointer group bg-white/95 backdrop-blur-sm border-white/20" onClick={() => navigate('/aluno/perfil')}>
+            <Card className="hover:shadow-lg hover:border-amber-300 dark:hover:border-amber-700 transition-all cursor-pointer group bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-white/20 dark:border-slate-800" onClick={() => navigate('/aluno/perfil')}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg group-hover:scale-110 transition-transform">
@@ -615,11 +615,11 @@ export default function StudentArea() {
                 </div>
                 
                 {filteredEnrollments.length === 0 ? (
-                    <Card className="bg-slate-50 border-dashed">
+                    <Card className="bg-slate-50 dark:bg-slate-900/40 border-dashed dark:border-slate-800">
                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                          <BookOpen className="h-12 w-12 text-slate-300 mb-4" />
-                          <h3 className="text-lg font-medium text-slate-900">Nenhum curso em andamento</h3>
-                          <p className="text-slate-500 max-w-sm mt-2">Você ainda não iniciou nenhum curso ou não possui matrículas ativas.</p>
+                          <BookOpen className="h-12 w-12 text-slate-300 dark:text-slate-700 mb-4" />
+                          <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100">Nenhum curso em andamento</h3>
+                          <p className="text-slate-500 dark:text-slate-400 max-w-sm mt-2">Você ainda não iniciou nenhum curso ou não possui matrículas ativas.</p>
                           <Button className="mt-6" onClick={() => navigate('/cursos')}>Explorar Cursos</Button>
                        </CardContent>
                     </Card>
@@ -685,7 +685,7 @@ export default function StudentArea() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
                           placeholder="Buscar dicas…"
-                          className="pl-9 h-9 text-sm bg-white/50 backdrop-blur-sm"
+                          className="pl-9 h-9 text-sm bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 dark:text-slate-100"
                           value={searchTip}
                           onChange={(e) => setSearchTip(e.target.value)}
                         />
@@ -710,9 +710,9 @@ export default function StudentArea() {
                     )}
 
                     {videoTips.length === 0 && !isLoadingTips ? (
-                      <div className="bg-slate-50/50 border border-dashed rounded-xl py-12 flex flex-col items-center justify-center text-center">
-                        <Video className="w-10 h-10 text-slate-300 mb-3" />
-                        <p className="text-slate-500 text-sm">Nenhum vídeo encontrado para sua busca.</p>
+                      <div className="bg-slate-50/50 dark:bg-slate-900/20 border border-dashed dark:border-slate-800 rounded-xl py-12 flex flex-col items-center justify-center text-center">
+                        <Video className="w-10 h-10 text-slate-300 dark:text-slate-700 mb-3" />
+                        <p className="text-slate-500 dark:text-slate-400 text-sm">Nenhum vídeo encontrado para sua busca.</p>
                         {searchTip && (
                           <Button variant="link" size="sm" onClick={() => setSearchTip('')} className="mt-1">
                             Limpar busca
@@ -725,7 +725,7 @@ export default function StudentArea() {
                           {videoTips.map((tip) => (
                             <Card 
                               key={tip.id} 
-                              className="overflow-hidden border-none shadow-sm hover:shadow-md transition-all group cursor-pointer bg-white/80 backdrop-blur-sm"
+                              className="overflow-hidden border border-transparent dark:border-slate-800 shadow-sm hover:shadow-md transition-all group cursor-pointer bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm"
                               onClick={() => setSelectedTip(tip)}
                             >
                               <div className="relative aspect-video overflow-hidden bg-slate-100">

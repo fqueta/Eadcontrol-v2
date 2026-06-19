@@ -283,8 +283,9 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
           const hover = String(dataObj['app_hover_color'] || '').trim();
           const gradientTo = String(dataObj['app_gradient_to_color'] || '').trim();
           const layoutStyle = String(dataObj['app_layout_style'] || '').trim();
+          const headerTransparent = getVal('app_header_transparent');
 
-          if (primary || primaryText || secondary || secondaryText || hover || gradientTo || layoutStyle) {
+          if (primary || primaryText || secondary || secondaryText || hover || gradientTo || layoutStyle || headerTransparent) {
             const stored = localStorage.getItem('appearanceSettings');
             let settings = stored ? JSON.parse(stored) : {};
             
@@ -315,6 +316,10 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
             }
             if (layoutStyle && settings.layoutStyle !== layoutStyle) {
               settings.layoutStyle = layoutStyle;
+              changed = true;
+            }
+            if (headerTransparent && settings.headerTransparent !== (headerTransparent === 'true')) {
+              settings.headerTransparent = (headerTransparent === 'true');
               changed = true;
             }
 

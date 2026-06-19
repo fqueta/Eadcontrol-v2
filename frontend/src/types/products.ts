@@ -17,6 +17,11 @@ export interface Product {
   terms: string[];
   validUntil?: string;
   stock: number;
+  destaque?: 's' | 'n';
+  salePrice: number;
+  costPrice: number;
+  unit: string;
+  active: boolean;
 }
 
 /**
@@ -38,6 +43,7 @@ export interface CreateProductInput {
   availability: 'available' | 'limited' | 'unavailable';
   terms: string[];
   validUntil?: string;
+  destaque?: 's' | 'n';
 }
 
 /**
@@ -59,6 +65,7 @@ export interface UpdateProductInput {
   availability?: 'available' | 'limited' | 'unavailable';
   terms?: string[];
   validUntil?: string;
+  destaque?: 's' | 'n';
 }
 
 /**

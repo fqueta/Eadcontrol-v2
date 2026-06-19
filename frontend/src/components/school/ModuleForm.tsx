@@ -158,7 +158,7 @@ export const ModuleForm = ({
                 Tipo de Duração
               </Label>
               <Select value={form.watch('tipo_duracao')} onValueChange={(v) => form.setValue('tipo_duracao', v as any)}>
-                <SelectTrigger className="h-12 rounded-xl bg-white/40 border-slate-200 font-bold">
+                <SelectTrigger className="h-12 rounded-xl bg-white/40 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 font-bold text-slate-900 dark:text-slate-100">
                   <div className="flex items-center gap-2">
                     <FileType className="h-4 w-4 text-slate-400" />
                     <SelectValue placeholder="Selecione" />
@@ -196,7 +196,7 @@ export const ModuleForm = ({
                 rows={3} 
                 placeholder="Uma breve apresentação sobre o que será aprendido neste módulo..." 
                 {...form.register('description')} 
-                className="rounded-2xl border-slate-200 bg-white/40 hover:bg-white focus:bg-white transition-all font-medium py-4 px-5"
+                className="rounded-2xl border-slate-200 bg-white/40 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900 focus:bg-white dark:focus:bg-slate-950 transition-all font-medium py-4 px-5 text-slate-900 dark:text-slate-100"
               />
             </div>
 
@@ -208,7 +208,7 @@ export const ModuleForm = ({
                 rows={4} 
                 placeholder="Instruções internas, links de referência ou observações técnicas..." 
                 {...form.register('content')} 
-                className="rounded-2xl border-slate-200 bg-white/40 hover:bg-white focus:bg-white transition-all font-medium py-4 px-5"
+                className="rounded-2xl border-slate-200 bg-white/40 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900 focus:bg-white dark:focus:bg-slate-950 transition-all font-medium py-4 px-5 text-slate-900 dark:text-slate-100"
               />
             </div>
 

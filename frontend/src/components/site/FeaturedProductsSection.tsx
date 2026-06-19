@@ -3,33 +3,27 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Clock, Star, Users } from "lucide-react";
+import { ArrowRight, ShoppingBag, Star } from "lucide-react";
 import { getTenantApiUrl, getVersionApi } from "@/lib/qlib";
-import { FeaturedCoursesConfig, FeaturedCoursesEditor } from "./FeaturedCoursesEditor";
+import { FeaturedProductsConfig, FeaturedProductsEditor } from "./FeaturedProductsEditor";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 
-interface Course {
-  id: number;
-  nome?: string;
-  titulo?: string;
-  descricao?: string | null;
+interface Product {
+  id: string | number;
+  name: string;
+  description: string;
   slug: string;
-  valor?: string | number;
-  duracao?: number;
-  unidade_duracao?: string;
+  salePrice?: string | number;
+  image?: string | null;
   destaque?: 's' | 'n';
-  config?: {
-    cover?: {
-      url: string;
-    };
-  };
+  categoryData?: { id: string | number; name: string } | null;
 }
 
-const DEFAULT_CONFIG: FeaturedCoursesConfig = {
-  title: "Cursos em Destaque",
-  subtitle: "Explore nossos treinamentos mais procurados e comece sua jornada de aprendizado hoje mesmo.",
-  backgroundColor: "#f8fafc",
+const DEFAULT_CONFIG: FeaturedProductsConfig = {
+  title: "Produtos em Destaque",
+  subtitle: "Confira nossa seleção de produtos especiais para você.",
+  backgroundColor: "#ffffff",
   gradientColorTo: "",
   accentColor: "",
   titleColor: "#0f172a",
@@ -41,24 +35,20 @@ const DEFAULT_CONFIG: FeaturedCoursesConfig = {
   paddingTop: "0rem",
   paddingBottom: "0rem",
   showViewAll: true,
-  viewAllText: "Ver todos os cursos"
+  viewAllText: "Ver todos os produtos"
 };
 
-/**
- * Utility to strip HTML tags from a string
- */
 const stripHtml = (html: string) => {
   if (!html) return "";
-  // Basic regex to strip tags, then decode basic entities if needed
   return html.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"');
 };
 
-export function FeaturedCoursesSection() {
+export function FeaturedProductsSection() {
   const { user } = useAuth();
   const { darkMode } = useTheme();
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [config, setConfig] = useState<FeaturedCoursesConfig>(DEFAULT_CONFIG);
+  const [config, setConfig] = useState<FeaturedProductsConfig>(DEFAULT_CONFIG);
 
   const canEdit = !!user && Number(user?.permission_id ?? 9999) < 3;
 
@@ -71,25 +61,25 @@ export function FeaturedCoursesSection() {
         const optResponse = await fetch(`${baseUrl}/public/options/branding`);
         if (optResponse.ok) {
           const optJson = await optResponse.json();
-          const savedConfig = optJson.data?.featured_courses_config;
+          const savedConfig = optJson.data?.featured_products_config;
           if (savedConfig) {
             try {
               const parsed = typeof savedConfig === 'string' ? JSON.parse(savedConfig) : savedConfig;
               setConfig({ ...DEFAULT_CONFIG, ...parsed });
             } catch (e) {
-              console.error("Failed to parse featured_courses_config", e);
+              console.error("Failed to parse featured_products_config", e);
             }
           }
         }
 
-        // 2. Fetch courses
-        const response = await fetch(`${baseUrl}/public/courses?destaque=s&per_page=6`);
+        // 2. Fetch products
+        const response = await fetch(`${baseUrl}/public/products?destaque=s&per_page=6`);
         if (response.ok) {
           const json = await response.json();
-          setCourses(Array.isArray(json.data) ? json.data : []);
+          setProducts(Array.isArray(json.data) ? json.data : (json.data?.data || []));
         }
       } catch (error) {
-        console.error("Failed to fetch featured courses:", error);
+        console.error("Failed to fetch featured products:", error);
       } finally {
         setLoading(false);
       }
@@ -110,8 +100,7 @@ export function FeaturedCoursesSection() {
     );
   }
 
-  // If no courses and not an admin, hide the whole section
-  if (courses.length === 0 && !canEdit) return null;
+  if (products.length === 0 && !canEdit) return null;
 
   const finalBgColor = darkMode 
     ? (config.backgroundColor === "#f8fafc" || config.backgroundColor === "#ffffff" ? "transparent" : config.backgroundColor)
@@ -145,13 +134,13 @@ export function FeaturedCoursesSection() {
       }}
     >
       {/* Editor component rendered here for admins */}
-      <FeaturedCoursesEditor 
+      <FeaturedProductsEditor 
         currentConfig={config} 
         onConfigChange={(newConfig) => setConfig(newConfig)} 
       />
 
       <div className="container mx-auto px-4">
-        {courses.length > 0 ? (
+        {products.length > 0 ? (
           <>
             <div 
               className={`flex flex-col gap-6 mb-12 ${
@@ -184,7 +173,7 @@ export function FeaturedCoursesSection() {
                   style={config.accentColor ? { color: config.accentColor } : {}}
                   asChild
                 >
-                  <Link to="/cursos">
+                  <Link to="/produtos">
                     {config.viewAllText}
                     <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
@@ -193,25 +182,28 @@ export function FeaturedCoursesSection() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {courses.map((course) => {
-                const courseTitle = course.titulo || course.nome || "Curso sem título";
-                const courseDesc = stripHtml(course.descricao || "Transforme sua carreira com este treinamento especializado de alto impacto.");
-                const coverUrl = course.config?.cover?.url || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60";
-                const duration = course.duracao ? `${course.duracao}${course.unidade_duracao || 'h'}` : "40h";
-                const formattedPrice = course.valor ? (
-                  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(String(course.valor).replace(',', '.')))
+              {products.map((product) => {
+                const productTitle = product.name || "Produto sem título";
+                const productDesc = stripHtml(product.description || "Confira os detalhes deste produto especial e aproveite nossas condições exclusivas.");
+                const coverUrl = product.image || "";
+                const formattedPrice = product.salePrice ? (
+                  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(String(product.salePrice).replace(',', '.')))
                 ) : "Sob Consulta";
 
                 return (
-                  <Card key={course.id} className="group overflow-hidden border-none shadow-xl hover:shadow-2xl transition-all duration-500 bg-white dark:bg-slate-900 flex flex-col h-full hover:-translate-y-2">
-                    <div className="relative aspect-video overflow-hidden">
-                      <img 
-                        src={coverUrl} 
-                        alt={courseTitle}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                      />
+                  <Card key={product.id} className="group overflow-hidden border-none shadow-xl hover:shadow-2xl transition-all duration-500 bg-white dark:bg-slate-900 flex flex-col h-full hover:-translate-y-2">
+                    <div className="relative aspect-video overflow-hidden bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+                      {coverUrl ? (
+                        <img 
+                          src={coverUrl} 
+                          alt={productTitle}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                      ) : (
+                        <ShoppingBag className="h-16 w-16 text-slate-300 dark:text-slate-700" />
+                      )}
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      {course.destaque === 's' && (
+                      {product.destaque === 's' && (
                         <Badge className="absolute top-4 right-4 bg-primary/90 backdrop-blur-md border-none font-bold">
                           Destaque
                         </Badge>
@@ -219,34 +211,31 @@ export function FeaturedCoursesSection() {
                     </div>
                     
                     <CardHeader className="flex-grow">
-                      <div className="flex items-center gap-4 text-xs font-bold text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-widest">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3.5 w-3.5" />
-                          {duration}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Users className="h-3.5 w-3.5" />
-                          Popular
-                        </span>
-                      </div>
+                      {product.categoryData?.name && (
+                        <div className="mb-2">
+                          <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-widest">
+                            {product.categoryData.name}
+                          </Badge>
+                        </div>
+                      )}
                       <CardTitle className="text-xl font-black text-slate-900 dark:text-white line-clamp-2 group-hover:text-primary transition-colors">
-                        {courseTitle}
+                        {productTitle}
                       </CardTitle>
                       <CardDescription className="line-clamp-3 text-slate-600 dark:text-slate-400 mt-2 font-medium">
-                        {courseDesc}
+                        {productDesc}
                       </CardDescription>
                     </CardHeader>
 
                     <CardFooter className="pt-0 border-t border-slate-100 dark:border-slate-800 mt-auto p-6">
                       <div className="flex items-center justify-between w-full">
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Investimento</span>
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor</span>
                           <span className="text-2xl font-black text-primary">
                             {formattedPrice}
                           </span>
                         </div>
                         <Button size="sm" className="rounded-lg font-bold" asChild>
-                          <Link to={`/cursos/${course.slug}/detalhes`}>
+                          <Link to={`/produtos/${product.slug}`}>
                             Detalhes
                           </Link>
                         </Button>
@@ -264,8 +253,8 @@ export function FeaturedCoursesSection() {
             </div>
             <h3 className="text-2xl font-black text-slate-400 uppercase tracking-tighter mb-2">Vitrine Vazia</h3>
             <p className="text-slate-500 font-medium max-w-md mx-auto">
-              Nenhum curso marcado como <strong className="text-primary">destaque</strong> foi encontrado. 
-              Vá ao painel e ative o botão de destaque em seus melhores cursos!
+              Nenhum produto marcado como <strong className="text-primary">destaque</strong> foi encontrado. 
+              Vá ao painel e ative o botão de destaque em seus melhores produtos!
             </p>
           </div>
         )}

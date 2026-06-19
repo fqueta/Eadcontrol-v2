@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProduct, useUpdateProduct } from '@/hooks/products';
 import { useCategoriesList } from '@/hooks/categories';
-import { ProductForm } from '@/components/products/ProductForm';
+import { ProductForm, ProductFormData } from '@/components/products/ProductForm';
 import { productSchema } from '@/components/products/ProductForm';
 import { UpdateProductInput } from '@/types/products';
 import { toast } from '@/hooks/use-toast';
@@ -35,7 +35,7 @@ export default function ProductEdit() {
   const isLoadingUnits = false;
   const unitsError = null;
 
-  const form = useForm<UpdateProductInput>({
+  const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: '',
@@ -53,6 +53,7 @@ export default function ProductEdit() {
       availability: 'available',
       terms: [],
       validUntil: undefined,
+      destaque: 'n',
     },
   });
 
@@ -77,6 +78,7 @@ export default function ProductEdit() {
         availability: product.availability || 'available',
         terms: product.terms || [],
         validUntil: product.validUntil,
+        destaque: product.destaque || 'n',
       });
     }
   }, [product, form]);
@@ -84,7 +86,7 @@ export default function ProductEdit() {
   /**
    * Função para lidar com o envio do formulário de edição
    */
-  const onSubmit = async (data: UpdateProductInput) => {
+  const onSubmit = async (data: ProductFormData) => {
     if (!id) return;
     
     try {
@@ -106,6 +108,7 @@ export default function ProductEdit() {
           availability: data.availability,
           terms: data.terms,
           validUntil: data.validUntil,
+          destaque: data.destaque as 's' | 'n',
         },
       });
       

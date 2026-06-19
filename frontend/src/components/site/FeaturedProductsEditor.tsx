@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 
 const optionsService = createGenericService('/options');
 
-export interface FeaturedCoursesConfig {
+export interface FeaturedProductsConfig {
   title: string;
   subtitle: string;
   backgroundColor: string;
@@ -29,14 +29,14 @@ export interface FeaturedCoursesConfig {
   viewAllText: string;
 }
 
-const DEFAULT_CONFIG: FeaturedCoursesConfig = {
-  title: "Cursos em Destaque",
-  subtitle: "Explore nossos treinamentos mais procurados e comece sua jornada de aprendizado hoje mesmo.",
-  backgroundColor: "#f8fafc", // slate-50
+const DEFAULT_CONFIG: FeaturedProductsConfig = {
+  title: "Produtos em Destaque",
+  subtitle: "Confira nossa seleção de produtos especiais para você.",
+  backgroundColor: "#ffffff",
   gradientColorTo: "",
   accentColor: "",
-  titleColor: "#0f172a", // slate-900
-  subtitleColor: "#475569", // slate-600
+  titleColor: "#0f172a",
+  subtitleColor: "#475569",
   titleSize: "3rem",
   textAlign: "center",
   marginTop: "4rem",
@@ -44,17 +44,17 @@ const DEFAULT_CONFIG: FeaturedCoursesConfig = {
   paddingTop: "0rem",
   paddingBottom: "0rem",
   showViewAll: true,
-  viewAllText: "Ver todos os cursos"
+  viewAllText: "Ver todos os produtos"
 };
 
 interface Props {
-  onConfigChange: (config: FeaturedCoursesConfig) => void;
-  currentConfig?: FeaturedCoursesConfig;
+  onConfigChange: (config: FeaturedProductsConfig) => void;
+  currentConfig?: FeaturedProductsConfig;
 }
 
-export function FeaturedCoursesEditor({ onConfigChange, currentConfig }: Props) {
+export function FeaturedProductsEditor({ onConfigChange, currentConfig }: Props) {
   const { user } = useAuth();
-  const [config, setConfig] = useState<FeaturedCoursesConfig>(currentConfig || DEFAULT_CONFIG);
+  const [config, setConfig] = useState<FeaturedProductsConfig>(currentConfig || DEFAULT_CONFIG);
   
   const canEdit = !!user && Number(user?.permission_id ?? 9999) < 3;
 
@@ -64,7 +64,7 @@ export function FeaturedCoursesEditor({ onConfigChange, currentConfig }: Props) 
 
   if (!canEdit) return null;
 
-  const handleChange = (field: keyof FeaturedCoursesConfig, value: any) => {
+  const handleChange = (field: keyof FeaturedProductsConfig, value: any) => {
     const newConfig = { ...config, [field]: value };
     setConfig(newConfig);
     onConfigChange(newConfig);
@@ -73,9 +73,9 @@ export function FeaturedCoursesEditor({ onConfigChange, currentConfig }: Props) 
   const handleSave = async () => {
     try {
       await optionsService.customPost('/all', { 
-        featured_courses_config: JSON.stringify(config) 
+        featured_products_config: JSON.stringify(config) 
       });
-      localStorage.setItem('featured_courses_config', JSON.stringify(config));
+      localStorage.setItem('featured_products_config', JSON.stringify(config));
       toast({ title: 'Configurações salvas!', description: 'O layout da seção foi atualizado.' });
     } catch (e: any) {
       toast({ title: 'Erro ao salvar', description: e?.message || 'Falha na conexão', variant: 'destructive' });
@@ -95,11 +95,11 @@ export function FeaturedCoursesEditor({ onConfigChange, currentConfig }: Props) 
           <Button
             size="lg"
             className="rounded-full shadow-2xl h-14 w-14 p-0 bg-primary hover:scale-110 transition-transform relative group"
-            title="Editar Seção de Cursos"
+            title="Editar Seção de Produtos"
           >
             <Settings className="h-6 w-6 animate-spin-slow" />
             <span className="absolute left-16 bg-primary text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl">
-              Editar Cursos
+              Editar Produtos
             </span>
           </Button>
         </PopoverTrigger>

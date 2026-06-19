@@ -84,11 +84,11 @@ export function PillarsEditor({ onConfigChange, currentConfig }: Props) {
         <PopoverTrigger asChild>
           <Button
             size="lg"
-            className="rounded-full shadow-2xl h-14 w-14 p-0 bg-indigo-600 hover:bg-indigo-700 hover:scale-110 transition-transform relative group"
+            className="rounded-full shadow-2xl h-14 w-14 p-0 bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-110 transition-transform relative group"
             title="Editar Seção de Pilares"
           >
             <Settings className="h-6 w-6 animate-spin-slow" />
-            <span className="absolute left-16 bg-indigo-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl">
+            <span className="absolute left-16 bg-primary text-primary-foreground text-[10px] font-black uppercase px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl">
               Editar Pilares
             </span>
           </Button>
@@ -97,7 +97,7 @@ export function PillarsEditor({ onConfigChange, currentConfig }: Props) {
           <div className="space-y-4">
             <div className="border-b pb-2 mb-4 flex justify-between items-center">
               <div>
-                <h4 className="font-black text-lg uppercase tracking-tight text-indigo-600">Editar Pilares</h4>
+                <h4 className="font-black text-lg uppercase tracking-tight text-primary">Editar Pilares</h4>
                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Personalize esta seção</p>
               </div>
               <div className="flex items-center gap-2">
@@ -158,7 +158,7 @@ export function PillarsEditor({ onConfigChange, currentConfig }: Props) {
                         onClick={() => handleChange('textAlign', align)}
                         className={`flex-1 flex items-center justify-center py-1.5 rounded transition-all ${
                           config.textAlign === align 
-                            ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600' 
+                            ? 'bg-white dark:bg-slate-700 shadow-sm text-primary' 
                             : 'text-slate-400 hover:text-slate-600'
                         }`}
                       >
@@ -211,7 +211,7 @@ export function PillarsEditor({ onConfigChange, currentConfig }: Props) {
             </div>
 
             <div className="flex gap-2 pt-4 border-t mt-4">
-              <Button onClick={handleSave} className="flex-1 font-bold bg-indigo-600 hover:bg-indigo-700">
+              <Button onClick={handleSave} className="flex-1 font-bold bg-primary text-primary-foreground hover:bg-primary/90">
                 <Save className="w-4 h-4 mr-2" /> Salvar
               </Button>
               <Button onClick={handleReset} variant="outline" size="icon" title="Resetar">

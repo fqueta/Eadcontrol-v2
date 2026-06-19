@@ -47,6 +47,7 @@ const productSchema = z.object({
   }),
   terms: z.array(z.string()).optional(),
   validUntil: z.string().optional(),
+  destaque: z.string().optional().default("n"),
 });
 
 export type ProductFormData = z.infer<typeof productSchema>;
@@ -503,6 +504,27 @@ export function ProductForm({
                   <Switch
                     checked={field.value}
                     onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="destaque"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base">Produto em Destaque</FormLabel>
+                  <div className="text-sm text-muted-foreground">
+                    Exibir este produto na vitrine da página inicial
+                  </div>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value === 's'}
+                    onCheckedChange={(checked) => field.onChange(checked ? 's' : 'n')}
                   />
                 </FormControl>
               </FormItem>

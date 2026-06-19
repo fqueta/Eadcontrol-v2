@@ -81,6 +81,7 @@ export default function Products() {
       availability: "available" as const,
       terms: [],
       validUntil: "",
+      destaque: "n",
     },
   });
 
@@ -118,7 +119,8 @@ export default function Products() {
           reviews: data.reviews || 0,
           availability: data.availability,
           terms: data.terms,
-          validUntil: data.validUntil || ''
+          validUntil: data.validUntil || '',
+          destaque: data.destaque as 's' | 'n'
         };
         await updateMutation.mutateAsync({ id: editingProduct.id, data: updateData });
       } else {
@@ -137,7 +139,8 @@ export default function Products() {
           reviews: data.reviews || 0,
           availability: data.availability,
           terms: data.terms,
-          validUntil: data.validUntil || ''
+          validUntil: data.validUntil || '',
+          destaque: data.destaque as 's' | 'n'
         };
         await createMutation.mutateAsync(createData);
       }

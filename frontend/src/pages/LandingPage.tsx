@@ -9,6 +9,7 @@ import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription } f
 import { EditableOptionText } from "@/components/common/EditableOptionText";
 import HeroBanner from "@/components/site/HeroBanner";
 import { FeaturedCoursesSection } from "@/components/site/FeaturedCoursesSection";
+import { FeaturedProductsSection } from "@/components/site/FeaturedProductsSection";
 import { PillarsSection } from "@/components/site/PillarsSection";
 import { CtaSection } from "@/components/site/CtaSection";
 
@@ -49,6 +50,8 @@ const LandingPage = ({ linkLoja }: { linkLoja?: string }) => {
       />
 
       <FeaturedCoursesSection />
+
+      <FeaturedProductsSection />
 
       <PillarsSection />
 

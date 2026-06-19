@@ -1,8 +1,9 @@
-import React, { createContext, useCallback, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 import { predefinedThemes } from '@/lib/themes';
 
 interface ThemeContextType {
   applyThemeSettings: () => void;
+  darkMode: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -12,7 +13,7 @@ export const useTheme = () => {
   // console.log('useTheme hook called, context:', !!context);
   // Se o contexto não estiver disponível (ex: em páginas que escapam ao provider padrão),
   // retorna um objeto seguro com funções vazias para evitar erros fatais
-  return context || { applyThemeSettings: () => {} };
+  return context || { applyThemeSettings: () => {}, darkMode: false };
 };
 
 interface ThemeProviderProps {
@@ -24,6 +25,15 @@ interface ThemeProviderProps {
  * Carrega as configurações do localStorage e aplica no documento
  */
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('appearanceSettings');
+      if (saved) {
+        return !!JSON.parse(saved).darkMode;
+      }
+    } catch {}
+    return false;
+  });
   
   /**
    * Carrega uma fonte do Google Fonts dinamicamente
@@ -94,6 +104,22 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
    */
   const applyThemeSettings = () => {
     try {
+      // 0. Carrega configurações de aparência para saber se está em modo escuro
+      const savedAppearanceSettings = localStorage.getItem('appearanceSettings');
+      let isDarkMode = false;
+      let appearanceSettings: any = null;
+      
+      if (savedAppearanceSettings) {
+        try {
+          appearanceSettings = JSON.parse(savedAppearanceSettings);
+          isDarkMode = !!appearanceSettings.darkMode;
+        } catch (e) {
+          console.error("Failed to parse appearance settings", e);
+        }
+      }
+      
+      setDarkMode(isDarkMode);
+
       // 1. Aplica o tema pré-definido se houver
       const themeId = localStorage.getItem('app_theme') || 'default';
       const theme = predefinedThemes.find(t => t.id === themeId);
@@ -102,19 +128,38 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         const root = document.documentElement;
         root.style.setProperty('--primary', hexToHsl(theme.colors.primary));
         root.style.setProperty('--secondary', hexToHsl(theme.colors.secondary));
-        root.style.setProperty('--background', hexToHsl(theme.colors.background));
-        root.style.setProperty('--foreground', hexToHsl(theme.colors.foreground));
-        root.style.setProperty('--accent', hexToHsl(theme.colors.accent));
         root.style.setProperty('--primary-hover', hexToHsl(theme.colors.primary, -10));
         root.style.setProperty('--secondary-hover', hexToHsl(theme.colors.secondary, -10));
+        
+        if (isDarkMode) {
+          // No modo escuro, limpamos as propriedades de cor em linha do tema (que são claras)
+          // para permitir que as variáveis da classe .dark do index.css entrem em vigor.
+          root.style.removeProperty('--background');
+          root.style.removeProperty('--foreground');
+          root.style.removeProperty('--accent');
+          root.style.removeProperty('--border');
+          root.style.removeProperty('--input');
+          root.style.removeProperty('--muted');
+          root.style.removeProperty('--card');
+          root.style.removeProperty('--popover');
+        } else {
+          // No modo claro, aplicamos as cores claras do tema
+          root.style.setProperty('--background', hexToHsl(theme.colors.background));
+          root.style.setProperty('--foreground', hexToHsl(theme.colors.foreground));
+          root.style.setProperty('--accent', hexToHsl(theme.colors.accent));
+          root.style.removeProperty('--border');
+          root.style.removeProperty('--input');
+          root.style.removeProperty('--muted');
+          root.style.removeProperty('--card');
+          root.style.removeProperty('--popover');
+        }
         
         if (theme.fontFamily) {
           root.style.setProperty('--font-family', theme.fontFamily);
         }
       }
 
-      // 2. Carrega configurações de aparência (overrides)
-      const savedAppearanceSettings = localStorage.getItem('appearanceSettings');
+      // 2. Carrega configurações de aparência adicionais
       const fontOverride = localStorage.getItem('app_font_family');
       
       if (fontOverride) {
@@ -123,9 +168,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         loadGoogleFont(fontOverride);
       }
 
-      if (savedAppearanceSettings) {
-        const appearanceSettings = JSON.parse(savedAppearanceSettings);
-        
+      if (appearanceSettings) {
         // Aplica estilo de layout
         const layoutStyle = appearanceSettings.layoutStyle || 'rounded';
         if (layoutStyle === 'squared') {
@@ -139,7 +182,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         }
         
         // Aplica modo escuro
-        const isDarkMode = appearanceSettings.darkMode;
         if (isDarkMode) {
           document.documentElement.classList.add('dark');
         } else {
@@ -254,7 +296,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   }, []);
   
   const value = {
-    applyThemeSettings
+    applyThemeSettings,
+    darkMode
   };
   
   return (

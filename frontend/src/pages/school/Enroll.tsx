@@ -237,7 +237,7 @@ export default function Enroll() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input
               placeholder="Pesquisar por aluno, curso ou ID..."
-              className="h-12 pl-11 rounded-xl border-slate-200 bg-white/40 group-hover:bg-white focus:bg-white transition-all shadow-sm focus:ring-4 focus:ring-primary/10 font-medium"
+              className="h-12 pl-11 rounded-xl border-slate-200 bg-white/40 dark:bg-slate-900/40 group-hover:bg-white dark:group-hover:bg-slate-900 focus:bg-white dark:focus:bg-slate-950 transition-all shadow-sm focus:ring-4 focus:ring-primary/10 font-medium text-slate-900 dark:text-slate-100"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -299,7 +299,7 @@ export default function Enroll() {
                   value={selectedSituationId || undefined}
                   onValueChange={(v) => { setSelectedSituationId(v === '__all__' ? '' : v); setPage(1); }}
                 >
-                  <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-white/40 hover:bg-white transition-all font-bold">
+                  <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-white/40 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900 transition-all font-bold text-slate-900 dark:text-slate-100">
                     <div className="flex items-center gap-2">
                       <Target className="h-4 w-4 text-slate-400" />
                       <SelectValue placeholder="Todas as situações" />
@@ -439,7 +439,7 @@ export default function Enroll() {
                       localStorage.setItem('eadcontrol_enroll_per_page', String(val));
                     }}
                   >
-                  <SelectTrigger className="h-10 w-24 rounded-xl border-slate-200 font-bold bg-white/40">
+                  <SelectTrigger className="h-10 w-24 rounded-xl border-slate-200 font-bold bg-white/40 dark:bg-slate-900/40 text-slate-900 dark:text-slate-100">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-slate-200">

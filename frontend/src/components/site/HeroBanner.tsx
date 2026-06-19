@@ -25,22 +25,38 @@ function useHeroSettings() {
   const [showTexts, setShowTexts] = useState(() => localStorage.getItem('home_hero_show_texts') !== 'false');
   const [showButton, setShowButton] = useState(() => localStorage.getItem('home_hero_show_button') !== 'false');
   const [autoplayInterval, setAutoplayInterval] = useState(() => Number(localStorage.getItem('home_hero_autoplay_interval') || 6) * 1000);
+  const [headerTransparent, setHeaderTransparent] = useState(() => {
+    try {
+      const saved = localStorage.getItem('appearanceSettings');
+      return saved ? !!JSON.parse(saved).headerTransparent : false;
+    } catch {
+      return false;
+    }
+  });
 
   const updateSettings = useCallback(() => {
     setShowOverlay(localStorage.getItem('home_hero_show_overlay') !== 'false');
     setShowTexts(localStorage.getItem('home_hero_show_texts') !== 'false');
     setShowButton(localStorage.getItem('home_hero_show_button') !== 'false');
     setAutoplayInterval(Number(localStorage.getItem('home_hero_autoplay_interval') || 6) * 1000);
+    try {
+      const saved = localStorage.getItem('appearanceSettings');
+      setHeaderTransparent(saved ? !!JSON.parse(saved).headerTransparent : false);
+    } catch {}
   }, []);
 
   useEffect(() => {
     window.addEventListener('hero_settings_updated', updateSettings);
+    window.addEventListener('storage', updateSettings);
+    window.addEventListener('branding:updated', updateSettings);
     return () => {
       window.removeEventListener('hero_settings_updated', updateSettings);
+      window.removeEventListener('storage', updateSettings);
+      window.removeEventListener('branding:updated', updateSettings);
     };
   }, [updateSettings]);
 
-  return { showOverlay, showTexts, showButton, autoplayInterval };
+  return { showOverlay, showTexts, showButton, autoplayInterval, headerTransparent };
 }
 
 /**
@@ -62,7 +78,7 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
   const [slides, setSlides] = useState<BannerSlide[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const { showOverlay, showTexts, showButton, autoplayInterval } = useHeroSettings();
+  const { showOverlay, showTexts, showButton, autoplayInterval, headerTransparent } = useHeroSettings();
   const isMobile = useIsMobile();
 
   // Resolve fallbacks from branding
@@ -106,7 +122,11 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
   }
 
   return (
-    <section className="relative h-[calc(100vh-128px)] sm:h-[calc(100vh-64px)] md:h-[calc(100vh-64px)] min-h-[450px] sm:min-h-[550px] md:min-h-[700px] w-full overflow-hidden bg-slate-900">
+    <section className={`relative ${
+      headerTransparent 
+        ? 'h-[75vh] sm:h-[85vh] md:h-screen min-h-[500px] sm:min-h-[600px] md:min-h-[800px]' 
+        : 'h-[60vh] sm:h-[70vh] md:h-[calc(100vh-64px)] min-h-[420px] sm:min-h-[500px] md:min-h-[700px]'
+    } w-full overflow-hidden bg-slate-900`}>
       <div className="h-full w-full relative">
         {slides.map((slide, index) => (
           <div 
@@ -139,19 +159,19 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
               <div className={`max-w-3xl transition-all duration-1000 transform pointer-events-auto ${index === selectedIndex ? 'translate-x-0 opacity-100' : '-translate-x-12 opacity-0'}`}>
                 {showTexts && (
                   <>
-                    <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 font-bold text-sm mb-8 backdrop-blur-md">
+                    <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary font-bold text-xs sm:text-sm mb-4 md:mb-8 backdrop-blur-md">
                       <Play className="h-4 w-4 fill-current" />
                       <span className="uppercase tracking-widest">{name}</span>
                     </div>
                     
                     <h2 
-                      className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg"
-                      style={slide.config?.titleSize ? { fontSize: `${slide.config.titleSize}px`, lineHeight: '1.2' } : {}}
+                      className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-3 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg"
+                      style={slide.config?.titleSize ? { fontSize: isMobile ? `${Math.min(slide.config.titleSize, 32)}px` : `${slide.config.titleSize}px`, lineHeight: '1.2' } : {}}
                     >
                       {slide.title || slogan}
                     </h2>
                     
-                    <p className="text-base sm:text-lg md:text-xl text-slate-300 mb-8 md:mb-10 max-w-xl leading-relaxed font-medium drop-shadow">
+                    <p className="text-sm sm:text-lg md:text-xl text-slate-300 mb-5 md:mb-10 max-w-xl leading-relaxed font-medium drop-shadow">
                       {slide.subtitle || description}
                     </p>
                   </>
@@ -162,7 +182,7 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
                   slide.config?.buttonAlign === 'right' ? 'justify-end' : 'justify-start'
                 }`}>
                   {showButton && (
-                    <Button size="lg" className="w-full sm:w-auto h-16 px-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg shadow-xl shadow-blue-500/20 transition-all hover:scale-105 active:scale-95" asChild>
+                    <Button size="lg" className="w-full sm:w-auto h-12 md:h-16 px-6 md:px-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm md:text-lg shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95" asChild>
                       <Link to="/cursos">
                         Explorar Cursos
                         <ArrowRight className="ml-2 h-5 w-5" />
@@ -234,7 +254,7 @@ type StaticSlide = {
 function StaticCarousel({ name, slogan, description }: { name: string; slogan: string; description: string }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [displayImages, setDisplayImages] = useState<StaticSlide[]>([]);
-  const { showOverlay, showTexts, showButton, autoplayInterval } = useHeroSettings();
+  const { showOverlay, showTexts, showButton, autoplayInterval, headerTransparent } = useHeroSettings();
   const isMobile = useIsMobile();
 
   const updateImages = useCallback(() => {
@@ -276,7 +296,11 @@ function StaticCarousel({ name, slogan, description }: { name: string; slogan: s
   }, [displayImages.length, autoplayInterval]);
 
   return (
-    <section className="relative h-[calc(100vh-128px)] sm:h-[calc(100vh-64px)] md:h-[calc(100vh-64px)] min-h-[450px] sm:min-h-[550px] md:min-h-[700px] w-full overflow-hidden bg-slate-900">
+    <section className={`relative ${
+      headerTransparent 
+        ? 'h-[75vh] sm:h-[85vh] md:h-screen min-h-[500px] sm:min-h-[600px] md:min-h-[800px]' 
+        : 'h-[60vh] sm:h-[70vh] md:h-[calc(100vh-64px)] min-h-[420px] sm:min-h-[500px] md:min-h-[700px]'
+    } w-full overflow-hidden bg-slate-900`}>
       <div className="h-full w-full relative">
         {displayImages.map((img, index) => (
           <div 
@@ -303,13 +327,13 @@ function StaticCarousel({ name, slogan, description }: { name: string; slogan: s
               <div className={`max-w-3xl transition-all duration-1000 transform pointer-events-auto ${index === selectedIndex ? 'translate-x-0 opacity-100' : '-translate-x-12 opacity-0'}`}>
                 {showTexts && (
                   <>
-                    <div className="mb-8">
-                      <BrandLogo className="h-16 w-auto brightness-0 invert opacity-90 drop-shadow-lg" />
+                    <div className="mb-4 md:mb-8">
+                      <BrandLogo className="h-10 md:h-16 w-auto drop-shadow-lg" />
                     </div>
                     
                     <h2 
-                      className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg"
-                      style={img.titleSize ? { fontSize: `${img.titleSize}px`, lineHeight: '1.2' } : {}}
+                      className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-3 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg"
+                      style={img.titleSize ? { fontSize: isMobile ? `${Math.min(img.titleSize, 32)}px` : `${img.titleSize}px`, lineHeight: '1.2' } : {}}
                     >
                       {img.title ? img.title : (
                         <EditableOptionText 
@@ -320,7 +344,7 @@ function StaticCarousel({ name, slogan, description }: { name: string; slogan: s
                       )}
                     </h2>
                     
-                    <p className="text-base sm:text-lg md:text-xl text-slate-300 mb-8 md:mb-10 max-w-xl leading-relaxed font-medium drop-shadow">
+                    <p className="text-sm sm:text-lg md:text-xl text-slate-300 mb-5 md:mb-10 max-w-xl leading-relaxed font-medium drop-shadow">
                       {img.subtitle ? img.subtitle : (
                         <EditableOptionText 
                           optionKey="home_hero_description" 
@@ -336,7 +360,7 @@ function StaticCarousel({ name, slogan, description }: { name: string; slogan: s
                   img.buttonAlign === 'right' ? 'justify-end' : 'justify-start'
                 }`}>
                   {showButton && (
-                    <Button size="lg" className="w-full sm:w-auto h-16 px-10 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-lg shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95" asChild>
+                    <Button size="lg" className="w-full sm:w-auto h-12 md:h-16 px-6 md:px-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm md:text-lg shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95" asChild>
                       <Link to={img.buttonUrl || "/cursos"}>
                         {img.buttonLabel || "Conhecer Cursos"}
                         <ArrowRight className="ml-2 h-5 w-5" />

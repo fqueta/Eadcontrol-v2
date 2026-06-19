@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCreateProduct } from '@/hooks/products';
 import { useCategoriesList } from '@/hooks/categories';
-import { ProductForm } from '@/components/products/ProductForm';
+import { ProductForm, ProductFormData } from '@/components/products/ProductForm';
 import { productSchema } from '@/components/products/ProductForm';
 import { CreateProductInput } from '@/types/products';
 import { toast } from '@/hooks/use-toast';
@@ -33,7 +33,7 @@ export default function ProductCreate() {
   const isLoadingUnits = false;
   const unitsError = null;
 
-  const form = useForm<CreateProductInput>({
+  const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: '',
@@ -51,13 +51,14 @@ export default function ProductCreate() {
       availability: 'available',
       terms: [],
       validUntil: undefined,
+      destaque: 'n',
     },
   });
 
   /**
    * Função para lidar com o envio do formulário de criação
    */
-  const onSubmit = async (data: CreateProductInput) => {
+  const onSubmit = async (data: ProductFormData) => {
     try {
       await createProductMutation.mutateAsync({
         name: data.name,
@@ -75,6 +76,7 @@ export default function ProductCreate() {
         availability: data.availability,
         terms: data.terms,
         validUntil: data.validUntil,
+        destaque: data.destaque as 's' | 'n',
       });
       
       toast({

@@ -100,11 +100,11 @@ export function CtaEditor({ onConfigChange, currentConfig }: Props) {
         <PopoverTrigger asChild>
           <Button
             size="lg"
-            className="rounded-full shadow-2xl h-14 w-14 p-0 bg-blue-600 hover:bg-blue-700 hover:scale-110 transition-transform relative group text-white border-none"
+            className="rounded-full shadow-2xl h-14 w-14 p-0 bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-110 transition-transform relative group border-none"
             title="Editar Seção CTA"
           >
             <Settings className="h-6 w-6 animate-spin-slow" />
-            <span className="absolute left-16 bg-blue-600 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl">
+            <span className="absolute left-16 bg-primary text-primary-foreground text-[10px] font-black uppercase px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl">
               Editar CTA
             </span>
           </Button>
@@ -113,7 +113,7 @@ export function CtaEditor({ onConfigChange, currentConfig }: Props) {
           <div className="space-y-4">
             <div className="border-b pb-2 mb-4 flex justify-between items-center">
               <div>
-                <h4 className="font-black text-lg uppercase tracking-tight text-blue-600 dark:text-blue-400">Editar CTA</h4>
+                <h4 className="font-black text-lg uppercase tracking-tight text-primary">Editar CTA</h4>
                 <p className="text-[10px] text-muted-foreground uppercase font-bold">Personalize esta seção</p>
               </div>
               <div className="flex items-center gap-2">
@@ -145,7 +145,7 @@ export function CtaEditor({ onConfigChange, currentConfig }: Props) {
               </div>
 
               <div className="border-t pt-2 my-2">
-                <h5 className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 mb-2">Botão Principal</h5>
+                <h5 className="text-[10px] font-black uppercase text-primary mb-2">Botão Principal</h5>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <Label className="text-[9px] font-black uppercase text-slate-400">Texto</Label>
@@ -167,7 +167,7 @@ export function CtaEditor({ onConfigChange, currentConfig }: Props) {
               </div>
 
               <div className="border-t pt-2 my-2">
-                <h5 className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 mb-2">Botão Secundário</h5>
+                <h5 className="text-[10px] font-black uppercase text-primary mb-2">Botão Secundário</h5>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <Label className="text-[9px] font-black uppercase text-slate-400">Texto</Label>
@@ -189,7 +189,7 @@ export function CtaEditor({ onConfigChange, currentConfig }: Props) {
               </div>
 
               <div className="border-t pt-2 my-2">
-                <h5 className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 mb-2">Estilos e Fundo</h5>
+                <h5 className="text-[10px] font-black uppercase text-primary mb-2">Estilos e Fundo</h5>
                 
                 <div className="grid grid-cols-2 gap-3 mb-2">
                   <div className="space-y-1">
@@ -252,7 +252,7 @@ export function CtaEditor({ onConfigChange, currentConfig }: Props) {
                           onClick={() => handleChange('textAlign', align)}
                           className={`flex-1 flex items-center justify-center py-1 rounded transition-all ${
                             config.textAlign === align 
-                              ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' 
+                              ? 'bg-white dark:bg-slate-700 shadow-sm text-primary' 
                               : 'text-slate-400 hover:text-slate-600'
                           }`}
                         >
@@ -314,7 +314,7 @@ export function CtaEditor({ onConfigChange, currentConfig }: Props) {
             </div>
 
             <div className="flex gap-2 pt-4 border-t mt-4">
-              <Button onClick={handleSave} className="flex-1 font-bold bg-blue-600 hover:bg-blue-700 text-white">
+              <Button onClick={handleSave} className="flex-1 font-bold bg-primary text-primary-foreground hover:bg-primary/90">
                 <Save className="w-4 h-4 mr-2" /> Salvar
               </Button>
               <Button onClick={handleReset} variant="outline" size="icon" title="Resetar" className="border border-input">

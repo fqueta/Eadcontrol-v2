@@ -516,7 +516,7 @@ const FastCheckout = () => {
                                     id="name" 
                                     placeholder="Digite seu nome completo" 
                                     {...form.register("name")}
-                                    className="h-14 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                    className="h-14 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 focus:bg-white dark:focus:bg-slate-950 focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-slate-100"
                                 />
                                 {form.formState.errors.name && <p className="text-xs text-red-500 font-bold mt-1">{form.formState.errors.name.message}</p>}
                             </div>
@@ -529,7 +529,7 @@ const FastCheckout = () => {
                                     {...form.register("email", {
                                         onBlur: (e) => handleCheckUser('email', e.target.value)
                                     })}
-                                    className="h-14 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                    className="h-14 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 focus:bg-white dark:focus:bg-slate-950 focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-slate-100"
                                 />
                                 {form.formState.errors.email && <p className="text-xs text-red-500 font-bold mt-1">{form.formState.errors.email.message}</p>}
                             </div>
@@ -545,7 +545,7 @@ const FastCheckout = () => {
                                         },
                                         onBlur: (e) => handleCheckUser('cpfCnpj', e.target.value)
                                     })}
-                                    className="h-14 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                    className="h-14 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 focus:bg-white dark:focus:bg-slate-950 focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-slate-100"
                                 />
                                 {form.formState.errors.cpfCnpj && <p className="text-xs text-red-500 font-bold mt-1">{form.formState.errors.cpfCnpj.message}</p>}
                             </div>
@@ -560,7 +560,7 @@ const FastCheckout = () => {
                                             form.setValue("phone", val);
                                         }
                                     })}
-                                    className="h-14 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                    className="h-14 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 focus:bg-white dark:focus:bg-slate-950 focus:ring-2 focus:ring-primary/20 transition-all font-medium text-slate-900 dark:text-slate-100"
                                 />
                                 {form.formState.errors.phone && <p className="text-xs text-red-500 font-bold mt-1">{form.formState.errors.phone.message}</p>}
                             </div>
@@ -613,7 +613,7 @@ const FastCheckout = () => {
                                                   handleApplyCoupon();
                                               }
                                           }}
-                                          className={`h-14 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 focus:bg-white uppercase font-bold tracking-wider pr-10 transition-all ${couponError ? 'border-red-500 ring-1 ring-red-200 bg-red-50/50' : ''}`}
+                                          className={`h-14 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 focus:bg-white dark:focus:bg-slate-950 uppercase font-bold tracking-wider pr-10 transition-all text-slate-900 dark:text-slate-100 ${couponError ? 'border-red-500 ring-1 ring-red-200 bg-red-50/50' : ''}`}
                                         />
                                         {couponLoading && (
                                           <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -770,7 +770,7 @@ const FastCheckout = () => {
                                                         value={String(field.value || 1)}
                                                         onValueChange={(val) => field.onChange(Number(val))}
                                                     >
-                                                        <SelectTrigger className="h-14 rounded-xl font-bold bg-white">
+                                                        <SelectTrigger className="h-14 rounded-xl font-bold bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100">
                                                             <SelectValue placeholder="Selecione as parcelas" />
                                                         </SelectTrigger>
                                                         <SelectContent className="rounded-xl">
