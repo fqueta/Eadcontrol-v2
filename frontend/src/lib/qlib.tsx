@@ -18,39 +18,19 @@ export function getTenantApiUrl(): string {
   const host = window.location.host.replace(/^www\./i, '');
   const protocol = window.location.protocol;
   const tenantId = getTenantIdFromSubdomain() || 'default';
-  let envUrl: string | undefined = (import.meta.env as any).VITE_TENANT_API_URL;
 
-  let url = '';
-  if (envUrl) {
-    envUrl = envUrl.replace('{tenant_id}', tenantId);
-    const envIsLocal = /localhost|127\.0\.0\.1/.test(envUrl);
-    const hostIsProd = !/localhost|127\.0\.0\.1/.test(host);
-    if (hostIsProd && envIsLocal) {
-      url = '';
-    } else {
-      url = envUrl;
-      if (protocol === 'https:' && url.startsWith('http://') && hostIsProd) {
-        url = url.replace(/^http:\/\//, 'https://');
-      }
+  // Se estiver rodando localmente (localhost ou 127.0.0.1)
+  if (/localhost|127\.0\.0\.1/.test(host)) {
+    let envUrl: string | undefined = (import.meta.env as any).VITE_TENANT_API_URL;
+    if (envUrl) {
+      return envUrl.replace('{tenant_id}', tenantId).replace(/\/+$/, '');
     }
+    return 'http://api-{tenant_id}.localhost:8002/api'.replace('{tenant_id}', tenantId);
   }
 
-  if (!url) {
-    if (/localhost|127\.0\.0\.1/.test(host)) {
-      url = 'http://api-{tenant_id}.localhost:8002/api'.replace('{tenant_id}', tenantId);
-    } else {
-      // Se for um subdomínio da plataforma (ex: eadcontrol.com.br, eadcrontro.com.br ou incluireeducar.com.br),
-      // a API é prefixada com 'api-'. Caso contrário (domínios customizados),
-      // a API responde diretamente no mesmo host (ex: aeroclubejf.com.br/api).
-      const isPlatformDomain = /(?:^|\.)(?:eadcontrol|eadcrontro|incluireeducar)\.com\.br$/i.test(host);
-      if (isPlatformDomain) {
-        url = `${protocol}//api-${host}/api`;
-      } else {
-        url = `${protocol}//${host}/api`;
-      }
-    }
-  }
-
+  // Em produção, a resolução do backend é sempre 100% dinâmica baseada no domínio de acesso (multi-tenant)
+  const isPlatformDomain = /(?:^|\.)(?:eadcontrol|eadcrontro|incluireeducar)\.com\.br$/i.test(host);
+  const url = isPlatformDomain ? `${protocol}//api-${host}/api` : `${protocol}//${host}/api`;
   return url.replace(/\/+$/, '');
 }
 
