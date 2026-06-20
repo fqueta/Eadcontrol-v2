@@ -16,7 +16,7 @@ import {
 import { User, LogOut, ChevronDown, Monitor, ExternalLink, Moon, Sun, Menu, Home, BookOpen, Receipt, ShoppingCart, GraduationCap, UserCircle, ShieldAlert } from "lucide-react";
 import { BrandLogo } from "@/components/branding/BrandLogo";
 
-import { applyBrandingFavicon, hydrateBrandingFromPublicApi, getInstitutionName, getInstitutionSlogan, getInstitutionDescription } from "@/lib/branding";
+import { applyBrandingFavicon, hydrateBrandingFromPublicApi, getInstitutionName, getInstitutionSlogan, getInstitutionDescription, getInstitutionUrl } from "@/lib/branding";
 import { getTenantApiUrl, getVersionApi } from "@/lib/qlib";
 import { ForceChangePasswordModal } from "@/components/auth/ForceChangePasswordModal";
 
@@ -41,6 +41,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
   const [institutionName, setInstitutionName] = useState(() => getInstitutionName() || 'Instituição');
   const [institutionSlogan, setInstitutionSlogan] = useState(() => getInstitutionSlogan() || '');
   const [institutionDescription, setInstitutionDescription] = useState(() => getInstitutionDescription() || '');
+  const [institutionUrl, setInstitutionUrl] = useState(() => getInstitutionUrl() || '');
   const [isAdminImpersonating, setIsAdminImpersonating] = useState(false);
   const [headerTransparent, setHeaderTransparent] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -106,6 +107,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
           setInstitutionName(getInstitutionName() || 'Instituição');
           setInstitutionSlogan(getInstitutionSlogan() || '');
           setInstitutionDescription(getInstitutionDescription() || '');
+          setInstitutionUrl(getInstitutionUrl() || '');
           applyThemeSettings();
           applyBrandingFavicon('/favicon.ico');
         }
@@ -574,9 +576,9 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
             <div className="col-span-1 md:col-span-2 space-y-6">
               <div className="flex items-center space-x-3 group w-fit">
-                <BrandLogo
+                <img
+                  src="https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=375,fit=crop,q=95/AQExkVPy2aUDzpqL/sem-nome-250-x-125-px-4-AzGMXn77KQTvDXrP.png"
                   alt="Marca"
-                  fallbackSrc="https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=375,fit=crop,q=95/AQExkVPy2aUDzpqL/sem-nome-250-x-125-px-4-AzGMXn77KQTvDXrP.png"
                   className="h-10 brightness-0 invert opacity-80 group-hover:opacity-100 transition-opacity"
                 />
                 <div className="border-l border-white/10 pl-3">
@@ -603,7 +605,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
               <h4 className="font-bold text-sm uppercase tracking-widest mb-6 text-slate-200">Institucional</h4>
               <ul className="space-y-3 text-sm text-slate-400">
                 <li>
-                  <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors flex items-center group">
+                  <a href={institutionUrl || "https://incluireeducar.com.br/"} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors flex items-center group">
                     <span className="w-1.5 h-1.5 rounded-full bg-primary/40 mr-2 opacity-0 group-hover:opacity-100 transition-all -ml-3.5 group-hover:ml-0" />
                     Site oficial
                   </a>
