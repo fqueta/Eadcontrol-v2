@@ -89,6 +89,7 @@ class OptionController extends Controller
             'pillars_config',
             'cta_config',
             'footer_config',
+            'app_footer_logo_url',
         ];
 
         // Fetch options for allowed keys only
@@ -136,7 +137,7 @@ class OptionController extends Controller
         }
 
 
-        $perPage = $request->input('per_page', 100);
+        $perPage = $request->input('per_page', $this->sec == 'all' ? 2000 : 100);
         $order_by = $request->input('order_by', 'created_at');
         $order = $request->input('order', 'desc');
 

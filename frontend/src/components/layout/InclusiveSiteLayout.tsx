@@ -110,16 +110,25 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
    */
   useEffect(() => {
     let cancelled = false;
+    const handleBrandingUpdate = () => {
+      if (!cancelled) {
+        setInstitutionName(getInstitutionName() || 'Instituição');
+        setInstitutionSlogan(getInstitutionSlogan() || '');
+        setInstitutionDescription(getInstitutionDescription() || '');
+        setInstitutionUrl(getInstitutionUrl() || '');
+        setFooterLogoUrl(getBrandFooterLogoUrl() || '');
+        applyThemeSettings();
+      }
+    };
+
+    window.addEventListener('storage', handleBrandingUpdate);
+    window.addEventListener('branding:updated', handleBrandingUpdate);
+
     (async () => {
       try {
         await hydrateBrandingFromPublicApi({ persist: true });
         if (!cancelled) {
-          setInstitutionName(getInstitutionName() || 'Instituição');
-          setInstitutionSlogan(getInstitutionSlogan() || '');
-          setInstitutionDescription(getInstitutionDescription() || '');
-          setInstitutionUrl(getInstitutionUrl() || '');
-          setFooterLogoUrl(getBrandFooterLogoUrl() || '');
-          applyThemeSettings();
+          handleBrandingUpdate();
           applyBrandingFavicon('/favicon.ico');
         }
       } catch {
@@ -148,7 +157,11 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
         } catch {}
       }
     })();
-    return () => { cancelled = true; };
+    return () => { 
+      cancelled = true; 
+      window.removeEventListener('storage', handleBrandingUpdate);
+      window.removeEventListener('branding:updated', handleBrandingUpdate);
+    };
   }, []);
 
   /**

@@ -39,6 +39,23 @@ export function getBrandFooterLogoUrl(defaultUrl: string = '/logo.png'): string 
 }
 
 /**
+ * getBrandSocialUrl
+ * pt-BR: Obtém a URL da imagem social (OpenGraph/Twitter) personalizada a partir de localStorage, window.
+ */
+export function getBrandSocialUrl(defaultUrl: string = ''): string {
+  try {
+    const ls = localStorage.getItem('app_social_image_url');
+    if (ls && ls.trim() !== '') return ls.trim();
+  } catch {}
+
+  const anyWin = window as any;
+  const winLogo = anyWin?.__APP_SOCIAL_IMAGE_URL__;
+  if (typeof winLogo === 'string' && winLogo.trim() !== '') return winLogo.trim();
+
+  return defaultUrl;
+}
+
+/**
  * getBrandFaviconUrl
  * pt-BR: Obtém a URL do favicon personalizada do localStorage; caso não exista, retorna vazio.
  * en-US: Gets the custom favicon URL from localStorage; returns empty string if not present.
@@ -375,8 +392,8 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
  * pt-BR: Sincroniza o título da página e metatags (OG/Twitter) de forma consistente.
  * en-US: Synchronizes page title and metatags (OG/Twitter) consistently.
  */
-export function syncBrandingToMetaTags(data: { name?: string; slogan?: string; description?: string }): void {
-  const { name, slogan, description } = data;
+export function syncBrandingToMetaTags(data: { name?: string; slogan?: string; description?: string; social?: string }): void {
+  const { name, slogan, description, social } = data;
   const resolvedTitle = name ? (slogan ? `${name} — ${slogan}` : name) : null;
 
   if (resolvedTitle) {
@@ -393,6 +410,13 @@ export function syncBrandingToMetaTags(data: { name?: string; slogan?: string; d
     const ogDesc = document.querySelector('meta[property="og:description"]');
     if (ogDesc) ogDesc.setAttribute('content', description);
   }
+
+  if (social) {
+    const ogImage = document.getElementById('app-og-image') || document.querySelector('meta[property="og:image"]');
+    if (ogImage) ogImage.setAttribute('content', social);
+    const twitterImage = document.getElementById('app-twitter-image') || document.querySelector('meta[name="twitter:image"]');
+    if (twitterImage) twitterImage.setAttribute('content', social);
+  }
 }
 
 /**
@@ -404,8 +428,9 @@ export function applyBrandingFromPersistedSources(): void {
   const name = getInstitutionName();
   const slogan = getInstitutionSlogan();
   const description = getInstitutionDescription();
+  const social = getBrandSocialUrl();
   
-  syncBrandingToMetaTags({ name, slogan, description });
+  syncBrandingToMetaTags({ name, slogan, description, social });
   applyBrandingFavicon();
 }
 

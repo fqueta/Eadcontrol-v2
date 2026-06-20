@@ -46,7 +46,7 @@
        * en-US: Reads localStorage and, as fallback, global variables; applies favicon and social images.
        *        Also exposes values to window.__APP_*__ for React components to consume.
        */
-      (function applyBrandingFromPersistedSources() {
+      function updateBranding() {
         try {
           var win = window;
           var logo = localStorage.getItem('app_logo_url') || '';
@@ -112,10 +112,82 @@
             var ogDesc = document.querySelector('meta[property="og:description"]');
             if (ogDesc) ogDesc.setAttribute('content', descr);
           }
+
+          // Dynamic PWA manifest & browser theme-color
+          var primaryColor = '#0ea5e9';
+          try {
+            var appearanceRaw = localStorage.getItem('appearanceSettings');
+            if (appearanceRaw) {
+              var settings = JSON.parse(appearanceRaw);
+              if (settings && settings.primaryColor) primaryColor = settings.primaryColor;
+            }
+          } catch(e) {}
+
+          var themeMeta = document.querySelector('meta[name="theme-color"]');
+          if (themeMeta) {
+            themeMeta.setAttribute('content', primaryColor);
+          }
+
+          var manifestEl = document.querySelector('link[rel="manifest"]');
+          if (!manifestEl) {
+            manifestEl = document.createElement('link');
+            manifestEl.setAttribute('rel', 'manifest');
+            document.head.appendChild(manifestEl);
+          }
+
+          var logoType = 'image/png';
+          if (logo) {
+            if (/\.svg$/i.test(logo)) logoType = 'image/svg+xml';
+            else if (/\.webp$/i.test(logo)) logoType = 'image/webp';
+            else if (/\.jpe?g$/i.test(logo)) logoType = 'image/jpeg';
+          }
+
+          var manifestObj = {
+            name: instName || 'Ead Control',
+            short_name: instName || 'Ead Control',
+            description: descr || 'Plataforma de controle de EAD',
+            lang: 'pt-BR',
+            theme_color: primaryColor,
+            background_color: '#ffffff',
+            display: 'standalone',
+            start_url: '/',
+            icons: [
+              {
+                src: logo || '/logo.png',
+                sizes: '192x192',
+                type: logoType,
+                purpose: 'any maskable'
+              },
+              {
+                src: logo || '/logo.png',
+                sizes: '512x512',
+                type: logoType
+              }
+            ]
+          };
+
+          try {
+            var blob = new Blob([JSON.stringify(manifestObj)], {type: 'application/json'});
+            var manifestURL = URL.createObjectURL(blob);
+            if (win.__APP_MANIFEST_BLOB_URL__) {
+              URL.revokeObjectURL(win.__APP_MANIFEST_BLOB_URL__);
+            }
+            win.__APP_MANIFEST_BLOB_URL__ = manifestURL;
+            manifestEl.setAttribute('href', manifestURL);
+          } catch (e) {
+            console.warn('PWA Manifest dynamic update failed:', e);
+          }
         } catch (e) {
           console.warn('Branding load failed:', e);
         }
-      })();
+      }
+
+      // Executa imediatamente
+      updateBranding();
+
+      // Registra listeners para sincronização dinâmica
+      window.addEventListener('storage', updateBranding);
+      window.addEventListener('branding:updated', updateBranding);
     </script>
   </head>
 

@@ -540,6 +540,15 @@ export default function SystemSettings() {
         }
       }
 
+      // Update meta tags immediately
+      syncBrandingToMetaTags({ 
+        name: institutionName, 
+        slogan: institutionSlogan, 
+        description: institutionDescription,
+        social: brandingSocialUrl || undefined
+      });
+      window.dispatchEvent(new Event('branding:updated'));
+
       toast.success('Branding salvo. Recarregue a página para aplicar.');
     } catch (error: any) {
       toast.error(`Falha ao salvar branding: ${error?.message || 'erro desconhecido'}`);
