@@ -21,6 +21,17 @@ import { getTenantApiUrl, getVersionApi } from "@/lib/qlib";
 import { ForceChangePasswordModal } from "@/components/auth/ForceChangePasswordModal";
 import { FooterEditor, FooterConfig } from "@/components/site/FooterEditor";
 
+const getPersistedTopMenuItems = (): any[] | null => {
+  try {
+    const raw = localStorage.getItem('app_top_menu');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
 type InclusiveSiteLayoutProps = {
   children: ReactNode;
 };
@@ -34,11 +45,13 @@ type InclusiveSiteLayoutProps = {
  */
 export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
   const { user, isAuthenticated, logout } = useAuth();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { applyThemeSettings } = useTheme();
   const { toast } = useToast();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isDark, setIsDark] = useState<boolean>(false);
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
+  const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
   const [institutionName, setInstitutionName] = useState(() => getInstitutionName() || 'Instituição');
   const [institutionSlogan, setInstitutionSlogan] = useState(() => getInstitutionSlogan() || '');
   const [institutionDescription, setInstitutionDescription] = useState(() => getInstitutionDescription() || '');
@@ -47,21 +60,18 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
   const [footerConfig, setFooterConfig] = useState<FooterConfig>(() => {
     try {
       const saved = localStorage.getItem('footer_config');
-      return saved ? JSON.parse(saved) : { backgroundColor: "#020617", textColor: "#94a3b8", titleColor: "#ffffff" };
+      return saved ? JSON.parse(saved) : null;
     } catch {
-      return { backgroundColor: "#020617", textColor: "#94a3b8", titleColor: "#ffffff" };
+      return null;
     }
   });
+  const [headerTransparent, setHeaderTransparent] = useState<boolean>(false);
   const [isAdminImpersonating, setIsAdminImpersonating] = useState(false);
-  const [headerTransparent, setHeaderTransparent] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  const location = useLocation();
 
   useEffect(() => {
     const checkHeaderStyle = () => {
       try {
-        const saved = localStorage.getItem('appearanceSettings');
+        const saved = localStorage.getItem('footer_config');
         if (saved) {
           const parsed = JSON.parse(saved);
           setHeaderTransparent(!!parsed.headerTransparent);
@@ -83,16 +93,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
 
   const isHomePage = location.pathname === '/';
   const isTransparentActive = headerTransparent && isHomePage && !scrolled;
-  const [topMenuItems, setTopMenuItems] = useState<any[] | null>(() => {
-    try {
-      const raw = localStorage.getItem('app_top_menu');
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : null;
-    } catch {
-      return null;
-    }
-  });
+  const [topMenuItems, setTopMenuItems] = useState<any[] | null>(() => getPersistedTopMenuItems());
   /**
    * BrandLogo usage
    * pt-BR: Substitui lógica manual por componente BrandLogo para resolver a URL
@@ -117,6 +118,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
         setInstitutionDescription(getInstitutionDescription() || '');
         setInstitutionUrl(getInstitutionUrl() || '');
         setFooterLogoUrl(getBrandFooterLogoUrl() || '');
+        setTopMenuItems(getPersistedTopMenuItems());
         applyThemeSettings();
       }
     };
@@ -251,6 +253,14 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
 
   const permission_id: any = user?.permission_id;
 
+  const menuItems = topMenuItems ?? [
+    { label: 'Início', url: '/', auth: false },
+    { label: 'Cursos', url: '/cursos', auth: false },
+    { label: 'Produtos', url: '/produtos', auth: false },
+    { label: 'Área do Aluno', url: '/aluno', auth: true },
+    { label: 'Site institucional', url: institutionUrl || 'https://incluireeducar.com.br/', auth: false, external: true },
+  ];
+
   return (
     <div className="min-h-screen bg-background transition-colors duration-500">
       {/* Refined background elements for modern app feel */}
@@ -322,13 +332,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
             </Button>
           </div>
           <div className="hidden md:flex space-x-3 items-center">
-            {(topMenuItems ?? [
-              { label: 'Início', url: '/', auth: false },
-              { label: 'Cursos', url: '/cursos', auth: false },
-              { label: 'Produtos', url: '/produtos', auth: false },
-              { label: 'Área do Aluno', url: '/aluno', auth: true },
-              { label: 'Site institucional', url: 'https://incluireeducar.com.br/', auth: false, external: true },
-            ]).map((item: any) => {
+            {menuItems.map((item: any) => {
               if (item.auth && !isAuthenticated) return null;
               const isExternal = item.external || item.url?.startsWith('http');
               return (
@@ -471,10 +475,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
           <div className="p-4 space-y-6 overflow-y-auto max-h-[80vh]">
             <div className="space-y-1">
               <p className="px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Navegação Principal</p>
-              {(topMenuItems ?? [
-                { label: 'Início', url: '/', auth: false },
-                { label: 'Cursos', url: '/cursos', auth: false },
-              ]).map((item: any) => {
+              {menuItems.map((item: any) => {
                 if (item.auth && !isAuthenticated) return null;
                 const isExternal = item.external || item.url?.startsWith('http');
                 return (
