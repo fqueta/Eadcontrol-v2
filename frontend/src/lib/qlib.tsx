@@ -4,7 +4,7 @@
  * en-US: Gets the tenant_id from the current subdomain.
  */
 export function getTenantIdFromSubdomain(): string | null {
-  const host = window.location.hostname;
+  const host = window.location.hostname.replace(/^www\./i, '');
   const parts = host.split('.');
   return parts.length > 1 ? parts[0] : null;
 }
@@ -15,7 +15,7 @@ export function getTenantIdFromSubdomain(): string | null {
  * en-US: Returns tenant API base, WITHOUT version. E.g.: "http://{tenant_id}.localhost:8000/api".
  */
 export function getTenantApiUrl(): string {
-  const host = window.location.host;
+  const host = window.location.host.replace(/^www\./i, '');
   const protocol = window.location.protocol;
   const tenantId = getTenantIdFromSubdomain() || 'default';
   let envUrl: string | undefined = (import.meta.env as any).VITE_TENANT_API_URL;
@@ -39,7 +39,15 @@ export function getTenantApiUrl(): string {
     if (/localhost|127\.0\.0\.1/.test(host)) {
       url = 'http://api-{tenant_id}.localhost:8002/api'.replace('{tenant_id}', tenantId);
     } else {
-      url = `https://api-${host}/api`;
+      // Se for um subdomínio da plataforma (ex: eadcontrol.com.br ou eadcrontro.com.br),
+      // a API é prefixada com 'api-'. Caso contrário (domínios customizados),
+      // a API responde diretamente no mesmo host (ex: aeroclubejf.com.br/api).
+      const isPlatformDomain = /(?:^|\.)(?:eadcontrol|eadcrontro)\.com\.br$/i.test(host);
+      if (isPlatformDomain) {
+        url = `${protocol}//api-${host}/api`;
+      } else {
+        url = `${protocol}//${host}/api`;
+      }
     }
   }
 
