@@ -88,6 +88,7 @@ class OptionController extends Controller
             'featured_products_config',
             'pillars_config',
             'cta_config',
+            'footer_config',
         ];
 
         // Fetch options for allowed keys only

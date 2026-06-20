@@ -19,6 +19,7 @@ import { BrandLogo } from "@/components/branding/BrandLogo";
 import { applyBrandingFavicon, hydrateBrandingFromPublicApi, getInstitutionName, getInstitutionSlogan, getInstitutionDescription, getInstitutionUrl } from "@/lib/branding";
 import { getTenantApiUrl, getVersionApi } from "@/lib/qlib";
 import { ForceChangePasswordModal } from "@/components/auth/ForceChangePasswordModal";
+import { FooterEditor, FooterConfig } from "@/components/site/FooterEditor";
 
 type InclusiveSiteLayoutProps = {
   children: ReactNode;
@@ -42,6 +43,14 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
   const [institutionSlogan, setInstitutionSlogan] = useState(() => getInstitutionSlogan() || '');
   const [institutionDescription, setInstitutionDescription] = useState(() => getInstitutionDescription() || '');
   const [institutionUrl, setInstitutionUrl] = useState(() => getInstitutionUrl() || '');
+  const [footerConfig, setFooterConfig] = useState<FooterConfig>(() => {
+    try {
+      const saved = localStorage.getItem('footer_config');
+      return saved ? JSON.parse(saved) : { backgroundColor: "#020617", textColor: "#94a3b8", titleColor: "#ffffff" };
+    } catch {
+      return { backgroundColor: "#020617", textColor: "#94a3b8", titleColor: "#ffffff" };
+    }
+  });
   const [isAdminImpersonating, setIsAdminImpersonating] = useState(false);
   const [headerTransparent, setHeaderTransparent] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -126,6 +135,12 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
             if (raw) {
               const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
               setTopMenuItems(Array.isArray(parsed) ? parsed : null);
+            }
+            const rawFooter = json?.data?.footer_config;
+            if (rawFooter) {
+              const parsed = typeof rawFooter === 'string' ? JSON.parse(rawFooter) : rawFooter;
+              setFooterConfig(parsed);
+              localStorage.setItem('footer_config', JSON.stringify(parsed));
             }
           }
         } catch {}
@@ -570,58 +585,82 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
       <main className="min-h-[60vh] pb-20 md:pb-0">{children}</main>
 
       {/* Footer */}
-      <footer className="bg-slate-950 border-t border-slate-900 text-white py-16 px-4 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-30" />
-        <div className="container mx-auto relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
-            <div className="col-span-1 md:col-span-2 space-y-6">
-              <div className="flex items-center space-x-3 group w-fit">
-                <img
-                  src="https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=375,fit=crop,q=95/AQExkVPy2aUDzpqL/sem-nome-250-x-125-px-4-AzGMXn77KQTvDXrP.png"
-                  alt="Marca"
-                  className="h-10 brightness-0 invert opacity-80 group-hover:opacity-100 transition-opacity"
-                />
-                <div className="border-l border-white/10 pl-3">
-                  <h3 className="font-bold text-lg tracking-tight">{institutionName}</h3>
-                   {institutionSlogan && <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">{institutionSlogan}</p>}
+      {(() => {
+        const finalBgColor = footerConfig?.backgroundColor || "#020617";
+        const finalGradientTo = footerConfig?.gradientColorTo || "";
+        const finalTextColor = footerConfig?.textColor || "#94a3b8";
+        const finalTitleColor = footerConfig?.titleColor || "#ffffff";
+        const bgStyle = finalGradientTo 
+          ? `linear-gradient(to right, ${finalBgColor}, ${finalGradientTo})`
+          : finalBgColor;
+        const canEdit = !!user && Number(permission_id ?? 9999) < 3;
+
+        return (
+          <footer 
+            className="border-t border-slate-900 py-16 px-4 relative overflow-hidden transition-all duration-500"
+            style={{ background: bgStyle, color: finalTextColor }}
+          >
+            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-30" />
+            
+            {canEdit && (
+              <FooterEditor 
+                currentConfig={footerConfig} 
+                onConfigChange={(newConfig) => setFooterConfig(newConfig)} 
+              />
+            )}
+
+            <div className="container mx-auto relative z-10">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+                <div className="col-span-1 md:col-span-2 space-y-6">
+                  <div className="flex items-center space-x-3 group w-fit">
+                    <img
+                      src="https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=375,fit=crop,q=95/AQExkVPy2aUDzpqL/sem-nome-250-x-125-px-4-AzGMXn77KQTvDXrP.png"
+                      alt="Marca"
+                      className="h-10 brightness-0 invert opacity-80 group-hover:opacity-100 transition-opacity"
+                    />
+                    <div className="border-l border-white/10 pl-3">
+                      <h3 className="font-bold text-lg tracking-tight" style={{ color: finalTitleColor }}>{institutionName}</h3>
+                      {institutionSlogan && <p className="text-xs uppercase tracking-widest font-bold" style={{ color: finalTextColor }}>{institutionSlogan}</p>}
+                    </div>
+                  </div>
+                  <p className="text-sm leading-relaxed max-w-sm" style={{ color: finalTextColor }}>
+                    {institutionDescription || 'Educação e tecnologia juntos.'}
+                  </p>
+                  <div className="flex space-x-4">
+                    {/* Social media placeholders if needed, otherwise just leave or remove */}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm uppercase tracking-widest mb-6" style={{ color: finalTitleColor }}>Acesso rápido</h4>
+                  <ul className="space-y-3 text-sm" style={{ color: finalTextColor }}>
+                    <li><Link to="/cursos" className="hover:text-primary transition-colors flex items-center group"><span className="w-1.5 h-1.5 rounded-full bg-primary/40 mr-2 opacity-0 group-hover:opacity-100 transition-all -ml-3.5 group-hover:ml-0" />Cursos</Link></li>
+                    <li><Link to="/login" className="hover:text-primary transition-colors flex items-center group"><span className="w-1.5 h-1.5 rounded-full bg-primary/40 mr-2 opacity-0 group-hover:opacity-100 transition-all -ml-3.5 group-hover:ml-0" />Entrar</Link></li>
+                    <li><Link to="/register" className="hover:text-primary transition-colors flex items-center group"><span className="w-1.5 h-1.5 rounded-full bg-primary/40 mr-2 opacity-0 group-hover:opacity-100 transition-all -ml-3.5 group-hover:ml-0" />Cadastro</Link></li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm uppercase tracking-widest mb-6" style={{ color: finalTitleColor }}>Institucional</h4>
+                  <ul className="space-y-3 text-sm" style={{ color: finalTextColor }}>
+                    <li>
+                      <a href={institutionUrl || "https://incluireeducar.com.br/"} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors flex items-center group">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary/40 mr-2 opacity-0 group-hover:opacity-100 transition-all -ml-3.5 group-hover:ml-0" />
+                        Site oficial
+                      </a>
+                    </li>
+                  </ul>
                 </div>
               </div>
-              <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
-                {institutionDescription || 'Educação e tecnologia juntos.'}
-              </p>
-              <div className="flex space-x-4">
-                {/* Social media placeholders if needed, otherwise just leave or remove */}
+              <div className="border-t border-white/5 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs" style={{ color: finalTextColor }}>
+                <p>&copy; {new Date().getFullYear()} {institutionName}. Todos os direitos reservados.</p>
+                <div className="flex gap-6">
+                  <Link to="/pagina/politica-de-privacidade" className="hover:text-slate-300 transition-colors">Privacidade</Link>
+                  <Link to="/pagina/termos" className="hover:text-slate-300 transition-colors">Termos</Link>
+                </div>
               </div>
             </div>
-            <div>
-              <h4 className="font-bold text-sm uppercase tracking-widest mb-6 text-slate-200">Acesso rápido</h4>
-              <ul className="space-y-3 text-sm text-slate-400">
-                <li><Link to="/cursos" className="hover:text-primary transition-colors flex items-center group"><span className="w-1.5 h-1.5 rounded-full bg-primary/40 mr-2 opacity-0 group-hover:opacity-100 transition-all -ml-3.5 group-hover:ml-0" />Cursos</Link></li>
-                <li><Link to="/login" className="hover:text-primary transition-colors flex items-center group"><span className="w-1.5 h-1.5 rounded-full bg-primary/40 mr-2 opacity-0 group-hover:opacity-100 transition-all -ml-3.5 group-hover:ml-0" />Entrar</Link></li>
-                <li><Link to="/register" className="hover:text-primary transition-colors flex items-center group"><span className="w-1.5 h-1.5 rounded-full bg-primary/40 mr-2 opacity-0 group-hover:opacity-100 transition-all -ml-3.5 group-hover:ml-0" />Cadastro</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold text-sm uppercase tracking-widest mb-6 text-slate-200">Institucional</h4>
-              <ul className="space-y-3 text-sm text-slate-400">
-                <li>
-                  <a href={institutionUrl || "https://incluireeducar.com.br/"} target="_blank" rel="noreferrer" className="hover:text-primary transition-colors flex items-center group">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary/40 mr-2 opacity-0 group-hover:opacity-100 transition-all -ml-3.5 group-hover:ml-0" />
-                    Site oficial
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-white/5 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-500">
-            <p>&copy; {new Date().getFullYear()} {institutionName}. Todos os direitos reservados.</p>
-            <div className="flex gap-6">
-              <Link to="/pagina/politica-de-privacidade" className="hover:text-slate-300 transition-colors">Privacidade</Link>
-              <Link to="/pagina/termos" className="hover:text-slate-300 transition-colors">Termos</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+          </footer>
+        );
+      })()}
     </div>
   );
 }
