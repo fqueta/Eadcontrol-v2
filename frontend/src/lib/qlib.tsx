@@ -39,10 +39,10 @@ export function getTenantApiUrl(): string {
     if (/localhost|127\.0\.0\.1/.test(host)) {
       url = 'http://api-{tenant_id}.localhost:8002/api'.replace('{tenant_id}', tenantId);
     } else {
-      // Se for um subdomínio da plataforma (ex: eadcontrol.com.br ou eadcrontro.com.br),
+      // Se for um subdomínio da plataforma (ex: eadcontrol.com.br, eadcrontro.com.br ou incluireeducar.com.br),
       // a API é prefixada com 'api-'. Caso contrário (domínios customizados),
       // a API responde diretamente no mesmo host (ex: aeroclubejf.com.br/api).
-      const isPlatformDomain = /(?:^|\.)(?:eadcontrol|eadcrontro)\.com\.br$/i.test(host);
+      const isPlatformDomain = /(?:^|\.)(?:eadcontrol|eadcrontro|incluireeducar)\.com\.br$/i.test(host);
       if (isPlatformDomain) {
         url = `${protocol}//api-${host}/api`;
       } else {
