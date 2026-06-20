@@ -16,7 +16,7 @@ import {
 import { User, LogOut, ChevronDown, Monitor, ExternalLink, Moon, Sun, Menu, Home, BookOpen, Receipt, ShoppingCart, GraduationCap, UserCircle, ShieldAlert } from "lucide-react";
 import { BrandLogo } from "@/components/branding/BrandLogo";
 
-import { applyBrandingFavicon, hydrateBrandingFromPublicApi, getInstitutionName, getInstitutionSlogan, getInstitutionDescription, getInstitutionUrl } from "@/lib/branding";
+import { applyBrandingFavicon, hydrateBrandingFromPublicApi, getInstitutionName, getInstitutionSlogan, getInstitutionDescription, getInstitutionUrl, getBrandFooterLogoUrl } from "@/lib/branding";
 import { getTenantApiUrl, getVersionApi } from "@/lib/qlib";
 import { ForceChangePasswordModal } from "@/components/auth/ForceChangePasswordModal";
 import { FooterEditor, FooterConfig } from "@/components/site/FooterEditor";
@@ -43,6 +43,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
   const [institutionSlogan, setInstitutionSlogan] = useState(() => getInstitutionSlogan() || '');
   const [institutionDescription, setInstitutionDescription] = useState(() => getInstitutionDescription() || '');
   const [institutionUrl, setInstitutionUrl] = useState(() => getInstitutionUrl() || '');
+  const [footerLogoUrl, setFooterLogoUrl] = useState(() => getBrandFooterLogoUrl() || '');
   const [footerConfig, setFooterConfig] = useState<FooterConfig>(() => {
     try {
       const saved = localStorage.getItem('footer_config');
@@ -117,6 +118,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
           setInstitutionSlogan(getInstitutionSlogan() || '');
           setInstitutionDescription(getInstitutionDescription() || '');
           setInstitutionUrl(getInstitutionUrl() || '');
+          setFooterLogoUrl(getBrandFooterLogoUrl() || '');
           applyThemeSettings();
           applyBrandingFavicon('/favicon.ico');
         }
@@ -614,9 +616,9 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
                 <div className="col-span-1 md:col-span-2 space-y-6">
                   <div className="flex items-center space-x-3 group w-fit">
                     <img
-                      src="https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=375,fit=crop,q=95/AQExkVPy2aUDzpqL/sem-nome-250-x-125-px-4-AzGMXn77KQTvDXrP.png"
+                      src={footerLogoUrl || "https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=375,fit=crop,q=95/AQExkVPy2aUDzpqL/sem-nome-250-x-125-px-4-AzGMXn77KQTvDXrP.png"}
                       alt="Marca"
-                      className="h-10 brightness-0 invert opacity-80 group-hover:opacity-100 transition-opacity"
+                      className={`h-10 opacity-80 group-hover:opacity-100 transition-opacity ${!footerLogoUrl ? 'brightness-0 invert' : ''}`}
                     />
                     <div className="border-l border-white/10 pl-3">
                       <h3 className="font-bold text-lg tracking-tight" style={{ color: finalTitleColor }}>{institutionName}</h3>

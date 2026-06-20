@@ -22,6 +22,23 @@ export function getBrandLogoUrl(defaultUrl: string = '/logo.png'): string {
 }
 
 /**
+ * getBrandFooterLogoUrl
+ * pt-BR: Obtém a URL da logo de rodapé personalizada a partir de localStorage, window e env.
+ */
+export function getBrandFooterLogoUrl(defaultUrl: string = '/logo.png'): string {
+  try {
+    const ls = localStorage.getItem('app_footer_logo_url');
+    if (ls && ls.trim() !== '') return ls.trim();
+  } catch {}
+
+  const anyWin = window as any;
+  const winLogo = anyWin?.__APP_FOOTER_LOGO_URL__;
+  if (typeof winLogo === 'string' && winLogo.trim() !== '') return winLogo.trim();
+
+  return defaultUrl;
+}
+
+/**
  * getBrandFaviconUrl
  * pt-BR: Obtém a URL do favicon personalizada do localStorage; caso não exista, retorna vazio.
  * en-US: Gets the custom favicon URL from localStorage; returns empty string if not present.
@@ -173,6 +190,7 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
     }
     const json = await res.json();
     let logoUrl: string | undefined;
+    let logoFooterUrl: string | undefined;
     let name: string | undefined;
 
     const dataObj = json?.data as Record<string, any> | undefined;
@@ -181,6 +199,7 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
         if ((import.meta as any)?.env?.DEV) console.debug('[branding] payload keys', Object.keys(dataObj || {}));
       } catch {}
       logoUrl = String(dataObj['app_logo_url'] || '').trim() || undefined;
+      logoFooterUrl = String(dataObj['app_footer_logo_url'] || '').trim() || undefined;
       name = String(dataObj['app_institution_name'] || dataObj['site_name'] || dataObj['app_name'] || '').trim() || undefined;
 
       // Optional fields
@@ -262,8 +281,8 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
         } catch {}
       }
       if (persist) {
-        const anyWin = window as any;
         if (logoUrl) { try { localStorage.setItem('app_logo_url', logoUrl); } catch {} anyWin.__APP_LOGO_URL__ = logoUrl; }
+        if (logoFooterUrl) { try { localStorage.setItem('app_footer_logo_url', logoFooterUrl); } catch {} anyWin.__APP_FOOTER_LOGO_URL__ = logoFooterUrl; }
         if (name) {
           try { localStorage.setItem('app_institution_name', name); } catch {}
           anyWin.__APP_INSTITUTION_NAME__ = name;

@@ -205,6 +205,9 @@ export default function SystemSettings() {
   const [brandingLogoUrl, setBrandingLogoUrl] = useState<string | null>(() => {
     try { return (localStorage.getItem('app_logo_url') || '').trim() || null; } catch { return null; }
   });
+  const [brandingFooterLogoUrl, setBrandingFooterLogoUrl] = useState<string | null>(() => {
+    try { return (localStorage.getItem('app_footer_logo_url') || '').trim() || null; } catch { return null; }
+  });
   const [brandingFaviconUrl, setBrandingFaviconUrl] = useState<string | null>(() => {
     try { return (localStorage.getItem('app_favicon_url') || '').trim() || null; } catch { return null; }
   });
@@ -328,6 +331,14 @@ export default function SystemSettings() {
         setBrandingLogoUrl(valLogo);
         localStorage.setItem('app_logo_url', valLogo);
         (window as any).__APP_LOGO_URL__ = valLogo;
+      }
+
+      const optFooterLogo = getOpt('app_footer_logo_url');
+      const valFooterLogo = (optFooterLogo && (optFooterLogo.value ?? '')) || '';
+      if (valFooterLogo && valFooterLogo !== brandingFooterLogoUrl) {
+        setBrandingFooterLogoUrl(valFooterLogo);
+        localStorage.setItem('app_footer_logo_url', valFooterLogo);
+        (window as any).__APP_FOOTER_LOGO_URL__ = valFooterLogo;
       }
 
       const optFav = getOpt('app_favicon_url');
@@ -471,6 +482,17 @@ export default function SystemSettings() {
   }
 
   /**
+   * handleUploadFooterLogo
+   * pt-BR: Envia a logo do rodapé e atualiza estado.
+   * en-US: Uploads the footer logo and updates state.
+   */
+  async function handleUploadFooterLogo(file: File): Promise<string> {
+    const url = await handleUploadGeneric(file, { title: 'footer-logo', name: 'app-footer-logo' });
+    setBrandingFooterLogoUrl(url);
+    return url;
+  }
+
+  /**
    * handleUploadFavicon
    * pt-BR: Envia o favicon e atualiza estado.
    * en-US: Uploads the favicon and updates state.
@@ -502,6 +524,7 @@ export default function SystemSettings() {
   async function handleSaveBranding() {
     const payload: Record<string, string> = {};
     if (brandingLogoUrl) payload['app_logo_url'] = brandingLogoUrl;
+    if (brandingFooterLogoUrl) payload['app_footer_logo_url'] = brandingFooterLogoUrl;
     if (brandingFaviconUrl) payload['app_favicon_url'] = brandingFaviconUrl;
     if (brandingSocialUrl) payload['app_social_image_url'] = brandingSocialUrl;
 
@@ -1435,15 +1458,27 @@ export default function SystemSettings() {
             </div>
           </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="space-y-2">
-                  <Label>Logo</Label>
+                  <Label>Logo Principal</Label>
                   <ImageUpload
                     name="app_logo"
-                    label="Logo"
+                    label="Logo Principal"
                     value={brandingLogoUrl || ''}
                     onChange={(val) => setBrandingLogoUrl(val || null)}
                     onUpload={handleUploadLogo}
+                    acceptedTypes={["image/png", "image/jpeg", "image/webp", "image/svg+xml"]}
+                    className="max-w-xs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Logo do Rodapé</Label>
+                  <ImageUpload
+                    name="app_footer_logo"
+                    label="Logo do Rodapé"
+                    value={brandingFooterLogoUrl || ''}
+                    onChange={(val) => setBrandingFooterLogoUrl(val || null)}
+                    onUpload={handleUploadFooterLogo}
                     acceptedTypes={["image/png", "image/jpeg", "image/webp", "image/svg+xml"]}
                     className="max-w-xs"
                   />
