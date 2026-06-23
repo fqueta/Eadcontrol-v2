@@ -154,6 +154,10 @@ Route::name('api.')->prefix('api/v1')->middleware([
         Route::get('options/branding', [OptionController::class, 'publicBranding'])
             ->name('options.public.branding')
             ->middleware('throttle:60,1');
+        
+        // Dynamic metadata crawler preview for social sharing crawlers/bots
+        Route::get('crawler-preview', [OptionController::class, 'crawlerPreview'])
+            ->name('public.crawler-preview');
         // Endpoint público: banner rotativo da landing page
         Route::get('posts/banners', [PostController::class, 'publicBanners'])
             ->name('posts.public.banners')

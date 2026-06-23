@@ -529,4 +529,143 @@ class OptionController extends Controller
             'status' => 200
         ]);
     }
+
+    /**
+     * Preview de metadados para crawlers/bots (WhatsApp, Facebook, Telegram, etc.)
+     * pt-BR: Retorna o index.html da SPA com as tags <title> e <meta> injetadas
+     *        dinamicamente conforme o tenant e a rota original (como detalhes de cursos).
+     */
+    public function crawlerPreview(Request $request)
+    {
+        // 1. Obter a URL de origem solicitada
+        $rawUrl = $request->query('url') ?? $request->fullUrl();
+        $parsedUrl = parse_url($rawUrl);
+        $path = $parsedUrl['path'] ?? '/';
+
+        // 2. Buscar o template HTML do frontend (com cache se o driver suportar)
+        $templateHtml = null;
+        try {
+            $templateHtml = cache()->remember('frontend_index_html', 1800, function() {
+                try {
+                    $context = stream_context_create([
+                        'http' => ['timeout' => 3.0]
+                    ]);
+                    return @file_get_contents('http://frontend/index.html', false, $context);
+                } catch (\Exception $e) {
+                    return null;
+                }
+            });
+        } catch (\BadMethodCallException $e) {
+            // Se o driver de cache não suportar tags/remember (ex: driver 'file' local com tenancy)
+            try {
+                $context = stream_context_create([
+                    'http' => ['timeout' => 3.0]
+                ]);
+                $templateHtml = @file_get_contents('http://frontend/index.html', false, $context);
+            } catch (\Exception $ex) {
+                $templateHtml = null;
+            }
+        }
+
+        if (!$templateHtml) {
+            $localPaths = [
+                base_path('../frontend/index.html'),
+                base_path('../frontend/dist/index.html'),
+                public_path('index.html')
+            ];
+            foreach ($localPaths as $pathToCheck) {
+                if (file_exists($pathToCheck)) {
+                    $templateHtml = file_get_contents($pathToCheck);
+                    break;
+                }
+            }
+        }
+
+        if (!$templateHtml) {
+            return response('Service temporarily unavailable', 503);
+        }
+
+        // Metadados padrão (fallback)
+        $branding = [
+            'title' => 'Incluireeducar - Controle de EAD',
+            'description' => 'Plataforma de controle de ead',
+            'image' => 'https://api-educar.eadcontrol.com.br/tenancy/assets/file-storage/ExO8vhdToezIjc9ImVHx7tJyAYI65BZ5V6sVW2Mu.png'
+        ];
+
+        // Carregar opções do tenant
+        $allowedKeys = [
+            'app_institution_name',
+            'app_institution_slogan',
+            'app_institution_description',
+            'app_social_image_url',
+            'app_logo_url'
+        ];
+
+        $options = Option::query()
+            ->whereIn('url', $allowedKeys)
+            ->where(function($q) {
+                $q->whereNull('deletado')->orWhere('deletado', '!=', 's');
+            })
+            ->where(function($q) {
+                $q->whereNull('excluido')->orWhere('excluido', '!=', 's');
+            })
+            ->get(['url', 'value'])
+            ->pluck('value', 'url')
+            ->toArray();
+
+        $instName = $options['app_institution_name'] ?? config('app.name');
+        $slogan = $options['app_institution_slogan'] ?? null;
+        
+        if ($instName) {
+            $branding['title'] = $slogan ? "{$instName} — {$slogan}" : $instName;
+        }
+        if (!empty($options['app_institution_description'])) {
+            $branding['description'] = $options['app_institution_description'];
+        }
+        if (!empty($options['app_social_image_url'])) {
+            $branding['image'] = $options['app_social_image_url'];
+        } elseif (!empty($options['app_logo_url'])) {
+            $branding['image'] = $options['app_logo_url'];
+        }
+
+        // 3. Verificar se o caminho aponta para a página de detalhes de um curso
+        $normalizedPath = trim($path, '/');
+        $course = null;
+
+        if (preg_match('/^(?:cursos|courses)(?:\/by-slug)?\/([^\/]+)$/i', $normalizedPath, $matches)) {
+            $slugOrId = $matches[1];
+            if (is_numeric($slugOrId)) {
+                $course = \App\Models\Curso::find($slugOrId);
+            } else {
+                $course = \App\Models\Curso::where('slug', $slugOrId)
+                    ->orWhere('campo_bus', $slugOrId)
+                    ->first();
+            }
+        }
+
+        if ($course) {
+            $branding['title'] = ($course->titulo ?: $course->nome) . " | " . ($options['app_institution_name'] ?? config('app.name'));
+            if ($course->descricao) {
+                $branding['description'] = \Illuminate\Support\Str::limit(strip_tags($course->descricao), 200);
+            }
+            if (isset($course->config['cover']['url'])) {
+                $branding['image'] = $course->config['cover']['url'];
+            }
+        }
+
+        // 4. Injetar metadados no HTML
+        $html = preg_replace('/<title id="app-title">.*?<\/title>/is', "<title id=\"app-title\">" . e($branding['title']) . "</title>", $templateHtml);
+        $html = preg_replace('/<meta id="app-description" name="description" content="[^"]*"/is', '<meta id="app-description" name="description" content="' . e($branding['description']) . '"', $html);
+        $html = preg_replace('/<meta property="og:title" content="[^"]*"/is', '<meta property="og:title" content="' . e($branding['title']) . '"', $html);
+        $html = preg_replace('/<meta property="og:description" content="[^"]*"/is', '<meta property="og:description" content="' . e($branding['description']) . '"', $html);
+        
+        if (strpos($html, 'id="app-og-image"') !== false) {
+            $html = preg_replace('/<meta id="app-og-image" property="og:image" content="[^"]*"/is', '<meta id="app-og-image" property="og:image" content="' . e($branding['image']) . '"', $html);
+        }
+        if (strpos($html, 'id="app-twitter-image"') !== false) {
+            $html = preg_replace('/<meta id="app-twitter-image" name="twitter:image" content="[^"]*"/is', '<meta id="app-twitter-image" name="twitter:image" content="' . e($branding['image']) . '"', $html);
+        }
+
+        return response($html)->header('Content-Type', 'text/html');
+    }
 }
