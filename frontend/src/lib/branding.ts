@@ -27,6 +27,7 @@ export function getBrandLogoUrl(defaultUrl: string = '/logo.png'): string {
  */
 export function getBrandFooterLogoUrl(defaultUrl: string = '/logo.png'): string {
   try {
+    // Force cache trigger
     const ls = localStorage.getItem('app_footer_logo_url');
     if (ls && ls.trim() !== '') return ls.trim();
   } catch {}

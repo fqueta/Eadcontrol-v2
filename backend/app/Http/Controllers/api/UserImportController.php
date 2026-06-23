@@ -38,7 +38,19 @@ class UserImportController extends Controller
             // Fetch from URL if provided
             if ($url) {
                 try {
-                    $response = Http::timeout(120)->get($url);
+                    // pt-BR: Mapeia conexões locais do WSL para o host Windows
+                    // en-US: Maps local WSL connections to the Windows host gateway
+                    if (str_contains($url, 'hair-api-old.localhost')) {
+                        $gateway = trim(shell_exec("ip route show | grep default | awk '{print $3}'"));
+                        if ($gateway) {
+                            $targetUrl = str_replace('hair-api-old.localhost', $gateway, $url);
+                            $response = Http::withHeaders(['Host' => 'hair-api-old.localhost'])->timeout(120)->get($targetUrl);
+                        } else {
+                            $response = Http::timeout(120)->get($url);
+                        }
+                    } else {
+                        $response = Http::timeout(120)->get($url);
+                    }
                     if ($response->successful()) {
                         $json = $response->json();
                         

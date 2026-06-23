@@ -360,7 +360,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+    // pt-BR: Fallback seguro quando o hook é chamado fora do AuthProvider (ex: duplicação de bundles no Vite)
+    // en-US: Safe fallback when hook is called outside AuthProvider (e.g. bundle duplication in Vite)
+    const storedUser = authService.getStoredUser();
+    const storedToken = authService.getStoredToken();
+    const storedPermissions = authService.getStoredPermissions() || [];
+    const storedMenu = authService.getStoredMenu() || [];
+    const storedForce = localStorage.getItem('auth_force_password_change') === 'true';
+
+    return {
+      user: storedUser,
+      token: storedToken,
+      permissions: storedPermissions,
+      menu: storedMenu,
+      isLoading: false,
+      isAuthenticated: !!storedUser && !!storedToken,
+      forcePasswordChange: storedForce,
+      login: async () => false,
+      loginWithResponse: async () => false,
+      register: async () => false,
+      logout: async () => {},
+      refreshUser: async () => {},
+      syncUserData: async () => {},
+      updateProfile: async () => false,
+      changePassword: async () => false,
+      userPointsBalance: null,
+    };
   }
   return context;
 }

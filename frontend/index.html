@@ -40,6 +40,38 @@
     -->
     <script>
       /**
+       * hexToHsl
+       * pt-BR: Converte cor hex para HSL compatível com variáveis Tailwind/CSS.
+       */
+      function hexToHsl(hex, lightnessAdjust) {
+        lightnessAdjust = lightnessAdjust || 0;
+        hex = hex.replace('#', '');
+        var r = parseInt(hex.substr(0, 2), 16) / 255;
+        var g = parseInt(hex.substr(2, 2), 16) / 255;
+        var b = parseInt(hex.substr(4, 2), 16) / 255;
+        var max = Math.max(r, g, b);
+        var min = Math.min(r, g, b);
+        var l = (max + min) / 2;
+        var h = 0, s = 0;
+        if (max !== min) {
+          var d = max - min;
+          s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+          switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+          }
+          h /= 6;
+        }
+        var hDeg = Math.round(h * 360);
+        var sPercent = Math.round(s * 100);
+        var lPercent = Math.round(l * 100) + lightnessAdjust;
+        if (lPercent < 0) lPercent = 0;
+        if (lPercent > 100) lPercent = 100;
+        return hDeg + ' ' + sPercent + '% ' + lPercent + '%';
+      }
+
+      /**
        * applyBrandingFromPersistedSources
        * pt-BR: Lê localStorage e, em fallback, variáveis globais; aplica favicon e imagens sociais.
        *        Também expõe valores em window.__APP_*__ para uso por componentes React.
@@ -115,13 +147,54 @@
 
           // Dynamic PWA manifest & browser theme-color
           var primaryColor = '#0ea5e9';
+          var secondaryColor = '';
+          var hoverColor = '';
+          var gradientTo = '';
+          var isDark = false;
+          var layoutStyle = 'rounded';
+
           try {
             var appearanceRaw = localStorage.getItem('appearanceSettings');
             if (appearanceRaw) {
               var settings = JSON.parse(appearanceRaw);
-              if (settings && settings.primaryColor) primaryColor = settings.primaryColor;
+              if (settings) {
+                if (settings.primaryColor) primaryColor = settings.primaryColor;
+                if (settings.secondaryColor) secondaryColor = settings.secondaryColor;
+                if (settings.hoverColor) hoverColor = settings.hoverColor;
+                if (settings.gradientToColor) gradientTo = settings.gradientToColor;
+                if (settings.darkMode) isDark = !!settings.darkMode;
+                if (settings.layoutStyle) layoutStyle = settings.layoutStyle;
+              }
             }
           } catch(e) {}
+
+          var root = document.documentElement;
+          if (primaryColor) {
+            root.style.setProperty('--primary', hexToHsl(primaryColor));
+            root.style.setProperty('--primary-hover', hexToHsl(hoverColor || primaryColor, hoverColor ? 0 : -10));
+          }
+          if (secondaryColor) {
+            root.style.setProperty('--secondary', hexToHsl(secondaryColor));
+            root.style.setProperty('--secondary-hover', hexToHsl(secondaryColor, -10));
+          }
+          if (gradientTo) {
+            root.style.setProperty('--gradient-to', gradientTo);
+          }
+          if (layoutStyle === 'squared') {
+            root.classList.add('layout-squared');
+            root.classList.remove('layout-rounded');
+            root.style.setProperty('--radius', '0px');
+          } else {
+            root.classList.add('layout-rounded');
+            root.classList.remove('layout-squared');
+            root.style.setProperty('--radius', '0.3rem');
+          }
+
+          if (isDark) {
+            root.classList.add('dark');
+          } else {
+            root.classList.remove('dark');
+          }
 
           var themeMeta = document.querySelector('meta[name="theme-color"]');
           if (themeMeta) {
@@ -188,11 +261,102 @@
       // Registra listeners para sincronização dinâmica
       window.addEventListener('storage', updateBranding);
       window.addEventListener('branding:updated', updateBranding);
+
+      // Prefetch de branding em background
+      try {
+        var host = window.location.host.replace(/^www\./i, '');
+        var protocol = window.location.protocol;
+        var parts = window.location.hostname.replace(/^www\./i, '').split('.');
+        var tenantId = parts.length > 1 ? parts[0] : 'default';
+        var apiUrl = '';
+
+        if (/localhost|127\.0\.0\.1/.test(host)) {
+          apiUrl = 'http://api-' + tenantId + '.localhost:8002/api/v1';
+        } else {
+          var isPlatformDomain = /(?:^|\.)(?:eadcontrol|eadcrontro|incluireeducar)\.com\.br$/i.test(host);
+          apiUrl = isPlatformDomain ? (protocol + '//api-' + host + '/api/v1') : (protocol + '//' + host + '/api/v1');
+        }
+
+        var publicBrandingUrl = apiUrl + '/public/options/branding';
+
+        fetch(publicBrandingUrl, { cache: 'no-store' })
+          .then(function(res) {
+            if (res.ok) return res.json();
+          })
+          .then(function(json) {
+            var dataObj = json && json.data;
+            if (dataObj && typeof dataObj === 'object') {
+              var keysMap = {
+                app_logo_url: 'app_logo_url',
+                app_footer_logo_url: 'app_footer_logo_url',
+                app_favicon_url: 'app_favicon_url',
+                app_social_image_url: 'app_social_image_url',
+                app_institution_name: 'app_institution_name',
+                app_institution_slogan: 'app_institution_slogan',
+                app_institution_description: 'app_institution_description',
+                app_institution_url: 'app_institution_url',
+                app_whatsapp: 'app_whatsapp',
+                app_theme: 'app_theme',
+                app_font_family: 'app_font_family',
+                home_hero_title: 'home_hero_title',
+                home_hero_image_url: 'home_hero_image_url'
+              };
+              for (var k in keysMap) {
+                if (dataObj[k] !== undefined) {
+                  localStorage.setItem(keysMap[k], String(dataObj[k]).trim());
+                }
+              }
+
+              try {
+                var primary = String(dataObj['app_primary_color'] || '').trim();
+                var primaryText = String(dataObj['app_primary_text_color'] || '').trim();
+                var secondary = String(dataObj['app_secondary_color'] || '').trim();
+                var secondaryText = String(dataObj['app_secondary_text_color'] || '').trim();
+                var hover = String(dataObj['app_hover_color'] || '').trim();
+                var gradientTo = String(dataObj['app_gradient_to_color'] || '').trim();
+                var layoutStyle = String(dataObj['app_layout_style'] || '').trim();
+                var headerTransparent = dataObj['app_header_transparent'] === true || dataObj['app_header_transparent'] === 'true';
+
+                var stored = localStorage.getItem('appearanceSettings');
+                var settings = stored ? JSON.parse(stored) : {};
+                if (primary) settings.primaryColor = primary;
+                if (primaryText) settings.primaryTextColor = primaryText;
+                if (secondary) settings.secondaryColor = secondary;
+                if (secondaryText) settings.secondaryTextColor = secondaryText;
+                if (hover) settings.hoverColor = hover;
+                if (gradientTo) settings.gradientToColor = gradientTo;
+                if (layoutStyle) settings.layoutStyle = layoutStyle;
+                settings.headerTransparent = headerTransparent;
+
+                localStorage.setItem('appearanceSettings', JSON.stringify(settings));
+              } catch(e) {}
+
+              updateBranding();
+              window.dispatchEvent(new Event('branding:updated'));
+            }
+          })
+          .catch(function(err) {
+            console.warn('Silent branding prefetch failed:', err);
+          });
+      } catch (e) {}
     </script>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background-color: #ffffff; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;">
+        <div style="width: 48px; height: 48px; border: 4px solid hsl(var(--primary) / 0.1); border-left-color: hsl(var(--primary)); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <style>
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+          /* Dark mode support for preload page */
+          .dark body, .dark #root > div {
+            background-color: #020617 !important;
+          }
+        </style>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
