@@ -630,6 +630,7 @@ export function CourseForm({
         })
       )
       .optional(),
+    config: z.any().optional(),
   });
 
   const { toast } = useToast();
@@ -664,6 +665,7 @@ export function CourseForm({
         cover: { url: '', file_id: undefined as any, title: '' },
         banner: { url: '', file_id: undefined as any, title: '' },
         product_ids: [],
+        duracao_manual: false,
       },
       inscricao: '0,00',
       valor: '0,00',
@@ -829,6 +831,7 @@ export function CourseForm({
           title: c.config?.banner?.title || '',
         },
         product_ids: c.config?.product_ids ?? [],
+        duracao_manual: !!c.config?.duracao_manual,
       },
       aeronaves: c.aeronaves ?? [],
       modulos: (c.modulos ?? []).map((m: any) => ({
@@ -2415,8 +2418,7 @@ export function CourseForm({
   /**
    * recalcInstallment
    * pt-BR: Recalcula o valor da parcela dividindo o Valor pelo número de parcelas.
-   * en-US: Recalculates installment value by dividing total Value by parcels.
-   */
+*/
   const recalcInstallment = (base?: string, parcelas?: string) => {
     const total = currencyRemoveMaskToNumber(base || '');
     const n = parseInt(String(parcelas || '').trim(), 10);
@@ -2437,8 +2439,11 @@ export function CourseForm({
    * en-US: Recalculates total course duration from modules/activities and
    *        updates the `duracao` field using the selected unit.
    */
-  const recalcCourseDuration = () => {
+  const recalcCourseDuration = (forceAuto = false) => {
     try {
+      if (!forceAuto && form.getValues('config.duracao_manual')) {
+        return;
+      }
       const mods = form.getValues('modulos') ?? [];
       const unit = form.getValues('unidade_duracao') || 'hrs';
       const totalSecs = (mods as any[]).reduce((acc, m) => acc + getModuleTotalSeconds(m), 0);
@@ -2680,8 +2685,39 @@ export function CourseForm({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="text-sm font-bold text-foreground/80">Duração <span className="text-[10px] font-normal text-muted-foreground text-primary uppercase ml-1">(automático)</span></Label>
-                    <Input placeholder="0" readOnly title="Calculado automaticamente a partir do conteúdo" {...form.register('duracao')} className="h-11 rounded-xl bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 text-primary font-bold" />
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-bold text-foreground/80 flex items-center gap-1">
+                        Duração
+                        {form.watch('config.duracao_manual') ? (
+                          <span className="text-[10px] font-normal text-amber-600 dark:text-amber-400 uppercase ml-1">(manual)</span>
+                        ) : (
+                          <span className="text-[10px] font-normal text-primary uppercase ml-1">(automático)</span>
+                        )}
+                      </Label>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Label htmlFor="duracao-manual" className="cursor-pointer text-[11px] font-medium">Definir manual</Label>
+                        <Switch
+                          id="duracao-manual"
+                          checked={!!form.watch('config.duracao_manual')}
+                          onCheckedChange={(checked) => {
+                            form.setValue('config.duracao_manual', checked);
+                            if (!checked) {
+                              recalcCourseDuration(true);
+                            }
+                          }}
+                          className="scale-75 data-[state=checked]:bg-amber-500"
+                        />
+                      </div>
+                    </div>
+                    <Input
+                      placeholder="0"
+                      readOnly={!form.watch('config.duracao_manual')}
+                      title={form.watch('config.duracao_manual') ? "Insira a duração manual" : "Calculado automaticamente a partir do conteúdo"}
+                      {...form.register('duracao')}
+                      className={`h-11 rounded-xl border-slate-200 dark:border-slate-800 text-primary font-bold ${
+                        !form.watch('config.duracao_manual') ? 'bg-slate-50/50 dark:bg-slate-950/50 cursor-not-allowed' : 'bg-white/50 dark:bg-slate-950/50'
+                      }`}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-bold text-foreground/80">Unidade de duração<RequiredMark /></Label>

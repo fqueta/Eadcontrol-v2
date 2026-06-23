@@ -68,6 +68,7 @@ export interface CourseConfig {
     title?: string;
   };
   product_ids?: string[];
+  duracao_manual?: boolean;
 }
 
 /**
