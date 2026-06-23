@@ -15,6 +15,36 @@ class PermissionService
     {
         // pega todos os grupos que o usuário pertence
         $groupIds = isset($user['permission_id']) ? $user['permission_id'] : 0;
+
+        // Master (grupo 1) sempre tem permissão total
+        if ($groupIds == 1) {
+            return true;
+        }
+
+        // Tratamento especial para rotas da biblioteca de mídia (file-storage)
+        if (is_string($routeName) && str_starts_with($routeName, 'api.file-storage.')) {
+            // Leva em conta especificamente os permission_id de 1 a 5
+            if ($groupIds >= 1 && $groupIds <= 5) {
+                // Permite listar/ver e fazer upload para os perfis autorizados (1 a 5)
+                if ($action === 'view' || $action === 'create' || $action === 'upload') {
+                    return true;
+                }
+                // Exclusão permitida apenas para Master (1) e Administrador (2)
+                if ($action === 'delete') {
+                    return $groupIds == 1 || $groupIds == 2;
+                }
+            }
+            return false;
+        }
+
+        // Tratamento especial para as rotas de opções gerais (options/all)
+        if ($routeName === 'api.options.all' || $routeName === 'api.options.all.get') {
+            if ($groupIds >= 1 && $groupIds <= 5) {
+                return true;
+            }
+            return false;
+        }
+
         $campo = 'can_' . $action; // can_view, can_create, can_edit, can_delete, can_upload
         // se no seu caso for hasOne ou belongsTo, só trocar.
         $get_id_menu_by_url = $this->get_id_menu_by_url($routeName);
