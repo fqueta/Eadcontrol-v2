@@ -7,3 +7,18 @@
 
 # And keep the .gitignore itself
 !.gitignore
+
+# Scripts de deploy e operação
+!deploy.sh
+!update.sh
+
+# Docker compose
+!docker-compose.yml
+!docker-compose.production.yml
+
+# Documentação operacional
+!AI_CONTEXT.md
+!DEPLOYMENT.md
+!DEPLOY_SUMMARY.md
+!OPERATIONS.md
+!SECURITY_CHECKLIST.md

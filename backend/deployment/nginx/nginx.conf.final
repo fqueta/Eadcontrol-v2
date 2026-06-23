@@ -39,9 +39,9 @@ http {
     # 1. REDIRECIONAMENTO AUTOMÁTICO (HTTP para HTTPS)
     server {
         listen 80;
-        server_name cursos.incluireeducar.com.br api-cursos.incluireeducar.com.br;
+        server_name cursos.incluireeducar.com.br api-cursos.incluireeducar.com.br *.eadcontrol.com.br;
 
-        # Rota para renovação do Certbot
+        # Rota para renovação do Certbot (domínios conhecidos)
         location /.well-known/acme-challenge/ {
             root /var/www/certbot;
         }
@@ -51,7 +51,7 @@ http {
         }
     }
 
-    # 2. SERVIDOR HTTPS
+    # 2. SERVIDOR HTTPS - Domínios conhecidos (incluireeducar)
     server {
         listen 443 ssl;
         http2 on;
@@ -111,6 +111,58 @@ http {
             if ($host = "api-cursos.incluireeducar.com.br") {
                 proxy_pass http://octane_app:8000;
             }
+        }
+    }
+
+    # 3. SERVIDOR HTTPS - Tenants Wildcard (*.eadcontrol.com.br)
+    server {
+        listen 443 ssl;
+        http2 on;
+        server_name *.eadcontrol.com.br;
+
+        # Certificados Wildcard
+        ssl_certificate /etc/letsencrypt/live/eadcontrol.com.br/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/eadcontrol.com.br/privkey.pem;
+
+        # Otimização SSL
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_session_timeout 1d;
+        ssl_session_cache shared:SSL:100m;
+        ssl_session_tickets off;
+        ssl_prefer_server_ciphers on;
+
+        # Proxy Comum
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+
+        # CORS para *.eadcontrol.com.br
+        set $cors_origin "";
+        if ($http_origin ~* "^https://.*\.eadcontrol\.com\.br$") {
+            set $cors_origin $http_origin;
+        }
+
+        # ROTEAMENTO: Todos os tenants vão para o Backend (Octane)
+        location / {
+            if ($request_method = 'OPTIONS') {
+                add_header 'Access-Control-Allow-Origin' "$cors_origin" always;
+                add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+                add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-Tenant-Id,X-Tenant-Slug' always;
+                add_header 'Access-Control-Allow-Credentials' 'true' always;
+                add_header 'Access-Control-Max-Age' 1728000;
+                add_header 'Content-Type' 'text/plain; charset=utf-8';
+                add_header 'Content-Length' 0;
+                return 204;
+            }
+
+            add_header 'Access-Control-Allow-Origin' "$cors_origin" always;
+            add_header 'Access-Control-Allow-Credentials' 'true' always;
+
+            proxy_pass http://octane_app:8000;
         }
     }
 }
