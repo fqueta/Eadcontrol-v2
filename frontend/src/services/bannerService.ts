@@ -24,6 +24,9 @@ export interface BannerSlide {
     buttonAlign?: 'left' | 'center' | 'right';
     buttonPosY?: 'top' | 'center' | 'bottom';
     mobile_image_url?: string;
+    showTexts?: boolean;
+    showButton?: boolean;
+    showOverlay?: boolean;
   };
 }
 

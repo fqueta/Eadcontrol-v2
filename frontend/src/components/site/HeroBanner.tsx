@@ -147,7 +147,7 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
               }}
             />
             {/* Modern Overlay Gradient */}
-            {showOverlay && (
+            {(slide.config?.showOverlay !== false && (slide.config?.showOverlay !== undefined ? slide.config.showOverlay : showOverlay)) && (
               <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/50 to-transparent z-10" />
             )}
             
@@ -157,7 +157,7 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
               'items-center'
             }`}>
               <div className={`max-w-3xl transition-all duration-1000 transform pointer-events-auto ${index === selectedIndex ? 'translate-x-0 opacity-100' : '-translate-x-12 opacity-0'}`}>
-                {showTexts && (
+                {(slide.config?.showTexts !== false && (slide.config?.showTexts !== undefined ? slide.config.showTexts : showTexts)) && (
                   <>
                     <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary font-bold text-xs sm:text-sm mb-4 md:mb-8 backdrop-blur-md">
                       <Play className="h-4 w-4 fill-current" />
@@ -181,7 +181,7 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
                   slide.config?.buttonAlign === 'center' ? 'justify-center' :
                   slide.config?.buttonAlign === 'right' ? 'justify-end' : 'justify-start'
                 }`}>
-                  {showButton && (
+                  {(slide.config?.showButton !== false && (slide.config?.showButton !== undefined ? slide.config.showButton : showButton)) && (
                     <Button size="lg" className="w-full sm:w-auto h-12 md:h-16 px-6 md:px-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm md:text-lg shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95" asChild>
                       <Link to="/cursos">
                         Explorar Cursos
@@ -245,6 +245,9 @@ type StaticSlide = {
   titleSize?: number;
   buttonAlign?: 'left' | 'center' | 'right';
   buttonPosY?: 'top' | 'center' | 'bottom';
+  showTexts?: boolean;
+  showButton?: boolean;
+  showOverlay?: boolean;
 };
 
 /**
@@ -315,7 +318,7 @@ function StaticCarousel({ name, slogan, description }: { name: string; slogan: s
                 backgroundImage: `url(${isMobile && img.mobileUrl ? img.mobileUrl : img.url})` 
               }}
             />
-            {showOverlay && (
+            {(img.showOverlay !== false && (img.showOverlay !== undefined ? img.showOverlay : showOverlay)) && (
               <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/50 to-transparent z-10" />
             )}
             
@@ -325,7 +328,7 @@ function StaticCarousel({ name, slogan, description }: { name: string; slogan: s
               'items-center'
             }`}>
               <div className={`max-w-3xl transition-all duration-1000 transform pointer-events-auto ${index === selectedIndex ? 'translate-x-0 opacity-100' : '-translate-x-12 opacity-0'}`}>
-                {showTexts && (
+                {(img.showTexts !== false && (img.showTexts !== undefined ? img.showTexts : showTexts)) && (
                   <>
                     <div className="mb-4 md:mb-8">
                       <BrandLogo className="h-10 md:h-16 w-auto drop-shadow-lg" />
@@ -359,7 +362,7 @@ function StaticCarousel({ name, slogan, description }: { name: string; slogan: s
                   img.buttonAlign === 'center' ? 'justify-center' :
                   img.buttonAlign === 'right' ? 'justify-end' : 'justify-start'
                 }`}>
-                  {showButton && (
+                  {(img.showButton !== false && (img.showButton !== undefined ? img.showButton : showButton)) && (
                     <Button size="lg" className="w-full sm:w-auto h-12 md:h-16 px-6 md:px-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm md:text-lg shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95" asChild>
                       <Link to={img.buttonUrl || "/cursos"}>
                         {img.buttonLabel || "Conhecer Cursos"}

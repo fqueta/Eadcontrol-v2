@@ -29,6 +29,9 @@ type StaticSlide = {
   titleSize?: number;
   buttonAlign?: 'left' | 'center' | 'right';
   buttonPosY?: 'top' | 'center' | 'bottom';
+  showTexts?: boolean;
+  showButton?: boolean;
+  showOverlay?: boolean;
 };
 
 /**
@@ -127,7 +130,7 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
     toast({ title: 'Imagem mobile removida' });
   };
 
-  const handleUpdateSlide = (index: number, field: 'title' | 'subtitle' | 'buttonLabel' | 'buttonUrl' | 'titleSize' | 'buttonAlign' | 'buttonPosY' | 'mobileUrl', value: string | number) => {
+  const handleUpdateSlide = (index: number, field: 'title' | 'subtitle' | 'buttonLabel' | 'buttonUrl' | 'titleSize' | 'buttonAlign' | 'buttonPosY' | 'mobileUrl' | 'showTexts' | 'showButton' | 'showOverlay', value: string | number | boolean) => {
     const newSlides = [...slides];
     newSlides[index] = { ...newSlides[index], [field]: value } as any;
     setSlides(newSlides);
@@ -428,6 +431,36 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
                               </button>
                             ))}
                           </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t pt-3 mt-1">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor={`show-texts-${index}`} className="text-xs font-bold text-slate-500 uppercase cursor-pointer">Exibir Textos</Label>
+                          <Switch
+                            id={`show-texts-${index}`}
+                            checked={slide.showTexts !== false}
+                            onCheckedChange={(checked) => handleUpdateSlide(index, 'showTexts', checked)}
+                            className="scale-90 data-[state=checked]:bg-primary"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor={`show-button-${index}`} className="text-xs font-bold text-slate-500 uppercase cursor-pointer">Exibir Botão</Label>
+                          <Switch
+                            id={`show-button-${index}`}
+                            checked={slide.showButton !== false}
+                            onCheckedChange={(checked) => handleUpdateSlide(index, 'showButton', checked)}
+                            className="scale-90 data-[state=checked]:bg-primary"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor={`show-overlay-${index}`} className="text-xs font-bold text-slate-500 uppercase cursor-pointer">Exibir Overlay</Label>
+                          <Switch
+                            id={`show-overlay-${index}`}
+                            checked={slide.showOverlay !== false}
+                            onCheckedChange={(checked) => handleUpdateSlide(index, 'showOverlay', checked)}
+                            className="scale-90 data-[state=checked]:bg-primary"
+                          />
                         </div>
                       </div>
                     </div>

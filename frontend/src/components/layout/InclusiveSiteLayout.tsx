@@ -65,22 +65,35 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
       return null;
     }
   });
-  const [headerTransparent, setHeaderTransparent] = useState<boolean>(false);
+  const [headerTransparent, setHeaderTransparent] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('appearanceSettings');
+      return saved ? !!JSON.parse(saved).headerTransparent : false;
+    } catch {
+      return false;
+    }
+  });
   const [isAdminImpersonating, setIsAdminImpersonating] = useState(false);
 
   useEffect(() => {
     const checkHeaderStyle = () => {
       try {
-        const saved = localStorage.getItem('footer_config');
+        const saved = localStorage.getItem('appearanceSettings');
         if (saved) {
           const parsed = JSON.parse(saved);
           setHeaderTransparent(!!parsed.headerTransparent);
+        } else {
+          setHeaderTransparent(false);
         }
       } catch {}
     };
     checkHeaderStyle();
     window.addEventListener('storage', checkHeaderStyle);
-    return () => window.removeEventListener('storage', checkHeaderStyle);
+    window.addEventListener('branding:updated', checkHeaderStyle);
+    return () => {
+      window.removeEventListener('storage', checkHeaderStyle);
+      window.removeEventListener('branding:updated', checkHeaderStyle);
+    };
   }, []);
 
   useEffect(() => {
