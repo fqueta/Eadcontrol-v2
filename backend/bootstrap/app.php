@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->prepend(\App\Http\Middleware\SaasTenancyByHeader::class);
         $middleware->trustProxies(at: '*');
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
@@ -35,6 +36,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant.headers' => \App\Http\Middleware\TenantHeadersMiddleware::class,
             'auth.active'    => \App\Http\Middleware\EnsureActiveUser::class,
+            'saas.admin'     => \App\Http\Middleware\CheckSaasPermission::class,
+            'saas.tenancy'   => \App\Http\Middleware\SaasTenancyByHeader::class,
         ]);
 
         $middleware->web(append: [

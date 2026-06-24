@@ -148,6 +148,23 @@
     -   `backend/app/Http/Controllers/api/ProductUnitController.php`: `map_product_unit()` agora retorna `null` se `$productUnit` for null.
     -   `backend/app/Services/Qlib.php`: `get_unit_by_id()` retorna `null` se `$id` vazio ou unidade nao encontrada.
     -   `backend/app/Services/PermissionService.php`: Mapeamento de rotas de produtos corrigido de `/products` para `/admin/products`.
+-   **SaaS Subscription and Invoice Management**:
+    -   **Migrations (Central DB)**:
+        -   `create_saas_plans_table`: Tabela `saas_plans` contendo campos: `name`, `slug`, `price_monthly`, `price_yearly`, `active`, `trial_days`, `features` (json).
+        -   `create_saas_subscriptions_table`: Tabela `saas_subscriptions` mapeando `tenant_id`, `plan_id`, `starts_at`, `ends_at`, `status` (`active`, `suspended`, `cancelled`, `trial`, `past_due`), `billing_cycle`, `next_billing_date`, `config` (json).
+        -   `create_saas_invoices_table`: Tabela `saas_invoices` registrando faturas para cada tenant, com `subscription_id`, `amount`, `due_date`, `status` (`pending`, `paid`, `cancelled`, `overdue`), `payment_method`, `gateway_invoice_id`, `invoice_url`.
+    -   **Models & Controllers**:
+        -   Models: `SaasPlan`, `SaasSubscription`, `SaasInvoice` configurados especificamente com a conexão `mysql` (Central DB).
+        -   Controllers: `SaasPlanController`, `SaasSubscriptionController` (incluindo ações de suspensão, reativação e cancelamento), `SaasInvoiceController` (com suporte a emissão em lote, faturamento do mês e sincronização com gateway), `SaasDashboardController` (trazendo métricas consolidadas como MRR, ARR, e faturamento mensal).
+    -   **Asaas Payment Integration**:
+        -   `SaasPaymentGatewayInterface` e implementação `SaasAsaasGateway` para registrar clientes e emitir faturas no Asaas centralizado sob as credenciais de admin SaaS da plataforma.
+    -   **Middleware**:
+        -   `SaasTenancyByHeader` registrado de forma global e prioritária em `bootstrap/app.php` para chavear o tenant apropriado via header `X-Tenant-Id` antes da execução do middleware Sanctum.
+        -   `CheckSaasPermission`: Valida se o usuário autenticado possui `permission_id = 1` para as rotas sob o prefixo `api/v1/saas/*`.
+    -   **Frontend Pages & Services**:
+        -   `saasService.ts` e `saas.ts` (tipos): Cliente HTTP apontando para as novas APIs centrais de SaaS.
+        -   `SaasDashboard.tsx`, `SaasPlans.tsx`, `SaasSubscriptions.tsx` (com modal para criação e edição dinâmica de planos, ciclos de cobrança, data de vencimento e status), `SaasInvoices.tsx`.
+        -   `AppSidebar.tsx` e `App.tsx`: Roteamento e link no menu lateral "Gerenciamento SaaS" restrito a super admins.
 
 ## Important Constraints & Rules
 -   **Octane**: Code changes in generic PHP classes may require `artisan octane:reload` to take effect due to memory persistence.

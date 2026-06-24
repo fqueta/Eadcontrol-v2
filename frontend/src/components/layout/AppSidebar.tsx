@@ -42,7 +42,7 @@ import { BrandLogo } from "@/components/branding/BrandLogo";
  */
 export function AppSidebar() {
   const { state } = useSidebar();
-  const { menu: apiMenu, logout } = useAuth();
+  const { menu: apiMenu, logout, user } = useAuth();
   const location = useLocation();
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
@@ -275,6 +275,110 @@ export function AppSidebar() {
             </TooltipProvider>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* SaaS Management (Only for super admin permission_id = 1) */}
+        {user?.permission_id && parseInt(String(user.permission_id)) === 1 && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-muted-foreground/70 uppercase tracking-wider font-bold text-[10px] mb-2 px-4">
+              Gerenciamento SaaS
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <TooltipProvider>
+                <SidebarMenu className="space-y-1 px-2">
+                  
+                  {/* Dashboard SaaS */}
+                  <SidebarMenuItem>
+                    <Tooltip disableHoverableContent={!collapsed}>
+                      <TooltipTrigger asChild>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive('/saas')}
+                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${collapsed ? 'justify-center' : 'justify-start'}`}
+                        >
+                          <NavLink
+                            to="/admin/saas"
+                            className={`flex items-center gap-3 py-2 ${collapsed ? 'px-0 justify-center' : 'px-2'}`}
+                          >
+                            <ChartPie className={`h-[18px] w-[18px] ${isActive('/saas') ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
+                            {!collapsed && <span>Dashboard SaaS</span>}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </TooltipTrigger>
+                      {collapsed && <TooltipContent side="right">Dashboard SaaS</TooltipContent>}
+                    </Tooltip>
+                  </SidebarMenuItem>
+
+                  {/* Planos SaaS */}
+                  <SidebarMenuItem>
+                    <Tooltip disableHoverableContent={!collapsed}>
+                      <TooltipTrigger asChild>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive('/saas/plans')}
+                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${collapsed ? 'justify-center' : 'justify-start'}`}
+                        >
+                          <NavLink
+                            to="/admin/saas/plans"
+                            className={`flex items-center gap-3 py-2 ${collapsed ? 'px-0 justify-center' : 'px-2'}`}
+                          >
+                            <Wrench className={`h-[18px] w-[18px] ${isActive('/saas/plans') ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
+                            {!collapsed && <span>Planos SaaS</span>}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </TooltipTrigger>
+                      {collapsed && <TooltipContent side="right">Planos SaaS</TooltipContent>}
+                    </Tooltip>
+                  </SidebarMenuItem>
+
+                  {/* Assinaturas SaaS */}
+                  <SidebarMenuItem>
+                    <Tooltip disableHoverableContent={!collapsed}>
+                      <TooltipTrigger asChild>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive('/saas/subscriptions')}
+                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${collapsed ? 'justify-center' : 'justify-start'}`}
+                        >
+                          <NavLink
+                            to="/admin/saas/subscriptions"
+                            className={`flex items-center gap-3 py-2 ${collapsed ? 'px-0 justify-center' : 'px-2'}`}
+                          >
+                            <User className={`h-[18px] w-[18px] ${isActive('/saas/subscriptions') ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
+                            {!collapsed && <span>Assinaturas SaaS</span>}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </TooltipTrigger>
+                      {collapsed && <TooltipContent side="right">Assinaturas SaaS</TooltipContent>}
+                    </Tooltip>
+                  </SidebarMenuItem>
+
+                  {/* Faturas SaaS */}
+                  <SidebarMenuItem>
+                    <Tooltip disableHoverableContent={!collapsed}>
+                      <TooltipTrigger asChild>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive('/saas/invoices')}
+                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${collapsed ? 'justify-center' : 'justify-start'}`}
+                        >
+                          <NavLink
+                            to="/admin/saas/invoices"
+                            className={`flex items-center gap-3 py-2 ${collapsed ? 'px-0 justify-center' : 'px-2'}`}
+                          >
+                            <Globe className={`h-[18px] w-[18px] ${isActive('/saas/invoices') ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
+                            {!collapsed && <span>Faturas SaaS</span>}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </TooltipTrigger>
+                      {collapsed && <TooltipContent side="right">Faturas SaaS</TooltipContent>}
+                    </Tooltip>
+                  </SidebarMenuItem>
+
+                </SidebarMenu>
+              </TooltipProvider>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarSeparator className="mx-4 my-2 opacity-50" />

@@ -391,3 +391,77 @@ Route::post('/v1/dev/create-tenant', function(\Illuminate\Http\Request $request)
         return response()->json(['message' => 'Error creating tenant: ' . $e->getMessage()], 500);
     }
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+// SaaS Management Routes (Central Domain Only - permission_id=1)
+// ════════════════════════════════════════════════════════════════════════════
+
+Route::prefix('v1/saas')->middleware(['api', 'auth:sanctum', 'saas.admin'])->group(function () {
+    // Dashboard
+    Route::get('dashboard', [\App\Http\Controllers\api\SaasDashboardController::class, 'index'])
+        ->name('saas.dashboard');
+
+    // Plans CRUD
+    Route::apiResource('plans', \App\Http\Controllers\api\SaasPlanController::class)
+        ->names([
+            'index' => 'saas.plans.index',
+            'store' => 'saas.plans.store',
+            'show' => 'saas.plans.show',
+            'update' => 'saas.plans.update',
+            'destroy' => 'saas.plans.destroy',
+        ])
+        ->parameters(['plans' => 'id']);
+
+    // Subscriptions CRUD + actions
+    Route::patch('subscriptions/{id}/suspend', [\App\Http\Controllers\api\SaasSubscriptionController::class, 'suspend'])
+        ->name('saas.subscriptions.suspend');
+    Route::patch('subscriptions/{id}/reactivate', [\App\Http\Controllers\api\SaasSubscriptionController::class, 'reactivate'])
+        ->name('saas.subscriptions.reactivate');
+    Route::apiResource('subscriptions', \App\Http\Controllers\api\SaasSubscriptionController::class)
+        ->names([
+            'index' => 'saas.subscriptions.index',
+            'store' => 'saas.subscriptions.store',
+            'show' => 'saas.subscriptions.show',
+            'update' => 'saas.subscriptions.update',
+            'destroy' => 'saas.subscriptions.destroy',
+        ])
+        ->parameters(['subscriptions' => 'id']);
+
+    // Invoices CRUD + actions
+    Route::post('invoices/{id}/charge', [\App\Http\Controllers\api\SaasInvoiceController::class, 'charge'])
+        ->name('saas.invoices.charge');
+    Route::patch('invoices/{id}/mark-paid', [\App\Http\Controllers\api\SaasInvoiceController::class, 'markAsPaid'])
+        ->name('saas.invoices.mark-paid');
+    Route::post('invoices/generate-batch', [\App\Http\Controllers\api\SaasInvoiceController::class, 'generateBatch'])
+        ->name('saas.invoices.generate-batch');
+    Route::apiResource('invoices', \App\Http\Controllers\api\SaasInvoiceController::class)
+        ->names([
+            'index' => 'saas.invoices.index',
+            'store' => 'saas.invoices.store',
+            'show' => 'saas.invoices.show',
+            'update' => 'saas.invoices.update',
+            'destroy' => 'saas.invoices.destroy',
+        ])
+        ->parameters(['invoices' => 'id']);
+
+    // Tenants list (for dropdowns)
+    Route::get('tenants', function () {
+        return response()->json([
+            'data' => \App\Models\Tenant::with('domains')
+                ->orderBy('name')
+                ->get()
+                ->map(function ($t) {
+                    return [
+                        'id' => $t->id,
+                        'name' => $t->name ?? $t->id,
+                        'ativo' => $t->ativo,
+                        'domain' => $t->domains->first()?->domain,
+                    ];
+                }),
+        ]);
+    })->name('saas.tenants.list');
+});
+
+// SaaS Webhook (público, sem auth)
+Route::post('v1/saas/webhook/{provider}', [\App\Http\Controllers\api\SaasWebhookController::class, 'handle'])
+    ->name('saas.webhook');

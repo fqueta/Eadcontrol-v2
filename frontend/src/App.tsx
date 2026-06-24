@@ -8,6 +8,7 @@ import { UserPrefsProvider } from "@/contexts/UserPrefsContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AdminProtectedRoute } from "./components/auth/AdminProtectedRoute";
+import { SaasPermissionGuard } from "./components/auth/SaasPermissionGuard";
 import { AuthRedirect } from "./components/auth/AuthRedirect";
 import { AppLayout } from "./components/layout/AppLayout";
 import FaviconUpdater from "@/components/branding/FaviconUpdater";
@@ -138,6 +139,11 @@ const LiveSessionsCalendar = lazy(() => import("./pages/school/LiveSessionsCalen
 const StudentLiveCalendar = lazy(() => import("./pages/school/StudentLiveCalendar"));
 const PublicVideoTip = lazy(() => import("./pages/public/PublicVideoTip"));
 const UserManual = lazy(() => import("./pages/help/UserManual"));
+
+const SaasDashboard = lazy(() => import("./pages/saas/SaasDashboard"));
+const SaasPlans = lazy(() => import("./pages/saas/SaasPlans"));
+const SaasSubscriptions = lazy(() => import("./pages/saas/SaasSubscriptions"));
+const SaasInvoices = lazy(() => import("./pages/saas/SaasInvoices"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1079,6 +1085,44 @@ const App = () => {
                   <AppLayout>
                     <ShowServiceOrder />
                   </AppLayout>
+                </AdminProtectedRoute>
+              } />
+
+              {/* SaaS Management */}
+              <Route path="/admin/saas" element={
+                <AdminProtectedRoute>
+                  <SaasPermissionGuard>
+                    <AppLayout>
+                      <SaasDashboard />
+                    </AppLayout>
+                  </SaasPermissionGuard>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/saas/plans" element={
+                <AdminProtectedRoute>
+                  <SaasPermissionGuard>
+                    <AppLayout>
+                      <SaasPlans />
+                    </AppLayout>
+                  </SaasPermissionGuard>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/saas/subscriptions" element={
+                <AdminProtectedRoute>
+                  <SaasPermissionGuard>
+                    <AppLayout>
+                      <SaasSubscriptions />
+                    </AppLayout>
+                  </SaasPermissionGuard>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/saas/invoices" element={
+                <AdminProtectedRoute>
+                  <SaasPermissionGuard>
+                    <AppLayout>
+                      <SaasInvoices />
+                    </AppLayout>
+                  </SaasPermissionGuard>
                 </AdminProtectedRoute>
               } />
 
