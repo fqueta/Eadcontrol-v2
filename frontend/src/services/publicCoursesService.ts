@@ -55,6 +55,10 @@ class PublicCoursesService extends GenericApiService<CourseRecord, any, any> {
    * pt-BR: Obtém detalhes do curso público via ID em '/public/cursos/by-id/{id}'.
    * en-US: Gets public course details by ID at '/public/cursos/by-id/{id}'.
    */
+  async getDisplayConfig(): Promise<{ badge_position: string }> {
+    return this.get<{ badge_position: string }>('/public/course-display-config');
+  }
+
   async getById(id: string | number): Promise<CourseRecord | any> {
     const response = await this.customGet<any>(`/by-id/${id}`);
     const normalized = (response && typeof response === 'object' && 'data' in response)

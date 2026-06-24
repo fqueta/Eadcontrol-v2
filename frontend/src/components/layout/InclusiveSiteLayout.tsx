@@ -274,6 +274,20 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
     { label: 'Site institucional', url: institutionUrl || 'https://incluireeducar.com.br/', auth: false, external: true },
   ];
 
+  // Busca a opção de Produtos no menu
+  const productsMenuItem = menuItems.find(item => 
+    String(item.url || '').toLowerCase().includes('/produtos') || 
+    String(item.label || '').toLowerCase().includes('produto') ||
+    String(item.label || '').toLowerCase().includes('loja')
+  );
+
+  // Define o item dinâmico do mobile: se houver a opção de produtos no menu, usa ela. Caso contrário, usa a URL institucional do tenant.
+  const dynamicMobileItem = productsMenuItem || { 
+    label: 'Site', 
+    url: institutionUrl || '#', 
+    external: true 
+  };
+
   return (
     <div className="min-h-screen bg-background transition-colors duration-500">
       {/* Refined background elements for modern app feel */}
@@ -312,17 +326,17 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
           : "sticky top-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-white/20 dark:border-slate-800/50 shadow-[0_2px_20px_-2px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_30px_-5px_rgba(0,0,0,0.3)]"
       }`}>
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-3 group cursor-pointer transition-transform duration-300 hover:scale-[1.02]">
+          <Link to="/" className="flex items-center space-x-3 group cursor-pointer transition-transform duration-300 hover:scale-[1.02]">
             <BrandLogo
               alt="Marca"
               fallbackSrc="https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=375,fit=crop,q=95/AQExkVPy2aUDzpqL/sem-nome-250-x-125-px-4-AzGMXn77KQTvDXrP.png"
               className="h-10 p-1.5"
             />
-            <div className="hidden md:block">
+            <div className="hidden md:block text-left">
               <h1 className={`text-xl font-bold ${isTransparentActive ? 'text-white' : 'bg-clip-text text-transparent'}`} style={isTransparentActive ? {} : { backgroundImage: 'linear-gradient(to right, hsl(var(--primary)), var(--gradient-to, #4f46e5))' }}>{institutionName}</h1>
                {institutionSlogan && <p className={`text-[10px] uppercase tracking-wider font-bold ${isTransparentActive ? 'text-white/70' : 'text-primary/80 dark:text-blue-300/70'}`}>{institutionSlogan}</p>}
             </div>
-          </div>
+          </Link>
           {/* Mobile actions: theme toggle + menu */}
           <div className="flex md:hidden items-center gap-2">
             <Button 
@@ -591,10 +605,21 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
             </button>
           </div>
 
-          <a href="https://incluireeducar.com.br/" target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-blue-400 transition-colors">
-            <ExternalLink className="w-5 h-5" />
-            <span className="text-[10px] font-bold uppercase tracking-tighter">Educar</span>
-          </a>
+          {dynamicMobileItem.external ? (
+            <a href={dynamicMobileItem.url} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-blue-400 transition-colors">
+              <ExternalLink className="w-5 h-5" />
+              <span className="text-[10px] font-bold uppercase tracking-tighter truncate max-w-[64px]">{dynamicMobileItem.label || 'Site'}</span>
+            </a>
+          ) : (
+            <Link to={dynamicMobileItem.url} className="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-blue-400 transition-colors">
+              {String(dynamicMobileItem.url).includes('/produtos') ? (
+                <ShoppingCart className="w-5 h-5" />
+              ) : (
+                <ExternalLink className="w-5 h-5" />
+              )}
+              <span className="text-[10px] font-bold uppercase tracking-tighter truncate max-w-[64px]">{dynamicMobileItem.label || 'Produtos'}</span>
+            </Link>
+          )}
           
           {isAuthenticated ? (
             <Link to="/aluno" className="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-blue-400 transition-colors">

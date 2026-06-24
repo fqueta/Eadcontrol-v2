@@ -23,6 +23,7 @@ function useIsMobile() {
 function useHeroSettings() {
   const [showOverlay, setShowOverlay] = useState(() => localStorage.getItem('home_hero_show_overlay') !== 'false');
   const [showTexts, setShowTexts] = useState(() => localStorage.getItem('home_hero_show_texts') !== 'false');
+  const [showLogo, setShowLogo] = useState(() => localStorage.getItem('home_hero_show_logo') !== 'false');
   const [showButton, setShowButton] = useState(() => localStorage.getItem('home_hero_show_button') !== 'false');
   const [autoplayInterval, setAutoplayInterval] = useState(() => Number(localStorage.getItem('home_hero_autoplay_interval') || 6) * 1000);
   const [headerTransparent, setHeaderTransparent] = useState(() => {
@@ -37,6 +38,7 @@ function useHeroSettings() {
   const updateSettings = useCallback(() => {
     setShowOverlay(localStorage.getItem('home_hero_show_overlay') !== 'false');
     setShowTexts(localStorage.getItem('home_hero_show_texts') !== 'false');
+    setShowLogo(localStorage.getItem('home_hero_show_logo') !== 'false');
     setShowButton(localStorage.getItem('home_hero_show_button') !== 'false');
     setAutoplayInterval(Number(localStorage.getItem('home_hero_autoplay_interval') || 6) * 1000);
     try {
@@ -56,7 +58,7 @@ function useHeroSettings() {
     };
   }, [updateSettings]);
 
-  return { showOverlay, showTexts, showButton, autoplayInterval, headerTransparent };
+  return { showOverlay, showTexts, showLogo, showButton, autoplayInterval, headerTransparent };
 }
 
 /**
@@ -246,6 +248,7 @@ type StaticSlide = {
   buttonAlign?: 'left' | 'center' | 'right';
   buttonPosY?: 'top' | 'center' | 'bottom';
   showTexts?: boolean;
+  showLogo?: boolean;
   showButton?: boolean;
   showOverlay?: boolean;
 };
@@ -257,7 +260,7 @@ type StaticSlide = {
 function StaticCarousel({ name, slogan, description }: { name: string; slogan: string; description: string }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [displayImages, setDisplayImages] = useState<StaticSlide[]>([]);
-  const { showOverlay, showTexts, showButton, autoplayInterval, headerTransparent } = useHeroSettings();
+  const { showOverlay, showTexts, showLogo, showButton, autoplayInterval, headerTransparent } = useHeroSettings();
   const isMobile = useIsMobile();
 
   const updateImages = useCallback(() => {
@@ -330,9 +333,11 @@ function StaticCarousel({ name, slogan, description }: { name: string; slogan: s
               <div className={`max-w-3xl transition-all duration-1000 transform pointer-events-auto ${index === selectedIndex ? 'translate-x-0 opacity-100' : '-translate-x-12 opacity-0'}`}>
                 {(img.showTexts !== false && (img.showTexts !== undefined ? img.showTexts : showTexts)) && (
                   <>
-                    <div className="mb-4 md:mb-8">
-                      <BrandLogo className="h-10 md:h-16 w-auto drop-shadow-lg" />
-                    </div>
+                    {(img.showLogo !== false && (img.showLogo !== undefined ? img.showLogo : showLogo)) && (
+                      <div className="mb-4 md:mb-8">
+                        <BrandLogo className="h-10 md:h-16 w-auto drop-shadow-lg" />
+                      </div>
+                    )}
                     
                     <h2 
                       className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-3 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg"

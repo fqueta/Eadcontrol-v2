@@ -109,12 +109,22 @@ class SaasSubscriptionController extends Controller
                 'next_billing_date' => $nextBillingDate,
             ]);
 
+            // Salvar dados de cobrança no tenant
+            $tenant = Tenant::find($request->input('tenant_id'));
+            if ($tenant) {
+                if ($request->filled('customer_name')) $tenant->name = $request->input('customer_name');
+                if ($request->filled('customer_email')) $tenant->email = $request->input('customer_email');
+                if ($request->filled('customer_cpf_cnpj')) $tenant->cpf_cnpj = $request->input('customer_cpf_cnpj');
+                if ($request->filled('customer_phone')) $tenant->phone = $request->input('customer_phone');
+                $tenant->save();
+            }
+
             // Registrar no gateway se solicitado
             if ($request->boolean('create_gateway_subscription')) {
                 try {
                     $gateway = SaasPaymentFactory::create();
                     $gatewayData = $gateway->createRecurringSubscription($subscription, [
-                        'name' => $request->input('customer_name', $subscription->tenant->name ?? $subscription->tenant_id),
+                        'name' => $request->input('customer_name', $tenant?->name ?? $subscription->tenant_id),
                         'email' => $request->input('customer_email'),
                         'cpfCnpj' => $request->input('customer_cpf_cnpj'),
                         'phone' => $request->input('customer_phone'),
@@ -129,7 +139,6 @@ class SaasSubscriptionController extends Controller
             }
 
             // Ativar o tenant
-            $tenant = Tenant::find($request->input('tenant_id'));
             if ($tenant && $tenant->ativo !== 's') {
                 $tenant->ativo = 's';
                 $tenant->save();

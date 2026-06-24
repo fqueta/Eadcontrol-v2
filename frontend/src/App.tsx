@@ -144,6 +144,8 @@ const SaasDashboard = lazy(() => import("./pages/saas/SaasDashboard"));
 const SaasPlans = lazy(() => import("./pages/saas/SaasPlans"));
 const SaasSubscriptions = lazy(() => import("./pages/saas/SaasSubscriptions"));
 const SaasInvoices = lazy(() => import("./pages/saas/SaasInvoices"));
+const SaasGatewayConfig = lazy(() => import("./pages/saas/SaasGatewayConfig"));
+const SaasTenants = lazy(() => import("./pages/saas/SaasTenants"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1121,6 +1123,24 @@ const App = () => {
                   <SaasPermissionGuard>
                     <AppLayout>
                       <SaasInvoices />
+                    </AppLayout>
+                  </SaasPermissionGuard>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/saas/gateway" element={
+                <AdminProtectedRoute>
+                  <SaasPermissionGuard>
+                    <AppLayout>
+                      <SaasGatewayConfig />
+                    </AppLayout>
+                  </SaasPermissionGuard>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/saas/tenants" element={
+                <AdminProtectedRoute>
+                  <SaasPermissionGuard>
+                    <AppLayout>
+                      <SaasTenants />
                     </AppLayout>
                   </SaasPermissionGuard>
                 </AdminProtectedRoute>

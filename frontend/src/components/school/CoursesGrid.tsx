@@ -14,9 +14,19 @@ import { cn } from '@/lib/utils'; // Make sure utils is imported for cn
  * pt-BR: Grid público de cursos com busca, cards e ação para detalhes.
  * en-US: Public courses grid with search, cards and action to details.
  */
+const badgePositionClasses: Record<string, string> = {
+  'top-right': 'top-4 right-4',
+  'top-left': 'top-4 left-4',
+  'top-center': 'top-4 left-1/2 -translate-x-1/2',
+  'bottom-right': 'bottom-4 right-4',
+  'bottom-left': 'bottom-4 left-4',
+  'bottom-center': 'bottom-4 left-1/2 -translate-x-1/2',
+};
+
 export default function CoursesGrid() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [badgePosition, setBadgePosition] = useState('top-right');
   
   // Persist view mode logic
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
@@ -35,6 +45,16 @@ export default function CoursesGrid() {
     queryKey: ['cursos', 'public-list', search],
     queryFn: async () => publicCoursesService.listPublicCourses({ page: 1, per_page: 50, search: search || undefined }),
     staleTime: 5 * 60 * 1000,
+  });
+
+  useQuery({
+    queryKey: ['course-display-config'],
+    queryFn: async () => {
+      const config = await publicCoursesService.getDisplayConfig();
+      setBadgePosition(config.badge_position || 'top-right');
+      return config;
+    },
+    staleTime: 10 * 60 * 1000,
   });
 
   /**
@@ -210,6 +230,11 @@ export default function CoursesGrid() {
               style={{ animationDelay: `${idx * 50}ms` }}
               onClick={() => onOpenCourse(c)}
             >
+              {price && badgePosition !== 'hidden' && badgePosition !== 'bottom-left' && (
+                 <div className={`absolute ${badgePositionClasses[badgePosition] || 'top-4 right-4'} bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 py-1.5 rounded-full font-black text-primary shadow-lg border border-white/20 z-10`}>
+                   R$ {price}
+                 </div>
+              )}
               <div className="relative w-full h-56 overflow-hidden shrink-0">
                 {cover ? (
                   <img
@@ -221,12 +246,6 @@ export default function CoursesGrid() {
                   <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
                     <GraduationCap className="w-16 h-16 text-primary/40" />
                   </div>
-                )}
-                {/* Overlay labels */}
-                {price && (
-                   <div className="absolute top-4 right-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 py-1.5 rounded-full font-black text-primary shadow-lg border border-white/20">
-                     R$ {price}
-                   </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500" />
               </div>
@@ -242,16 +261,24 @@ export default function CoursesGrid() {
               
               <CardContent className="p-8 pt-2 mt-auto">
                 <div className="pt-6 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
-                   <div className="flex -space-x-2">
-                     {[1, 2, 3].map(i => (
-                       <div key={i} className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 flex items-center justify-center overflow-hidden">
-                         <img src={`https://i.pravatar.cc/100?u=${i + idx}`} className="w-full h-full object-cover grayscale opacity-50" alt="aluno" />
-                       </div>
-                     ))}
-                     <div className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-muted-foreground mr-2">
-                       +
-                     </div>
-                   </div>
+                    {badgePosition === 'bottom-left' ? (
+                      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 py-1.5 rounded-full font-black text-primary border border-slate-200 dark:border-white/10 shadow-sm text-sm">
+                        R$ {price}
+                      </div>
+                    ) : badgePosition !== 'bottom-center' ? (
+                      <div className="flex -space-x-2">
+                        {[1, 2, 3].map(i => (
+                          <div key={i} className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 flex items-center justify-center overflow-hidden">
+                            <img src={`https://i.pravatar.cc/100?u=${i + idx}`} className="w-full h-full object-cover grayscale opacity-50" alt="aluno" />
+                          </div>
+                        ))}
+                        <div className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-muted-foreground mr-2">
+                          +
+                        </div>
+                      </div>
+                    ) : (
+                      <div /> // Espaçador vazio para manter o botão alinhado à direita
+                    )}
                    <Button 
                     onClick={(e) => { e.stopPropagation(); onOpenCourse(c); }} 
                     className="h-10 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all px-6 font-bold"

@@ -240,6 +240,7 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
       
       const showOverlay = getVal('home_hero_show_overlay');
       const showTexts = getVal('home_hero_show_texts');
+      const showLogo = getVal('home_hero_show_logo');
       const showButton = getVal('home_hero_show_button');
       const autoplayInterval = getVal('home_hero_autoplay_interval');
       const hf1t = String(dataObj['home_feature_1_title'] || '').trim();
@@ -275,17 +276,18 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
         if (heroImages) setVal('home_hero_images', heroImages, '__HOME_HERO_IMAGES__');
         if (showOverlay) setVal('home_hero_show_overlay', showOverlay, '__HOME_HERO_SHOW_OVERLAY__');
         if (showTexts) setVal('home_hero_show_texts', showTexts, '__HOME_HERO_SHOW_TEXTS__');
+        if (showLogo) setVal('home_hero_show_logo', showLogo, '__HOME_HERO_SHOW_LOGO__');
         if (showButton) setVal('home_hero_show_button', showButton, '__HOME_HERO_SHOW_BUTTON__');
         if (autoplayInterval) setVal('home_hero_autoplay_interval', autoplayInterval, '__HOME_HERO_AUTOPLAY_INTERVAL__');
         
         notify();
-
+ 
         try {
           if ((import.meta as any)?.env?.DEV) {
             const keys = [
               'app_institution_name','app_institution_slogan','app_institution_description',
               'home_hero_title','home_hero_image_url','home_hero_images',
-              'home_hero_show_overlay','home_hero_show_texts','home_hero_show_button','home_hero_autoplay_interval',
+              'home_hero_show_overlay','home_hero_show_texts','home_hero_show_logo','home_hero_show_button','home_hero_autoplay_interval',
               'home_feature_1_title','home_feature_1_desc',
               'home_feature_2_title','home_feature_2_desc',
               'home_feature_3_title','home_feature_3_desc',

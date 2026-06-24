@@ -11,6 +11,7 @@ import {
   SaasSubscription,
   SaasInvoice,
   SaasDashboardData,
+  SaasGatewayConfig,
   PaginatedResponse
 } from '@/types/saas';
 import { getTenantIdFromSubdomain } from '@/lib/qlib';
@@ -120,11 +121,28 @@ async function apiDelete<T>(path: string): Promise<T> {
 // ─── Service Methods ──────────────────────────────────────
 
 export const saasService = {
+  // ── Tenants ──
+  getTenants: () =>
+    apiGet<{ data: SaasTenant[] }>('/tenants'),
+  getTenant: (id: string) =>
+    apiGet<SaasTenant>(`/tenants/${id}`),
+  createTenant: (data: any) =>
+    apiPost<{ message: string; data: SaasTenant }>('/tenants', data),
+  updateTenant: (id: string, data: Partial<SaasTenant>) =>
+    apiPut<{ message: string; data: SaasTenant }>(`/tenants/${id}`, data),
+  // ── Gateway Config ──
+  getGatewayConfigs: () =>
+    apiGet<SaasGatewayConfig[]>('/gateway-configs'),
+  getGatewayConfig: (provider: string) =>
+    apiGet<SaasGatewayConfig>(`/gateway-configs/${provider}`),
+  createGatewayConfig: (data: Partial<SaasGatewayConfig>) =>
+    apiPost<{ message: string; data: SaasGatewayConfig }>('/gateway-configs', data),
+  updateGatewayConfig: (provider: string, data: Partial<SaasGatewayConfig>) =>
+    apiPut<{ message: string; data: SaasGatewayConfig }>(`/gateway-configs/${provider}`, data),
+  deleteGatewayConfig: (provider: string) =>
+    apiDelete<{ message: string }>(`/gateway-configs/${provider}`),
   // ── Dashboard ──
   getDashboard: () => apiGet<SaasDashboardData>('/dashboard'),
-
-  // ── Tenants ──
-  getTenants: () => apiGet<{ data: SaasTenant[] }>('/tenants'),
 
   // ── Plans ──
   getPlans: (params?: Record<string, any>) =>

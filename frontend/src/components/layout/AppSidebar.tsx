@@ -1,4 +1,4 @@
-import { ChevronUp, ChevronDown, User, Wrench, Settings, ChartPie, GraduationCap, Globe } from "lucide-react";
+import { ChevronUp, ChevronDown, User, Wrench, Settings, ChartPie, GraduationCap, Globe, Building2 } from "lucide-react";
 import * as React from "react";
 import { NavLink, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -371,6 +371,50 @@ export function AppSidebar() {
                         </SidebarMenuButton>
                       </TooltipTrigger>
                       {collapsed && <TooltipContent side="right">Faturas SaaS</TooltipContent>}
+                    </Tooltip>
+                  </SidebarMenuItem>
+
+                  {/* Tenants */}
+                  <SidebarMenuItem>
+                    <Tooltip disableHoverableContent={!collapsed}>
+                      <TooltipTrigger asChild>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive('/saas/tenants')}
+                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${collapsed ? 'justify-center' : 'justify-start'}`}
+                        >
+                          <NavLink
+                            to="/admin/saas/tenants"
+                            className={`flex items-center gap-3 py-2 ${collapsed ? 'px-0 justify-center' : 'px-2'}`}
+                          >
+                            <Building2 className={`h-[18px] w-[18px] ${isActive('/saas/tenants') ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
+                            {!collapsed && <span>Tenants</span>}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </TooltipTrigger>
+                      {collapsed && <TooltipContent side="right">Tenants</TooltipContent>}
+                    </Tooltip>
+                  </SidebarMenuItem>
+
+                  {/* Gateway SaaS */}
+                  <SidebarMenuItem>
+                    <Tooltip disableHoverableContent={!collapsed}>
+                      <TooltipTrigger asChild>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive('/saas/gateway')}
+                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${collapsed ? 'justify-center' : 'justify-start'}`}
+                        >
+                          <NavLink
+                            to="/admin/saas/gateway"
+                            className={`flex items-center gap-3 py-2 ${collapsed ? 'px-0 justify-center' : 'px-2'}`}
+                          >
+                            <Settings className={`h-[18px] w-[18px] ${isActive('/saas/gateway') ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
+                            {!collapsed && <span>Gateway</span>}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </TooltipTrigger>
+                      {collapsed && <TooltipContent side="right">Gateway</TooltipContent>}
                     </Tooltip>
                   </SidebarMenuItem>
 

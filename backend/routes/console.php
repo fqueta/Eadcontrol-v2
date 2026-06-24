@@ -144,3 +144,11 @@ Artisan::command('files:normalize-urls {--dry-run} {--chunk=200} {--limit=0}', f
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+/**
+ * saas:generate-invoices
+ * Gera faturas em lote para assinaturas com next_billing_date atingida.
+ * O comando é auto-descoberto em App\Console\Commands\GenerateSaasInvoices.
+ * Pode ser agendado no cron:
+ *   0 6 * * * cd /path/to/project && php artisan saas:generate-invoices --auto-charge >> storage/logs/saas-billing.log 2>&1
+ */

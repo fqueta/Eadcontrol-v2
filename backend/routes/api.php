@@ -444,22 +444,27 @@ Route::prefix('v1/saas')->middleware(['api', 'auth:sanctum', 'saas.admin'])->gro
         ])
         ->parameters(['invoices' => 'id']);
 
-    // Tenants list (for dropdowns)
-    Route::get('tenants', function () {
-        return response()->json([
-            'data' => \App\Models\Tenant::with('domains')
-                ->orderBy('name')
-                ->get()
-                ->map(function ($t) {
-                    return [
-                        'id' => $t->id,
-                        'name' => $t->name ?? $t->id,
-                        'ativo' => $t->ativo,
-                        'domain' => $t->domains->first()?->domain,
-                    ];
-                }),
-        ]);
-    })->name('saas.tenants.list');
+    // Gateway config
+    Route::get('gateway-configs', [\App\Http\Controllers\api\SaasGatewayConfigController::class, 'index'])
+        ->name('saas.gateway-configs.index');
+    Route::get('gateway-configs/{provider}', [\App\Http\Controllers\api\SaasGatewayConfigController::class, 'show'])
+        ->name('saas.gateway-configs.show');
+    Route::post('gateway-configs', [\App\Http\Controllers\api\SaasGatewayConfigController::class, 'store'])
+        ->name('saas.gateway-configs.store');
+    Route::put('gateway-configs/{provider}', [\App\Http\Controllers\api\SaasGatewayConfigController::class, 'update'])
+        ->name('saas.gateway-configs.update');
+    Route::delete('gateway-configs/{provider}', [\App\Http\Controllers\api\SaasGatewayConfigController::class, 'destroy'])
+        ->name('saas.gateway-configs.destroy');
+
+    // Tenants
+    Route::get('tenants', [\App\Http\Controllers\api\SaasTenantController::class, 'index'])
+        ->name('saas.tenants.index');
+    Route::post('tenants', [\App\Http\Controllers\api\SaasTenantController::class, 'store'])
+        ->name('saas.tenants.store');
+    Route::get('tenants/{id}', [\App\Http\Controllers\api\SaasTenantController::class, 'show'])
+        ->name('saas.tenants.show');
+    Route::put('tenants/{id}', [\App\Http\Controllers\api\SaasTenantController::class, 'update'])
+        ->name('saas.tenants.update');
 });
 
 // SaaS Webhook (público, sem auth)

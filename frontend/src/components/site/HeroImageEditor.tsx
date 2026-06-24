@@ -30,6 +30,7 @@ type StaticSlide = {
   buttonAlign?: 'left' | 'center' | 'right';
   buttonPosY?: 'top' | 'center' | 'bottom';
   showTexts?: boolean;
+  showLogo?: boolean;
   showButton?: boolean;
   showOverlay?: boolean;
 };
@@ -49,6 +50,7 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
   // Settings state
   const [showOverlay, setShowOverlay] = useState(() => localStorage.getItem('home_hero_show_overlay') !== 'false');
   const [showTexts, setShowTexts] = useState(() => localStorage.getItem('home_hero_show_texts') !== 'false');
+  const [showLogo, setShowLogo] = useState(() => localStorage.getItem('home_hero_show_logo') !== 'false');
   const [showButton, setShowButton] = useState(() => localStorage.getItem('home_hero_show_button') !== 'false');
   const [intervalSecs, setIntervalSecs] = useState(() => Number(localStorage.getItem('home_hero_autoplay_interval') || 6));
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -130,7 +132,7 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
     toast({ title: 'Imagem mobile removida' });
   };
 
-  const handleUpdateSlide = (index: number, field: 'title' | 'subtitle' | 'buttonLabel' | 'buttonUrl' | 'titleSize' | 'buttonAlign' | 'buttonPosY' | 'mobileUrl' | 'showTexts' | 'showButton' | 'showOverlay', value: string | number | boolean) => {
+  const handleUpdateSlide = (index: number, field: 'title' | 'subtitle' | 'buttonLabel' | 'buttonUrl' | 'titleSize' | 'buttonAlign' | 'buttonPosY' | 'mobileUrl' | 'showTexts' | 'showLogo' | 'showButton' | 'showOverlay', value: string | number | boolean) => {
     const newSlides = [...slides];
     newSlides[index] = { ...newSlides[index], [field]: value } as any;
     setSlides(newSlides);
@@ -222,11 +224,19 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="showTexts" className="cursor-pointer">Textos e Logo</Label>
+              <Label htmlFor="showTexts" className="cursor-pointer">Exibir Textos</Label>
               <Switch 
                 id="showTexts" 
                 checked={showTexts} 
                 onCheckedChange={(v) => handleSettingChange('home_hero_show_texts', v, setShowTexts)} 
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="showLogo" className="cursor-pointer">Exibir Logo</Label>
+              <Switch 
+                id="showLogo" 
+                checked={showLogo} 
+                onCheckedChange={(v) => handleSettingChange('home_hero_show_logo', v, setShowLogo)} 
               />
             </div>
             <div className="flex items-center justify-between">
@@ -434,13 +444,22 @@ export default function HeroImageEditor({ onChanged, className, size = 'sm' }: P
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t pt-3 mt-1">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t pt-3 mt-1">
                         <div className="flex items-center justify-between">
                           <Label htmlFor={`show-texts-${index}`} className="text-xs font-bold text-slate-500 uppercase cursor-pointer">Exibir Textos</Label>
                           <Switch
                             id={`show-texts-${index}`}
                             checked={slide.showTexts !== false}
                             onCheckedChange={(checked) => handleUpdateSlide(index, 'showTexts', checked)}
+                            className="scale-90 data-[state=checked]:bg-primary"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor={`show-logo-${index}`} className="text-xs font-bold text-slate-500 uppercase cursor-pointer">Exibir Logo</Label>
+                          <Switch
+                            id={`show-logo-${index}`}
+                            checked={slide.showLogo !== false}
+                            onCheckedChange={(checked) => handleUpdateSlide(index, 'showLogo', checked)}
                             className="scale-90 data-[state=checked]:bg-primary"
                           />
                         </div>

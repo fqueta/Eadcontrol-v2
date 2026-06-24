@@ -23,8 +23,13 @@ export interface SaasPlan {
 export interface SaasTenant {
   id: string;
   name: string;
+  email: string | null;
+  cpf_cnpj: string | null;
+  phone: string | null;
   ativo: string;
   domain: string | null;
+  course_badge_position: string;
+  created_at?: string;
 }
 
 export interface SaasSubscription {
@@ -118,6 +123,18 @@ export interface SaasDashboardData {
     revenue_by_month: Record<string, number>;
     plan_distribution: { plan_name: string; count: number }[];
   };
+}
+
+export interface SaasGatewayConfig {
+  id: number;
+  provider: string;
+  api_key: string | null;
+  environment: 'sandbox' | 'production';
+  webhook_secret: string | null;
+  active: boolean;
+  config: Record<string, any> | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PaginatedResponse<T> {

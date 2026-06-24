@@ -132,6 +132,10 @@ Route::name('api.')->prefix('api/v1')->middleware([
         // Cursos (PT/EN)
         Route::get('courses', [CursoController::class, 'publicIndex'])->name('public.courses.index');
         Route::get('cursos', [CursoController::class, 'publicIndex'])->name('public.cursos.index');
+        Route::get('course-display-config', [\App\Http\Controllers\api\CourseDisplayConfigController::class, 'index'])
+            ->name('public.courses.display-config');
+        Route::put('course-display-config', [\App\Http\Controllers\api\CourseDisplayConfigController::class, 'update'])
+            ->name('public.courses.display-config.update');
         Route::get('courses/by-id/{id}', [CursoController::class, 'publicShowById'])->name('public.courses.showById');
         Route::get('cursos/by-id/{id}', [CursoController::class, 'publicShowById'])->name('public.cursos.showById');
         Route::get('courses/by-slug/{slug}', [CursoController::class, 'publicShowBySlug'])->name('public.courses.showBySlug');

@@ -3,6 +3,7 @@
 namespace App\Services\SaasPayment;
 
 use App\Interfaces\SaasPaymentGatewayInterface;
+use App\Models\SaasGatewayConfig;
 use App\Models\SaasInvoice;
 use App\Models\SaasSubscription;
 use App\Models\Tenant;
@@ -22,18 +23,27 @@ class SaasAsaasGateway implements SaasPaymentGatewayInterface
     protected string $apiUrl;
     protected ?string $webhookSecret;
 
-    public function __construct()
+    public function __construct(?string $provider = 'asaas')
     {
-        $this->apiKey = (string) env('SAAS_ASAAS_API_KEY', '');
-        $this->webhookSecret = env('SAAS_ASAAS_WEBHOOK_SECRET');
+        // Tenta ler do banco de dados primeiro, com fallback para .env
+        $dbConfig = SaasGatewayConfig::getActiveConfig($provider);
 
-        $environment = env('SAAS_ASAAS_ENVIRONMENT', 'sandbox');
+        if ($dbConfig && $dbConfig->api_key) {
+            $this->apiKey = $dbConfig->api_key;
+            $this->webhookSecret = $dbConfig->webhook_secret;
+            $environment = $dbConfig->environment;
+        } else {
+            $this->apiKey = (string) env('SAAS_ASAAS_API_KEY', '');
+            $this->webhookSecret = env('SAAS_ASAAS_WEBHOOK_SECRET');
+            $environment = env('SAAS_ASAAS_ENVIRONMENT', 'sandbox');
+        }
+
         $this->apiUrl = $environment === 'production'
             ? 'https://api.asaas.com/v3'
             : 'https://sandbox.asaas.com/api/v3';
 
         if (!$this->apiKey) {
-            Log::warning('SaasAsaasGateway: API Key não configurada. Defina SAAS_ASAAS_API_KEY no .env');
+            Log::warning('SaasAsaasGateway: API Key não configurada. Configure pelo painel SaaS ou defina SAAS_ASAAS_API_KEY no .env');
         }
     }
 
@@ -107,10 +117,30 @@ class SaasAsaasGateway implements SaasPaymentGatewayInterface
         $subscription = $invoice->subscription;
         $tenant = $invoice->tenant;
 
-        // Garantir customer ID
-        $customerId = $subscription->gateway_customer_id;
+        // Garantir customer ID — cria automaticamente se não existir
+        $customerId = $subscription->gateway_customer_id
+            ?? $tenant->config['saas_asaas_customer_id']
+            ?? null;
+
         if (!$customerId) {
-            throw new \Exception("SaaS Asaas: Tenant {$tenant->id} não possui customer ID no gateway.");
+            $customerData = array_filter([
+                'name' => $tenant->data['name'] ?? $tenant->name ?? $tenant->id,
+                'email' => $tenant->data['email'] ?? null,
+                'cpfCnpj' => $tenant->data['cpf_cnpj'] ?? $tenant->data['document'] ?? $subscription->config['customer_cpf_cnpj'] ?? null,
+                'phone' => $tenant->data['phone'] ?? $tenant->data['telephone'] ?? $subscription->config['customer_phone'] ?? null,
+            ]);
+
+            if (!$customerData['cpfCnpj']) {
+                throw new \Exception(
+                    "SaaS Asaas: Tenant {$tenant->id} não possui CPF/CNPJ. " .
+                    "Edite os dados do tenant no painel SaaS para adicionar o CPF ou CNPJ."
+                );
+            }
+
+            $customerId = $this->ensureCustomer($tenant, $customerData);
+
+            $subscription->gateway_customer_id = $customerId;
+            $subscription->save();
         }
 
         $payload = [
