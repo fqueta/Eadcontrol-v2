@@ -168,19 +168,30 @@ export default function EnrollmentTable({
   function resolvePace(enroll: any) {
     const progress = Number(enroll?.progresso ?? enroll?.progress ?? enroll?.meta?.progresso ?? 0);
     
-    // pt-BR: Cores baseadas na "saúde" da matrícula
-    // en-US: Colors based on enrollment "health"
-    const colorClass = progress >= 70 ? 'bg-emerald-500' : progress >= 30 ? 'bg-amber-500' : 'bg-red-500';
-    const textColor = progress >= 70 ? 'text-emerald-600' : progress >= 30 ? 'text-amber-600' : 'text-red-600';
-    const bgColor = progress >= 70 ? 'bg-emerald-50/50' : progress >= 30 ? 'bg-amber-50/50' : 'bg-red-50/50';
+    let colorClass = 'bg-red-500';
+    let textColor = 'text-red-600 dark:text-red-400';
+    let bgColor = 'bg-red-50/50 dark:bg-red-950/20';
+    let label = progress === 0 ? 'Não Iniciado' : 'Em Progresso';
+
+    if (progress === 100) {
+      colorClass = 'bg-emerald-500';
+      textColor = 'text-emerald-600 dark:text-emerald-400';
+      bgColor = 'bg-emerald-50/50 dark:bg-emerald-950/20';
+      label = 'Concluído';
+    } else if (progress >= 30) {
+      colorClass = 'bg-blue-500';
+      textColor = 'text-blue-600 dark:text-blue-400';
+      bgColor = 'bg-blue-50/50 dark:bg-blue-950/20';
+      label = 'Em Progresso';
+    }
 
     return (
-      <div className={`p-2 rounded-xl ${bgColor} border border-transparent hover:border-slate-100 transition-all space-y-1.5 group/pace`}>
+      <div className={`p-2 rounded-xl ${bgColor} border border-transparent hover:border-slate-100 dark:hover:border-slate-800 transition-all space-y-1.5 group/progress`}>
         <div className="flex items-center justify-between px-0.5">
-           <span className={`text-[9px] font-black uppercase tracking-tighter ${textColor}`}>{progress >= 70 ? 'Excelente' : progress >= 30 ? 'Em Ritmo' : 'Crítico'}</span>
+           <span className={`text-[9px] font-black uppercase tracking-tighter ${textColor}`}>{label}</span>
            <span className={`text-[10px] font-black ${textColor}`}>{progress}%</span>
         </div>
-        <Progress value={progress} className="h-1.5 bg-slate-200/50" indicatorClassName={`${colorClass} shadow-[0_0_8px_rgba(0,0,0,0.1)] transition-all duration-1000`} />
+        <Progress value={progress} className="h-1.5 bg-slate-200/50 dark:bg-slate-800/50" indicatorClassName={`${colorClass} shadow-[0_0_8px_rgba(0,0,0,0.1)] transition-all duration-1000`} />
       </div>
     );
   }
@@ -204,7 +215,7 @@ export default function EnrollmentTable({
             <TableHead className="px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70">Situação</TableHead>
             <TableHead className="px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70 min-w-[120px]">
                <div className="flex items-center justify-center gap-2">
-                  <Activity className="h-3 w-3" /> Saúde / Pace
+                  <BarChart3 className="h-3 w-3" /> Progresso
                </div>
             </TableHead>
             <TableHead className="px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70">Ativo</TableHead>

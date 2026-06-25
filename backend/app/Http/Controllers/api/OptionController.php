@@ -74,6 +74,7 @@ class OptionController extends Controller
             'home_hero_images',
             'home_hero_show_overlay',
             'home_hero_show_texts',
+            'home_hero_show_logo',
             'home_hero_show_button',
             'home_hero_autoplay_interval',
             'home_feature_1_title',

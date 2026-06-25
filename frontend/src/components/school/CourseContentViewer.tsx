@@ -3023,6 +3023,7 @@ function htmlEquals(a: string, b: string): boolean {
                             <div
                               ref={youtubeContainerRef}
                               id={playerId}
+                              key={playerId}
                               className="w-full h-full"
                             />
                           );
@@ -3033,6 +3034,7 @@ function htmlEquals(a: string, b: string): boolean {
                             <iframe
                               ref={iframeRef}
                               id={playerId}
+                              key={playerId}
                               className="w-full h-full"
                               src={embedWithApi}
                               title={title}
@@ -3048,6 +3050,7 @@ function htmlEquals(a: string, b: string): boolean {
                           return (
                             <video
                               ref={html5VideoRef}
+                              key={playerId}
                               className="w-full h-full"
                               src={String(url)}
                               controls
@@ -3060,6 +3063,7 @@ function htmlEquals(a: string, b: string): boolean {
                           <iframe
                             ref={iframeRef}
                             id={playerId}
+                            key={playerId}
                             className="w-full h-full"
                             src={String(url)}
                             title={title}

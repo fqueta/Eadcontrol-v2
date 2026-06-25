@@ -84,7 +84,7 @@ class MatriculaController extends Controller
             ->leftJoin('turmas', 'matriculas.id_turma', '=', 'turmas.id')
             ->leftJoin('users', 'matriculas.id_cliente', '=', 'users.id')
             ->leftJoin('posts', 'matriculas.situacao_id', '=', 'posts.id')
-           ->select('matriculas.*', 'cursos.nome as curso_nome','cursos.tipo as curso_tipo', 'turmas.nome as turma_nome', 'users.name as cliente_nome', 'users.email as email', 'posts.post_title as situacao','cursos.slug as curso_slug','cursos.config as curso_config')
+           ->select('matriculas.*', 'cursos.nome as curso_nome','cursos.tipo as curso_tipo', 'turmas.nome as turma_nome', 'users.name as cliente_nome', 'users.email as email', 'posts.post_title as situacao','cursos.slug as curso_slug','cursos.config as curso_config', 'cursos.modulos as curso_modulos')
             ->orderBy($orderByQualified, $order);
         // pt-BR: Reforça o escopo para segurança e acesso universal na área do aluno (public=1).
         // en-US: Reinforce scope for security and universal access in the student area (public=1).
@@ -172,6 +172,43 @@ class MatriculaController extends Controller
             $item->meta = $this->getAllMatriculaMeta($item->id);
             //converte curso_config de json para array
             $item->curso_config = json_decode($item->curso_config, true);
+            
+            // Calcular o progresso geral do aluno no curso de forma dinâmica
+            try {
+                $mods = is_string($item->curso_modulos) ? json_decode($item->curso_modulos, true) : $item->curso_modulos;
+                $mods = is_array($mods) ? $mods : [];
+                $activityIds = [];
+                foreach ($mods as $module) {
+                    if (isset($module['atividades']) && is_array($module['atividades'])) {
+                        foreach ($module['atividades'] as $act) {
+                            $raw = is_array($act) ? ($act['activity_id'] ?? $act['id'] ?? null) : null;
+                            if (is_numeric($raw)) {
+                                $activityIds[] = (int)$raw;
+                            }
+                        }
+                    }
+                }
+                $activityIds = array_values(array_unique($activityIds));
+                $total = count($activityIds);
+                if ($total > 0) {
+                    $completed = \App\Models\ActivityProgress::where('id_matricula', $item->id)
+                        ->whereIn('activity_id', $activityIds)
+                        ->where('completed', true)
+                        ->count();
+                    $prog = (int)round(($completed / $total) * 100);
+                } else {
+                    $prog = 0;
+                }
+            } catch (\Throwable $e) {
+                $prog = 0;
+            }
+            $item->progresso = $prog;
+            $meta = $item->meta;
+            if (is_array($meta)) {
+                $meta['progresso'] = $prog;
+                $item->meta = $meta;
+            }
+            
             return $item;
         });
         return response()->json($items);
@@ -587,12 +624,48 @@ class MatriculaController extends Controller
                 'users.name as cliente_nome',
                 'users.email as email',
                 'consultores.name as consultor_nome',
-                'posts.post_title as situacao'
+                'posts.post_title as situacao',
+                'cursos.modulos as curso_modulos'
             )
             ->findOrFail($id);
 
         $data = $matricula->toArray();
         $data['meta'] = $this->getAllMatriculaMeta($matricula->id);
+        
+        // Calcular o progresso geral do aluno no curso de forma dinâmica
+        try {
+            $mods = is_string($matricula->curso_modulos) ? json_decode($matricula->curso_modulos, true) : $matricula->curso_modulos;
+            $mods = is_array($mods) ? $mods : [];
+            $activityIds = [];
+            foreach ($mods as $module) {
+                if (isset($module['atividades']) && is_array($module['atividades'])) {
+                    foreach ($module['atividades'] as $act) {
+                        $raw = is_array($act) ? ($act['activity_id'] ?? $act['id'] ?? null) : null;
+                        if (is_numeric($raw)) {
+                            $activityIds[] = (int)$raw;
+                        }
+                    }
+                }
+            }
+            $activityIds = array_values(array_unique($activityIds));
+            $total = count($activityIds);
+            if ($total > 0) {
+                $completed = \App\Models\ActivityProgress::where('id_matricula', $matricula->id)
+                    ->whereIn('activity_id', $activityIds)
+                    ->where('completed', true)
+                    ->count();
+                $prog = (int)round(($completed / $total) * 100);
+            } else {
+                $prog = 0;
+            }
+        } catch (\Throwable $e) {
+            $prog = 0;
+        }
+        $data['progresso'] = $prog;
+        if (is_array($data['meta'])) {
+            $data['meta']['progresso'] = $prog;
+        }
+
         // Expor parcelamentos vinculados via pivot
         $data['parcelamentos'] = Parcelamento::join('matricula_parcelamento', 'parcelamentos.id', '=', 'matricula_parcelamento.parcelamento_id')
             ->where('matricula_parcelamento.matricula_id', $matricula->id)
