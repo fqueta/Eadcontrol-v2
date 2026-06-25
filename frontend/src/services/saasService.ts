@@ -34,8 +34,9 @@ function getSaasApiBaseUrl(): string {
     return `${protocol}//localhost:8002/api/v1/saas`;
   }
 
-  // Em produção, usar o domínio central
-  return `${protocol}//${host}/api/v1/saas`;
+  // Em produção, usar o subdomínio api- (ex: cursos -> api-cursos, hairacademyrj -> api-hairacademyrj)
+  const apiHost = /^api[-.]/.test(host) ? host : host.replace(/^[^.]+/, 'api-$&');
+  return `${protocol}//${apiHost}/api/v1/saas`;
 }
 
 const SAAS_API_BASE = getSaasApiBaseUrl();

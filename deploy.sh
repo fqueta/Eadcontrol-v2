@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-# 🚀 Script de Deploy Automático - EadControl
-
 echo "📥 Buscando atualizações do Git..."
 git update-index --no-assume-unchanged backend/config/cors.php docker-compose.production.yml 2>/dev/null
 
@@ -27,39 +25,38 @@ git update-index --assume-unchanged backend/config/cors.php docker-compose.produ
 echo "🏗️ Reconstruindo containers (Backend/Frontend)..."
 docker compose -f docker-compose.production.yml up --build -d --remove-orphans
 
-echo "⏳ Aguardando container octane_app ficar saudável..."
-for i in $(seq 1 30); do
-  if docker ps -q --filter "name=octane_app" --filter "health=healthy" | grep -q .; then
-    echo "✅ octane_app pronto!"
-    break
-  fi
-  if docker ps -q --filter "name=octane_app" --filter "status=running" | grep -q .; then
-    # sem healthcheck configurado, confia que está rodando após alguns segundos
-    if [ $i -gt 10 ]; then
-      echo "✅ octane_app está rodando (sem healthcheck)"
+echo "⏳ Aguardando octane_app ficar saudável (HTTP)..."
+for i in $(seq 1 60); do
+  HTTP_CODE=$(docker exec octane_app curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/ 2>/dev/null || true)
+  case "$HTTP_CODE" in
+    200|302|404|000)
+      echo "✅ octane_app pronto! (HTTP $HTTP_CODE)"
       break
-    fi
-  fi
+      ;;
+    *)
+      if [ $i -eq 60 ]; then
+        echo "❌ octane_app não respondeu após 120 segundos (último HTTP: $HTTP_CODE)"
+        exit 1
+      fi
+      ;;
+  esac
   sleep 2
 done
 
 echo "🧹 Limpando caches do Laravel..."
-if docker ps -q --filter "name=octane_app" --filter "status=running" | grep -q . ; then
-    docker exec octane_app php artisan optimize:clear
-    docker exec octane_app php artisan route:clear
-    
-    echo "🏗️ Rodando Migrations dos Tenants..."
-    docker exec octane_app php artisan tenants:migrate --force
+docker exec octane_app php artisan optimize:clear
+docker exec octane_app php artisan route:clear
 
-    echo "🌱 Rodando Database Seeds (MenuSeeder)..."
-    docker exec octane_app php artisan tenants:seed --class=MenuSeeder --force
-else
-    echo "⚠️ octane_app não está rodando. Pulando limpeza de cache."
-fi
+echo "🏗️ Rodando Migrations dos Tenants..."
+docker exec octane_app php artisan tenants:migrate --force
 
-echo "🔄 Copiando config do Nginx e recarregando..."
-docker cp backend/deployment/nginx/nginx.conf.final nginx_standalone_proxy:/etc/nginx/nginx.conf
-docker exec nginx_standalone_proxy nginx -t && docker exec nginx_standalone_proxy nginx -s reload
+echo "🌱 Rodando Database Seeds (MenuSeeder)..."
+docker exec octane_app php artisan tenants:seed --class=MenuSeeder --force
+
+echo "🔄 Atualizando config do Nginx..."
+cp backend/deployment/nginx/eadcontrol.conf /home/servidor/nginx/conf.d/eadcontrol.conf
+
+echo "🔄 Testando e reiniciando Nginx (limpa cache DNS)..."
+docker restart nginx_standalone_proxy
 
 echo "✅ Deploy finalizado com sucesso!"
-
