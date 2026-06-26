@@ -51,7 +51,12 @@ class Client extends User
             throw new \Exception("E-mail é obrigatório para identificação do cliente.");
         }
 
-        $client = self::where('email', $email)->first();
+        $client = self::withoutGlobalScope('client')->where('email', $email)->first();
+        // Se encontrou um usuário com esse email mas não tem permissão de cliente,
+        // não pode criar outro — lança erro
+        if ($client && (int) $client->permission_id !== (new \App\Http\Controllers\api\ClientController)->cliente_permission_id) {
+            throw new \Exception("Este e-mail já está cadastrado no sistema. Faça login para continuar.");
+        }
 
         if (!$client) {
             $cpfCnpjClean = preg_replace('/\D/', '', $data['cpfCnpj'] ?? '');

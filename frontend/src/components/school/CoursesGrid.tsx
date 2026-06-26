@@ -27,7 +27,7 @@ const badgePositionClasses: Record<string, string> = {
 export default function CoursesGrid() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [badgePosition, setBadgePosition] = useState('top-right');
+
   
   // Persist view mode logic
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
@@ -48,15 +48,13 @@ export default function CoursesGrid() {
     staleTime: 5 * 60 * 1000,
   });
 
-  useQuery({
+  const { data: configData } = useQuery({
     queryKey: ['course-display-config'],
-    queryFn: async () => {
-      const config = await publicCoursesService.getDisplayConfig();
-      setBadgePosition(config.badge_position || 'top-right');
-      return config;
-    },
+    queryFn: () => publicCoursesService.getDisplayConfig(),
     staleTime: 10 * 60 * 1000,
   });
+
+  const badgePosition = configData?.badge_position || 'top-right';
 
   /**
    * Filtered items
