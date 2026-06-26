@@ -6,6 +6,7 @@ import ProductFormDialog from "@/components/products/ProductFormDialog";
 import { ProductFormData, productSchema } from "@/components/products/ProductForm";
 import { useCreateProduct } from "@/hooks/products";
 import { useProductCategories, useProductUnits } from "@/hooks/products";
+import { currencyRemoveMaskToNumber } from "@/lib/masks/currency";
 
 
 
@@ -40,10 +41,10 @@ export function QuickCreateProductModal({
       name: "",
       description: "",
       category: "",
-      salePrice: 0,
-      costPrice: 0,
+      salePrice: '0,00',
+      costPrice: '0,00',
       stock: 0,
-      unit: "",
+      unit: "un",
       active: true,
       image: "",
     },
@@ -64,8 +65,8 @@ export function QuickCreateProductModal({
         name: data.name,
         description: data.description || null,
         category: data.category,
-        salePrice: data.salePrice,
-        costPrice: data.costPrice,
+        salePrice: currencyRemoveMaskToNumber(data.salePrice),
+        costPrice: currencyRemoveMaskToNumber(data.costPrice),
         stock: data.stock,
         unit: data.unit,
         active: data.active,

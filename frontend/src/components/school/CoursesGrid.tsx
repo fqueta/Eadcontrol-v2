@@ -8,6 +8,7 @@ import { CourseRecord } from '@/types/courses';
 import { useNavigate } from 'react-router-dom';
 import { LayoutGrid, List, GraduationCap } from 'lucide-react';
 import { cn } from '@/lib/utils'; // Make sure utils is imported for cn
+import { DynamicPrice } from '@/components/common/DynamicPrice';
 
 /**
  * CoursesGrid
@@ -204,7 +205,11 @@ export default function CoursesGrid() {
                                     Certificado Incluso
                                   </div>
                                 </div>
-                                {(price) && <div className="text-2xl font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-white/5 px-4 py-1.5 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm">R$ {price}</div>}
+                                {(price) && (
+                                  <div className="bg-slate-50 dark:bg-white/5 px-4 py-1.5 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm text-right shrink-0">
+                                    <DynamicPrice price={price} installments={c.parcelas} installmentValue={c.valor_parcela} align="right" />
+                                  </div>
+                                )}
                              </div>
                              <p className="text-muted-foreground leading-relaxed line-clamp-2 md:line-clamp-3 text-base">
                                 {desc}
@@ -231,8 +236,8 @@ export default function CoursesGrid() {
               onClick={() => onOpenCourse(c)}
             >
               {price && badgePosition !== 'hidden' && badgePosition !== 'bottom-left' && (
-                 <div className={`absolute ${badgePositionClasses[badgePosition] || 'top-4 right-4'} bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 py-1.5 rounded-full font-black text-primary shadow-lg border border-white/20 z-10`}>
-                   R$ {price}
+                 <div className={`absolute ${badgePositionClasses[badgePosition] || 'top-4 right-4'} bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-5 py-3 rounded-2xl font-black text-primary shadow-lg border border-white/20 z-10 min-w-[150px]`}>
+                   <DynamicPrice price={price} installments={c.parcelas} installmentValue={c.valor_parcela} align="center" badgeStyle={true} />
                  </div>
               )}
               <div className="relative w-full h-56 overflow-hidden shrink-0">
@@ -262,8 +267,8 @@ export default function CoursesGrid() {
               <CardContent className="p-8 pt-2 mt-auto">
                 <div className="pt-6 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
                     {badgePosition === 'bottom-left' ? (
-                      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 py-1.5 rounded-full font-black text-primary border border-slate-200 dark:border-white/10 shadow-sm text-sm">
-                        R$ {price}
+                      <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-5 py-3 rounded-2xl font-black text-primary border border-slate-200 dark:border-white/10 shadow-sm text-sm min-w-[150px]">
+                        <DynamicPrice price={price} installments={c.parcelas} installmentValue={c.valor_parcela} align="center" badgeStyle={true} />
                       </div>
                     ) : badgePosition !== 'bottom-center' ? (
                       <div className="flex -space-x-2">

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useProductsList, useCreateProduct, useUpdateProduct, useDeleteProduct, useProductCategories, useProductUnits } from "@/hooks/products";
 import type { Product, CreateProductInput, UpdateProductInput } from "@/types/products";
 import { Plus, Edit } from "lucide-react";
+import { currencyRemoveMaskToNumber } from "@/lib/masks/currency";
 import ProductsStats from "@/components/products/ProductsStats";
 import ProductsTable from "@/components/products/ProductsTable";
 import ProductFormDialog from "@/components/products/ProductFormDialog";
@@ -69,17 +70,15 @@ export default function Products() {
       name: "",
       description: "",
       category: "",
-      salePrice: 0,
-      costPrice: 0,
+      salePrice: '0,00',
+      costPrice: '0,00',
       stock: 0,
-      unit: "Unidade",
+      unit: "un",
       active: true,
       image: "",
-      points: 0,
       rating: 0,
       reviews: 0,
       availability: "available" as const,
-      terms: [],
       validUntil: "",
       destaque: "n",
     },
@@ -108,17 +107,17 @@ export default function Products() {
           name: data.name,
           description: data.description || '',
           category: data.category,
-          salePrice: data.salePrice,
-          costPrice: data.costPrice,
+          salePrice: currencyRemoveMaskToNumber(data.salePrice),
+          costPrice: currencyRemoveMaskToNumber(data.costPrice),
           stock: data.stock,
           unit: data.unit,
           active: data.active,
           image: data.image || '',
-          points: data.points,
+          points: 0,
           rating: data.rating || 0,
           reviews: data.reviews || 0,
           availability: data.availability,
-          terms: data.terms,
+          terms: [],
           validUntil: data.validUntil || '',
           destaque: data.destaque as 's' | 'n'
         };
@@ -128,17 +127,17 @@ export default function Products() {
           name: data.name,
           description: data.description || '',
           category: data.category,
-          salePrice: data.salePrice,
-          costPrice: data.costPrice,
+          salePrice: currencyRemoveMaskToNumber(data.salePrice),
+          costPrice: currencyRemoveMaskToNumber(data.costPrice),
           stock: data.stock,
           unit: data.unit,
           active: data.active,
           image: data.image || '',
-          points: data.points,
+          points: 0,
           rating: data.rating || 0,
           reviews: data.reviews || 0,
           availability: data.availability,
-          terms: data.terms,
+          terms: [],
           validUntil: data.validUntil || '',
           destaque: data.destaque as 's' | 'n'
         };
@@ -161,10 +160,10 @@ export default function Products() {
             Gerencie todos os produtos do estoque
           </p>
         </div>
-        {/* <Button onClick={handleNewProduct}>
+        <Button onClick={handleNewProduct}>
           <Plus className="mr-2 h-4 w-4" />
           Novo Produto
-        </Button> */}
+        </Button>
       </div>
 
       {/* Stats Cards */}

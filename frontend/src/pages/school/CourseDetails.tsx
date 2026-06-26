@@ -18,6 +18,7 @@ import api from '@/lib/axios';
 import { useEnrollmentsList } from '@/hooks/enrollments';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { phoneApplyMask } from '@/lib/masks/phone-apply-mask';
+import { DynamicPrice } from '@/components/common/DynamicPrice';
 
 
 import { ValidationConflictModal } from '@/components/modals/ValidationConflictModal';
@@ -652,9 +653,13 @@ export default function CourseDetails() {
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary to-secondary" />
                     <CardContent className="p-6">
                     <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Preço do curso</div>
-                    <div className="text-4xl font-extrabold text-primary dark:text-blue-400 mt-1 mb-4 flex items-baseline gap-1">
-                         <span className="text-lg font-normal text-muted-foreground">R$</span>
-                        {priceBox.valor || 'Consultar'}
+                    <div className="mt-1 mb-4 flex items-baseline gap-1">
+                      <DynamicPrice 
+                        price={priceBox.valor} 
+                        installments={priceBox.parcelas} 
+                        installmentValue={priceBox.valorParcela} 
+                        size="lg" 
+                      />
                     </div>
 
                     {priceBox.inscricao && priceBox.inscricao !== '0' && priceBox.inscricao !== '0,00' && (
@@ -669,11 +674,11 @@ export default function CourseDetails() {
                     <Separator className="my-4 bg-slate-100 dark:bg-slate-800" />
                     
                     <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-                        {priceBox.parcelas && priceBox.valorParcela ? (
+                        {priceBox.parcelas && priceBox.valorParcela && Number(priceBox.parcelas) > 1 ? (
                         <div className="flex items-center gap-2">
                             <div className="price-icon-themed-primary">💳</div>
                             <div>
-                                Até <span className="font-bold ml-0.5">{priceBox.parcelas}x</span> de <span className="font-bold ml-0.5">R$ {priceBox.valorParcela}</span>
+                                Parcelamento facilitado em até <span className="font-bold ml-0.5">{priceBox.parcelas}x</span>
                             </div>
                         </div>
                         ) : (

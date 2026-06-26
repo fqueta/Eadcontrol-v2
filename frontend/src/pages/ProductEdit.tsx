@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+import { currencyApplyMask, currencyRemoveMaskToNumber } from '@/lib/masks/currency';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProduct, useUpdateProduct } from '@/hooks/products';
@@ -41,44 +42,51 @@ export default function ProductEdit() {
       name: '',
       description: '',
       category: '',
-      salePrice: 0,
-      costPrice: 0,
+      salePrice: '0,00',
+      costPrice: '0,00',
       stock: 0,
-      unit: '',
+      unit: 'un',
       active: true,
       image: '',
-      points: 0,
       rating: 0,
       reviews: 0,
       availability: 'available',
-      terms: [],
       validUntil: undefined,
       destaque: 'n',
+      parcelas: '1',
+      valor_parcela: '0,00',
     },
   });
 
   /**
    * Preenche o formulário com os dados do produto quando carregado
    */
+  const toMaskedCurrency = (v: any) => {
+    if (v === null || v === undefined || v === '') return '';
+    const num = Number(v);
+    if (!isNaN(num)) return currencyApplyMask(String(Math.round(num * 100)), 'pt-BR', 'BRL');
+    return String(v);
+  };
+
   useEffect(() => {
     if (product) {
       form.reset({
         name: product.name || '',
         description: product.description || '',
         category: product.category || '',
-        salePrice: Number(product.salePrice) || 0,
-        costPrice: Number(product.costPrice) || 0,
+        salePrice: toMaskedCurrency(product.salePrice),
+        costPrice: toMaskedCurrency(product.costPrice),
         stock: Number(product.stock) || 0,
         unit: product.unit || '',
         active: product.active ?? true,
         image: product.image || '',
-        points: Number(product.points) || 0,
         rating: Number(product.rating) || 0,
         reviews: Number(product.reviews) || 0,
         availability: product.availability || 'available',
-        terms: product.terms || [],
         validUntil: product.validUntil,
         destaque: product.destaque || 'n',
+        parcelas: String((product as any).parcelas || '1'),
+        valor_parcela: toMaskedCurrency((product as any).valor_parcela),
       });
     }
   }, [product, form]);
@@ -96,19 +104,21 @@ export default function ProductEdit() {
           name: data.name,
           description: data.description,
           category: data.category,
-          salePrice: data.salePrice,
-          costPrice: data.costPrice,
+          salePrice: currencyRemoveMaskToNumber(data.salePrice),
+          costPrice: currencyRemoveMaskToNumber(data.costPrice),
           stock: data.stock,
           unit: data.unit,
           active: data.active,
           image: data.image,
-          points: data.points,
+          points: 0,
           rating: data.rating,
           reviews: data.reviews,
           availability: data.availability,
-          terms: data.terms,
+          terms: [],
           validUntil: data.validUntil,
           destaque: data.destaque as 's' | 'n',
+          parcelas: data.parcelas ? Number(data.parcelas) : 1,
+          valor_parcela: data.valor_parcela ? currencyRemoveMaskToNumber(data.valor_parcela) : 0,
         },
       });
       

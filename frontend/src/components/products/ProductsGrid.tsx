@@ -5,6 +5,7 @@ import { publicProductsService } from '@/services/publicProductsService';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, ShoppingBag, Loader2, AlertCircle } from 'lucide-react';
+import { DynamicPrice } from '@/components/common/DynamicPrice';
 
 export default function ProductsGrid() {
   const navigate = useNavigate();
@@ -92,11 +93,9 @@ export default function ProductsGrid() {
                 <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3 min-h-[2rem]">
                   {product.description?.replace(/<[^>]*>/g, '') || 'Sem descrição'}
                 </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-primary">
-                    {product.salePrice ? `R$ ${product.salePrice}` : 'Consultar'}
-                  </span>
-                  <Button size="sm" variant="outline" className="btn-themed-outline">
+                <div className="flex items-end justify-between mt-auto">
+                  <DynamicPrice price={product.salePrice} installments={product.parcelas} installmentValue={product.valor_parcela} size="sm" />
+                  <Button size="sm" variant="outline" className="btn-themed-outline shrink-0">
                     Ver detalhes
                   </Button>
                 </div>

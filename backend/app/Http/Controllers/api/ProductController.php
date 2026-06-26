@@ -183,6 +183,8 @@ class ProductController extends Controller
             'unitData' => Qlib::get_unit_by_id($product->config['unit'] ?? null),
             'unit' => $product->config['unit'] ?? null,
             'destaque' => $product->config['destaque'] ?? 'n',
+            'parcelas' => $product->config['parcelas'] ?? null,
+            'valor_parcela' => $product->config['valor_parcela'] ?? null,
             'created_at' => $product->created_at,
             'updated_at' => $product->updated_at,
         ];
@@ -199,6 +201,8 @@ class ProductController extends Controller
             'unit' => 'nullable|string|max:100',
             'image' => 'nullable|string|max:500',
             'destaque' => 'nullable|string|in:s,n',
+            'parcelas' => 'nullable|integer|min:1',
+            'valor_parcela' => 'nullable|numeric|min:0',
         ];
     }
     /**
@@ -284,6 +288,12 @@ class ProductController extends Controller
         }
         if (isset($validated['image'])) {
             $configData['image'] = $validated['image'];
+        }
+        if (isset($validated['parcelas'])) {
+            $configData['parcelas'] = $validated['parcelas'];
+        }
+        if (isset($validated['valor_parcela'])) {
+            $configData['valor_parcela'] = $validated['valor_parcela'];
         }
         $configData['destaque'] = $validated['destaque'] ?? 'n';
         $mappedData['config'] = $configData;
@@ -421,6 +431,14 @@ class ProductController extends Controller
         }
         if (isset($validated['destaque'])) {
             $config['destaque'] = $validated['destaque'];
+            $hasConfigChange = true;
+        }
+        if (isset($validated['parcelas'])) {
+            $config['parcelas'] = $validated['parcelas'];
+            $hasConfigChange = true;
+        }
+        if (isset($validated['valor_parcela'])) {
+            $config['valor_parcela'] = $validated['valor_parcela'];
             $hasConfigChange = true;
         }
         if ($hasConfigChange) {

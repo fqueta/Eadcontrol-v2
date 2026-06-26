@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft } from 'lucide-react';
+import { currencyRemoveMaskToNumber } from '@/lib/masks/currency';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCreateProduct } from '@/hooks/products';
@@ -39,19 +40,19 @@ export default function ProductCreate() {
       name: '',
       description: '',
       category: '',
-      salePrice: 0,
-      costPrice: 0,
+      salePrice: '0,00',
+      costPrice: '0,00',
       stock: 0,
-      unit: '',
+      unit: 'un',
       active: true,
       image: '',
-      points: 0,
       rating: 0,
       reviews: 0,
       availability: 'available',
-      terms: [],
       validUntil: undefined,
       destaque: 'n',
+      parcelas: '1',
+      valor_parcela: '0,00',
     },
   });
 
@@ -64,19 +65,21 @@ export default function ProductCreate() {
         name: data.name,
         description: data.description,
         category: data.category,
-        salePrice: data.salePrice,
-        costPrice: data.costPrice,
+        salePrice: currencyRemoveMaskToNumber(data.salePrice),
+        costPrice: currencyRemoveMaskToNumber(data.costPrice),
         stock: data.stock,
         unit: data.unit,
         active: data.active,
         image: data.image,
-        points: data.points,
+        points: 0,
         rating: data.rating,
         reviews: data.reviews,
         availability: data.availability,
-        terms: data.terms,
+        terms: [],
         validUntil: data.validUntil,
         destaque: data.destaque as 's' | 'n',
+        parcelas: data.parcelas ? Number(data.parcelas) : 1,
+        valor_parcela: data.valor_parcela ? currencyRemoveMaskToNumber(data.valor_parcela) : 0,
       });
       
       toast({

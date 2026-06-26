@@ -22,6 +22,8 @@ export interface Product {
   costPrice: number;
   unit: string;
   active: boolean;
+  parcelas?: number;
+  valor_parcela?: number;
 }
 
 /**
@@ -44,6 +46,8 @@ export interface CreateProductInput {
   terms: string[];
   validUntil?: string;
   destaque?: 's' | 'n';
+  parcelas?: number;
+  valor_parcela?: number;
 }
 
 /**
@@ -66,6 +70,8 @@ export interface UpdateProductInput {
   terms?: string[];
   validUntil?: string;
   destaque?: 's' | 'n';
+  parcelas?: number;
+  valor_parcela?: number;
 }
 
 /**

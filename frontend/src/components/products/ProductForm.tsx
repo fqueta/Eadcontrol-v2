@@ -33,21 +33,21 @@ const productSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   description: z.string().optional(),
   category: z.string().min(1, "Categoria é obrigatória"),
-  salePrice: z.number().min(0, "Preço de venda deve ser maior ou igual a 0"),
-  costPrice: z.number().min(0, "Preço de custo deve ser maior ou igual a 0"),
+  salePrice: z.string().refine((v) => currencyRemoveMaskToNumber(v) >= 0, "Preço de venda deve ser maior ou igual a 0"),
+  costPrice: z.string().refine((v) => currencyRemoveMaskToNumber(v) >= 0, "Preço de custo deve ser maior ou igual a 0"),
   stock: z.number().int().min(0, "Estoque deve ser maior ou igual a 0"),
   unit: z.string().min(1, "Unidade é obrigatória"),
   active: z.boolean(),
   image: z.string().url("Deve ser uma URL válida").optional().or(z.literal("")),
-  points: z.number().min(0, "Pontos devem ser maior ou igual a 0"),
   rating: z.number().min(0).max(5, "Avaliação deve estar entre 0 e 5").optional(),
   reviews: z.number().int().min(0, "Número de avaliações deve ser maior ou igual a 0").optional(),
   availability: z.enum(["available", "limited", "unavailable"], {
     required_error: "Disponibilidade é obrigatória",
   }),
-  terms: z.array(z.string()).optional(),
   validUntil: z.string().optional(),
   destaque: z.string().optional().default("n"),
+  parcelas: z.string().optional(),
+  valor_parcela: z.string().optional(),
 });
 
 export type ProductFormData = z.infer<typeof productSchema>;
@@ -237,16 +237,58 @@ export function ProductForm({
                 <FormLabel>Preço de Venda</FormLabel>
                 <FormControl>
                   <Input 
-                    type="text"
                     placeholder="R$ 0,00"
-                    value={field.value ? currencyApplyMask(String(field.value), 'pt-BR', 'BRL') : ''}
+                    value={field.value || ''}
                     onChange={(e) => {
-                      const masked = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
-                      field.onChange(currencyRemoveMaskToNumber(masked));
+                      const v = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
+                      field.onChange(v);
                     }}
-                    onBlur={(e) => {
-                      const masked = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
-                      field.onChange(currencyRemoveMaskToNumber(masked));
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="parcelas"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Número Máximo de Parcelas</FormLabel>
+                <FormControl>
+                  <Select
+                    value={field.value || '1'}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                        <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="valor_parcela"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Valor da Parcela</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="R$ 0,00"
+                    value={field.value || ''}
+                    onChange={(e) => {
+                      const v = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
+                      field.onChange(v);
                     }}
                   />
                 </FormControl>
@@ -263,16 +305,11 @@ export function ProductForm({
                 <FormLabel>Preço de Custo</FormLabel>
                 <FormControl>
                   <Input 
-                    type="text"
                     placeholder="R$ 0,00"
-                    value={field.value ? currencyApplyMask(String(field.value), 'pt-BR', 'BRL') : ''}
+                    value={field.value || ''}
                     onChange={(e) => {
-                      const masked = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
-                      field.onChange(currencyRemoveMaskToNumber(masked));
-                    }}
-                    onBlur={(e) => {
-                      const masked = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
-                      field.onChange(currencyRemoveMaskToNumber(masked));
+                      const v = currencyApplyMask(e.target.value, 'pt-BR', 'BRL');
+                      field.onChange(v);
                     }}
                   />
                 </FormControl>
@@ -341,25 +378,6 @@ export function ProductForm({
 
           <FormField
             control={form.control}
-            name="points"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Pontos</FormLabel>
-                <FormControl>
-                  <Input 
-                    type="number" 
-                    placeholder="0" 
-                    {...field}
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
             name="rating"
             render={({ field }) => (
               <FormItem>
@@ -420,56 +438,6 @@ export function ProductForm({
                 <FormMessage />
               </FormItem>
             )}
-          />
-
-          <FormField
-            control={form.control}
-            name="terms"
-            render={({ field }) => {
-              const [newTerm, setNewTerm] = useState("");
-              
-              const addTerm = () => {
-                if (newTerm.trim() && !field.value?.includes(newTerm.trim())) {
-                  field.onChange([...(field.value || []), newTerm.trim()]);
-                  setNewTerm("");
-                }
-              };
-              
-              const removeTerm = (termToRemove: string) => {
-                field.onChange(field.value?.filter(term => term !== termToRemove) || []);
-              };
-              
-              return (
-                <FormItem>
-                  <FormLabel>Termos e Condições</FormLabel>
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <Input 
-                        placeholder="Adicionar termo"
-                        value={newTerm}
-                        onChange={(e) => setNewTerm(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTerm())}
-                      />
-                      <Button type="button" onClick={addTerm} variant="outline">
-                        Adicionar
-                      </Button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {field.value?.map((term, index) => (
-                        <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                          {term}
-                          <X 
-                            className="h-3 w-3 cursor-pointer" 
-                            onClick={() => removeTerm(term)}
-                          />
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              );
-            }}
           />
 
           <FormField

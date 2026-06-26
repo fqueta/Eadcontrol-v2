@@ -8,6 +8,7 @@ import { getTenantApiUrl, getVersionApi } from "@/lib/qlib";
 import { FeaturedCoursesConfig, FeaturedCoursesEditor } from "./FeaturedCoursesEditor";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { DynamicPrice } from "../common/DynamicPrice";
 
 interface Course {
   id: number;
@@ -24,6 +25,8 @@ interface Course {
       url: string;
     };
   };
+  parcelas?: string | number;
+  valor_parcela?: string | number;
 }
 
 const DEFAULT_CONFIG: FeaturedCoursesConfig = {
@@ -240,10 +243,8 @@ export function FeaturedCoursesSection() {
                     <CardFooter className="pt-0 border-t border-slate-100 dark:border-slate-800 mt-auto p-6">
                       <div className="flex items-center justify-between w-full">
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Investimento</span>
-                          <span className="text-2xl font-black text-primary">
-                            {formattedPrice}
-                          </span>
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Investimento</span>
+                          <DynamicPrice price={course.valor} installments={course.parcelas} installmentValue={course.valor_parcela} size="md" />
                         </div>
                         <Button size="sm" className="rounded-lg font-bold" asChild>
                           <Link to={`/cursos/${course.slug}/detalhes`}>

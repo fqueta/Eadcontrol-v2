@@ -7,8 +7,11 @@ use App\Models\FileStorage;
 use App\Services\PermissionService;
 use App\Services\Qlib;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 
 /**
  * Controlador FileStorage
@@ -46,6 +49,103 @@ class FileStorageController extends Controller
     private function decode_status($post_status)
     {
         return $post_status === 'publish';
+    }
+
+    /**
+     * Comprime imagens acima de 999KB.
+     *
+     * - Redimensiona para max 1920px de largura (proporcional) — ideal para
+     *   capas de curso em mobile/desktop sem perda visual significativa.
+     * - Aplica qualidade 85% (virtualmente indistinguível do original).
+     * - Preserva PNGs com transparência e formatos já comprimidos (WebP/AVIF).
+     *
+     * EN: Compress images over 999KB.
+     *   - Resize to 1920px max width (maintains aspect ratio).
+     *   - Apply 85% quality (visually lossless).
+     *   - Skip PNGs with transparency and already-compressed formats.
+     */
+    private function compressImageIfNeeded(string $path, int $originalSize, string $mimeType): void
+    {
+        if ($originalSize <= 999 * 1024) {
+            Log::info('compress: imagem pulada (<= 999KB)', [
+                'path' => $path,
+                'size' => $originalSize,
+                'mime' => $mimeType,
+            ]);
+            return;
+        }
+
+        if (!str_starts_with($mimeType, 'image/')) {
+            Log::info('compress: pulado (não é imagem)', [
+                'path' => $path,
+                'mime' => $mimeType,
+            ]);
+            return;
+        }
+
+        $skipFormats = ['image/webp', 'image/avif', 'image/gif'];
+        if (in_array($mimeType, $skipFormats)) {
+            Log::info('compress: pulado (formato já comprimido)', [
+                'path' => $path,
+                'mime' => $mimeType,
+            ]);
+            return;
+        }
+
+        $fullPath = Storage::disk('public')->path($path);
+        if (!$fullPath || !file_exists($fullPath)) {
+            Log::warning('compress: arquivo não encontrado no disco', [
+                'path' => $path,
+                'fullPath' => $fullPath,
+            ]);
+            return;
+        }
+
+        try {
+            $manager = new ImageManager(new Driver());
+            $image = $manager->decodePath($fullPath);
+
+            $origWidth = $image->width();
+
+            if ($mimeType === 'image/png') {
+                if ($origWidth > 1920) {
+                    $image->scale(width: 1920);
+                }
+                $image->save($fullPath);
+                $finalSize = filesize($fullPath);
+
+                Log::info('compress: PNG redimensionado', [
+                    'path' => $path,
+                    'original' => $originalSize,
+                    'final' => $finalSize,
+                    'reduction' => round((1 - $finalSize / $originalSize) * 100) . '%',
+                    'width' => $origWidth . ' -> ' . min($origWidth, 1920),
+                ]);
+                return;
+            }
+
+            // JPEG e outros: redimensiona + comprime
+            if ($origWidth > 1920) {
+                $image->scale(width: 1920);
+            }
+
+            $image->save($fullPath, quality: 85);
+            $finalSize = filesize($fullPath);
+
+            Log::info('compress: JPEG/image comprimido', [
+                'path' => $path,
+                'original' => $originalSize,
+                'final' => $finalSize,
+                'reduction' => round((1 - $finalSize / $originalSize) * 100) . '%',
+                'width' => $origWidth . ' -> ' . min($origWidth, 1920),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('compress: falha ao comprimir imagem', [
+                'path' => $path,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
     }
 
     /**
@@ -302,6 +402,11 @@ class FileStorageController extends Controller
         // Upload de arquivo obrigatório
         $file = $request->file('file');
         $path = $file->store('file-storage', 'public');
+
+        // Comprime imagem se passar de 999KB
+        $this->compressImageIfNeeded($path, $file->getSize(), $file->getMimeType());
+        $finalSize = Storage::disk('public')->size($path);
+
         /**
          * Persistência sem host
          * pt-BR: Armazena apenas a URL relativa (sem domínio) para evitar
@@ -343,7 +448,7 @@ class FileStorageController extends Controller
                 'url' => $relativeUrl,
                 'original' => $file->getClientOriginalName(),
                 'mime' => $file->getClientMimeType(),
-                'size' => $file->getSize(),
+                'size' => $finalSize,
                 'ext' => $file->getClientOriginalExtension(),
             ],
         ];
@@ -413,6 +518,11 @@ class FileStorageController extends Controller
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $path = $file->store('file-storage', 'public');
+
+            // Comprime imagem se passar de 999KB
+            $this->compressImageIfNeeded($path, $file->getSize(), $file->getMimeType());
+            $finalSize = Storage::disk('public')->size($path);
+
             /**
              * Persistência sem host
              * pt-BR: Armazena somente URL relativa; leitura gera URL pública
@@ -426,7 +536,7 @@ class FileStorageController extends Controller
                 'url' => $relativeUrl,
                 'original' => $file->getClientOriginalName(),
                 'mime' => $file->getClientMimeType(),
-                'size' => $file->getSize(),
+                'size' => $finalSize,
                 'ext' => $file->getClientOriginalExtension(),
             ];
             $mapped['guid'] = $relativeUrl;

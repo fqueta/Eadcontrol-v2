@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { publicProductsService } from '@/services/publicProductsService';
 import { ArrowLeft, ShoppingBag, Loader2, AlertCircle } from 'lucide-react';
+import { DynamicPrice } from '@/components/common/DynamicPrice';
 
 export default function ProductPublicDetails() {
   const { slug } = useParams<{ slug: string }>();
@@ -85,8 +86,13 @@ export default function ProductPublicDetails() {
 
             <div>
               <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Preço</div>
-              <div className="text-4xl font-extrabold text-primary">
-                {product.salePrice ? `R$ ${product.salePrice}` : 'Consultar'}
+              <div className="mt-1 mb-2">
+                <DynamicPrice 
+                  price={product.salePrice} 
+                  installments={(product as any).parcelas} 
+                  installmentValue={(product as any).valor_parcela} 
+                  size="lg" 
+                />
               </div>
               {product.stock !== null && product.stock !== undefined && (
                 <p className="text-sm text-muted-foreground mt-1">
