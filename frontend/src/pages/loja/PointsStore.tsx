@@ -388,11 +388,11 @@ const PointsStore: React.FC<PointsStoreProps> = ({ linkLoja }) => {
                   const pointsRequired = product.pointsRequired || 0;
                   return (
                     <Card key={product.id} className="overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-purple-100 flex flex-col h-full">
-                      <div className="relative">
+                      <div className="relative bg-slate-50/30 dark:bg-slate-950/30 flex items-center justify-center h-48">
                         <img
                           src={product.image || 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=300&fit=crop'}
                           alt={product.name}
-                          className="w-full h-48 object-cover"
+                          className="w-full h-full object-contain"
                         />
                         {!product.isActive && (
                           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">

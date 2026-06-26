@@ -13,6 +13,7 @@ import { ImageUpload } from "@/components/lib/ImageUpload";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -173,6 +174,9 @@ export function ProductForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Imagem do Produto</FormLabel>
+                <FormDescription>
+                  Recomendado: imagem em formato quadrado (proporção 1:1, ex: 800x800 pixels) para evitar que a imagem seja cortada nas páginas do site.
+                </FormDescription>
                 <FormControl>
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
@@ -218,7 +222,7 @@ export function ProductForm({
                         <img
                           src={field.value}
                           alt="Preview"
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-contain"
                         />
                       </div>
                     )}

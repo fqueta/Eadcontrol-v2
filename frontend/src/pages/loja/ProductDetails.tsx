@@ -325,7 +325,7 @@ const ProductDetails: React.FC<PointsStoreProps> = ({ linkLoja }) => {
               <img
                 src={product.image2??product.image}
                 alt={product.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
             </div>
           </div>

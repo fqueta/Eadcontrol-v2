@@ -60,7 +60,7 @@ export default function ProductPublicDetails() {
               <img
                 src={product.image}
                 alt={product.name}
-                className="w-full h-full object-cover aspect-square"
+                className="w-full h-full object-contain aspect-square"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
             ) : (
@@ -107,7 +107,7 @@ export default function ProductPublicDetails() {
               <div>
                 <h3 className="text-sm font-bold text-foreground/80 mb-2">Descrição</h3>
                 <div
-                  className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed prose prose-sm max-w-none"
+                  className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed prose prose-sm max-w-none whitespace-pre-wrap"
                   dangerouslySetInnerHTML={{ __html: product.description }}
                 />
               </div>
