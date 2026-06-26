@@ -6,12 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { publicProductsService } from '@/services/publicProductsService';
-import { ArrowLeft, ShoppingBag, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, Loader2, AlertCircle, Edit } from 'lucide-react';
 import { DynamicPrice } from '@/components/common/DynamicPrice';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProductPublicDetails() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const permissionId = Number((user as any)?.permission_id ?? 999);
 
   const { data: product, isLoading, error } = useQuery({
     queryKey: ['public-product', slug],
@@ -72,14 +75,29 @@ export default function ProductPublicDetails() {
 
           <div className="space-y-6">
             <div>
-              {product.categoryData?.name && (
-                <span className="category-badge-themed px-3 py-1 mb-3">
-                  {product.categoryData.name}
-                </span>
-              )}
-              <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900 dark:text-white">
-                {product.name}
-              </h1>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  {product.categoryData?.name && (
+                    <span className="category-badge-themed px-3 py-1 mb-3">
+                      {product.categoryData.name}
+                    </span>
+                  )}
+                  <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900 dark:text-white">
+                    {product.name}
+                  </h1>
+                </div>
+                {permissionId < 3 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate(`/admin/products/${product.id}/edit`)}
+                    className="shrink-0 flex items-center gap-1.5 rounded-lg border-slate-200 text-xs font-semibold"
+                    title="Editar produto"
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                    Editar
+                  </Button>
+                )}
+              </div>
             </div>
 
             <Separator />

@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useProductsList, useCreateProduct, useUpdateProduct, useDeleteProduct, useProductCategories, useProductUnits } from "@/hooks/products";
 import type { Product, CreateProductInput, UpdateProductInput } from "@/types/products";
-import { Plus, Edit } from "lucide-react";
+import { Plus, Edit, Package } from "lucide-react";
 import { currencyRemoveMaskToNumber } from "@/lib/masks/currency";
 import ProductsStats from "@/components/products/ProductsStats";
 import ProductsTable from "@/components/products/ProductsTable";
@@ -153,16 +153,16 @@ export default function Products() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Produtos</h1>
-          <p className="text-muted-foreground">
-            Gerencie todos os produtos do estoque
-          </p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Package className="h-8 w-8 text-primary" />
+            Produtos
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">Gerencie o catálogo de produtos e suas configurações de exibição.</p>
         </div>
-        <Button onClick={handleNewProduct}>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Produto
+        <Button onClick={handleNewProduct} size="lg" className="shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
+          <Plus className="h-5 w-5 mr-2" /> Novo produto
         </Button>
       </div>
 

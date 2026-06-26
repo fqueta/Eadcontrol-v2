@@ -76,6 +76,8 @@ export default function ProductsTable({
   const [editingStockId, setEditingStockId] = useState<string | null>(null);
   const [stockDraft, setStockDraft] = useState<number>(0);
 
+
+
   /**
    * Inicia edição de estoque para um produto da listagem.
    * @param product Produto alvo para edição
@@ -151,45 +153,55 @@ export default function ProductsTable({
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Lista de Produtos</CardTitle>
-        <CardDescription>
-          Visualize e gerencie todos os produtos cadastrados
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center space-x-2 mb-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar produtos..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
-            />
+    <Card className="border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm overflow-hidden">
+      <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              Produtos cadastrados
+              {filteredProducts.length > 0 && (
+                <Badge variant="secondary" className="rounded-full px-2 font-mono text-[10px]">
+                  {filteredProducts.length}
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription className="mt-1">
+              Visualize e gerencie todos os produtos cadastrados
+            </CardDescription>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative group">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
+              <Input
+                placeholder="Buscar produtos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 w-full md:w-[240px] lg:w-[320px] bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 transition-all"
+              />
+            </div>
           </div>
         </div>
-
-        <div className="rounded-md border">
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="relative overflow-x-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
               <TableRow>
-                <TableHead>Imagem</TableHead>
-                <TableHead>Produto</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead>Preço de Venda</TableHead>
-                <TableHead>Pontos</TableHead>
-                <TableHead>Estoque</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Destaque</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider text-slate-500 pl-6">Imagem</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider text-slate-500">Produto</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider text-slate-500">Categoria</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider text-slate-500">Preço de Venda</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider text-slate-500">Pontos</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider text-slate-500">Estoque</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider text-slate-500">Status</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider text-slate-500">Destaque</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-wider text-slate-500 text-right pr-6">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     <div className="flex items-center justify-center space-x-2">
                       <Package className="h-4 w-4 animate-spin" />
                       <span>Carregando produtos...</span>
@@ -198,7 +210,7 @@ export default function ProductsTable({
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     <div className="flex flex-col items-center space-y-2 text-destructive">
                       <AlertTriangle className="h-8 w-8" />
                       <div>
@@ -220,7 +232,7 @@ export default function ProductsTable({
                 </TableRow>
               ) : !products || products.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     <div className="flex flex-col items-center space-y-2 text-muted-foreground">
                       <Package className="h-8 w-8" />
                       <div>
@@ -253,7 +265,7 @@ export default function ProductsTable({
               ) : (
                 filteredProducts.map((product) => (
                   <TableRow key={product.id} onDoubleClick={() => onEditProduct(product)} className="cursor-pointer">
-                    <TableCell>
+                    <TableCell className="pl-6">
                       <div className="w-16 h-16 rounded-md overflow-hidden bg-muted flex items-center justify-center">
                         {product.image ? (
                           <img 
@@ -273,13 +285,7 @@ export default function ProductsTable({
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">{product.name}</div>
-                        <div 
-                          className="text-sm text-muted-foreground"
-                          dangerouslySetInnerHTML={{ __html: product.description || '' }}
-                        />
-                      </div>
+                      <div className="font-medium">{product.name}</div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{(product as any).categoryData?.name || product.category}</Badge>
@@ -338,7 +344,7 @@ export default function ProductsTable({
                         disabled={updateProductMutation.isPending}
                       />
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right pr-6">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="h-8 w-8 p-0">

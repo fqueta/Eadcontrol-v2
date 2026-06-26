@@ -2793,6 +2793,9 @@ export function CourseForm({
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <Label className="text-sm font-bold text-foreground/80">Imagem de capa</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Recomendado: imagem retangular na proporção 16:9 (ex: 1280x720 pixels) para evitar que a imagem seja cortada nas páginas do site.
+                      </p>
                       <div className="flex flex-wrap items-center gap-2">
                         <Button type="button" variant="secondary" onClick={() => setMediaOpen(true)} className="rounded-xl font-bold bg-primary/5 text-primary hover:bg-primary/10 border-primary/20 transition-all">
                           <ImageIcon className="h-4 w-4 mr-2" /> 
@@ -2830,7 +2833,7 @@ export function CourseForm({
                     <div className="aspect-video rounded-2xl border-2 border-slate-100 dark:border-slate-800 overflow-hidden bg-slate-100 dark:bg-slate-900 flex items-center justify-center shadow-inner relative group">
                       {form.watch('config.cover.url') ? (
                         <>
-                          <img src={form.watch('config.cover.url')!} alt="Pré-visualização" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                          <img src={form.watch('config.cover.url')!} alt="Pré-visualização" className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105" />
                           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <span className="bg-white/90 dark:bg-slate-900/90 py-2 px-4 rounded-full text-xs font-bold shadow-xl">Capa Selecionada</span>
                           </div>
@@ -2854,7 +2857,9 @@ export function CourseForm({
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <Label className="text-sm font-bold text-foreground/80">Banner do curso</Label>
-                      <p className="text-xs text-muted-foreground">Imagem de destaque no topo da página de detalhes do curso.</p>
+                      <p className="text-xs text-muted-foreground">
+                        Imagem de destaque no topo da página de detalhes do curso. Recomendado: proporção 4:1 (ex: 1920x480 pixels) para evitar que a imagem seja cortada.
+                      </p>
                       <div className="flex flex-wrap items-center gap-2 mt-2">
                         <Button type="button" variant="secondary" onClick={() => setMediaBannerOpen(true)} className="rounded-xl font-bold bg-primary/5 text-primary hover:bg-primary/10 border-primary/20 transition-all">
                           <ImageIcon className="h-4 w-4 mr-2" /> 
@@ -2892,7 +2897,7 @@ export function CourseForm({
                     <div className="aspect-video rounded-2xl border-2 border-slate-100 dark:border-slate-800 overflow-hidden bg-slate-100 dark:bg-slate-900 flex items-center justify-center shadow-inner relative group">
                       {form.watch('config.banner.url') ? (
                         <>
-                          <img src={form.watch('config.banner.url')!} alt="Pré-visualização banner" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                          <img src={form.watch('config.banner.url')!} alt="Pré-visualização banner" className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105" />
                           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <span className="bg-white/90 dark:bg-slate-900/90 py-2 px-4 rounded-full text-xs font-bold shadow-xl">Banner Selecionado</span>
                           </div>
