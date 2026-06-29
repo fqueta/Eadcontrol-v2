@@ -4,51 +4,64 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use App\Models\Menu;
 
 class AdminMenuPermissionSeeder extends Seeder
 {
-    /**
-     * Seed para configurar as permissões do grupo Administrador (permission_id = 2).
-     * O Administrador tem acesso a todos os menus, exceto nos submenus de Configurações,
-     * onde ele só tem acesso a "Usuários" e "Permissões" (ou "Perfis").
-     *
-     * @return void
-     */
     public function run(): void
     {
         $adminPermissionId = 2;
-        $menus = Menu::all();
 
-        // Encontrar o menu pai de Configurações
-        $configMenu = Menu::where('title', 'Configurações')->whereNull('parent_id')->first();
-        $configMenuId = $configMenu ? $configMenu->id : null;
-
-        // Limpa permissões existentes para o grupo 2 para evitar duplicados
         DB::table('menu_permission')->where('permission_id', $adminPermissionId)->delete();
 
-        foreach ($menus as $menu) {
-            $canAccess = true;
+        $permissions = [
+            ['menu_id' => 1,  'parent_id' => null, 'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 3,  'parent_id' => 2,    'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 4,  'parent_id' => 2,    'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 6,  'parent_id' => 5,    'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 7,  'parent_id' => 5,    'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 8,  'parent_id' => 5,    'can_view' => false, 'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 9,  'parent_id' => 5,    'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 10, 'parent_id' => 5,    'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 11, 'parent_id' => 5,    'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 12, 'parent_id' => 5,    'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 13, 'parent_id' => 5,    'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 14, 'parent_id' => 5,    'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 15, 'parent_id' => 5,    'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 16, 'parent_id' => 5,    'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 17, 'parent_id' => 5,    'can_view' => false, 'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 18, 'parent_id' => 5,    'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 20, 'parent_id' => 19,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 21, 'parent_id' => 19,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 22, 'parent_id' => 19,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 23, 'parent_id' => 19,   'can_view' => false, 'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 25, 'parent_id' => 24,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 26, 'parent_id' => 24,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 27, 'parent_id' => 24,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 28, 'parent_id' => 24,   'can_view' => false, 'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 30, 'parent_id' => 29,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 31, 'parent_id' => 29,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 32, 'parent_id' => 29,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 33, 'parent_id' => 29,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 34, 'parent_id' => 29,   'can_view' => false, 'can_create' => false, 'can_edit' => false, 'can_delete' => false, 'can_upload' => false],
+            ['menu_id' => 35, 'parent_id' => 29,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 36, 'parent_id' => 29,   'can_view' => false, 'can_create' => false, 'can_edit' => false, 'can_delete' => false, 'can_upload' => false],
+            ['menu_id' => 37, 'parent_id' => 29,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => false, 'can_upload' => false],
+        ];
 
-            // Se for um submenu de Configurações, restringir aos permitidos
-            if ($configMenuId && $menu->parent_id == $configMenuId) {
-                $allowedSubmenus = ['Usuários', 'Permissões', 'Perfis'];
-                if (!in_array($menu->title, $allowedSubmenus)) {
-                    $canAccess = false;
-                }
-            }
-
-            DB::table('menu_permission')->insert([
-                'menu_id'       => $menu->id,
+        $rows = array_map(function ($item) use ($adminPermissionId) {
+            return [
+                'menu_id'       => $item['menu_id'],
                 'permission_id' => $adminPermissionId,
-                'can_view'      => $canAccess,
-                'can_create'    => $canAccess,
-                'can_edit'      => $canAccess,
-                'can_delete'    => $canAccess,
-                'can_upload'    => $canAccess,
+                'can_view'      => $item['can_view'],
+                'can_create'    => $item['can_create'],
+                'can_edit'      => $item['can_edit'],
+                'can_delete'    => $item['can_delete'],
+                'can_upload'    => $item['can_upload'],
                 'created_at'    => now(),
                 'updated_at'    => now(),
-            ]);
-        }
+            ];
+        }, $permissions);
+
+        DB::table('menu_permission')->insert($rows);
     }
 }
