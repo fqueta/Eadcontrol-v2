@@ -31,7 +31,11 @@ class ProductController extends Controller
     {
         foreach ($data as $key => $value) {
             if (is_string($value)) {
-                $data[$key] = strip_tags($value);
+                if ($key === 'post_content') {
+                    $data[$key] = trim($value);
+                } else {
+                    $data[$key] = strip_tags($value);
+                }
             }
         }
         return $data;

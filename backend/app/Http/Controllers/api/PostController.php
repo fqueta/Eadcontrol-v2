@@ -30,15 +30,18 @@ class PostController extends Controller
     /**
      * Sanitiza os dados recebidos, inclusive arrays como config
      */
-    private function sanitizeInput($input)
+    private function sanitizeInput($input, $key = null)
     {
         if (is_array($input)) {
             $sanitized = [];
-            foreach ($input as $key => $value) {
-                $sanitized[$key] = $this->sanitizeInput($value);
+            foreach ($input as $k => $value) {
+                $sanitized[$k] = $this->sanitizeInput($value, $k);
             }
             return $sanitized;
         } elseif (is_string($input)) {
+            if ($key === 'post_content') {
+                return trim($input);
+            }
             return trim(strip_tags($input));
         }
         return $input;
