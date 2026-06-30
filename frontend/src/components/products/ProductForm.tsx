@@ -77,6 +77,7 @@ interface ProductFormProps {
   unitsError: any;
   onCancel: () => void;
   isEditing: boolean;
+  hideActions?: boolean;
 }
 
 export function ProductForm({
@@ -90,7 +91,8 @@ export function ProductForm({
   categoriesError,
   unitsError,
   onCancel,
-  isEditing
+  isEditing,
+  hideActions = false
 }: ProductFormProps) {
   const [mediaOpen, setMediaOpen] = useState(false);
   return (
@@ -506,14 +508,16 @@ export function ProductForm({
 
         </div>
 
-        <div className="flex justify-end space-x-2 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Salvando..." : isEditing ? "Atualizar" : "Criar"}
-          </Button>
-        </div>
+        {!hideActions && (
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Salvando..." : isEditing ? "Atualizar" : "Criar"}
+            </Button>
+          </div>
+        )}
       </form>
 
       <MediaLibraryModal
