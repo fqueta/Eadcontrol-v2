@@ -125,6 +125,8 @@ class UserImportController extends Controller
                       if (!empty($r['cpf'])) $cpfs[] = $r['cpf'];
                       if (!empty($r['cnpj'])) $cnpjs[] = $r['cnpj'];
                       if (!empty($r['id_cliente'])) $clientIds[] = (string)$r['id_cliente'];
+                      if (!empty($r['id_antigo'])) $clientIds[] = (string)$r['id_antigo'];
+                      if (!empty($r['id']) && $type === 'users') $clientIds[] = (string)$r['id'];
                  }
                  
                  if (!empty($emails) || !empty($cpfs) || !empty($cnpjs) || !empty($clientIds)) {
@@ -897,15 +899,18 @@ class UserImportController extends Controller
         $email = $row['email'] ?? null;
         $cpf = $row['cpf'] ?? null;
         $cnpj = $row['cnpj'] ?? null;
+        $legacyId = $row['id'] ?? $row['id_antigo'] ?? null;
 
-        if (empty($email) && empty($cpf) && empty($cnpj)) {
+        if (empty($email) && empty($cpf) && empty($cnpj) && empty($legacyId)) {
             return 'skipped';
         }
 
         // Try to find in map first
         $existingUser = null;
         
-        if ($email && isset($existingUsersMap['email'][$email])) {
+        if ($legacyId && isset($existingUsersMap['id_antigo'][(string)$legacyId])) {
+            $existingUser = $existingUsersMap['id_antigo'][(string)$legacyId];
+        } elseif ($email && isset($existingUsersMap['email'][$email])) {
             $existingUser = $existingUsersMap['email'][$email];
         } elseif ($cpf && isset($existingUsersMap['cpf'][$cpf])) {
              $existingUser = $existingUsersMap['cpf'][$cpf];
@@ -915,37 +920,78 @@ class UserImportController extends Controller
 
         // Fallback to query if map not provided or empty (legacy behavior support)
         if (!$existingUser && empty($existingUsersMap)) {
-            $query = User::query();
-            $query->where(function($q) use ($email, $cpf, $cnpj) {
-                if ($email) $q->where('email', $email);
-                if ($cpf) $q->orWhere('cpf', $cpf);
-                if ($cnpj) $q->orWhere('cnpj', $cnpj);
-            });
-            $existingUser = $query->first();
+            if ($legacyId) {
+                $existingUser = User::where('config->ID_antigo', (string)$legacyId)->first();
+            }
+            if (!$existingUser) {
+                $query = User::query();
+                $query->where(function($q) use ($email, $cpf, $cnpj) {
+                    if ($email) $q->where('email', $email);
+                    if ($cpf) $q->orWhere('cpf', $cpf);
+                    if ($cnpj) $q->orWhere('cnpj', $cnpj);
+                });
+                $existingUser = $query->first();
+            }
+        }
+
+        // Extract name
+        $nome = $row['nome'] ?? '';
+        $sobrenome = $row['sobrenome'] ?? '';
+        $name = trim($nome . ' ' . $sobrenome);
+        if (empty($name)) {
+            $name = $row['name'] ?? '';
+        }
+
+        // Status mapping
+        $ativoVal = $row['ativo'] ?? null;
+        $status = 'actived';
+        if ($ativoVal === 'n' || $ativoVal === '0' || $ativoVal === false || (isset($row['status']) && $row['status'] === 'inactive')) {
+            $status = 'inactive';
+        }
+
+        // Config mapping
+        $config = is_array($row['config'] ?? null) ? $row['config'] : [];
+        if ($legacyId) {
+            $config['ID_antigo'] = (string)$legacyId;
+        }
+        if (isset($row['celular'])) {
+            $config['celular'] = $row['celular'];
+        }
+        if (isset($row['telefone'])) {
+            $config['telefone_residencial'] = $row['telefone'];
+        }
+        if (isset($row['endereco'])) {
+            $config['endereco'] = $row['endereco'];
+            $config['numero'] = $row['numero'] ?? '';
+            $config['bairro'] = $row['bairro'] ?? '';
+            $config['cidade'] = $row['cidade'] ?? '';
+            $config['uf'] = $row['uf'] ?? '';
+            $config['cep'] = $row['cep'] ?? '';
+        }
+        if (isset($row['data_nascimento'])) {
+            $config['nascimento'] = $row['data_nascimento'];
+        }
+        if (isset($row['profissao'])) {
+            $config['profissao'] = $row['profissao'];
         }
 
         $attributes = [
-            'name' => $row['name'] ?? '',
+            'name' => $name,
             'email' => $email,
             'cpf' => $cpf,
             'cnpj' => $cnpj,
             'tipo_pessoa' => $row['tipo_pessoa'] ?? 'pf',
             'genero' => $row['genero'] ?? 'ni',
-            'status' => $row['status'] ?? 'actived',
-            'ativo' => ($row['status'] ?? '') === 'actived' ? 's' : 'n',
-            'config' => $row['config'] ?? [],
+            'status' => $status,
+            'ativo' => $status === 'actived' ? 's' : 'n',
+            'config' => json_encode($config),
         ];
 
         if (empty($attributes['cpf'])) $attributes['cpf'] = null;
         if (empty($attributes['cnpj'])) $attributes['cnpj'] = null;
         if (empty($attributes['email'])) $attributes['email'] = null;
 
-        if (is_array($attributes['config'])) {
-            $attributes['config'] = json_encode($attributes['config']);
-        }
-
         if ($this->defaultPasswordHash === null) {
-            // FIXED: Typo corrected from defaultPass16rdHash to defaultPasswordHash
             $this->defaultPasswordHash = Hash::make('mudar12@3');
         }
         $attributes['password'] = $this->defaultPasswordHash;
@@ -955,7 +1001,6 @@ class UserImportController extends Controller
             return 'updated';
         } else {
             $attributes['token'] = Qlib::token();
-            // password já definido com hash padrão
             Client::create($attributes);
             return 'created';
         }
