@@ -250,6 +250,17 @@ export function CourseActivityItem({
 
                     {/* Right Column: Content specific fields */}
                     <div className="md:col-span-9 space-y-5 border-l-2 pl-6 border-dashed border-muted">
+                         <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Descrição Pública</Label>
+                            <div className="min-h-[140px] rounded-2xl border border-slate-200 bg-white/80 shadow-sm overflow-hidden">
+                               <RichTextEditor
+                                  value={a.descricao || ''}
+                                  onChange={(html) => onFieldChange('descricao', html)}
+                                  placeholder="Descrição pública da atividade (visível para alunos)"
+                               />
+                            </div>
+                         </div>
+
                          {a.tipo === 'video' && (
                              <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
                                 <div className="flex flex-col sm:flex-row gap-4">

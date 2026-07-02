@@ -26,6 +26,9 @@ export default function BudgetPreview({
   discountAmountMasked,
   subtotalMasked,
   totalMasked,
+  showClientInfo = true,
+  showValidity = true,
+  status = 'Aguardando Aprovação',
 }: {
   title?: string;
   description?: string;
@@ -40,6 +43,9 @@ export default function BudgetPreview({
   discountAmountMasked?: string; // already masked (e.g. "R$ 6.000,00")
   subtotalMasked?: string; // already masked
   totalMasked?: string; // already masked
+  showClientInfo?: boolean;
+  showValidity?: boolean;
+  status?: string;
 }) {
   // Helpers
   const moduleTitle = module?.titulo || (course?.titulo || course?.nome || '');
@@ -89,7 +95,7 @@ export default function BudgetPreview({
              </div>
              <div>
                 <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-0.5">Status</p>
-                <p className="text-sm font-bold text-white">Aguardando Aprovação</p>
+                <p className="text-sm font-bold text-white">{status}</p>
              </div>
           </div>
         </div>
@@ -97,55 +103,61 @@ export default function BudgetPreview({
 
       <CardContent className="p-0">
         {/* Client Info Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x border-b">
-           {/* Column 1: Client Details */}
-           <div className="md:col-span-7 p-8 space-y-6">
-              <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-4">
-                 <User className="h-4 w-4" /> Dados do Cliente
-              </h4>
-              <div className="flex items-start gap-4">
-                 <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 text-primary font-bold text-lg">
-                    {clientName.charAt(0).toUpperCase()}
-                 </div>
-                 <div className="space-y-1">
-                    <h3 className="text-lg font-bold text-foreground leading-tight">{clientName}</h3>
-                    {clientId && <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">ID: #{String(clientId)}</p>}
-                 </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                 {clientEmail && (
-                    <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border border-transparent hover:border-muted-foreground/20 transition-all">
-                       <Mail className="h-4 w-4 text-primary/60" />
-                       <span className="text-sm font-medium truncate" title={clientEmail}>{clientEmail}</span>
-                    </div>
-                 )}
-                 {clientPhone && (
-                    <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border border-transparent hover:border-muted-foreground/20 transition-all">
-                       <Phone className="h-4 w-4 text-primary/60" />
-                       <span className="text-sm font-medium">{clientPhone}</span>
-                    </div>
-                 )}
-              </div>
-           </div>
+        {(showClientInfo || showValidity) && (
+          <div className="grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x border-b">
+             {/* Column 1: Client Details */}
+             {showClientInfo && (
+               <div className={`${showValidity ? 'md:col-span-7' : 'md:col-span-12'} p-8 space-y-6`}>
+                  <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-4">
+                     <User className="h-4 w-4" /> Dados do Cliente
+                  </h4>
+                  <div className="flex items-start gap-4">
+                     <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 text-primary font-bold text-lg">
+                        {clientName ? clientName.charAt(0).toUpperCase() : '?'}
+                     </div>
+                     <div className="space-y-1">
+                        <h3 className="text-lg font-bold text-foreground leading-tight">{clientName}</h3>
+                        {clientId && <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">ID: #{String(clientId)}</p>}
+                     </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                     {clientEmail && (
+                        <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border border-transparent hover:border-muted-foreground/20 transition-all">
+                           <Mail className="h-4 w-4 text-primary/60" />
+                           <span className="text-sm font-medium truncate" title={clientEmail}>{clientEmail}</span>
+                        </div>
+                     )}
+                     {clientPhone && (
+                        <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border border-transparent hover:border-muted-foreground/20 transition-all">
+                           <Phone className="h-4 w-4 text-primary/60" />
+                           <span className="text-sm font-medium">{clientPhone}</span>
+                        </div>
+                     )}
+                  </div>
+               </div>
+             )}
 
-           {/* Column 2: Dates & Validity */}
-           <div className="md:col-span-5 p-8 bg-muted/5 space-y-6">
-              <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-4">
-                 <Calendar className="h-4 w-4" /> Detalhes da Validade
-              </h4>
-              <div className="space-y-4">
-                 <div className="flex justify-between items-center p-3 bg-white rounded-lg border shadow-sm">
-                    <span className="text-xs font-bold text-muted-foreground uppercase">Emissão</span>
-                    <span className="text-sm font-mono font-bold text-foreground">{new Date().toLocaleDateString('pt-BR')}</span>
-                 </div>
-                 <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-lg border border-emerald-100 shadow-sm">
-                    <span className="text-xs font-bold text-emerald-700 uppercase">Válido Até</span>
-                    <span className="text-sm font-mono font-bold text-emerald-800">{validityDate || '—'}</span>
-                 </div>
-              </div>
-           </div>
-        </div>
+             {/* Column 2: Dates & Validity */}
+             {showValidity && (
+               <div className={`${showClientInfo ? 'md:col-span-5' : 'md:col-span-12'} p-8 bg-muted/5 space-y-6`}>
+                  <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-4">
+                     <Calendar className="h-4 w-4" /> Detalhes da Validade
+                  </h4>
+                  <div className="space-y-4">
+                     <div className="flex justify-between items-center p-3 bg-white rounded-lg border shadow-sm">
+                        <span className="text-xs font-bold text-muted-foreground uppercase">Emissão</span>
+                        <span className="text-sm font-mono font-bold text-foreground">{new Date().toLocaleDateString('pt-BR')}</span>
+                     </div>
+                     <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-lg border border-emerald-100 shadow-sm">
+                        <span className="text-xs font-bold text-emerald-700 uppercase">Válido Até</span>
+                        <span className="text-sm font-mono font-bold text-emerald-800">{validityDate || '—'}</span>
+                     </div>
+                  </div>
+               </div>
+             )}
+          </div>
+        )}
 
         {/* Financial Details */}
         <div className="p-8">

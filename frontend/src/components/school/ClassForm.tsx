@@ -17,34 +17,36 @@ import type { TurmaPayload, TurmaRecord } from '@/types/turmas';
 import { Loader2, Save, X, Calendar, Clock, DollarSign, Settings, Info, Users, BookOpen } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
-const simNao = z.enum(['s', 'n']);
+const simNao = z.enum(['s', 'n']).nullable().optional().transform(v => v ?? 'n');
+const simNaoAtivo = z.enum(['s', 'n']).nullable().optional().transform(v => v ?? 's');
 
 const classSchema = z.object({
   id_curso: z.coerce.number().min(1, 'Selecione um curso'),
   nome: z.string().min(1, 'Nome é obrigatório'),
-  token: z.string().optional(),
-  inicio: z.string().optional().nullable(),
-  fim: z.string().optional().nullable(),
-  professor: z.string().optional().nullable(),
-  Pgto: z.string().optional(),
-  Valor: z.coerce.number().optional(),
-  Matricula: z.coerce.number().optional(),
-  hora_inicio: z.string().optional().nullable(),
-  hora_fim: z.string().optional().nullable(),
-  duracao: z.coerce.number().optional(),
-  unidade_duracao: z.string().optional().default('Hrs'),
-  dia1: simNao.default('n'),
-  dia2: simNao.default('n'),
-  dia3: simNao.default('n'),
-  dia4: simNao.default('n'),
-  dia5: simNao.default('n'),
-  dia6: simNao.default('n'),
-  dia7: simNao.default('n'),
-  TemHorario: simNao.default('n'),
-  Quadro: z.string().optional(),
-  autor: z.coerce.number().optional(),
-  ativo: simNao.default('s'),
-  ordenar: z.coerce.number().optional(),
+  token: z.string().nullable().optional(),
+  inicio: z.string().nullable().optional(),
+  fim: z.string().nullable().optional(),
+  professor: z.string().nullable().optional(),
+  Pgto: z.string().nullable().optional(),
+  Valor: z.coerce.number().nullable().optional(),
+  Matricula: z.coerce.number().nullable().optional(),
+  hora_inicio: z.string().nullable().optional(),
+  hora_fim: z.string().nullable().optional(),
+  duracao: z.coerce.number().nullable().optional(),
+  unidade_duracao: z.string().nullable().optional().default('Hrs'),
+  dia1: simNao,
+  dia2: simNao,
+  dia3: simNao,
+  dia4: simNao,
+  dia5: simNao,
+  dia6: simNao,
+  dia7: simNao,
+  TemHorario: simNao,
+  Quadro: z.string().nullable().optional(),
+  autor: z.coerce.number().nullable().optional(),
+  ativo: simNaoAtivo,
+  ordenar: z.coerce.number().nullable().optional(),
+  obs: z.string().nullable().optional(),
   config: z.any().optional(),
 });
 
@@ -130,7 +132,7 @@ export function ClassForm({
   const courseOptions = useMemo(
     () => (coursesQuery.data?.data ?? []).map((c: any) => ({ 
       id: String(c.id), 
-      nome: c.nome ?? String(c.id),
+      nome: c.titulo || c.nome || String(c.id),
       valor: c.valor || c.Valor || 0,
       matricula: c.matricula || c.Matricula || 0
     })),
@@ -170,7 +172,19 @@ export function ClassForm({
   }, [form, courseOptions]);
 
   const handleSubmit = async (values: TurmaPayload) => {
-    await onSubmit(values);
+    const payload = { ...values };
+    
+    // Normalize optional fields to null if they are empty
+    if (payload.professor === "0" || payload.professor === "") payload.professor = null;
+    if (payload.inicio === "") payload.inicio = null;
+    if (payload.fim === "") payload.fim = null;
+    if (payload.hora_inicio === "") payload.hora_inicio = null;
+    if (payload.hora_fim === "") payload.hora_fim = null;
+    if (payload.Pgto === "") payload.Pgto = null;
+    if (payload.Quadro === "") payload.Quadro = null;
+    if (payload.token === "") payload.token = null;
+
+    await onSubmit(payload);
   };
 
   const handleValidationErrors = (errors: any) => {
@@ -221,18 +235,25 @@ export function ClassForm({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="font-bold flex items-center gap-2"><BookOpen className="w-4 h-4 text-primary" /> Curso Vinculado *</FormLabel>
-                      <Select value={String(field.value || '')} onValueChange={(v) => field.onChange(Number(v))}>
-                        <FormControl>
-                          <SelectTrigger className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200">
-                            <SelectValue placeholder="Selecione um curso..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="rounded-xl">
-                          {courseOptions.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {coursesQuery.isLoading ? (
+                        <div className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 flex items-center px-3">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground/60 mr-2" />
+                          <span className="text-sm text-muted-foreground">Carregando cursos...</span>
+                        </div>
+                      ) : (
+                        <Select value={field.value ? String(field.value) : undefined} onValueChange={(v) => field.onChange(Number(v))}>
+                          <FormControl>
+                            <SelectTrigger className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200">
+                              <SelectValue placeholder="Selecione um curso..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="rounded-xl">
+                            {courseOptions.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -259,7 +280,7 @@ export function ClassForm({
                     <FormItem>
                       <FormLabel className="font-bold">Token (URL)</FormLabel>
                       <FormControl>
-                        <Input className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900 font-mono" placeholder="slug-da-turma" {...field} />
+                        <Input className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900 font-mono" placeholder="slug-da-turma" {...field} value={field.value || ''} />
                       </FormControl>
                     </FormItem>
                   )}
@@ -271,19 +292,26 @@ export function ClassForm({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="font-bold flex items-center gap-2"><Users className="w-4 h-4 text-primary" /> Professor</FormLabel>
-                      <Select value={field.value ? String(field.value) : "0"} onValueChange={(v) => field.onChange(v)}>
-                        <FormControl>
-                          <SelectTrigger className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900">
-                            <SelectValue placeholder="Selecione um professor..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="rounded-xl">
-                          <SelectItem value="0">Nenhum professor</SelectItem>
-                          {professorOptions.map((p) => (
-                            <SelectItem key={p.id} value={String(p.id)}>{p.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {professorsQuery.isLoading ? (
+                        <div className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 flex items-center px-3">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground/60 mr-2" />
+                          <span className="text-sm text-muted-foreground">Carregando professores...</span>
+                        </div>
+                      ) : (
+                        <Select value={field.value ? String(field.value) : "0"} onValueChange={(v) => field.onChange(v)}>
+                          <FormControl>
+                            <SelectTrigger className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900">
+                              <SelectValue placeholder="Selecione um professor..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="0">Nenhum professor</SelectItem>
+                            {professorOptions.map((p) => (
+                              <SelectItem key={p.id} value={String(p.id)}>{p.nome}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </FormItem>
                   )}
                 />
@@ -385,7 +413,7 @@ export function ClassForm({
                 control={form.control}
                 name="obs"
                 render={({ field }) => (
-                  <FormItem><FormLabel className="font-bold">Obs</FormLabel><FormControl><Textarea className="min-h-[100px] rounded-xl" {...field} /></FormControl></FormItem>
+                  <FormItem><FormLabel className="font-bold">Obs</FormLabel><FormControl><Textarea className="min-h-[100px] rounded-xl" {...field} value={field.value || ''} /></FormControl></FormItem>
                 )}
               />
             </TabsContent>

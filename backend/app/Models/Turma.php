@@ -46,4 +46,14 @@ class Turma extends Model
         'max_alunos' => 'integer',
         'min_alunos' => 'integer',
     ];
+
+    public function matriculas()
+    {
+        return $this->hasMany(Matricula::class, 'id_turma');
+    }
+
+    public function curso()
+    {
+        return $this->belongsTo(Curso::class, 'id_curso');
+    }
 }

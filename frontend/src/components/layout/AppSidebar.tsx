@@ -174,8 +174,8 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <TooltipProvider>
               <SidebarMenu className="space-y-1 px-2">
-                {menuItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
+                {menuItems.map((item, index) => (
+                  <SidebarMenuItem key={item.id || `${item.title}-${index}`}>
                     {item.items ? (
                       collapsed ? (
                         // Collapsed: Dropdown Menu
@@ -191,8 +191,8 @@ export function AppSidebar() {
                           <DropdownMenuContent side="right" align="start" className="w-48 ml-2">
                              <DropdownMenuLabel>{item.title}</DropdownMenuLabel>
                              <DropdownMenuSeparator />
-                             {item.items.map((subItem) => (
-                               <DropdownMenuItem key={subItem.title} asChild>
+                             {item.items.map((subItem, subIndex) => (
+                               <DropdownMenuItem key={subItem.id || `${subItem.title}-${subIndex}`} asChild>
                                  <Link to={resolveUrl(subItem.url)} className="cursor-pointer">
                                    {subItem.title}
                                  </Link>
@@ -226,8 +226,8 @@ export function AppSidebar() {
                           </SidebarMenuButton>
                           {!isGroupCollapsed(item.title) && (
                             <SidebarMenuSub className="ml-4 border-l-2 border-primary/10 pl-2 space-y-1 my-1">
-                              {item.items.map((subItem) => (
-                                <SidebarMenuSubItem key={subItem.title}>
+                              {item.items.map((subItem, subIndex) => (
+                                <SidebarMenuSubItem key={subItem.id || `${subItem.title}-${subIndex}`}>
                                 <SidebarMenuSubButton 
                                   asChild 
                                   isActive={isActive(subItem.url)}

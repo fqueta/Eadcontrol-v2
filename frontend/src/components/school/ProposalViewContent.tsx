@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useEnrollment } from '@/hooks/enrollments';
 import { useClientById } from '@/hooks/clients';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { coursesService } from '@/services/coursesService';
 import { currencyRemoveMaskToNumber } from '@/lib/masks/currency';
 import BudgetPreview from '@/components/school/BudgetPreview';
@@ -11,7 +12,16 @@ import AccessManagementCard from '@/components/school/AccessManagementCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/utils';
-import { CreditCard, FileText } from 'lucide-react';
+import { CreditCard, FileText, MoreVertical, CheckSquare, Trash2, ExternalLink, PauseCircle } from 'lucide-react';
+import { accountsReceivableService } from '@/services/financialService';
+import { useToast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 interface ProposalViewContentProps {
   /**
@@ -104,9 +114,12 @@ export default function ProposalViewContent({ id }: ProposalViewContentProps) {
     }
   }
 
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
   const subtotalMasked = useMemo(() => maskMonetaryDisplay((enrollment as any)?.subtotal), [enrollment]);
   const totalMasked = useMemo(() => maskMonetaryDisplay((enrollment as any)?.total), [enrollment]);
-  const descuentoMasked = useMemo(() => maskMonetaryDisplay((enrollment as any)?.desconto), [enrollment]);
+  const descontoMasked = useMemo(() => maskMonetaryDisplay((enrollment as any)?.desconto), [enrollment]);
   const validadeDias = useMemo(() => String((enrollment as any)?.validade || '14'), [enrollment]);
   const clientName = client?.name || (client as any)?.nome || '';
   const clientPhone = client?.config?.celular || client?.config?.telefone_residencial || '';
@@ -117,6 +130,16 @@ export default function ProposalViewContent({ id }: ProposalViewContentProps) {
   const parcelamento = useMemo(() => {
     return ((enrollment as any)?.orc?.parcelamento ?? null) as any;
   }, [enrollment]);
+
+  const hasParcelamento = useMemo(() => {
+    if (!parcelamento) return false;
+    if (Array.isArray(parcelamento)) return parcelamento.length > 0;
+    if (typeof parcelamento === 'object') {
+      return Object.keys(parcelamento).length > 0 && 
+             (parcelamento.parcelas || parcelamento.valor || parcelamento.total);
+    }
+    return false;
+  }, [parcelamento]);
 
   const isActive = useMemo(() => {
     return (enrollment as any)?.ativo === 's';
@@ -191,12 +214,16 @@ export default function ProposalViewContent({ id }: ProposalViewContentProps) {
             subtotalMasked={subtotalMasked}
             totalMasked={totalMasked}
             validityDate={computeValidityDate(validadeDias)}
+            showClientInfo={false}
+            showValidity={false}
           />
         </TabsContent>
 
         <TabsContent value="financeiro" className="space-y-6 outline-none">
           {/* Card de Parcelamento */}
-          <InstallmentPreviewCard title="Condições de Pagamento" parcelamento={parcelamento} />
+          {hasParcelamento && (
+            <InstallmentPreviewCard title="Condições de Pagamento" parcelamento={parcelamento} />
+          )}
 
           {/* Faturas Locais (Contas a Receber) */}
           {invoices.length > 0 ? (
@@ -225,6 +252,7 @@ export default function ProposalViewContent({ id }: ProposalViewContentProps) {
                         <th className="py-3 px-6">Método</th>
                         <th className="py-3 px-6">Status</th>
                         <th className="py-3 px-6">Data Pagto</th>
+                        <th className="py-3 px-6 text-right">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y text-sm text-foreground/80">
@@ -242,6 +270,66 @@ export default function ProposalViewContent({ id }: ProposalViewContentProps) {
                           : inv.status === 'pending' ? 'Pendente'
                           : 'Vencido';
 
+                        const handleReceive = async () => {
+                          if (window.confirm(`Deseja lançar o recebimento local da fatura ${inv.invoice_number} no valor de ${formatCurrencyBRL(inv.amount)}?`)) {
+                            try {
+                              const todayStr = new Date().toISOString().split('T')[0];
+                              await accountsReceivableService.markAsReceived(String(inv.id), todayStr, inv.payment_method || 'pix');
+                              toast({
+                                title: "Recebimento Lançado",
+                                description: "O recebimento foi registrado com sucesso no financeiro.",
+                              });
+                              queryClient.invalidateQueries({ queryKey: ['enrollment', String(enrollment?.id)] });
+                            } catch (err: any) {
+                              toast({
+                                title: "Erro no Recebimento",
+                                description: err.message || 'Ocorreu um erro desconhecido.',
+                                variant: "destructive",
+                              });
+                            }
+                          }
+                        };
+
+                        const handleDelete = async () => {
+                          if (window.confirm(`Tem certeza que deseja excluir permanentemente a fatura ${inv.invoice_number}?`)) {
+                            try {
+                              await accountsReceivableService.delete(String(inv.id));
+                              toast({
+                                title: "Fatura Excluída",
+                                description: "A fatura foi excluída com sucesso.",
+                              });
+                              queryClient.invalidateQueries({ queryKey: ['enrollment', String(enrollment?.id)] });
+                            } catch (err: any) {
+                              toast({
+                                title: "Erro ao Excluir",
+                                description: err.message || 'Ocorreu um erro desconhecido.',
+                                variant: "destructive",
+                              });
+                            }
+                          }
+                        };
+
+                        const handleCancel = async () => {
+                          if (window.confirm(`Deseja cancelar a fatura ${inv.invoice_number}?`)) {
+                            try {
+                              await accountsReceivableService.cancel(String(inv.id));
+                              toast({
+                                title: "Fatura Cancelada",
+                                description: "A fatura foi cancelada com sucesso.",
+                              });
+                              queryClient.invalidateQueries({ queryKey: ['enrollment', String(enrollment?.id)] });
+                            } catch (err: any) {
+                              toast({
+                                title: "Erro ao Cancelar",
+                                description: err.message || 'Ocorreu um erro desconhecido.',
+                                variant: "destructive",
+                              });
+                            }
+                          }
+                        };
+
+                        const bankSlipUrl = inv.config?.bankSlipUrl || inv.config?.reg_asaas?.bankSlipUrl || null;
+
                         return (
                           <tr key={inv.id} className="hover:bg-muted/10 transition-colors">
                             <td className="py-4 px-6 font-mono font-bold text-primary">{inv.invoice_number}</td>
@@ -258,6 +346,42 @@ export default function ProposalViewContent({ id }: ProposalViewContentProps) {
                             </td>
                             <td className="py-4 px-6 font-medium text-muted-foreground">
                               {inv.payment_date ? formatDate(inv.payment_date) : '---'}
+                            </td>
+                            <td className="py-4 px-6 text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-muted">
+                                    <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56 bg-white border shadow-lg rounded-xl p-1 z-50">
+                                  {inv.status !== 'paid' && (
+                                    <DropdownMenuItem onClick={handleReceive} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-muted text-sm font-semibold text-emerald-600 focus:text-emerald-700">
+                                      <CheckSquare className="h-4 w-4" /> Lançar Recebimento
+                                    </DropdownMenuItem>
+                                  )}
+
+                                  {bankSlipUrl && (
+                                    <DropdownMenuItem asChild className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-muted text-sm font-semibold text-foreground">
+                                      <a href={bankSlipUrl} target="_blank" rel="noopener noreferrer">
+                                        <ExternalLink className="h-4 w-4" /> Visualizar Boleto
+                                      </a>
+                                    </DropdownMenuItem>
+                                  )}
+
+                                  {inv.status !== 'paid' && (
+                                    <DropdownMenuItem onClick={handleCancel} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-muted text-sm font-semibold text-amber-600 focus:text-amber-700">
+                                      <PauseCircle className="h-4 w-4" /> Cancelar Fatura
+                                    </DropdownMenuItem>
+                                  )}
+
+                                  <DropdownMenuSeparator className="my-1 border-t" />
+
+                                  <DropdownMenuItem onClick={handleDelete} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-red-50 text-sm font-semibold text-red-600 focus:text-red-700 focus:bg-red-50">
+                                    <Trash2 className="h-4 w-4" /> Excluir Fatura
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </td>
                           </tr>
                         );

@@ -3705,11 +3705,15 @@ export function CourseForm({
                              
                              <div className="md:col-span-8 space-y-1.5">
                                 <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Descrição Pública</Label>
-                                <Input 
-                                  className="h-8 bg-background block w-full" 
-                                  placeholder="Uma breve descrição sobre o que será aprendido neste módulo..."
-                                  {...control.register(`modulos.${index}.description`)}
-                                />
+                                <div className="min-h-[140px] rounded-2xl border border-slate-200 bg-white/80 shadow-sm overflow-hidden">
+                                  <RichTextEditor
+                                    value={m.description || ''}
+                                    onChange={(html) => {
+                                      setValue(`modulos.${index}.description`, html, { shouldValidate: true, shouldDirty: true });
+                                    }}
+                                    placeholder="Descrição pública do módulo..."
+                                  />
+                                </div>
                              </div>
                         </div>
 

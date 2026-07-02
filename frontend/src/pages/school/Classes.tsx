@@ -72,7 +72,8 @@ export default function Classes() {
 
   const goToCreate = () => navigate('/admin/school/classes/create');
   const goToEdit = (id: string | number) => navigate(`/admin/school/classes/${id}/edit`);
-  const handleRowDoubleClick = (id: string | number) => goToEdit(id);
+  const goToDetails = (id: string | number) => navigate(`/admin/school/classes/${id}`);
+  const handleRowDoubleClick = (id: string | number) => goToDetails(id);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return null;
@@ -149,25 +150,32 @@ export default function Classes() {
           <Table>
             <TableHeader className="bg-slate-50/80 dark:bg-slate-900/80">
               <TableRow className="border-slate-100 dark:border-slate-800/60">
-                <TableHead className="font-bold text-slate-500 w-[80px]">ID</TableHead>
-                <TableHead className="font-bold text-slate-500">Turma</TableHead>
-                <TableHead className="font-bold text-slate-500">Status</TableHead>
-                <TableHead className="font-bold text-slate-500">Período</TableHead>
+                <TableHead className="font-bold text-slate-500 w-[60px] pl-6">ID</TableHead>
+                <TableHead className="font-bold text-slate-500 min-w-[150px]">Nome da turma</TableHead>
+                <TableHead className="font-bold text-slate-500">Início</TableHead>
+                <TableHead className="font-bold text-slate-500">Fim</TableHead>
+                <TableHead className="font-bold text-slate-500">Ativo</TableHead>
+                <TableHead className="font-bold text-slate-500 text-center">Min Alunos</TableHead>
+                <TableHead className="font-bold text-slate-500 text-center">Máx Alunos</TableHead>
+                <TableHead className="font-bold text-slate-500 text-center">Total Alunos</TableHead>
+                <TableHead className="font-bold text-slate-500 text-center">Meta Alunos</TableHead>
+                <TableHead className="font-bold text-slate-500 text-center">Interessados</TableHead>
+                <TableHead className="font-bold text-slate-500 text-center">Matriculados</TableHead>
                 <TableHead className="font-bold text-slate-500">Valor</TableHead>
-                <TableHead className="text-right font-bold text-slate-500 w-[100px]">Ações</TableHead>
+                <TableHead className="text-right font-bold text-slate-500 pr-6 w-[80px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {listQuery.isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center">
+                  <TableCell colSpan={13} className="h-32 text-center">
                     <Loader2 className="h-6 w-6 animate-spin text-primary/40 mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground font-medium animate-pulse">Carregando turmas...</p>
                   </TableCell>
                 </TableRow>
               ) : listQuery.data?.data?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-48 text-center">
+                  <TableCell colSpan={13} className="h-48 text-center">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <BookOpen className="h-10 w-10 mb-3 opacity-20" />
                       <p className="font-medium text-base text-foreground/70">Nenhuma turma encontrada</p>
@@ -182,39 +190,40 @@ export default function Classes() {
                     onDoubleClick={() => handleRowDoubleClick(t.id)} 
                     className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 cursor-pointer border-slate-100 dark:border-slate-800/60 transition-colors group"
                   >
-                    <TableCell className="font-mono text-xs text-muted-foreground">{t.id}</TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground pl-6">{String(t.id).padStart(4, '0')}</TableCell>
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-bold text-foreground/90">{t.nome ?? 'Sem nome'}</span>
-                        <span className="text-xs text-muted-foreground font-medium flex items-center gap-1 mt-0.5">
-                          Prof: {t.professor || 'Não definido'}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={t.ativo === 's' ? 'default' : 'secondary'} className={t.ativo === 's' ? 'bg-green-500/10 text-green-700 hover:bg-green-500/20 border-green-500/20 shadow-none' : 'bg-slate-100 text-slate-500 shadow-none'}>
-                        {t.ativo === 's' ? 'Ativo' : 'Inativo'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
-                        <Clock className="h-3.5 w-3.5 opacity-70" />
-                        {t.inicio || t.fim ? (
-                          <>
-                            {formatDate(t.inicio)} 
-                            {t.fim && ` até ${formatDate(t.fim)}`}
-                          </>
-                        ) : (
-                          <span>Sem período</span>
+                        {t.professor && (
+                          <span className="text-xs text-muted-foreground font-medium flex items-center gap-1 mt-0.5">
+                            Prof: {t.professor}
+                          </span>
                         )}
                       </div>
                     </TableCell>
+                    <TableCell className="text-sm font-medium text-muted-foreground">
+                      {formatDate(t.inicio) || '-'}
+                    </TableCell>
+                    <TableCell className="text-sm font-medium text-muted-foreground">
+                      {formatDate(t.fim) || '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={t.ativo === 's' ? 'default' : 'secondary'} className={t.ativo === 's' ? 'bg-green-500/10 text-green-700 hover:bg-green-500/20 border-green-500/20 shadow-none' : 'bg-slate-100 text-slate-500 shadow-none'}>
+                        {t.ativo === 's' ? 'Sim' : 'Não'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center font-medium">{t.min_alunos ?? 0}</TableCell>
+                    <TableCell className="text-center font-medium">{t.max_alunos ?? 0}</TableCell>
+                    <TableCell className="text-center font-bold text-blue-600 dark:text-blue-400">{t.total_alunos ?? 0}</TableCell>
+                    <TableCell className="text-center font-medium">{t.max_alunos ?? 0}</TableCell>
+                    <TableCell className="text-center font-bold text-amber-600 dark:text-amber-400">{t.interessados ?? 0}</TableCell>
+                    <TableCell className="text-center font-bold text-green-600 dark:text-green-400">{t.matriculados ?? 0}</TableCell>
                     <TableCell>
                       <span className="font-bold text-foreground/80">
                         {t.Valor ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(t.Valor)) : 'Grátis'}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right pr-6">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
@@ -224,6 +233,9 @@ export default function Classes() {
                         <DropdownMenuContent align="end" className="w-40 rounded-xl shadow-xl border-slate-100 dark:border-slate-800">
                           <DropdownMenuLabel className="text-xs font-black uppercase text-muted-foreground tracking-wider">Ações</DropdownMenuLabel>
                           <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-800" />
+                          <DropdownMenuItem onClick={() => goToDetails(t.id)} className="font-medium cursor-pointer rounded-lg focus:bg-primary/10 focus:text-primary">
+                            Visualizar
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => goToEdit(t.id)} className="font-medium cursor-pointer rounded-lg focus:bg-primary/10 focus:text-primary">
                             Editar Turma
                           </DropdownMenuItem>

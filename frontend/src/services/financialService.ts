@@ -9,6 +9,7 @@ const api = new BaseApiService();
 import {
   AccountPayable,
   AccountReceivable,
+  AccountStatus,
   CashFlowEntry,
   FinancialCategory,
   FinancialDashboardData,
@@ -259,8 +260,43 @@ export const dashboardService = {
    */
   async getDashboardData(period?: string): Promise<FinancialDashboardData> {
     const params = period ? `?period=${period}` : '';
-    const response = await api.get(`/financial/dashboard${params}`);
-    return response.data;
+    const response = await api.get(`/financial/overview${params}`);
+    const data = response.data;
+    return {
+      summary: {
+        totalIncome: data?.summary?.totalIncome ?? 0,
+        totalExpenses: data?.summary?.totalExpenses ?? 0,
+        netProfit: data?.summary?.netProfit ?? 0,
+        cashBalance: data?.summary?.cashBalance ?? 0,
+        pendingReceivables: 0,
+        pendingPayables: 0,
+        overdueReceivables: data?.summary?.overdueReceivables ?? 0,
+        overduePayables: data?.summary?.overduePayables ?? 0,
+      },
+      recentTransactions: (data?.recentTransactions || []).map((t: any) => ({
+        id: t.id,
+        description: t.description,
+        amount: t.amount,
+        date: t.date,
+        type: t.type,
+      })),
+      upcomingPayables: (data?.upcomingPayables || []).map((a: any) => ({
+        id: a.id,
+        description: a.description,
+        amount: a.amount,
+        dueDate: a.date,
+        status: 'pending' as AccountStatus,
+      })),
+      upcomingReceivables: (data?.upcomingReceivables || []).map((a: any) => ({
+        id: a.id,
+        description: a.description,
+        amount: a.amount,
+        dueDate: a.date,
+        status: 'pending' as AccountStatus,
+      })),
+      monthlyTrend: [],
+      categoryBreakdown: [],
+    };
   },
 
   /**

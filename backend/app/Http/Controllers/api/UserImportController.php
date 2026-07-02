@@ -108,34 +108,49 @@ class UserImportController extends Controller
             $existingActivitiesMap = []; // Key: ID_antigo
             $existingEnrollmentsMap = []; // Key: id_cliente-id_curso (composite) or legacy_id
             $existingCommentsMap = []; // Key: id_antigo
+            $existingInvoicesMap = []; // Key: ID_antigo or id
 
             // 1. Users Map (Used by Users, Enrollments, Comments)
             if (in_array($type, ['users', 'enrollments', 'comments'])) {
                  $emails = [];
                  $cpfs = [];
                  $cnpjs = [];
+                 $clientIds = [];
                  foreach ($data as $row) {
-                     $r = $this->sanitizeInput($row);
-                     if (!empty($r['email']) || !empty($r['user_email']) || !empty($r['author_email'])) {
-                        $emails[] = $r['email'] ?? $r['user_email'] ?? $r['author_email'];
-                     }
-                     if (!empty($r['cpf'])) $cpfs[] = $r['cpf'];
-                     if (!empty($r['cnpj'])) $cnpjs[] = $r['cnpj'];
+                      $r = $this->sanitizeInput($row);
+                      if (!empty($r['email']) || !empty($r['user_email']) || !empty($r['author_email'])) {
+                         $emails[] = $r['email'] ?? $r['user_email'] ?? $r['author_email'];
+                      }
+                      if (!empty($r['cpf'])) $cpfs[] = $r['cpf'];
+                      if (!empty($r['cnpj'])) $cnpjs[] = $r['cnpj'];
+                      if (!empty($r['id_cliente'])) $clientIds[] = (string)$r['id_cliente'];
                  }
                  
-                 if (!empty($emails) || !empty($cpfs) || !empty($cnpjs)) {
-                     $users = User::query()->where(function($q) use ($emails, $cpfs, $cnpjs) {
-                         if (!empty($emails)) $q->whereIn('email', array_unique($emails));
-                         if (!empty($cpfs)) $q->orWhereIn('cpf', array_unique($cpfs));
-                         if (!empty($cnpjs)) $q->orWhereIn('cnpj', array_unique($cnpjs));
-                     })->get();
+                 if (!empty($emails) || !empty($cpfs) || !empty($cnpjs) || !empty($clientIds)) {
+                      $users = User::query()->where(function($q) use ($emails, $cpfs, $cnpjs, $clientIds) {
+                          if (!empty($emails)) $q->whereIn('email', array_unique($emails));
+                          if (!empty($cpfs)) $q->orWhereIn('cpf', array_unique($cpfs));
+                          if (!empty($cnpjs)) $q->orWhereIn('cnpj', array_unique($cnpjs));
+                          if (!empty($clientIds)) {
+                              $q->orWhereIn('config->ID_antigo', array_unique($clientIds));
+                              $q->orWhereIn('id', array_unique($clientIds));
+                          }
+                      })->get();
 
-                     foreach ($users as $u) {
-                         if ($u->email) $existingUsersMap['email'][$u->email] = $u;
-                         if ($u->cpf) $existingUsersMap['cpf'][$u->cpf] = $u;
-                         if ($u->cnpj) $existingUsersMap['cnpj'][$u->cnpj] = $u;
-                     }
-                 }
+                      foreach ($users as $u) {
+                          if ($u->email) $existingUsersMap['email'][$u->email] = $u;
+                          if ($u->cpf) $existingUsersMap['cpf'][$u->cpf] = $u;
+                          if ($u->cnpj) $existingUsersMap['cnpj'][$u->cnpj] = $u;
+                          
+                          $uConfig = $u->config;
+                          if (is_string($uConfig)) $uConfig = json_decode($uConfig, true);
+                          $legacyId = $uConfig['ID_antigo'] ?? null;
+                          if ($legacyId) {
+                              $existingUsersMap['id_antigo'][(string)$legacyId] = $u;
+                          }
+                          $existingUsersMap['id'][(string)$u->id] = $u;
+                      }
+                  }
             }
 
             // 2. Courses Map (Used by Courses, Enrollments, Comments)
@@ -239,29 +254,41 @@ class UserImportController extends Controller
 
             // 4. Enrollments Map (Used by Enrollments)
             if ($type === 'enrollments') {
-                // We need to check existence by (user_id + course_id)
-                // We don't have user_ids yet, only emails.
-                // But we have $existingUsersMap (with users that exist).
-                // We can fetch enrollments for these users.
-                
                 $userIds = [];
                 if (isset($existingUsersMap['email'])) {
                     foreach ($existingUsersMap['email'] as $u) $userIds[] = $u->id;
                 }
-                
-                if (!empty($userIds)) {
-                    $enrollments = \App\Models\Matricula::whereIn('id_cliente', $userIds)->get();
-                    foreach ($enrollments as $e) {
-                         // Key: client_id:course_id
-                         $key = $e->id_cliente . ':' . $e->id_curso;
-                         $existingEnrollmentsMap['composite'][$key] = $e;
-                         
-                         $conf = $e->config;
-                         if (is_string($conf)) $conf = json_decode($conf, true);
-                         if (isset($conf['ID_antigo'])) {
-                             $existingEnrollmentsMap['id_antigo'][(string)$conf['ID_antigo']] = $e;
-                         }
+                if (isset($existingUsersMap['id_antigo'])) {
+                    foreach ($existingUsersMap['id_antigo'] as $u) $userIds[] = $u->id;
+                }
+                $userIds = array_unique($userIds);
+
+                $enrollmentLegacyIds = [];
+                foreach ($data as $row) {
+                    $r = $this->sanitizeInput($row);
+                    $lid = $r['id_antigo'] ?? $r['id'] ?? null;
+                    if ($lid) $enrollmentLegacyIds[] = (string)$lid;
+                }
+
+                $enrollments = \App\Models\Matricula::where(function($q) use ($userIds, $enrollmentLegacyIds) {
+                    if (!empty($userIds)) {
+                        $q->whereIn('id_cliente', $userIds);
                     }
+                    if (!empty($enrollmentLegacyIds)) {
+                        $q->orWhereIn('config->ID_antigo', $enrollmentLegacyIds);
+                    }
+                })->get();
+
+                foreach ($enrollments as $e) {
+                     // Key: client_id:course_id
+                     $key = $e->id_cliente . ':' . $e->id_curso;
+                     $existingEnrollmentsMap['composite'][$key] = $e;
+                     
+                     $conf = $e->config;
+                     if (is_string($conf)) $conf = json_decode($conf, true);
+                     if (isset($conf['ID_antigo'])) {
+                         $existingEnrollmentsMap['id_antigo'][(string)$conf['ID_antigo']] = $e;
+                     }
                 }
             }
 
@@ -291,6 +318,33 @@ class UserImportController extends Controller
                      }
                  }
             }
+
+            // 6. Invoices Map (Used by Invoices)
+            if ($type === 'invoices') {
+                 $invoiceLegacyIds = [];
+                 foreach ($data as $row) {
+                     $r = $this->sanitizeInput($row);
+                     if (!empty($r['id'])) $invoiceLegacyIds[] = (string)$r['id'];
+                 }
+                 
+                 if (!empty($invoiceLegacyIds)) {
+                      $invoices = \App\Models\FinancialAccount::withoutGlobalScopes()
+                          ->where(function($q) use ($invoiceLegacyIds) {
+                              $q->whereIn('config->ID_antigo', array_unique($invoiceLegacyIds))
+                                ->orWhereIn('id', array_unique($invoiceLegacyIds));
+                          })->get();
+                          
+                      foreach ($invoices as $inv) {
+                           $existingInvoicesMap['id'][(string)$inv->id] = $inv;
+                           $invConfig = $inv->config;
+                           if (is_string($invConfig)) $invConfig = json_decode($invConfig, true);
+                           $legacyId = $invConfig['ID_antigo'] ?? null;
+                           if ($legacyId) {
+                                $existingInvoicesMap['id_antigo'][(string)$legacyId] = $inv;
+                           }
+                      }
+                 }
+            }
             
             // Start Transaction
             \Illuminate\Support\Facades\DB::beginTransaction();
@@ -304,12 +358,12 @@ class UserImportController extends Controller
                         $result = $this->importComment($row, $existingUsersMap, $existingCoursesMap, $existingActivitiesMap, $existingCommentsMap);
                     } elseif ($type == 'enrollments') {
                         $result = $this->importEnrollment($row, $existingUsersMap, $existingCoursesMap, $existingEnrollmentsMap);
+                    } elseif ($type == 'invoices') {
+                        $result = $this->importInvoice($row, $existingInvoicesMap);
                     } else {
                         $result = $this->importUser($row, $existingUsersMap);
                     }
                     
-                    // Log::info("Import Item [$index] Result: $result"); // Commented out to reduce I/O
-
                     if ($result === 'created') $stats['imported']++;
                     elseif ($result === 'updated') $stats['updated']++;
                     elseif ($result === 'exists') $stats['exists']++;
@@ -349,62 +403,140 @@ class UserImportController extends Controller
     private function importEnrollment($row, $existingUsersMap = [], $existingCoursesMap = [], $existingEnrollmentsMap = [])
     {
         $row = $this->sanitizeInput($row);
-        $legacyId = $row['id_antigo'] ?? null;
-        $userEmail = $row['user_email'] ?? null;
-        $courseIdWp = $row['course_id_wp'] ?? null;
-        $statusRaw = strtolower(trim((string)($row['status'] ?? '')));
-        $startAtRaw = $row['start_at'] ?? null;
-        $endAtRaw = $row['end_at'] ?? null;
-        if (!$userEmail || !$courseIdWp) {
-            return 'skipped';
-        }
         
-        // Resolve User
+        // 1. Resolve Legacy/External ID of the enrollment itself
+        $legacyId = $row['id_antigo'] ?? $row['id'] ?? null;
+        
+        // 2. Resolve User/Client
         $user = null;
-        if (isset($existingUsersMap['email'][$userEmail])) {
-            $user = $existingUsersMap['email'][$userEmail];
-        } else {
-            // Fallback
-             $user = User::where('email', $userEmail)->first();
+        $userEmail = $row['user_email'] ?? $row['email'] ?? null;
+        $id_cliente = $row['id_cliente'] ?? null;
+        
+        if ($userEmail) {
+            if (isset($existingUsersMap['email'][$userEmail])) {
+                $user = $existingUsersMap['email'][$userEmail];
+            } else {
+                $user = User::where('email', $userEmail)->first();
+            }
+        } elseif ($id_cliente) {
+            if (isset($existingUsersMap['id_antigo'][(string)$id_cliente])) {
+                $user = $existingUsersMap['id_antigo'][(string)$id_cliente];
+            } elseif (isset($existingUsersMap['id'][(string)$id_cliente])) {
+                $user = $existingUsersMap['id'][(string)$id_cliente];
+            } else {
+                $user = User::where('config->ID_antigo', (string)$id_cliente)->first();
+                if (!$user) {
+                    $user = User::find($id_cliente);
+                }
+            }
         }
         
         if (!$user) {
+            Log::warning("ImportEnrollment: skipped because user could not be resolved", [
+                'id_cliente' => $id_cliente,
+                'user_email' => $userEmail,
+                'row_id' => $legacyId
+            ]);
             return 'skipped';
         }
         
-        // Resolve Course
-        $course = $this->findCourseByExternalId($courseIdWp, $existingCoursesMap);
+        // 3. Resolve Course
+        $course = null;
+        $courseIdWp = $row['course_id_wp'] ?? null;
+        $id_curso = $row['id_curso'] ?? null;
+        
+        if ($courseIdWp) {
+            $course = $this->findCourseByExternalId($courseIdWp, $existingCoursesMap);
+        } elseif ($id_curso) {
+            if (isset($existingCoursesMap['id_antigo'][(string)$id_curso])) {
+                $course = $existingCoursesMap['id_antigo'][(string)$id_curso];
+            } elseif (isset($existingCoursesMap['id'][(string)$id_curso])) {
+                $course = $existingCoursesMap['id'][(string)$id_curso];
+            } else {
+                $course = $this->findCourseByExternalId($id_curso, $existingCoursesMap);
+                if (!$course) {
+                    $course = Curso::find($id_curso);
+                }
+            }
+        }
+        
         if (!$course) {
+            Log::warning("ImportEnrollment: skipped because course could not be resolved", [
+                'id_curso' => $id_curso,
+                'course_id_wp' => $courseIdWp,
+                'row_id' => $legacyId
+            ]);
             return 'skipped';
         }
 
-        $statusAndSit = $this->mapEnrollmentStatusAndSituation($statusRaw, $startAtRaw);
-        $status = $statusAndSit[0];
-        $situacaoId = $statusAndSit[1];
+        // 4. Resolve Status and Situation
+        $statusRaw = strtolower(trim((string)($row['status'] ?? '')));
+        $startAtRaw = $row['start_at'] ?? $row['created_at'] ?? $row['criado_em'] ?? null;
+        $endAtRaw = $row['end_at'] ?? null;
         
-        // Resolve Existing Enrollment
+        $status = 'a';
+        $situacaoId = null;
+        
+        if ($statusRaw) {
+            $statusAndSit = $this->mapEnrollmentStatusAndSituation($statusRaw, $startAtRaw);
+            $status = $statusAndSit[0];
+            $situacaoId = $statusAndSit[1];
+        } else {
+            $ativoVal = $row['ativo'] ?? null;
+            $situacaoIdLegacy = $row['situacao_id'] ?? null;
+            
+            if ($ativoVal === 'n' || $ativoVal === '0' || $ativoVal === false) {
+                $status = 'p'; // Inativo / Pendente
+                $situacaoId = 24; // Contrato cancelado
+            } else {
+                $status = 'a'; // Ativo
+                $situacaoId = 17; // Matriculado
+            }
+            
+            if ($situacaoIdLegacy && is_numeric($situacaoIdLegacy)) {
+                $exists = \App\Models\EnrollmentSituation::where('id', (int)$situacaoIdLegacy)->exists();
+                if ($exists) {
+                    $situacaoId = (int)$situacaoIdLegacy;
+                }
+            }
+            
+            if ($situacaoId === null) {
+                $default = (int) (Qlib::qoption('default_proposal_situacao_id') ?? 0);
+                if ($default > 0) {
+                    $situacaoId = $default;
+                }
+            }
+        }
+        
+        // 5. Resolve Turma
+        $id_turma = 0;
+        $row_id_turma = $row['id_turma'] ?? null;
+        if ($row_id_turma && $row_id_turma != '0') {
+            $turmaObj = \App\Models\Turma::where('config->ID_antigo', (string)$row_id_turma)->first();
+            if (!$turmaObj) {
+                $turmaObj = \App\Models\Turma::find($row_id_turma);
+            }
+            if ($turmaObj) {
+                $id_turma = $turmaObj->id;
+            }
+        }
+
+        // 6. Resolve Existing Enrollment
         $existing = null;
-        
-        // Try map by legacy ID
         if ($legacyId && isset($existingEnrollmentsMap['id_antigo'][(string)$legacyId])) {
             $existing = $existingEnrollmentsMap['id_antigo'][(string)$legacyId];
         }
-        // Try map by composite key
         if (!$existing) {
              $key = $user->id . ':' . $course->id;
              if (isset($existingEnrollmentsMap['composite'][$key])) {
-                 $existing = $existingEnrollmentsMap['composite'][$key];
+                  $existing = $existingEnrollmentsMap['composite'][$key];
              }
         }
-        
-        // Fallback Query (if map missed)
-        if (!$existing && empty($existingEnrollmentsMap)) {
+        if (!$existing) {
             if ($legacyId) {
-                $existing = \App\Models\Matricula::where('id_cliente', (string)$user->id)
-                    ->where('id_curso', (int)$course->id)
-                    ->where('config->ID_antigo', (string)$legacyId)
-                    ->first();
-            } else {
+                $existing = \App\Models\Matricula::where('config->ID_antigo', (string)$legacyId)->first();
+            }
+            if (!$existing) {
                 $existing = \App\Models\Matricula::where('id_cliente', (string)$user->id)
                     ->where('id_curso', (int)$course->id)
                     ->first();
@@ -413,44 +545,59 @@ class UserImportController extends Controller
 
         $config = [
             'ID_antigo' => $legacyId ? (string)$legacyId : null,
-            'order_id_wp' => $row['order_id_wp'] ?? null,
-            'course_id_wp' => (string)$courseIdWp,
-            'source' => 'eduma',
+            'order_id_wp' => $row['order_id_wp'] ?? $row['id'] ?? null,
+            'course_id_wp' => (string)($courseIdWp ?? $id_curso),
+            'source' => 'external',
         ];
-        $coursePriceRaw = $course->valor ?? null;
-        if ($coursePriceRaw === null || $coursePriceRaw === '' || !is_numeric(str_replace(',', '.', (string)$coursePriceRaw))) {
-            $coursePriceRaw = $course->inscricao ?? null;
-        }
+        
         $coursePrice = null;
-        if ($coursePriceRaw !== null && $coursePriceRaw !== '') {
-            $coursePrice = (float) str_replace(',', '.', (string)$coursePriceRaw);
+        if (isset($row['total']) && is_numeric($row['total'])) {
+            $coursePrice = (float)$row['total'];
+        } else {
+            $coursePriceRaw = $course->valor ?? null;
+            if ($coursePriceRaw === null || $coursePriceRaw === '' || !is_numeric(str_replace(',', '.', (string)$coursePriceRaw))) {
+                $coursePriceRaw = $course->inscricao ?? null;
+            }
+            if ($coursePriceRaw !== null && $coursePriceRaw !== '') {
+                $coursePrice = (float) str_replace(',', '.', (string)$coursePriceRaw);
+            }
         }
+        
         $attributes = [
             'id_cliente' => (string)$user->id,
             'id_curso' => (int)$course->id,
-            'id_turma' => 0,
+            'id_turma' => $id_turma,
             'status' => $status,
             'ativo' => $status === 'p' ? 'n' : 's',
             'situacao_id' => $situacaoId,
             'config' => $config,
             'subtotal' => $coursePrice,
             'total' => $coursePrice,
+            'desconto' => isset($row['desconto']) && is_numeric($row['desconto']) ? (float)$row['desconto'] : 0.00,
+            'inscricao' => isset($row['inscricao']) && is_numeric($row['inscricao']) ? (float)$row['inscricao'] : 0.00,
+            'obs' => $row['obs'] ?? '',
         ];
+        
         $startAt = null;
         $endAt = null;
         try { if (is_string($startAtRaw)) $startAt = \Carbon\Carbon::parse($startAtRaw); } catch (\Throwable $e) {}
         try { if (is_string($endAtRaw)) $endAt = \Carbon\Carbon::parse($endAtRaw); } catch (\Throwable $e) {}
+        
         if ($existing) {
             $existing->fill($attributes);
             if ($startAt) $existing->data = $startAt;
             if ($endAt) $existing->validade_acesso = $endAt;
             $existing->save();
+            Log::info("ImportEnrollment: updated enrollment", ['id' => $existing->id, 'legacy_id' => $legacyId]);
             return 'updated';
         } else {
+            $attributes['token'] = Qlib::token();
             $mat = new \App\Models\Matricula($attributes);
             if ($startAt) $mat->data = $startAt;
+            else $mat->data = \Carbon\Carbon::now();
             if ($endAt) $mat->validade_acesso = $endAt;
             $mat->save();
+            Log::info("ImportEnrollment: created new enrollment", ['id' => $mat->id, 'legacy_id' => $legacyId]);
             return 'created';
         }
     }
@@ -866,6 +1013,112 @@ class UserImportController extends Controller
         }
 
         return $status;
+    }
+
+    private function importInvoice($row, $existingInvoicesMap = [])
+    {
+        $row = $this->sanitizeInput($row);
+        $legacyId = $row['id'] ?? null;
+        $matriculaIdLegacy = $row['matricula_id'] ?? null;
+        $idClienteLegacy = $row['id_cliente'] ?? null;
+        $valorRaw = $row['valor'] ?? null;
+        $vencimentoRaw = $row['vencimento'] ?? null;
+        $pagoRaw = $row['pago'] ?? null; // 'Sim' or 'Não'
+        $dataPagamentoRaw = $row['data_pagamento'] ?? null;
+        $descricao = $row['descricao'] ?? '';
+
+        if (!$legacyId) {
+            return 'skipped';
+        }
+
+        // 1. Resolve Enrollment/Matricula
+        $enrollment = null;
+        if ($matriculaIdLegacy) {
+            $enrollment = \App\Models\Matricula::where('config->ID_antigo', (string)$matriculaIdLegacy)->first();
+            if (!$enrollment) {
+                // Try direct primary key lookup if they share same database IDs
+                $enrollment = \App\Models\Matricula::find($matriculaIdLegacy);
+            }
+        }
+
+        // 2. Resolve Client/User
+        $client = null;
+        if ($enrollment) {
+            $client = $enrollment->student;
+        }
+        if (!$client && $idClienteLegacy) {
+            $client = \App\Models\User::where('config->ID_antigo', (string)$idClienteLegacy)->first();
+            if (!$client) {
+                $client = \App\Models\User::find($idClienteLegacy);
+            }
+        }
+
+        // 3. Status mapping
+        $status = 'pending';
+        if (is_string($pagoRaw)) {
+            $pagoClean = strtolower(trim($pagoRaw));
+            if ($pagoClean === 'sim' || $pagoClean === 's' || $pagoClean === '1') {
+                $status = 'paid';
+            }
+        }
+
+        // 4. Dates mapping
+        $dueDate = null;
+        if ($vencimentoRaw) {
+            try { $dueDate = \Carbon\Carbon::parse($vencimentoRaw)->format('Y-m-d'); } catch (\Throwable $e) {}
+        }
+        
+        $paymentDate = null;
+        if ($dataPagamentoRaw && !str_starts_with($dataPagamentoRaw, '-0001')) {
+            try { $paymentDate = \Carbon\Carbon::parse($dataPagamentoRaw)->format('Y-m-d'); } catch (\Throwable $e) {}
+        }
+
+        $amount = (float)($valorRaw ?? 0.00);
+
+        // 5. Config mapping
+        $config = [
+            'ID_antigo' => (string)$legacyId,
+            'matricula_id' => $enrollment ? $enrollment->id : null,
+            'matricula_id_antigo' => $matriculaIdLegacy ? (string)$matriculaIdLegacy : null,
+            'ref_compra' => $row['ref_compra'] ?? null,
+            'local' => $row['local'] ?? null,
+            'categoria' => $row['categoria'] ?? null,
+            'source' => 'external',
+        ];
+
+        // 6. Check existing invoice
+        $existing = null;
+        if (isset($existingInvoicesMap['id_antigo'][(string)$legacyId])) {
+            $existing = $existingInvoicesMap['id_antigo'][(string)$legacyId];
+        } else {
+            $existing = \App\Models\FinancialAccount::withoutGlobalScopes()
+                ->where('config->ID_antigo', (string)$legacyId)
+                ->first();
+        }
+
+        $attributes = [
+            'amount' => $amount,
+            'type' => 'receivable', // Contas a receber
+            'customer_name' => $row['cliente_nome'] ?? ($client ? $client->name : ''),
+            'client_id' => $client ? $client->id : null,
+            'description' => strip_tags($descricao),
+            'due_date' => $dueDate,
+            'status' => $status,
+            'paid_amount' => $status === 'paid' ? $amount : 0.00,
+            'payment_date' => $paymentDate,
+            'config' => $config,
+        ];
+
+        if ($existing) {
+            $existing->update($attributes);
+            Log::info("ImportInvoice: updated invoice", ['id' => $existing->id, 'legacy_id' => $legacyId]);
+            return 'updated';
+        } else {
+            $attributes['token'] = Qlib::token();
+            $newInvoice = \App\Models\FinancialAccount::create($attributes);
+            Log::info("ImportInvoice: created new invoice", ['id' => $newInvoice->id, 'legacy_id' => $legacyId]);
+            return 'created';
+        }
     }
 
     private function sanitizeInput($data)

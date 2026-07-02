@@ -78,9 +78,9 @@ export const AccountsPayableTable: React.FC<AccountsPayableTableProps> = ({ cate
     setIsLoading(true);
     try {
       const response = await financialService.accountsPayable.getAll(filters);
-      setAccounts(response.data);
-      setTotalPages(response.totalPages);
-      setTotal(response.total);
+      setAccounts(response?.data || []);
+      setTotalPages(response?.totalPages || 0);
+      setTotal(response?.total || 0);
     } catch (error: any) {
       console.error('Erro ao carregar contas a pagar:', error);
       toast.error('Erro ao carregar contas a pagar');

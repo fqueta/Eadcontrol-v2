@@ -1,10 +1,19 @@
 import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { accountsReceivableService } from '@/services/financialService';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { MoreVertical, CheckSquare, Trash2, ExternalLink } from 'lucide-react';
 import { 
   ArrowLeft, 
   Settings, 
@@ -64,6 +73,7 @@ export default function EnrollmentView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const location = useLocation();
   const navState = (location?.state || {}) as { returnTo?: string };
 
@@ -287,6 +297,16 @@ export default function EnrollmentView() {
   const parcelamento = useMemo(() => {
     return ((enrollment as any)?.orc?.parcelamento ?? null) as any;
   }, [enrollment]);
+
+  const hasParcelamento = useMemo(() => {
+    if (!parcelamento) return false;
+    if (Array.isArray(parcelamento)) return parcelamento.length > 0;
+    if (typeof parcelamento === 'object') {
+      return Object.keys(parcelamento).length > 0 && 
+             (parcelamento.parcelas || parcelamento.valor || parcelamento.total);
+    }
+    return false;
+  }, [parcelamento]);
 
   const isActive = useMemo(() => {
     return (enrollment as any)?.ativo === 's' || (enrollment as any)?.ativo === 1;
@@ -890,7 +910,7 @@ export default function EnrollmentView() {
 
         <TabsContent value="financeiro" className="space-y-8 animate-in fade-in duration-300 outline-none">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="space-y-8">
+            <div className={`space-y-8 ${hasParcelamento ? 'lg:col-span-1' : 'lg:col-span-2'}`}>
               <div className="flex items-center gap-2 mb-4 px-1 border-b pb-2">
                 <CreditCard className="h-5 w-5 text-muted-foreground" />
                 <h2 className="text-xl font-bold tracking-tight text-foreground">Dados Financeiros</h2>
@@ -910,12 +930,17 @@ export default function EnrollmentView() {
                 subtotalMasked={subtotalMasked}
                 totalMasked={totalMasked}
                 validityDate={computeValidityDate(validadeDias)}
+                showClientInfo={false}
+                showValidity={false}
+                status={isActive ? 'Matrícula Ativa' : 'Aguardando Aprovação'}
               />
             </div>
             
-            <div className="space-y-8 pt-10">
-              <InstallmentPreviewCard title="Condições de Parcelamento" parcelamento={parcelamento} />
-            </div>
+            {hasParcelamento && (
+              <div className="space-y-8 pt-10 lg:col-span-1">
+                <InstallmentPreviewCard title="Condições de Parcelamento" parcelamento={parcelamento} />
+              </div>
+            )}
 
             {/* Faturas Locais (Contas a Receber) */}
             {invoices.length > 0 && (
@@ -944,6 +969,7 @@ export default function EnrollmentView() {
                           <th className="py-3 px-6">Método</th>
                           <th className="py-3 px-6">Status</th>
                           <th className="py-3 px-6">Data Pagto</th>
+                          <th className="py-3 px-6 text-right">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y text-sm text-foreground/80">
@@ -961,6 +987,66 @@ export default function EnrollmentView() {
                             : inv.status === 'pending' ? 'Pendente'
                             : 'Vencido';
 
+                          const handleReceive = async () => {
+                            if (window.confirm(`Deseja lançar o recebimento local da fatura ${inv.invoice_number} no valor de ${formatCurrencyBRL(inv.amount)}?`)) {
+                              try {
+                                const todayStr = new Date().toISOString().split('T')[0];
+                                await accountsReceivableService.markAsReceived(String(inv.id), todayStr, inv.payment_method || 'pix');
+                                toast({
+                                  title: "Recebimento Lançado",
+                                  description: "O recebimento foi registrado com sucesso no financeiro.",
+                                });
+                                queryClient.invalidateQueries({ queryKey: ['enrollment', String(id)] });
+                              } catch (err: any) {
+                                toast({
+                                  title: "Erro no Recebimento",
+                                  description: err.message || 'Ocorreu um erro desconhecido.',
+                                  variant: "destructive",
+                                });
+                              }
+                            }
+                          };
+
+                          const handleDelete = async () => {
+                            if (window.confirm(`Tem certeza que deseja excluir permanentemente a fatura ${inv.invoice_number}?`)) {
+                              try {
+                                await accountsReceivableService.delete(String(inv.id));
+                                toast({
+                                  title: "Fatura Excluída",
+                                  description: "A fatura foi excluída com sucesso.",
+                                });
+                                queryClient.invalidateQueries({ queryKey: ['enrollment', String(id)] });
+                              } catch (err: any) {
+                                toast({
+                                  title: "Erro ao Excluir",
+                                  description: err.message || 'Ocorreu um erro desconhecido.',
+                                  variant: "destructive",
+                                });
+                              }
+                            }
+                          };
+
+                          const handleCancel = async () => {
+                            if (window.confirm(`Deseja cancelar a fatura ${inv.invoice_number}?`)) {
+                              try {
+                                await accountsReceivableService.cancel(String(inv.id));
+                                toast({
+                                  title: "Fatura Cancelada",
+                                  description: "A fatura foi cancelada com sucesso.",
+                                });
+                                queryClient.invalidateQueries({ queryKey: ['enrollment', String(id)] });
+                              } catch (err: any) {
+                                toast({
+                                  title: "Erro ao Cancelar",
+                                  description: err.message || 'Ocorreu um erro desconhecido.',
+                                  variant: "destructive",
+                                });
+                              }
+                            }
+                          };
+
+                          const bankSlipUrl = inv.config?.bankSlipUrl || inv.config?.reg_asaas?.bankSlipUrl || null;
+
                           return (
                             <tr key={inv.id} className="hover:bg-muted/10 transition-colors">
                               <td className="py-4 px-6 font-mono font-bold text-primary">{inv.invoice_number}</td>
@@ -977,6 +1063,42 @@ export default function EnrollmentView() {
                               </td>
                               <td className="py-4 px-6 font-medium text-muted-foreground">
                                 {inv.payment_date ? formatDate(inv.payment_date) : '---'}
+                              </td>
+                              <td className="py-4 px-6 text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-muted">
+                                      <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-56 bg-white border shadow-lg rounded-xl p-1 z-50">
+                                    {inv.status !== 'paid' && (
+                                      <DropdownMenuItem onClick={handleReceive} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-muted text-sm font-semibold text-emerald-600 focus:text-emerald-700">
+                                        <CheckSquare className="h-4 w-4" /> Lançar Recebimento
+                                      </DropdownMenuItem>
+                                    )}
+
+                                    {bankSlipUrl && (
+                                      <DropdownMenuItem asChild className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-muted text-sm font-semibold text-foreground">
+                                        <a href={bankSlipUrl} target="_blank" rel="noopener noreferrer">
+                                          <ExternalLink className="h-4 w-4" /> Visualizar Boleto
+                                        </a>
+                                      </DropdownMenuItem>
+                                    )}
+
+                                    {inv.status !== 'paid' && (
+                                      <DropdownMenuItem onClick={handleCancel} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-muted text-sm font-semibold text-amber-600 focus:text-amber-700">
+                                        <PauseCircle className="h-4 w-4" /> Cancelar Fatura
+                                      </DropdownMenuItem>
+                                    )}
+
+                                    <DropdownMenuSeparator className="my-1 border-t" />
+
+                                    <DropdownMenuItem onClick={handleDelete} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-red-50 text-sm font-semibold text-red-600 focus:text-red-700 focus:bg-red-50">
+                                      <Trash2 className="h-4 w-4" /> Excluir Fatura
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </td>
                             </tr>
                           );

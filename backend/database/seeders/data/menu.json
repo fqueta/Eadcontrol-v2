@@ -49,7 +49,16 @@
       { "title": "Geral", "url": "/reports/relatorio-geral" },
       { "title": "Acesso de conteudo", "url": "/reports/content-access" },
       { "title": "Turmas", "url": "/reports/relatorio-turmas" },
-      { "title": "Frequência ao Vivo", "url": "/reports/live-attendance" }
+      { "title": "Frequência ao Vivo", "url": "/reports/live-attendance" },
+      { "title": "Financeiro", "url": "/reports/financial" }
+    ]
+  },
+  {
+    "title": "Financeiro",
+    "icon": "DollarSign",
+    "submenu": [
+      { "title": "Contas", "url": "/admin/financial" },
+      { "title": "Categorias", "url": "/admin/financial/categories" }
     ]
   },
   {

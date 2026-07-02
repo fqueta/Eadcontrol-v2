@@ -2003,6 +2003,8 @@ export default function SystemSettings() {
                             <SelectItem value="courses">Cursos (Courses)</SelectItem>
                             <SelectItem value="comments">Comentários (Comments)</SelectItem>
                             <SelectItem value="enrollments">Matrículas (Enrollments)</SelectItem>
+                            <SelectItem value="turmas">Turmas (Classes)</SelectItem>
+                            <SelectItem value="invoices">Faturas (Invoices)</SelectItem>
                         </SelectContent>
                     </Select>
                  </div>
@@ -2023,7 +2025,7 @@ export default function SystemSettings() {
                  </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Selecione o tipo de entidade (Usuários, Cursos, Comentários ou Matrículas) e forneça a URL correspondente.
+                Selecione o tipo de entidade (Usuários, Cursos, Comentários, Matrículas ou Turmas) e forneça a URL correspondente.
               </p>
             </CardContent>
           </Card>

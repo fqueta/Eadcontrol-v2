@@ -204,10 +204,12 @@ class CursoController extends Controller
             : Curso::query();
 
         // Filtro por nome/título
-        if ($search = $request->string('q')->toString()) {
-            $query->where(function ($q) use ($search) {
-                $q->where('nome', 'like', "%{$search}%")
-                  ->orWhere('titulo', 'like', "%{$search}%");
+        $search = $request->input('q') ?? $request->input('search');
+        if ($search !== null && trim((string)$search) !== '') {
+            $searchStr = trim((string)$search);
+            $query->where(function ($q) use ($searchStr) {
+                $q->where('nome', 'like', "%{$searchStr}%")
+                  ->orWhere('titulo', 'like', "%{$searchStr}%");
             });
         }
 

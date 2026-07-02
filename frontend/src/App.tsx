@@ -115,6 +115,7 @@ const CoursesPublicList = lazy(() => import("./pages/school/CoursesPublicList"))
 const Classes = lazy(() => import("./pages/school/Classes"));
 const ClassCreate = lazy(() => import("./pages/school/ClassCreate"));
 const ClassEdit = lazy(() => import("./pages/school/ClassEdit"));
+const ClassDetails = lazy(() => import("./pages/school/ClassDetails"));
 const Enroll = lazy(() => import("./pages/school/Enroll"));
 const EnrollmentView = lazy(() => import("./pages/school/EnrollmentView"));
 const EnrollmentSituationPage = lazy(() => import("./pages/school/EnrollmentSituation"));
@@ -522,6 +523,13 @@ const App = () => {
                 <AdminProtectedRoute>
                   <AppLayout>
                     <ClassEdit />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/school/classes/:id" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <ClassDetails />
                   </AppLayout>
                 </AdminProtectedRoute>
               } />

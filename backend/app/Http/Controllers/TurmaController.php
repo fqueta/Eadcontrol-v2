@@ -84,6 +84,22 @@ class TurmaController extends Controller
             }
         }
 
+        // Agregados conforme legado
+        $query->withCount([
+            'matriculas as total_alunos',
+            'matriculas as interessados' => function ($q) {
+                $q->join('posts', 'matriculas.situacao_id', '=', 'posts.id')
+                  ->where('posts.post_name', 'int');
+            },
+            'matriculas as matriculados' => function ($q) {
+                $q->leftJoin('posts', 'matriculas.situacao_id', '=', 'posts.id')
+                  ->where(function ($sub) {
+                      $sub->where('posts.post_name', '!=', 'int')
+                          ->orWhereNull('posts.post_name');
+                  });
+            }
+        ]);
+
         return response()->json($query->orderBy('id', 'desc')->paginate($perPage));
     }
 
@@ -182,10 +198,28 @@ class TurmaController extends Controller
         // Opcional: checagem de autenticação/permissão como no CursoController
         $turma = Turma::where('id', $id)
             ->where('deletado', 'n')
+            ->withCount([
+                'matriculas as total_alunos',
+                'matriculas as interessados' => function ($q) {
+                    $q->join('posts', 'matriculas.situacao_id', '=', 'posts.id')
+                      ->where('posts.post_name', 'int');
+                },
+                'matriculas as matriculados' => function ($q) {
+                    $q->leftJoin('posts', 'matriculas.situacao_id', '=', 'posts.id')
+                      ->where(function ($sub) {
+                          $sub->where('posts.post_name', '!=', 'int')
+                              ->orWhereNull('posts.post_name');
+                      });
+                }
+            ])
             ->first();
+            
         if (!$turma) {
             return response()->json(['message' => 'Turma não encontrada'], 404);
         }
+        
+        $turma->load('curso');
+        
         return response()->json($turma);
     }
 

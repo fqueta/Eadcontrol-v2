@@ -49,6 +49,7 @@ function VideoDescriptionToggleBase({ html }: { html: string }) {
       </Button>
       {open && (
         <div
+          key={html}
           className="prose prose-sm max-w-none text-muted-foreground mt-2"
           dangerouslySetInnerHTML={{ __html: html }}
         />
@@ -2663,7 +2664,9 @@ function htmlEquals(a: string, b: string): boolean {
                     <span className="line-clamp-1 flex-1 text-left">{title}</span>
                     <Badge variant={isCurrentModule ? "default" : "outline"} className="shrink-0">{activities.length}</Badge>
                   </button>
-                  
+                  {showActivities && (
+                    <div key={String(m?.module_id || m?.id || '')} className="px-3 mb-3 text-sm prose prose-sm max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: String(m?.description || m?.descricao || '') }} />
+                  )}
                   {showActivities && (
                     <ul className="space-y-2 ml-2 border-l-2 border-muted pl-3">
                       {activities.map((a: any, ai: number) => {
@@ -2801,6 +2804,9 @@ function htmlEquals(a: string, b: string): boolean {
                     );
                   })()}
                 </button>
+                {showActivities && (
+                  <div key={String(m?.module_id || m?.id || '')} className="px-3 mb-3 text-sm prose prose-sm max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: String(m?.description || m?.descricao || '') }} />
+                )}
                 {showActivities && (
                 <ul className="space-y-2">
                   {activities.map((a: any, ai: number) => {
@@ -3152,7 +3158,7 @@ function htmlEquals(a: string, b: string): boolean {
                       }
                       return (
                         <div className="p-4 overflow-auto">
-                          <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: html }} />
+                          <div key={html} className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: html }} />
                         </div>
                       );
                     })()}
@@ -3286,7 +3292,7 @@ function htmlEquals(a: string, b: string): boolean {
                       const contentHtml = String(currentActivity?.conteudo || currentActivity?.content || descHtml);
                       if (htmlEquals(descHtml, contentHtml)) return null;
                       return (
-                        <div className="prose prose-sm max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: descHtml }} />
+                        <div key={descHtml} className="prose prose-sm max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: descHtml }} />
                       );
                     })()}
                   </div>

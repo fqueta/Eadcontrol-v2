@@ -80,6 +80,14 @@ export interface TurmaRecord {
   // Configuração
   config?: any | null;
 
+  // Agregados calculados no controller do backend
+  total_alunos?: number;
+  interessados?: number;
+  matriculados?: number;
+
+  // Curso associado retornado pelo backend
+  curso?: { id: number; nome?: string | null; [key: string]: any } | null;
+
   // Timestamps modernos
   created_at?: string;
   updated_at?: string;
