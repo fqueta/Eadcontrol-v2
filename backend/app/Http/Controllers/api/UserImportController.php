@@ -109,6 +109,7 @@ class UserImportController extends Controller
             $existingEnrollmentsMap = []; // Key: id_cliente-id_curso (composite) or legacy_id
             $existingCommentsMap = []; // Key: id_antigo
             $existingInvoicesMap = []; // Key: ID_antigo or id
+            $existingTurmasMap = []; // Key: ID_antigo or id
 
             // 1. Users Map (Used by Users, Enrollments, Comments)
             if (in_array($type, ['users', 'enrollments', 'comments'])) {
@@ -345,6 +346,45 @@ class UserImportController extends Controller
                       }
                  }
             }
+
+            // 7. Turmas Map (Used by Turmas)
+            if ($type === 'turmas') {
+                 $turmaLegacyIds = [];
+                 $courseLegacyIds = [];
+                 foreach ($data as $row) {
+                     $r = $this->sanitizeInput($row);
+                     if (!empty($r['id'])) $turmaLegacyIds[] = (string)$r['id'];
+                     if (!empty($r['id_curso'])) $courseLegacyIds[] = (string)$r['id_curso'];
+                 }
+                 
+                 if (!empty($turmaLegacyIds)) {
+                      $turmas = \App\Models\Turma::where(function($q) use ($turmaLegacyIds) {
+                          $q->whereIn('config->ID_antigo', array_unique($turmaLegacyIds))
+                            ->orWhereIn('id', array_unique($turmaLegacyIds));
+                      })->get();
+                      
+                      foreach ($turmas as $t) {
+                           $existingTurmasMap['id'][(string)$t->id] = $t;
+                           $tConfig = $t->config;
+                           if (is_string($tConfig)) $tConfig = json_decode($tConfig, true);
+                           $legacyId = $tConfig['ID_antigo'] ?? null;
+                           if ($legacyId) {
+                                $existingTurmasMap['id_antigo'][(string)$legacyId] = $t;
+                           }
+                      }
+                 }
+                 
+                 // Also load courses for resolution of id_curso
+                 if (!empty($courseLegacyIds)) {
+                      $courses = \App\Models\Curso::whereIn('config->ID_antigo', array_unique($courseLegacyIds))
+                          ->orWhereIn('id', array_unique($courseLegacyIds))
+                          ->get();
+                      foreach ($courses as $c) {
+                           $existingCoursesMap['id_antigo'][(string)($c->config['ID_antigo'] ?? '')] = $c;
+                           $existingCoursesMap['id'][(string)$c->id] = $c;
+                      }
+                 }
+            }
             
             // Start Transaction
             \Illuminate\Support\Facades\DB::beginTransaction();
@@ -360,6 +400,8 @@ class UserImportController extends Controller
                         $result = $this->importEnrollment($row, $existingUsersMap, $existingCoursesMap, $existingEnrollmentsMap);
                     } elseif ($type == 'invoices') {
                         $result = $this->importInvoice($row, $existingInvoicesMap);
+                    } elseif ($type == 'turmas') {
+                        $result = $this->importTurma($row, $existingCoursesMap, $existingTurmasMap);
                     } else {
                         $result = $this->importUser($row, $existingUsersMap);
                     }
@@ -1117,6 +1159,93 @@ class UserImportController extends Controller
             $attributes['token'] = Qlib::token();
             $newInvoice = \App\Models\FinancialAccount::create($attributes);
             Log::info("ImportInvoice: created new invoice", ['id' => $newInvoice->id, 'legacy_id' => $legacyId]);
+            return 'created';
+        }
+    }
+
+    private function importTurma($row, $existingCoursesMap = [], $existingTurmasMap = [])
+    {
+        $row = $this->sanitizeInput($row);
+        $legacyId = $row['id'] ?? null;
+        $idCursoLegacy = $row['id_curso'] ?? null;
+        $nome = $row['nome'] ?? null;
+        $inicioRaw = $row['inicio'] ?? null;
+        $fimRaw = $row['fim'] ?? null;
+        $maxAlunos = (int)($row['max_alunos'] ?? 0);
+        $ativo = filter_var($row['ativo'] ?? true, FILTER_VALIDATE_BOOLEAN);
+
+        if (!$legacyId || !$nome) {
+            return 'skipped';
+        }
+
+        // 1. Resolve Course
+        $course = null;
+        if ($idCursoLegacy) {
+            if (isset($existingCoursesMap['id_antigo'][(string)$idCursoLegacy])) {
+                $course = $existingCoursesMap['id_antigo'][(string)$idCursoLegacy];
+            } else {
+                $course = \App\Models\Curso::where('config->ID_antigo', (string)$idCursoLegacy)->first();
+                if (!$course) {
+                    $course = \App\Models\Curso::find($idCursoLegacy);
+                }
+            }
+        }
+
+        if (!$course) {
+            Log::warning("ImportTurma: skipped class legacy ID {$legacyId} because linked course legacy ID {$idCursoLegacy} was not found.");
+            return 'skipped';
+        }
+
+        // 2. Parse Dates helper
+        $parseDate = function($val) {
+            if (empty($val)) return null;
+            try {
+                if (str_contains($val, '/')) {
+                    return \Carbon\Carbon::createFromFormat('d/m/Y', $val)->format('Y-m-d');
+                }
+                return \Carbon\Carbon::parse($val)->format('Y-m-d');
+            } catch (\Throwable $e) {
+                return null;
+            }
+        };
+
+        $inicio = $parseDate($inicioRaw);
+        $fim = $parseDate($fimRaw);
+
+        // 3. Config mapping
+        $config = [
+            'ID_antigo' => (string)$legacyId,
+            'curso_nome' => $row['curso'] ?? null,
+            'matriculados_legacy' => $row['matriculados'] ?? 0,
+            'source' => 'external',
+        ];
+
+        // 4. Check existing class
+        $existing = null;
+        if (isset($existingTurmasMap['id_antigo'][(string)$legacyId])) {
+            $existing = $existingTurmasMap['id_antigo'][(string)$legacyId];
+        } else {
+            $existing = \App\Models\Turma::where('config->ID_antigo', (string)$legacyId)->first();
+        }
+
+        $attributes = [
+            'id_curso' => $course->id,
+            'nome' => $nome,
+            'inicio' => $inicio,
+            'fim' => $fim,
+            'max_alunos' => $maxAlunos,
+            'ativo' => $ativo ? 's' : 'n',
+            'config' => $config,
+        ];
+
+        if ($existing) {
+            $existing->update($attributes);
+            Log::info("ImportTurma: updated class", ['id' => $existing->id, 'legacy_id' => $legacyId]);
+            return 'updated';
+        } else {
+            $attributes['token'] = Qlib::token();
+            $newTurma = \App\Models\Turma::create($attributes);
+            Log::info("ImportTurma: created new class", ['id' => $newTurma->id, 'legacy_id' => $legacyId]);
             return 'created';
         }
     }
