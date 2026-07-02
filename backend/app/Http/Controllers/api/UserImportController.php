@@ -49,10 +49,20 @@ class UserImportController extends Controller
                             $response = Http::timeout(120)->get($url);
                         }
                     } else {
-                        $response = Http::timeout(120)->get($url);
+                        $http = Http::timeout(120);
+                        $legacyToken = $request->header('Legacy-Authorization') ?? $request->input('legacy_token');
+                        if ($legacyToken) {
+                            $http = $http->withHeaders(['Authorization' => $legacyToken]);
+                        }
+                        $response = $http->get($url);
                     }
                     if ($response->successful()) {
                         $json = $response->json();
+                        Log::info("Import: Fetched data from URL", [
+                            'url' => $url,
+                            'response_keys' => is_array($json) ? array_keys($json) : gettype($json),
+                            'has_data_key' => isset($json['data']),
+                        ]);
                         
                         // Handle wrapped response (standard: { data: [...] })
                         if (isset($json['data'])) {
@@ -93,6 +103,9 @@ class UserImportController extends Controller
             }
 
             Log::info("Import: Starting import", ['count' => count($data), 'type' => $type]);
+            if (!empty($data)) {
+                Log::info("Import: First row sample", ['sample' => array_slice($data[0], 0, 10)]);
+            }
 
             $stats = [
                 'imported' => 0,
@@ -129,31 +142,40 @@ class UserImportController extends Controller
                       if (!empty($r['id']) && $type === 'users') $clientIds[] = (string)$r['id'];
                  }
                  
-                 if (!empty($emails) || !empty($cpfs) || !empty($cnpjs) || !empty($clientIds)) {
-                      $users = User::query()->where(function($q) use ($emails, $cpfs, $cnpjs, $clientIds) {
-                          if (!empty($emails)) $q->whereIn('email', array_unique($emails));
-                          if (!empty($cpfs)) $q->orWhereIn('cpf', array_unique($cpfs));
-                          if (!empty($cnpjs)) $q->orWhereIn('cnpj', array_unique($cnpjs));
-                          if (!empty($clientIds)) {
-                              $q->orWhereIn('config->ID_antigo', array_unique($clientIds));
-                              $q->orWhereIn('id', array_unique($clientIds));
-                          }
-                      })->get();
+                  if (!empty($emails) || !empty($cpfs) || !empty($cnpjs) || !empty($clientIds)) {
+                       $users = User::query()->where(function($q) use ($emails, $cpfs, $cnpjs, $clientIds) {
+                           if (!empty($emails)) $q->whereIn('email', array_unique($emails));
+                           if (!empty($cpfs)) $q->orWhereIn('cpf', array_unique($cpfs));
+                           if (!empty($cnpjs)) $q->orWhereIn('cnpj', array_unique($cnpjs));
+                           if (!empty($clientIds)) {
+                               $q->orWhereIn('config->ID_antigo', array_unique($clientIds));
+                               $q->orWhereIn('id', array_unique($clientIds));
+                           }
+                       })->get();
 
-                      foreach ($users as $u) {
-                          if ($u->email) $existingUsersMap['email'][$u->email] = $u;
-                          if ($u->cpf) $existingUsersMap['cpf'][$u->cpf] = $u;
-                          if ($u->cnpj) $existingUsersMap['cnpj'][$u->cnpj] = $u;
-                          
-                          $uConfig = $u->config;
-                          if (is_string($uConfig)) $uConfig = json_decode($uConfig, true);
-                          $legacyId = $uConfig['ID_antigo'] ?? null;
-                          if ($legacyId) {
-                              $existingUsersMap['id_antigo'][(string)$legacyId] = $u;
-                          }
-                          $existingUsersMap['id'][(string)$u->id] = $u;
-                      }
-                  }
+                        foreach ($users as $u) {
+                            if ($u->email) $existingUsersMap['email'][$u->email] = $u;
+                            if ($u->cpf) $existingUsersMap['cpf'][$u->cpf] = $u;
+                            if ($u->cnpj) $existingUsersMap['cnpj'][$u->cnpj] = $u;
+                            
+                            $uConfig = $u->config;
+                            if (is_string($uConfig)) $uConfig = json_decode($uConfig, true);
+                            $legacyId = $uConfig['ID_antigo'] ?? null;
+                            if ($legacyId) {
+                                $existingUsersMap['id_antigo'][(string)$legacyId] = $u;
+                            }
+                            foreach (($uConfig['legacy_ids'] ?? []) as $lid) {
+                                $existingUsersMap['id_antigo'][(string)$lid] = $u;
+                            }
+                            $existingUsersMap['id'][(string)$u->id] = $u;
+                        }
+                   }
+                   Log::info("Import: Users pre-fetch", [
+                       'type' => $type,
+                       'clientIds_count' => count($clientIds ?? []),
+                       'users_found' => count($existingUsersMap['id_antigo'] ?? []),
+                       'total_users' => count($users ?? []),
+                   ]);
             }
 
             // 2. Courses Map (Used by Courses, Enrollments, Comments)
@@ -171,6 +193,7 @@ class UserImportController extends Controller
                     // For Enrollment/Comment Import (Reference to Course)
                     if (!empty($row['course_id_wp'])) $legacyIds[] = (string)$row['course_id_wp'];
                     if (!empty($row['post_id_wp'])) $legacyIds[] = (string)$row['post_id_wp']; // post_type=lp_course
+                    if (!empty($row['id_curso'])) $legacyIds[] = (string)$row['id_curso'];
                 }
 
                 $query = Curso::query();
@@ -212,9 +235,9 @@ class UserImportController extends Controller
                 if ($shouldRun) {
                     // Simplify: Fetch all courses that might match (limit fields)
                     // If table is huge, this is bad. But usually courses < 10k.
-                    $courses = Curso::select('id', 'slug', 'config', 'nome')->get(); 
+                    $allCourses = Curso::select('id', 'slug', 'config', 'nome')->get(); 
                     
-                    foreach ($courses as $c) {
+                    foreach ($allCourses as $c) {
                         if ($c->slug) $existingCoursesMap['slug'][$c->slug] = $c;
                         
                         $conf = $c->config;
@@ -224,6 +247,14 @@ class UserImportController extends Controller
                         }
                     }
                 }
+                Log::info("Import: Courses pre-fetch", [
+                    'type' => $type,
+                    'legacyIds_count' => count($legacyIds ?? []),
+                    'should_run' => $shouldRun,
+                    'courses_found_by_id_antigo' => count($existingCoursesMap['id_antigo'] ?? []),
+                    'total_courses' => count($allCourses ?? []),
+                    'first_10_legacy_ids' => array_slice(array_values(array_unique($legacyIds ?? [])), 0, 10),
+                ]);
             }
 
             // 3. Activities Map (Used by Comments)
@@ -468,7 +499,10 @@ class UserImportController extends Controller
             } elseif (isset($existingUsersMap['id'][(string)$id_cliente])) {
                 $user = $existingUsersMap['id'][(string)$id_cliente];
             } else {
-                $user = User::where('config->ID_antigo', (string)$id_cliente)->first();
+                $user = User::where(function($q) use ($id_cliente) {
+                    $q->where('config->ID_antigo', (string)$id_cliente)
+                      ->orWhereJsonContains('config->legacy_ids', (string)$id_cliente);
+                })->first();
                 if (!$user) {
                     $user = User::find($id_cliente);
                 }
@@ -476,10 +510,13 @@ class UserImportController extends Controller
         }
         
         if (!$user) {
-            Log::warning("ImportEnrollment: skipped because user could not be resolved", [
+            Log::error("ImportEnrollment: skipped because user could not be resolved. Check if clients were imported with ID_antigo in config matching id_cliente.", [
                 'id_cliente' => $id_cliente,
+                'id_cliente_type' => gettype($id_cliente),
                 'user_email' => $userEmail,
-                'row_id' => $legacyId
+                'row_id' => $legacyId,
+                'users_in_map_by_id_antigo' => count($existingUsersMap['id_antigo'] ?? []),
+                'users_in_map_by_id' => count($existingUsersMap['id'] ?? []),
             ]);
             return 'skipped';
         }
@@ -505,10 +542,12 @@ class UserImportController extends Controller
         }
         
         if (!$course) {
-            Log::warning("ImportEnrollment: skipped because course could not be resolved", [
+            Log::error("ImportEnrollment: skipped because course could not be resolved. Check if courses were imported with ID_antigo in config matching id_curso.", [
                 'id_curso' => $id_curso,
+                'id_curso_type' => gettype($id_curso),
                 'course_id_wp' => $courseIdWp,
-                'row_id' => $legacyId
+                'row_id' => $legacyId,
+                'courses_in_map_by_id_antigo' => count($existingCoursesMap['id_antigo'] ?? []),
             ]);
             return 'skipped';
         }
@@ -1017,7 +1056,7 @@ class UserImportController extends Controller
         $courseService = new \App\Services\CourseService();
         // Sanitize data using the same logic as CursoController via Service
         
-        $wp_id = $row['ID_antigo'] ?? null;
+        $wp_id = $row['ID_antigo'] ?? $row['id'] ?? null;
         $title = $row['nome'] ?? $row['title'] ?? '';
         if (empty($title)) return 'skipped';
         
