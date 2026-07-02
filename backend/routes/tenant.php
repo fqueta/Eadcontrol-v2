@@ -243,6 +243,7 @@ Route::name('api.')->prefix('api/v1')->middleware([
         });
         Route::get('user',[UserController::class,'perfil'])->name('perfil.user');
         // User profile routes (self-service)
+        Route::get('user/my-invoices',[UserController::class,'myInvoices'])->name('user.my-invoices');
         Route::get('user/profile',[UserController::class,'profile'])->name('user.profile.show');
         Route::put('user/profile',[UserController::class,'updateProfile'])->name('user.profile.update');
         Route::post('user/change-password',[UserController::class,'changePassword'])->name('user.change-password');

@@ -180,6 +180,17 @@ class UsersService {
   }
 
   /**
+   * Busca as faturas do aluno autenticado
+   */
+  async getMyInvoices(): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/user/my-invoices`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<any[]>(response);
+  }
+
+  /**
    * Exclui permanentemente um usuário
    * @param id ID do usuário
    */

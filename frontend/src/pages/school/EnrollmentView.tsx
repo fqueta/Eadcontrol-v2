@@ -932,15 +932,11 @@ export default function EnrollmentView() {
                 validityDate={computeValidityDate(validadeDias)}
                 showClientInfo={false}
                 showValidity={false}
-                status={isActive ? 'Matrícula Ativa' : 'Aguardando Aprovação'}
+                status={isActive ? 'Matrícula Ativa' : 'Matrícula Inativa'}
               />
             </div>
             
-            {hasParcelamento && (
-              <div className="space-y-8 pt-10 lg:col-span-1">
-                <InstallmentPreviewCard title="Condições de Parcelamento" parcelamento={parcelamento} />
-              </div>
-            )}
+
 
             {/* Faturas Locais (Contas a Receber) */}
             {invoices.length > 0 && (
@@ -1068,7 +1064,7 @@ export default function EnrollmentView() {
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-muted">
-                                      <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                      <MoreVertical className="h-4 w-4" />
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" className="w-56 bg-white border shadow-lg rounded-xl p-1 z-50">
@@ -1085,6 +1081,12 @@ export default function EnrollmentView() {
                                         </a>
                                       </DropdownMenuItem>
                                     )}
+                                    
+                                    <DropdownMenuItem onClick={() => {
+                                      toast({ title: 'Integração', description: 'Enviando para o gateway de pagamento (Legado)...' });
+                                    }} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-muted text-sm font-semibold text-foreground">
+                                      <ExternalLink className="h-4 w-4" /> Enviar para Gateway
+                                    </DropdownMenuItem>
 
                                     {inv.status !== 'paid' && (
                                       <DropdownMenuItem onClick={handleCancel} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-muted text-sm font-semibold text-amber-600 focus:text-amber-700">

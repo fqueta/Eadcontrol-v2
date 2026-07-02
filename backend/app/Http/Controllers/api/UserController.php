@@ -253,6 +253,20 @@ class UserController extends Controller
         return response()->json($user);
     }
 
+    public function myInvoices(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+        $invoices = \App\Models\FinancialAccount::withoutGlobalScopes()
+            ->where('client_id', $user->id)
+            ->orderBy('due_date', 'asc')
+            ->get();
+            
+        return response()->json($invoices);
+    }
+
     public function profile(Request $request)
     {
         $user = $request->user();
