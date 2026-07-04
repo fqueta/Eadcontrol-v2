@@ -14,6 +14,18 @@ export function getTenantIdFromSubdomain(): string | null {
  * pt-BR: Retorna a base da API do tenant, SEM versão. Ex.: "http://{tenant_id}.localhost:8000/api".
  * en-US: Returns tenant API base, WITHOUT version. E.g.: "http://{tenant_id}.localhost:8000/api".
  */
+function isApexDomain(host: string): boolean {
+  const parts = host.split('.');
+
+  // Brazilian multi-part TLDs: dominio.com.br → 3 parts = apex
+  if (/\.(?:com|org|net|gov|edu|mil|art|blog|info)\.br$/i.test(host)) {
+    return parts.length === 3;
+  }
+
+  // Standard TLDs: dominio.com → 2 parts = apex
+  return parts.length === 2;
+}
+
 export function getTenantApiUrl(): string {
   const host = window.location.host.replace(/^www\./i, '');
   const protocol = window.location.protocol;
@@ -30,7 +42,8 @@ export function getTenantApiUrl(): string {
 
   // Em produção, a resolução do backend é sempre 100% dinâmica baseada no domínio de acesso (multi-tenant)
   const isPlatformDomain = /(?:^|\.)(?:eadcontrol|eadcrontro|incluireeducar)\.com\.br$/i.test(host);
-  const url = isPlatformDomain ? `${protocol}//api-${host}/api` : `${protocol}//${host}/api`;
+  const shouldPrefixApi = isPlatformDomain || isApexDomain(host);
+  const url = shouldPrefixApi ? `${protocol}//api-${host}/api` : `${protocol}//${host}/api`;
   return url.replace(/\/+$/, '');
 }
 
