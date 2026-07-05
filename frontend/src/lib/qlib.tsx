@@ -42,8 +42,11 @@ export function getTenantApiUrl(): string {
 
   // Em produção, a resolução do backend é sempre 100% dinâmica baseada no domínio de acesso (multi-tenant)
   const isPlatformDomain = /(?:^|\.)(?:eadcontrol|eadcrontro|incluireeducar)\.com\.br$/i.test(host);
-  const shouldPrefixApi = isPlatformDomain || isApexDomain(host);
-  const url = shouldPrefixApi ? `${protocol}//api-${host}/api` : `${protocol}//${host}/api`;
+  const url = isPlatformDomain
+    ? `${protocol}//api-${host}/api`
+    : isApexDomain(host)
+      ? `${protocol}//api.${host}/api`
+      : `${protocol}//${host}/api`;
   return url.replace(/\/+$/, '');
 }
 
