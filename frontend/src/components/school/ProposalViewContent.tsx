@@ -33,6 +33,63 @@ interface ProposalViewContentProps {
 }
 
 /**
+ * computeValidityDate
+ * pt-BR: Soma N dias à data atual e formata dd/MM/yyyy.
+ * en-US: Adds N days to today and formats dd/MM/yyyy.
+ */
+function computeValidityDate(daysStr?: string): string {
+  const days = parseInt(String(daysStr ?? ''), 10);
+  if (!Number.isFinite(days) || days <= 0) return '';
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+/**
+ * formatCurrencyBRL
+ * pt-BR: Formata número em BRL (R$).
+ * en-US: Formats number into BRL (R$).
+ */
+function formatCurrencyBRL(value: number): string {
+  try {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0);
+  } catch {
+    return `R$ ${(Number(value) || 0).toFixed(2)}`;
+  }
+}
+
+/**
+ * maskMonetaryDisplay
+ * pt-BR: Aplica máscara monetária para exibição; retorna vazio se não houver valor.
+ * en-US: Applies monetary mask for display; returns empty when no value.
+ */
+function maskMonetaryDisplay(raw: string | number | undefined | null): string {
+  const s = String(raw ?? '').trim();
+  if (!s) return '';
+  const num = currencyRemoveMaskToNumber(s);
+  return formatCurrencyBRL(num);
+}
+
+/**
+ * computeModulo
+ * pt-BR: Retorna módulo correto baseado no tipo de curso.
+ * en-US: Returns proper module based on course type.
+ */
+function computeModulo(enr: any, cursoTipo: string) {
+  try {
+    if (String(cursoTipo) === '4') {
+      return enr?.orc?.modulos?.[0] ?? '';
+    }
+    return enr?.orc?.modulo ?? '';
+  } catch {
+    return '';
+  }
+}
+
+/**
  * ProposalViewContent
  * pt-BR: Componente de visualização de proposta somente leitura, com card de Proposta Comercial e Parcelamento.
  * en-US: Read-only proposal view component, with Commercial Proposal card and Installment preview.
@@ -57,69 +114,14 @@ export default function ProposalViewContent({ id }: ProposalViewContentProps) {
     staleTime: 5 * 60 * 1000,
   });
 
-  /**
-   * computeValidityDate
-   * pt-BR: Soma N dias à data atual e formata dd/MM/yyyy.
-   * en-US: Adds N days to today and formats dd/MM/yyyy.
-   */
-  function computeValidityDate(daysStr?: string): string {
-    const days = parseInt(String(daysStr ?? ''), 10);
-    if (!Number.isFinite(days) || days <= 0) return '';
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
-  }
 
-  /**
-   * formatCurrencyBRL
-   * pt-BR: Formata número em BRL (R$).
-   * en-US: Formats number into BRL (R$).
-   */
-  function formatCurrencyBRL(value: number): string {
-    try {
-      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0);
-    } catch {
-      return `R$ ${(Number(value) || 0).toFixed(2)}`;
-    }
-  }
-
-  /**
-   * maskMonetaryDisplay
-   * pt-BR: Aplica máscara monetária para exibição; retorna vazio se não houver valor.
-   * en-US: Applies monetary mask for display; returns empty when no value.
-   */
-  function maskMonetaryDisplay(raw: string | number | undefined | null): string {
-    const s = String(raw ?? '').trim();
-    if (!s) return '';
-    const num = currencyRemoveMaskToNumber(s);
-    return formatCurrencyBRL(num);
-  }
-
-  /**
-   * computeModulo
-   * pt-BR: Retorna módulo correto baseado no tipo de curso.
-   * en-US: Returns proper module based on course type.
-   */
-  function computeModulo(enr: any, cursoTipo: string) {
-    try {
-      if (String(cursoTipo) === '4') {
-        return enr?.orc?.modulos?.[0] ?? '';
-      }
-      return enr?.orc?.modulo ?? '';
-    } catch {
-      return '';
-    }
-  }
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const subtotalMasked = useMemo(() => maskMonetaryDisplay((enrollment as any)?.subtotal), [enrollment]);
-  const totalMasked = useMemo(() => maskMonetaryDisplay((enrollment as any)?.total), [enrollment]);
-  const descontoMasked = useMemo(() => maskMonetaryDisplay((enrollment as any)?.desconto), [enrollment]);
+  const propSubtotalMasked = useMemo(() => maskMonetaryDisplay((enrollment as any)?.subtotal), [enrollment]);
+  const propTotalMasked = useMemo(() => maskMonetaryDisplay((enrollment as any)?.total), [enrollment]);
+  const propDescontoMasked = useMemo(() => maskMonetaryDisplay((enrollment as any)?.desconto), [enrollment]);
   const validadeDias = useMemo(() => String((enrollment as any)?.validade || '14'), [enrollment]);
   const clientName = client?.name || (client as any)?.nome || '';
   const clientPhone = client?.config?.celular || client?.config?.telefone_residencial || '';
@@ -163,7 +165,7 @@ export default function ProposalViewContent({ id }: ProposalViewContentProps) {
             <div className="flex flex-wrap gap-3">
               <div className="px-4 py-2 rounded-2xl bg-primary/10 border border-primary/10 flex flex-col">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-primary/70">Total da Proposta</span>
-                <span className="text-xl font-black text-primary">{totalMasked || 'R$ 0,00'}</span>
+                <span className="text-xl font-black text-primary">{propTotalMasked || 'R$ 0,00'}</span>
               </div>
               <div className="px-4 py-2 rounded-2xl bg-muted/50 border border-muted/10 flex flex-col">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">ID da Matrícula</span>
@@ -210,9 +212,9 @@ export default function ProposalViewContent({ id }: ProposalViewContentProps) {
             course={course as any}
             module={modulo}
             discountLabel="Desconto de Pontualidade"
-            discountAmountMasked={descontoMasked}
-            subtotalMasked={subtotalMasked}
-            totalMasked={totalMasked}
+            discountAmountMasked={propDescontoMasked}
+            subtotalMasked={propSubtotalMasked}
+            totalMasked={propTotalMasked}
             validityDate={computeValidityDate(validadeDias)}
             showClientInfo={false}
             showValidity={false}

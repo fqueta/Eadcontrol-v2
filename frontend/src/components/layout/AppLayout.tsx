@@ -1,6 +1,7 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
-import { Bell, Search, LogOut, Sun, Moon, Loader2, LayoutDashboard, Users, Package, BarChart2, Laptop } from "lucide-react";
+import { GlobalClientSearch } from "./GlobalClientSearch";
+import { Bell, Search, LogOut, Sun, Moon, Loader2, LayoutDashboard, Users, Package, BarChart2, Laptop, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -48,6 +49,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { applyThemeSettings } = useTheme();
   const navigate = useNavigate();
   const [cmdOpen, setCmdOpen] = React.useState(false);
+  const [clientSearchOpen, setClientSearchOpen] = React.useState(false);
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -149,6 +151,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <ForceChangePasswordModal />
+        <GlobalClientSearch open={clientSearchOpen} onOpenChange={setClientSearchOpen} />
         
         <div className="flex-1 flex flex-col">
           {/* Header */}
@@ -162,8 +165,11 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={() => setCmdOpen(true)} title="Pesquisar (Ctrl+K)">
+              <Button variant="ghost" size="icon" onClick={() => setClientSearchOpen(true)} title="Buscar Cliente (Ctrl+Espaço)">
                 <Search className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setCmdOpen(true)} title="Pesquisar/Navegar (Ctrl+K)">
+                <Command className="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="icon" onClick={toggleTheme} title="Alternar tema">
                 {/* Mostra sol/lua conforme classe dark no documento */}

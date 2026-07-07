@@ -76,15 +76,20 @@ class ClientController extends Controller
                 $q->whereNull('excluido')->orWhere('excluido', '!=', 's');
             });
         }
-        //adiciona filtro search por email, cpf ou cnpj ou nome
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function($q) use ($search) {
                 $q->where('email', 'like', '%' . $search . '%')
                   ->orWhere('cpf', 'like', '%' . $search . '%')
                   ->orWhere('celular', 'like', '%' . $search . '%')
+                  ->orWhere('config->celular', 'like', '%' . $search . '%')
+                  ->orWhere('config->telefone_residencial', 'like', '%' . $search . '%')
                   ->orWhere('cnpj', 'like', '%' . $search . '%')
                   ->orWhere('name', 'like', '%' . $search . '%');
+                
+                if (is_numeric($search)) {
+                    $q->orWhere('id', $search);
+                }
             });
         }
         if ($request->filled('email')) {
