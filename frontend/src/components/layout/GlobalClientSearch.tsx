@@ -98,6 +98,32 @@ function formatCpf(cpf: string | null | undefined): string {
   return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 }
 
+/**
+ * Destaca o termo de busca em um texto, envolvendo-o com <strong>
+ */
+function HighlightText({ text, query }: { text: string | null | undefined; query: string }) {
+  if (!text) return null;
+  if (!query || query.trim().length < 2) return <>{text}</>;
+
+  const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escapeRegExp(query.trim())})`, 'gi');
+  const parts = text.split(regex);
+
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <strong key={i} className="font-extrabold text-foreground">
+            {part}
+          </strong>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
 // ─── Hooks de Histórico ──────────────────────────────────────────────────────
 
 function loadHistory(): SearchHistoryEntry[] {
@@ -448,7 +474,7 @@ export function GlobalClientSearch({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-sm truncate">
-                        {client.name}
+                        <HighlightText text={client.name} query={searchTerm} />
                       </span>
                       <Badge
                         variant={client.status === "actived" ? "default" : "secondary"}
@@ -461,20 +487,20 @@ export function GlobalClientSearch({
                       {client.email && (
                         <span className="flex items-center gap-1 text-xs text-muted-foreground truncate">
                           <Mail className="h-3 w-3 shrink-0" />
-                          {client.email}
+                          <HighlightText text={client.email} query={searchTerm} />
                         </span>
                       )}
                       {(client.cpf || client.cnpj) && (
                         <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                           <FileText className="h-3 w-3" />
-                          {client.cpf ? formatCpf(client.cpf) : client.cnpj}
+                          <HighlightText text={client.cpf ? formatCpf(client.cpf) : client.cnpj} query={searchTerm} />
                         </span>
                       )}
                     </div>
                     {(client.config?.celular || client.celular) && (
                       <span className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                         <Phone className="h-3 w-3 shrink-0" />
-                        {client.config?.celular || client.celular}
+                        <HighlightText text={client.config?.celular || client.celular} query={searchTerm} />
                       </span>
                     )}
                   </div>
