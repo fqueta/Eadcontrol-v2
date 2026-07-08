@@ -72,16 +72,15 @@ export default function BudgetPreview({
   return (
     <Card className="border-0 shadow-lg overflow-hidden bg-white/80 backdrop-blur-md ring-1 ring-black/5">
       {/* Premium Header */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-8 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-5 transform rotate-12 scale-150 pointer-events-none">
-           <FileText className="h-64 w-64" />
+      <div className="bg-slate-900 p-5 md:p-6 text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-4 opacity-5 transform rotate-12 scale-125 pointer-events-none">
+           <FileText className="h-32 w-32" />
         </div>
         
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div className="space-y-2">
-
-            <h2 className="text-3xl font-black tracking-tight flex items-center gap-3">
-              <FileText className="h-8 w-8 text-primary-400" />
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
+              <FileText className="h-5 w-5 text-emerald-400" />
               {title}
             </h2>
             <p className="text-slate-400 text-sm max-w-md">
@@ -89,13 +88,13 @@ export default function BudgetPreview({
             </p>
           </div>
           
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10 flex items-center gap-4 min-w-[200px]">
-             <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/10 flex items-center gap-3">
+             <div className="h-8 w-8 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
              </div>
              <div>
-                <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-0.5">Status</p>
-                <p className="text-sm font-bold text-white">{status}</p>
+                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider mb-0">Status</p>
+                <p className="text-sm font-bold text-white leading-tight">{status}</p>
              </div>
           </div>
         </div>

@@ -113,7 +113,7 @@ export default function EnrollmentView() {
   const confirmEnrollment = useUpdateEnrollment({
     onSuccess: () => {
       toast({ title: 'Sucesso', description: 'Matrícula efetivada com sucesso!' });
-      queryClient.invalidateQueries({ queryKey: ['enrollment', String(id)] });
+      queryClient.invalidateQueries({ queryKey: ['enrollments', 'detail', String(id)] });
     },
     onError: (err: any) => {
       const msg = err?.response?.data?.message || 'Erro ao efetivar matrícula';
@@ -127,7 +127,7 @@ export default function EnrollmentView() {
       setIsGeneratingFee(true);
       await enrollmentsService.generateEnrollmentFee(String(enrollmentId));
       toast({ title: 'Sucesso', description: 'Cobrança de matrícula gerada com sucesso!' });
-      queryClient.invalidateQueries({ queryKey: ['enrollment', String(enrollmentId)] });
+      queryClient.invalidateQueries({ queryKey: ['enrollments', 'detail', String(enrollmentId)] });
     } catch (err: any) {
       toast({ title: 'Erro', description: err?.response?.data?.message || 'Falha ao gerar cobrança de matrícula', variant: 'destructive' });
     } finally {
@@ -632,12 +632,7 @@ export default function EnrollmentView() {
               {confirmEnrollment.isPending ? 'Efetivando...' : 'Efetivar Matrícula'}
             </Button>
           )}
-          {(course as any)?.inscricao > 0 && (
-            <Button size="sm" variant="outline" className="shadow-sm font-bold gap-1" onClick={handleGenerateFee} disabled={isGeneratingFee}>
-              {isGeneratingFee ? <Clock className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-              Gerar Taxa
-            </Button>
-          )}
+
           <Button size="sm" onClick={handlePrint} className="font-bold shadow-sm bg-primary text-primary-foreground hover:bg-primary/90">
              <Printer className="h-4 w-4 mr-2" /> Imprimir
           </Button>
@@ -1018,6 +1013,31 @@ export default function EnrollmentView() {
             </div>
             
 
+
+            {/* Gerar Taxa de Matrícula */}
+            {(course as any)?.inscricao > 0 && (
+              <Card className="shadow-sm border-muted/60 overflow-hidden lg:col-span-2">
+                <CardContent className="p-6 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Taxa de Matrícula</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Gere a cobrança da taxa de matrícula de <strong>{formatCurrencyBRL(Number((course as any).inscricao))}</strong>
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shadow-sm font-bold gap-1"
+                    onClick={handleGenerateFee}
+                    disabled={isGeneratingFee}
+                    title="Gera uma fatura única da Taxa de Matrícula para este aluno. Utilizado para cobrar o valor de inscrição do curso."
+                  >
+                    {isGeneratingFee ? <Clock className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                    Gerar Taxa ({formatCurrencyBRL(Number((course as any).inscricao))})
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Faturas Locais (Contas a Receber) */}
             {invoices.length > 0 && (

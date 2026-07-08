@@ -1309,9 +1309,20 @@ export default function ProposalsEdit() {
                           <Combobox
                             options={courseOptionsWithSelected}
                             value={field.value}
-                            onValueChange={(val) => {
+                            onValueChange={async (val) => {
                               field.onChange(val);
                               form.setValue('id_turma', '');
+                              try {
+                                const detail = await coursesService.getById(val);
+                                if (detail?.valor !== undefined) {
+                                  form.setValue('subtotal', formatCurrencyBRL(Number(detail.valor)), { shouldValidate: true });
+                                }
+                                if (detail?.inscricao !== undefined) {
+                                  form.setValue('inscricao', formatCurrencyBRL(Number(detail.inscricao)), { shouldValidate: true });
+                                }
+                              } catch (e) {
+                                console.error('Erro ao buscar detalhes do curso selecionado', e);
+                              }
                             }}
                             placeholder="Selecione o curso"
                             searchPlaceholder="Pesquisar curso pelo nome..."
