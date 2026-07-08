@@ -230,8 +230,25 @@ class FinancialAccountController extends Controller
 
         // Mapear campos usando o método centralizado
         $updateData = $this->mapRequestToModel($validated, $this->type);
-        $account->update($updateData);
-        $account->refresh();
+
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $account->update($updateData);
+            $account->refresh();
+
+            // Tentar sincronizar com o Asaas, se houver cobrança pendente
+            $billingService = new \App\Services\Financial\BillingService();
+            $billingService->updateCharge($account);
+
+            \Illuminate\Support\Facades\DB::commit();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json([
+                'message' => 'Falha ao sincronizar com o Asaas: ' . $e->getMessage(),
+                'status'  => 400,
+            ], 400);
+        }
+
         $account->load(['category', 'serviceOrder']);
 
         return response()->json([

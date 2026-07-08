@@ -460,6 +460,31 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
         return $payment;
     }
 
+    /**
+     * Updates an existing single charge in Asaas
+     */
+    public function updateSingleCharge(\App\Models\FinancialAccount $account, string $gatewayPaymentId): array
+    {
+        $payload = [
+            'value' => $account->amount,
+            'dueDate' => $account->due_date->format('Y-m-d'),
+            'description' => $account->description ?? "Cobrança avulsa",
+        ];
+
+        $response = Http::withHeaders([
+            'access_token' => $this->apiKey,
+        ])->put("{$this->apiUrl}/payments/{$gatewayPaymentId}", $payload);
+
+        $payment = $response->json();
+
+        if ($response->failed()) {
+            Log::error('Asaas Update Single Charge Failed', $payment);
+            throw new \Exception("Falha ao atualizar cobrança no Asaas. " . ($payment['errors'][0]['description'] ?? ''));
+        }
+
+        return $payment;
+    }
+
 
 
     protected function processEnrollment($courseId, $email, $name, $phone)

@@ -539,6 +539,13 @@ class ClientController extends Controller
         // dd($validated);
         $clientToUpdate->update($validated);
 
+        try {
+            $billingService = new \App\Services\Financial\BillingService();
+            $billingService->syncCustomer($clientToUpdate);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning("Falha silenciosa ao sincronizar cliente {$clientToUpdate->id} com o Asaas: " . $e->getMessage());
+        }
+
         // Converter config para array na resposta
         if (is_string($clientToUpdate->config)) {
             $clientToUpdate->config = json_decode($clientToUpdate->config, true) ?? [];

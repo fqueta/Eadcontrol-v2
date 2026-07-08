@@ -55,4 +55,56 @@ class BillingService
 
         return $account;
     }
+
+    /**
+     * Updates a charge in the payment gateway if it exists.
+     *
+     * @param FinancialAccount $account
+     * @return FinancialAccount
+     * @throws \Exception
+     */
+    public function updateCharge(FinancialAccount $account): FinancialAccount
+    {
+        if ($account->status !== 'pending') {
+            throw new \Exception("Apenas contas pendentes podem ser atualizadas no gateway.");
+        }
+
+        $config = is_array($account->config) ? $account->config : json_decode($account->config ?? '{}', true) ?? [];
+        $asaasPaymentId = $config['asaas_payment_id'] ?? null;
+
+        if (!$asaasPaymentId) {
+            // No gateway charge to update
+            return $account;
+        }
+
+        $gateway = PaymentGatewayFactory::create('asaas');
+
+        if (method_exists($gateway, 'updateSingleCharge')) {
+            $gateway->updateSingleCharge($account, $asaasPaymentId);
+        }
+
+        return $account;
+    }
+
+    /**
+     * Synchronizes customer data with the payment gateway.
+     *
+     * @param \App\Models\User $client
+     * @return void
+     * @throws \Exception
+     */
+    public function syncCustomer(\App\Models\User $client): void
+    {
+        // Only sync if the customer has an Asaas ID
+        $asaasId = \App\Services\Qlib::get_usermeta($client->id, 'id_asaas', true);
+        if (!$asaasId) {
+            return;
+        }
+
+        $gateway = PaymentGatewayFactory::create('asaas');
+
+        if (method_exists($gateway, 'ensureAsaasCustomer')) {
+            $gateway->ensureAsaasCustomer($client);
+        }
+    }
 }

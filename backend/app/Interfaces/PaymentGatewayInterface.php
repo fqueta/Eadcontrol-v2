@@ -31,4 +31,13 @@ interface PaymentGatewayInterface
      * @return \Illuminate\Http\JsonResponse|null
      */
     public function handleWebhook(Request $request);
+
+    /**
+     * Updates an existing single charge in the payment gateway.
+     *
+     * @param \App\Models\FinancialAccount $account
+     * @param string $gatewayPaymentId The ID of the payment in the gateway
+     * @return array
+     */
+    public function updateSingleCharge(\App\Models\FinancialAccount $account, string $gatewayPaymentId): array;
 }
