@@ -427,12 +427,11 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
                   <TableHead>Status</TableHead>
                   <TableHead>Categoria</TableHead>
                   <TableHead>Forma de Pagamento</TableHead>
-                  <TableHead className="w-12">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {accounts.map((account) => (
-                  <TableRow key={account.id}>
+                  <TableRow key={account.id} className="group hover:bg-muted/50 transition-colors">
                     <TableCell>
                       <Checkbox 
                         checked={selectedAccountIds.has(account.id)}
@@ -440,17 +439,50 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
                       />
                     </TableCell>
                     <TableCell className="font-medium">
-                      {account.description}
-                      {account.invoiceNumber && (
-                        <div className="text-sm text-gray-500">
-                          NF: {account.invoiceNumber}
+                      <div className="flex flex-col">
+                        <span>{account.description}</span>
+                        {account.invoiceNumber && (
+                          <span className="text-sm text-gray-500">
+                            NF: {account.invoiceNumber}
+                          </span>
+                        )}
+                        {account.serviceOrderId && (
+                          <span className="text-sm text-gray-500">
+                            OS: {account.serviceOrderId}
+                          </span>
+                        )}
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex flex-wrap gap-2 mt-2 text-xs font-normal">
+                          <button onClick={() => handleEditAccount(account)} className="text-primary hover:underline">Editar</button>
+                          
+                          {account.status === AccountStatus.PENDING && (
+                            <>
+                              <span className="text-muted-foreground">|</span>
+                              <button onClick={() => handleMarkAsReceived(account)} className="text-green-600 hover:underline">Receber</button>
+                              <span className="text-muted-foreground">|</span>
+                              <button onClick={() => handleCancelAccount(account)} className="text-orange-600 hover:underline">Cancelar</button>
+                            </>
+                          )}
+                          
+                          {account.status === AccountStatus.PENDING && !account.config?.invoice_url && (
+                            <>
+                              <span className="text-muted-foreground">|</span>
+                              <button onClick={() => handleGenerateCharge(account, 'BOLETO')} className="text-blue-600 hover:underline">Gerar Boleto</button>
+                              <span className="text-muted-foreground">|</span>
+                              <button onClick={() => handleGenerateCharge(account, 'PIX')} className="text-blue-600 hover:underline">Gerar PIX</button>
+                            </>
+                          )}
+
+                          {account.config?.invoice_url && (
+                            <>
+                              <span className="text-muted-foreground">|</span>
+                              <button onClick={() => window.open(account.config.invoice_url, '_blank')} className="text-blue-600 hover:underline">Ver Fatura</button>
+                            </>
+                          )}
+                          
+                          <span className="text-muted-foreground">|</span>
+                          <button onClick={() => handleDeleteAccount(account)} className="text-red-600 hover:underline">Excluir</button>
                         </div>
-                      )}
-                      {account.serviceOrderId && (
-                        <div className="text-sm text-gray-500">
-                          OS: {account.serviceOrderId}
-                        </div>
-                      )}
+                      </div>
                     </TableCell>
                     <TableCell>{account.customerName || '-'}</TableCell>
                     <TableCell>{formatCurrency(account.amount)}</TableCell>
@@ -473,63 +505,6 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
                     <TableCell>{getCategoryName(account.category)}</TableCell>
                     <TableCell>
                       {account.paymentMethod ? getPaymentMethodLabel(account.paymentMethod) : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditAccount(account)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Editar
-                          </DropdownMenuItem>
-                          
-                          {account.status === AccountStatus.PENDING && (
-                            <DropdownMenuItem onClick={() => handleMarkAsReceived(account)}>
-                              <Check className="h-4 w-4 mr-2" />
-                              Marcar como Recebido
-                            </DropdownMenuItem>
-                          )}
-                          
-                          {account.status === AccountStatus.PENDING && (
-                            <DropdownMenuItem onClick={() => handleCancelAccount(account)}>
-                              <X className="h-4 w-4 mr-2" />
-                              Cancelar
-                            </DropdownMenuItem>
-                          )}
-                          
-                          {account.status === AccountStatus.PENDING && !account.config?.invoice_url && (
-                            <>
-                              <DropdownMenuItem onClick={() => handleGenerateCharge(account, 'BOLETO')}>
-                                <Download className="h-4 w-4 mr-2" />
-                                Gerar Boleto (Asaas)
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleGenerateCharge(account, 'PIX')}>
-                                <Download className="h-4 w-4 mr-2" />
-                                Gerar PIX (Asaas)
-                              </DropdownMenuItem>
-                            </>
-                          )}
-
-                          {account.config?.invoice_url && (
-                            <DropdownMenuItem onClick={() => window.open(account.config.invoice_url, '_blank')}>
-                              <Download className="h-4 w-4 mr-2" />
-                              Visualizar Fatura / Boleto
-                            </DropdownMenuItem>
-                          )}
-                          
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteAccount(account)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
