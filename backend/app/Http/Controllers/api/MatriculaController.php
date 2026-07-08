@@ -1059,4 +1059,48 @@ class MatriculaController extends Controller
             ]);
         }
     }
+
+    public function gerarCobrancaMatricula($id)
+    {
+        $matricula = Matricula::findOrFail($id);
+        $course = $matricula->course;
+        $inscricao = (float) ($course->inscricao ?? 0);
+
+        if ($inscricao <= 0) {
+            return response()->json(['message' => 'Este curso não possui taxa de matrícula configurada.'], 400);
+        }
+
+        // Verifica se já existe uma fatura de matrícula pendente ou paga para evitar duplicidade
+        $exists = FinancialAccount::where('type', 'receivable')
+            ->where('description', 'like', '%Taxa de Matrícula%')
+            ->where('client_id', $matricula->id_cliente)
+            ->where('status', '!=', 'cancelled')
+            ->exists();
+
+        if ($exists) {
+            return response()->json(['message' => 'Já existe uma cobrança de taxa de matrícula gerada para este aluno.'], 400);
+        }
+
+        $dueDate = now()->addDays(3)->format('Y-m-d');
+
+        $account = FinancialAccount::create([
+            'token' => Qlib::token(),
+            'type' => 'receivable',
+            'status' => 'pending',
+            'amount' => $inscricao,
+            'description' => "Taxa de Matrícula - {$course->titulo}",
+            'due_date' => $dueDate,
+            'client_id' => $matricula->id_cliente,
+            'payment_method' => 'boleto',
+            'contract_number' => "Matrícula " . $matricula->id,
+            'config' => json_encode(['matricula_id' => $matricula->id]),
+            'excluido' => false,
+            'deletado' => false,
+        ]);
+
+        return response()->json([
+            'message' => 'Cobrança da taxa de matrícula gerada com sucesso nas Faturas Locais.',
+            'account' => $account
+        ], 201);
+    }
 }

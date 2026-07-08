@@ -56,6 +56,7 @@ import {
 } from "@/components/ui/tabs";
 
 import { useEnrollment, useUpdateEnrollment } from '@/hooks/enrollments';
+import { enrollmentsService } from '@/services/enrollmentsService';
 import { useClientById } from '@/hooks/clients';
 import { enrollmentSituationsService } from '@/services/enrollmentSituationsService';
 import { usersService } from '@/services/usersService';
@@ -71,6 +72,7 @@ import BudgetPreview from '@/components/school/BudgetPreview';
 import InstallmentPreviewCard from '@/components/school/InstallmentPreviewCard';
 
 export default function EnrollmentView() {
+  const [isGeneratingFee, setIsGeneratingFee] = useState(false);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -118,6 +120,20 @@ export default function EnrollmentView() {
       toast({ title: 'Erro', description: msg, variant: 'destructive' });
     },
   });
+
+  const handleGenerateFee = async () => {
+    if (!enrollmentId) return;
+    try {
+      setIsGeneratingFee(true);
+      await enrollmentsService.generateEnrollmentFee(String(enrollmentId));
+      toast({ title: 'Sucesso', description: 'Cobrança de matrícula gerada com sucesso!' });
+      queryClient.invalidateQueries({ queryKey: ['enrollment', String(enrollmentId)] });
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err?.response?.data?.message || 'Falha ao gerar cobrança de matrícula', variant: 'destructive' });
+    } finally {
+      setIsGeneratingFee(false);
+    }
+  };
 
   const handleConfirmEnrollment = () => {
     if (!matriculadoSituationId) {
@@ -609,11 +625,17 @@ export default function EnrollmentView() {
             <Button
               size="sm"
               onClick={handleConfirmEnrollment}
-              disabled={confirmEnrollment.isLoading}
+              disabled={confirmEnrollment.isPending}
               className="font-bold shadow-sm bg-emerald-600 text-white hover:bg-emerald-700"
             >
               <CheckCircle2 className="h-4 w-4 mr-2" />
-              {confirmEnrollment.isLoading ? 'Efetivando...' : 'Efetivar Matrícula'}
+              {confirmEnrollment.isPending ? 'Efetivando...' : 'Efetivar Matrícula'}
+            </Button>
+          )}
+          {(course as any)?.inscricao > 0 && (
+            <Button size="sm" variant="outline" className="shadow-sm font-bold gap-1" onClick={handleGenerateFee} disabled={isGeneratingFee}>
+              {isGeneratingFee ? <Clock className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+              Gerar Taxa
             </Button>
           )}
           <Button size="sm" onClick={handlePrint} className="font-bold shadow-sm bg-primary text-primary-foreground hover:bg-primary/90">
@@ -1006,9 +1028,11 @@ export default function EnrollmentView() {
                       <CreditCard className="h-5 w-5 text-primary" />
                       <CardTitle className="text-lg">Faturas Locais (Contas a Receber)</CardTitle>
                     </div>
-                    <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-0 font-bold px-3 py-1">
-                      {invoices.length} {invoices.length === 1 ? 'Parcela' : 'Parcelas'}
-                    </Badge>
+                    <div className="flex gap-2">
+                        <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-0 font-bold px-3 py-1">
+                          {invoices.length} {invoices.length === 1 ? 'Parcela' : 'Parcelas'}
+                        </Badge>
+                    </div>
                   </div>
                   <CardDescription>Sincronização em tempo real das parcelas geradas com o financeiro local.</CardDescription>
                 </CardHeader>

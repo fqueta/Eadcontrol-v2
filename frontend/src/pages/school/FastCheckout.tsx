@@ -346,6 +346,48 @@ const FastCheckout = () => {
   }
 
   if (isSuccess) {
+    const isSplit = paymentResult?.payment?.type === 'split';
+    
+    // Identificar pagamentos pendentes (Pix ou Boleto)
+    const isPending = isSplit 
+      ? (paymentResult?.payment?.enrollment?.billingType !== "CREDIT_CARD" || paymentResult?.payment?.course?.billingType !== "CREDIT_CARD")
+      : (paymentResult?.payment?.billingType === "PIX" || paymentResult?.payment?.billingType === "BOLETO");
+
+    const renderPaymentInfo = (title: string, p: any) => {
+        if (!p) return null;
+        if (p.billingType === "PIX" && p.pix) {
+            return (
+                <div className="bg-slate-50 dark:bg-slate-800/50 p-6 border rounded-3xl w-full max-w-sm space-y-4 shadow-sm mb-4 mx-auto">
+                    <h5 className="font-black text-slate-800 dark:text-slate-200">{title}</h5>
+                    <div className="bg-white p-4 rounded-2xl shadow-inner inline-block relative group">
+                         <img src={`data:image/png;base64,${p.pix.encodedImage}`} alt={`QR Code PIX ${title}`} className="w-48 h-48 mx-auto" />
+                    </div>
+                    <div className="space-y-3 text-left">
+                        <Label className="text-[10px] uppercase text-slate-400 font-black tracking-widest">Código Copia e Cola</Label>
+                        <div className="flex gap-2">
+                            <Input value={p.pix.payload} readOnly className="bg-white dark:bg-slate-900 text-xs h-10 rounded-lg border-slate-200" />
+                            <Button size="sm" className="bg-slate-900 dark:bg-slate-700 font-bold" onClick={() => {
+                                navigator.clipboard.writeText(p.pix.payload);
+                                toast({ title: "Copiado!", description: "Código PIX copiado com sucesso." });
+                            }}>Copiar</Button>
+                        </div>
+                    </div>
+                </div>
+            )
+        }
+        if (p.billingType === "BOLETO") {
+            return (
+                 <Button asChild className="w-full max-w-sm h-14 text-lg font-black rounded-xl mb-4 mx-auto flex items-center justify-center" variant="default">
+                     <a href={p.bankSlipUrl} target="_blank" rel="noopener noreferrer">
+                         <FileText className="mr-2 h-6 w-6" />
+                         Baixar Boleto: {title}
+                     </a>
+                 </Button>
+            )
+        }
+        return null;
+    };
+
     return (
         <InclusiveSiteLayout>
             <div className="bg-[#F8FAFC] dark:bg-slate-950/20 py-20 min-h-screen flex items-start justify-center px-4">
@@ -358,14 +400,14 @@ const FastCheckout = () => {
                     <div>
                       <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Obrigado pela compra!</h2>
                       <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-3 font-medium text-lg leading-relaxed">
-                        {(paymentResult?.payment?.billingType === "PIX" || paymentResult?.payment?.billingType === "BOLETO")
+                        {isPending
                           ? "Seu pedido foi registrado! Aguarde a confirmação do pagamento para ter acesso ao curso."
                           : "Seu pedido foi registrado com sucesso. Verifique seu e-mail para os próximos passos."}
                       </p>
                     </div>
 
-                    {(paymentResult?.payment?.billingType === "PIX" || paymentResult?.payment?.billingType === "BOLETO") && (
-                      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-xl text-left max-w-sm w-full">
+                    {isPending && (
+                      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 rounded-xl text-left max-w-sm w-full mx-auto">
                         <div className="flex items-start gap-3">
                           <div className="bg-amber-100 dark:bg-amber-900/40 p-2 rounded-lg shrink-0">
                             <Loader2 className="w-5 h-5 text-amber-600 dark:text-amber-400 animate-spin" />
@@ -373,16 +415,14 @@ const FastCheckout = () => {
                           <div>
                             <h4 className="font-bold text-amber-800 dark:text-amber-300 text-sm">Aguardando pagamento</h4>
                             <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
-                              {paymentResult?.payment?.billingType === "PIX" 
-                                ? "O pagamento via PIX leva alguns segundos para ser confirmado. Assim que recebermos, você receberá o acesso por e-mail."
-                                : "O boleto pode levar até 48 horas úteis para ser compensado. Você receberá o acesso por e-mail após a confirmação bancária."}
+                                O pagamento leva alguns instantes para ser confirmado. Assim que recebermos, você receberá o acesso por e-mail.
                             </p>
                           </div>
                         </div>
                       </div>
                     )}
 
-                    <div className="bg-green-50 border border-green-200 p-4 rounded-xl text-left max-w-sm w-full space-y-2">
+                    <div className="bg-green-50 border border-green-200 p-4 rounded-xl text-left max-w-sm w-full mx-auto space-y-2">
                         <h4 className="font-bold text-green-800 text-sm">Como acessar a plataforma:</h4>
                         <div className="text-sm text-green-700">
                            <p><strong>E-mail:</strong> o mesmo informado na compra</p>
@@ -390,34 +430,18 @@ const FastCheckout = () => {
                         </div>
                     </div>
 
-                    {paymentResult?.payment?.billingType === "PIX" && paymentResult?.payment?.pix && (
-                        <div className="bg-slate-50 dark:bg-slate-800/50 p-8 border rounded-3xl w-full max-w-sm space-y-6 shadow-sm">
-                            <div className="bg-white p-4 rounded-2xl shadow-inner inline-block relative group">
-                                 <img src={`data:image/png;base64,${paymentResult.payment.pix.encodedImage}`} alt="QR Code PIX" className="w-56 h-56" />
-                            </div>
-                            <div className="space-y-3 text-left">
-                                <Label className="text-[10px] uppercase text-slate-400 font-black tracking-widest">Código Copia e Cola</Label>
-                                <div className="flex gap-2">
-                                    <Input value={paymentResult.payment.pix.payload} readOnly className="bg-white dark:bg-slate-900 text-xs h-10 rounded-lg border-slate-200" />
-                                    <Button size="sm" className="bg-slate-900 dark:bg-slate-700 font-bold" onClick={() => {
-                                        navigator.clipboard.writeText(paymentResult.payment.pix.payload);
-                                        toast({ title: "Copiado!", description: "Código PIX copiado com sucesso." });
-                                    }}>Copiar</Button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    <div className="w-full flex flex-col items-center">
+                        {isSplit ? (
+                            <>
+                                {renderPaymentInfo('Taxa de Matrícula', paymentResult?.payment?.enrollment)}
+                                {renderPaymentInfo('Mensalidades (Curso)', paymentResult?.payment?.course)}
+                            </>
+                        ) : (
+                            renderPaymentInfo('Pagamento', paymentResult?.payment)
+                        )}
+                    </div>
 
-                    {paymentResult?.payment?.billingType === "BOLETO" && (
-                         <Button asChild className="w-full max-w-sm h-14 text-lg font-black rounded-xl" variant="default">
-                             <a href={paymentResult.payment.bankSlipUrl} target="_blank" rel="noopener noreferrer">
-                                 <FileText className="mr-2 h-6 w-6" />
-                                 Baixar Boleto Bancário
-                             </a>
-                         </Button>
-                    )}
-
-                    {paymentResult?.payment?.billingType === "CREDIT_CARD" && (
+                    {!isPending && (
                         <Button asChild variant="link" className="text-primary font-black hover:no-underline text-lg mt-6">
                             <Link to={`/aluno/cursos/${courseSlug}`}>
                                 Começar a estudar agora

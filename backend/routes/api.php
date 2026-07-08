@@ -283,6 +283,7 @@ Route::name('api.')->prefix('v1')->middleware([
         Route::apiResource('matriculas', \App\Http\Controllers\api\MatriculaController::class, ['parameters' => [
             'matriculas' => 'id'
         ]]);
+        Route::post('matriculas/{id}/gerar-cobranca-matricula', [\App\Http\Controllers\api\MatriculaController::class, 'gerarCobrancaMatricula']);
 
         // Rotas para sessões ao vivo (agenda de aulas)
         // EN: Live session scheduling routes (class calendar)

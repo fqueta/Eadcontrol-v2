@@ -117,6 +117,16 @@ class CheckoutController extends Controller
 
             $courseValor = (float) $course->valor;
             $courseInscricao = (float) ($course->inscricao ?? 0);
+            
+            $cobrarSeparado = false;
+            $courseConfig = $course->config;
+            if (is_string($courseConfig)) {
+                $courseConfig = json_decode($courseConfig, true);
+            }
+            if (is_array($courseConfig) && ($courseConfig['cobrar_matricula_separada'] ?? 'n') === 's') {
+                $cobrarSeparado = true;
+            }
+
             $totalBase = $courseValor + $courseInscricao;
             $discountValue = 0;
             $cupom = null;
@@ -219,6 +229,12 @@ class CheckoutController extends Controller
                     $paymentData['installmentCount'] = (int) $request->input('installmentCount');
                 }
             }
+
+            $paymentData['splitEnrollment'] = $cobrarSeparado;
+            $paymentData['courseInscricao'] = $courseInscricao;
+            $paymentData['courseValor'] = $courseValor;
+            $paymentData['discountValue'] = $discountValue;
+
 
             $response = $gateway->processPayment($matricula, $paymentData);
 

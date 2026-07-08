@@ -64,6 +64,15 @@ class EnrollmentsService extends BaseApiService {
     return super.delete<ApiDeleteResponse>(`/matriculas/${id}`);
   }
 
+  /**
+   * generateEnrollmentFee
+   * pt-BR: Gera a cobrança da taxa de matrícula.
+   */
+  async generateEnrollmentFee(id: string): Promise<any> {
+    return this.post<any>(`/matriculas/${id}/gerar-cobranca-matricula`, {});
+  }
+
+
   // Compat layer for useGenericApi
   async list(params?: EnrollmentsListParams): Promise<PaginatedResponse<EnrollmentRecord>> {
     return this.listEnrollments(params);
