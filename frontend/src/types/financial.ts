@@ -49,6 +49,7 @@ export interface BaseAccount {
   paymentMethod?: PaymentMethod;
   notes?: string;
   attachments?: string[];
+  config?: any;
   createdAt: string;
   updatedAt: string;
   createdBy: string;

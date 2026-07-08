@@ -419,6 +419,48 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
         return $customerId;
     }
 
+    /**
+     * Create a single charge in Asaas for a given FinancialAccount
+     */
+    public function createSingleCharge(\App\Models\FinancialAccount $account, \App\Models\Client $client, string $billingType): array
+    {
+        $customerId = $this->ensureAsaasCustomer($client);
+
+        $payload = [
+            'customer' => $customerId,
+            'billingType' => strtoupper($billingType),
+            'value' => $account->amount,
+            'dueDate' => $account->due_date->format('Y-m-d'),
+            'description' => $account->description ?? "Cobrança avulsa",
+            'externalReference' => "fa_{$account->id}",
+        ];
+
+        $response = Http::withHeaders([
+            'access_token' => $this->apiKey,
+        ])->post("{$this->apiUrl}/payments", $payload);
+
+        $payment = $response->json();
+
+        if ($response->failed()) {
+            Log::error('Asaas Single Charge Failed', $payment);
+            throw new \Exception("Falha ao criar cobrança no Asaas. " . ($payment['errors'][0]['description'] ?? ''));
+        }
+
+        // Se for PIX, buscar o QR Code
+        if ($payload['billingType'] === 'PIX' && !isset($payment['pix'])) {
+            $pixResponse = Http::withHeaders([
+                'access_token' => $this->apiKey,
+            ])->get("{$this->apiUrl}/payments/{$payment['id']}/pixQrCode");
+
+            if ($pixResponse->successful()) {
+                $payment['pix'] = $pixResponse->json();
+            }
+        }
+
+        return $payment;
+    }
+
+
 
     protected function processEnrollment($courseId, $email, $name, $phone)
     {

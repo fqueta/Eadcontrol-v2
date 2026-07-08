@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '../ui/table';
+import { Checkbox } from '../ui/checkbox';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
@@ -28,7 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import {
   MoreHorizontal,
   Search,
@@ -64,6 +65,7 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
   const [isLoading, setIsLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<AccountReceivable | undefined>();
+  const [selectedAccountIds, setSelectedAccountIds] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<AccountsFilter>({
     page: 1,
     limit: 10,
@@ -232,6 +234,89 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
   };
 
   /**
+   * Gera cobrança
+   */
+  const handleGenerateCharge = async (account: AccountReceivable, billingType: string) => {
+    const toastId = toast.loading(`Gerando cobrança via ${billingType}...`);
+    try {
+      await financialService.accountsReceivable.generateCharge(account.id, billingType);
+      toast.success('Cobrança gerada com sucesso!', { id: toastId });
+      loadAccounts();
+    } catch (error: any) {
+      console.error('Erro ao gerar cobrança:', error);
+      toast.error(error.message || error.body?.message || 'Erro ao gerar cobrança', { id: toastId });
+    }
+  };
+
+  /**
+   * Toggle all checkboxes
+   */
+  const toggleSelectAll = () => {
+    if (selectedAccountIds.size === accounts.length && accounts.length > 0) {
+      setSelectedAccountIds(new Set());
+    } else {
+      setSelectedAccountIds(new Set(accounts.map(a => a.id)));
+    }
+  };
+
+  /**
+   * Toggle single checkbox
+   */
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedAccountIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedAccountIds(next);
+  };
+
+  /**
+   * Gera cobranças em massa
+   */
+  const handleGenerateBulkCharges = async (billingType: string) => {
+    const ids = Array.from(selectedAccountIds);
+    if (ids.length === 0) return;
+
+    const accountsToProcess = accounts.filter(a => 
+      ids.includes(a.id) && 
+      a.status === AccountStatus.PENDING && 
+      !a.config?.invoice_url
+    );
+    
+    if (accountsToProcess.length === 0) {
+      toast.error('Nenhuma fatura pendente e sem cobrança selecionada.');
+      return;
+    }
+
+    const toastId = toast.loading(`Gerando cobrança via ${billingType} (0/${accountsToProcess.length})...`);
+    
+    let successCount = 0;
+    for (let i = 0; i < accountsToProcess.length; i++) {
+      const account = accountsToProcess[i];
+      try {
+        await financialService.accountsReceivable.generateCharge(account.id, billingType);
+        successCount++;
+        toast.loading(`Gerando cobrança via ${billingType} (${i + 1}/${accountsToProcess.length})...`, { id: toastId });
+      } catch (error) {
+        console.error(`Erro ao gerar cobrança para fatura ${account.id}:`, error);
+      }
+    }
+
+    if (successCount === accountsToProcess.length) {
+      toast.success(`${successCount} cobranças geradas com sucesso!`, { id: toastId });
+    } else if (successCount > 0) {
+      toast.warning(`${successCount} geradas, ${accountsToProcess.length - successCount} falharam.`, { id: toastId });
+    } else {
+      toast.error(`Falha ao gerar as cobranças. Verifique o console.`, { id: toastId });
+    }
+    
+    setSelectedAccountIds(new Set());
+    loadAccounts();
+  };
+
+  /**
    * Atualiza filtro de busca
    */
   const handleSearchChange = (search: string) => {
@@ -309,9 +394,32 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
           </div>
         ) : (
           <>
+            {selectedAccountIds.size > 0 && (
+              <div className="bg-primary/5 p-3 rounded-xl mb-4 flex items-center justify-between border border-primary/20">
+                <span className="text-sm font-medium text-primary">
+                  {selectedAccountIds.size} {selectedAccountIds.size === 1 ? 'fatura selecionada' : 'faturas selecionadas'}
+                </span>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => handleGenerateBulkCharges('BOLETO')} variant="default">
+                    <Download className="h-4 w-4 mr-2" />
+                    Gerar Boletos
+                  </Button>
+                  <Button size="sm" onClick={() => handleGenerateBulkCharges('PIX')} variant="default">
+                    <Download className="h-4 w-4 mr-2" />
+                    Gerar PIX
+                  </Button>
+                </div>
+              </div>
+            )}
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox 
+                      checked={accounts.length > 0 && selectedAccountIds.size === accounts.length}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Valor</TableHead>
@@ -325,6 +433,12 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
               <TableBody>
                 {accounts.map((account) => (
                   <TableRow key={account.id}>
+                    <TableCell>
+                      <Checkbox 
+                        checked={selectedAccountIds.has(account.id)}
+                        onCheckedChange={() => toggleSelect(account.id)}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       {account.description}
                       {account.invoiceNumber && (
@@ -341,7 +455,21 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
                     <TableCell>{account.customerName || '-'}</TableCell>
                     <TableCell>{formatCurrency(account.amount)}</TableCell>
                     <TableCell>{formatDate(account.dueDate)}</TableCell>
-                    <TableCell>{getStatusBadge(account.status)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1.5 items-start">
+                        {getStatusBadge(account.status)}
+                        {account.config?.invoice_url && (
+                          <Badge 
+                            variant="outline" 
+                            className="text-[10px] py-0 px-1.5 border-primary/30 text-primary bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors"
+                            onClick={() => window.open(account.config?.invoice_url, '_blank')}
+                            title="Visualizar Fatura"
+                          >
+                            Boleto/Pix Gerado
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{getCategoryName(account.category)}</TableCell>
                     <TableCell>
                       {account.paymentMethod ? getPaymentMethodLabel(account.paymentMethod) : '-'}
@@ -370,6 +498,26 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
                             <DropdownMenuItem onClick={() => handleCancelAccount(account)}>
                               <X className="h-4 w-4 mr-2" />
                               Cancelar
+                            </DropdownMenuItem>
+                          )}
+                          
+                          {account.status === AccountStatus.PENDING && !account.config?.invoice_url && (
+                            <>
+                              <DropdownMenuItem onClick={() => handleGenerateCharge(account, 'BOLETO')}>
+                                <Download className="h-4 w-4 mr-2" />
+                                Gerar Boleto (Asaas)
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleGenerateCharge(account, 'PIX')}>
+                                <Download className="h-4 w-4 mr-2" />
+                                Gerar PIX (Asaas)
+                              </DropdownMenuItem>
+                            </>
+                          )}
+
+                          {account.config?.invoice_url && (
+                            <DropdownMenuItem onClick={() => window.open(account.config.invoice_url, '_blank')}>
+                              <Download className="h-4 w-4 mr-2" />
+                              Visualizar Fatura / Boleto
                             </DropdownMenuItem>
                           )}
                           

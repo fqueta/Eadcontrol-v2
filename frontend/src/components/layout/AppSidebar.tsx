@@ -1,4 +1,4 @@
-import { ChevronUp, ChevronDown, User, Wrench, Settings, ChartPie, GraduationCap, Globe, Building2 } from "lucide-react";
+import { ChevronUp, ChevronDown, User, Wrench, Settings, ChartPie, GraduationCap, Globe, Building2, Search } from "lucide-react";
 import * as React from "react";
 import { NavLink, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/sidebar";
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -118,6 +119,32 @@ export function AppSidebar() {
   // Filter by can_view access
   const menuItems = filterMenuByViewAccess(baseMenu);
 
+  // Search logic
+  const [searchQuery, setSearchQuery] = React.useState("");
+
+  const filteredMenuItems = React.useMemo(() => {
+    if (!searchQuery.trim()) return menuItems;
+    
+    const query = searchQuery.toLowerCase();
+    
+    return menuItems.map((item: any) => {
+      const parentMatches = item.title.toLowerCase().includes(query);
+      const matchingSubItems = item.items?.filter((subItem: any) => 
+        subItem.title.toLowerCase().includes(query)
+      );
+      
+      if (parentMatches) {
+         return item;
+      }
+      
+      if (matchingSubItems && matchingSubItems.length > 0) {
+         return { ...item, items: matchingSubItems };
+      }
+      
+      return null;
+    }).filter(Boolean);
+  }, [menuItems, searchQuery]);
+
   const isActive = (path: string) => currentPath === resolveUrl(path);
   const hasActiveChild = (items: any[]) => 
     items?.some((item) => isActive(item.url));
@@ -164,6 +191,21 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
+        {/* Input de busca (visível apenas quando não colapsado) */}
+        {!collapsed && (
+          <div className="px-4 py-2 mt-2 mb-1">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar menu..."
+                className="h-9 pl-9 bg-muted/50 border-none focus-visible:ring-1 text-sm rounded-xl"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
         <SidebarGroup>
           {/*
            * SidebarGroupLabel color override
@@ -174,7 +216,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <TooltipProvider>
               <SidebarMenu className="space-y-1 px-2">
-                {menuItems.map((item, index) => (
+                {filteredMenuItems.map((item: any, index: number) => (
                   <SidebarMenuItem key={item.id || `${item.title}-${index}`}>
                     {item.items ? (
                       collapsed ? (

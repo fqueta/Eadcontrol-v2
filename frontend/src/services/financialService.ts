@@ -159,6 +159,14 @@ export const accountsReceivableService = {
    */
   async delete(id: string): Promise<void> {
     await api.delete(`/financial/accounts-receivable/${id}`);
+  },
+
+  /**
+   * Gera uma cobrança (boleto, PIX, etc) para a conta a receber
+   */
+  async generateCharge(id: string, billingType: string = 'BOLETO'): Promise<{ data: AccountReceivable, message: string }> {
+    const response = await api.post(`/financial/accounts-receivable/${id}/generate-charge`, { billingType });
+    return response.data;
   }
 };
 

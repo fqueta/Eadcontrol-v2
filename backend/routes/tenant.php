@@ -471,6 +471,9 @@ Route::name('api.')->prefix('api/v1')->middleware([
         Route::patch('financial/accounts-receivable/{id}/cancel', function(Request $request, $id) {
             return app(FinancialAccountController::class)->cancel($request, $id);
         })->name('financial.accounts-receivable.cancel');
+        Route::post('financial/accounts-receivable/{id}/generate-charge', function(Request $request, $id) {
+            return app(FinancialAccountController::class)->generateCharge($request, $id);
+        })->name('financial.accounts-receivable.generate-charge');
 
         // Resumo financeiro (dados mocados)
         Route::get('financial/overview', [FinancialOverviewController::class, 'index'])->name('financial.overview');

@@ -680,6 +680,7 @@ class FinancialAccountController extends Controller
             'netAmount'       => $account->getNetAmountAttribute(),
             'isPayable'       => $account->isPayable(),
             'isReceivable'    => $account->isReceivable(),
+            'config'          => is_string($account->config) ? json_decode($account->config, true) : $account->config,
             // Relacionamentos
             'categoryData'    => $account->category ? [
                 'id'   => $account->category->id,
@@ -870,4 +871,41 @@ class FinancialAccountController extends Controller
         return $validator->validated();
     }
 
+    /**
+     * Generate a charge via payment gateway.
+     * Endpoint: POST /financial/accounts-receivable/{id}/generate-charge
+     * Body esperado:
+     *  - billingType: string ('BOLETO', 'PIX', etc.)
+     */
+    public function generateCharge(\Illuminate\Http\Request $request, string $id)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+
+        $account = \App\Models\FinancialAccount::where('id', $id)->firstOrFail();
+
+        $billingType = $request->input('billingType', 'BOLETO');
+
+        try {
+            $billingService = new \App\Services\Financial\BillingService();
+            $account = $billingService->generateCharge($account, $billingType);
+
+            // Refreshes the account and relationships
+            $account->refresh();
+            $account->load(['category', 'serviceOrder', 'client']);
+
+            return response()->json([
+                'data'    => $this->transformAccount($account),
+                'message' => 'Cobrança gerada com sucesso.',
+                'status'  => 200,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Erro ao gerar cobrança: ' . $e->getMessage(),
+                'status'  => 400,
+            ], 400);
+        }
+    }
 }
