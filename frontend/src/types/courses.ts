@@ -57,6 +57,7 @@ export interface CourseConfig {
   adc: CourseADCConfig;
   ead: CourseEADConfig;
   incluir_opcao_cartao_parcelas?: 's' | 'n';
+  cobrar_matricula_separada?: 's' | 'n';
   cover?: {
     url: string;
     file_id?: number | string;

@@ -820,6 +820,7 @@ export function CourseForm({
         adc: c.config?.adc ?? { recheck: 'n', recorrente: 'n', cor: 'FFFFFF' },
         ead: c.config?.ead ?? { id_eadcontrol: '' },
         incluir_opcao_cartao_parcelas: c.config?.incluir_opcao_cartao_parcelas ?? 'n',
+        cobrar_matricula_separada: c.config?.cobrar_matricula_separada ?? 'n',
         cover: {
           url: String(c.config?.cover?.url || '').trim(),
           file_id: c.config?.cover?.file_id,
