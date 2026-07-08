@@ -4,8 +4,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
+import { AccountReceivableForm } from '@/components/financial/AccountReceivableForm';
 import { useToast } from '@/hooks/use-toast';
-import { accountsReceivableService } from '@/services/financialService';
+import { accountsReceivableService, categoriesService } from '@/services/financialService';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -73,6 +75,8 @@ import InstallmentPreviewCard from '@/components/school/InstallmentPreviewCard';
 
 export default function EnrollmentView() {
   const [isGeneratingFee, setIsGeneratingFee] = useState(false);
+  const [isInvoiceFormOpen, setIsInvoiceFormOpen] = useState(false);
+  const [selectedInvoiceToEdit, setSelectedInvoiceToEdit] = useState<any>(undefined);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -215,6 +219,13 @@ export default function EnrollmentView() {
       return res?.data || [];
     }
   });
+
+  // 5. Fetch Financial Categories
+  const { data: categoriesData } = useQuery({
+    queryKey: ['financialCategories'],
+    queryFn: () => categoriesService.getAll()
+  });
+  const categories = categoriesData || [];
 
   // --- Handlers & Helpers ---
 
@@ -1068,7 +1079,6 @@ export default function EnrollmentView() {
                           <th className="py-3 px-6">Método</th>
                           <th className="py-3 px-6">Status</th>
                           <th className="py-3 px-6">Data Pagto</th>
-                          <th className="py-3 px-6 text-right">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y text-sm text-foreground/80">
@@ -1151,9 +1161,39 @@ export default function EnrollmentView() {
                           const bankSlipUrl = inv.config?.bankSlipUrl || inv.config?.reg_asaas?.bankSlipUrl || null;
 
                           return (
-                            <tr key={inv.id} className="hover:bg-muted/10 transition-colors">
-                              <td className="py-4 px-6 font-mono font-bold text-primary">{inv.invoice_number}</td>
-                              <td className="py-4 px-6 font-medium max-w-[250px] truncate" title={inv.description}>{inv.description}</td>
+                            <tr key={inv.id} className="group hover:bg-muted/10 transition-colors">
+                              <td className="py-4 px-6 font-mono font-bold text-primary align-top">{inv.invoice_number}</td>
+                              <td className="py-4 px-6 align-top">
+                                <div className="font-medium max-w-[250px] truncate" title={inv.description}>{inv.description}</div>
+                                <div className="flex items-center gap-2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold">
+                                  {inv.status !== 'paid' && (
+                                    <>
+                                      <button onClick={() => {
+                                        setSelectedInvoiceToEdit(inv);
+                                        setIsInvoiceFormOpen(true);
+                                      }} className="text-blue-600 hover:text-blue-800 transition-colors">Editar</button>
+                                      <span className="text-muted-foreground/30">|</span>
+                                      <button onClick={handleReceive} className="text-emerald-600 hover:text-emerald-800 transition-colors">Lançar</button>
+                                      <span className="text-muted-foreground/30">|</span>
+                                    </>
+                                  )}
+                                  {bankSlipUrl && (
+                                    <>
+                                      <a href={bankSlipUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 transition-colors">Boleto</a>
+                                      <span className="text-muted-foreground/30">|</span>
+                                    </>
+                                  )}
+                                  <button onClick={() => toast({ title: 'Integração', description: 'Enviando para o gateway de pagamento (Legado)...' })} className="text-primary hover:text-primary/80 transition-colors">Gateway</button>
+                                  {inv.status !== 'paid' && (
+                                    <>
+                                      <span className="text-muted-foreground/30">|</span>
+                                      <button onClick={handleCancel} className="text-amber-600 hover:text-amber-800 transition-colors">Cancelar</button>
+                                    </>
+                                  )}
+                                  <span className="text-muted-foreground/30">|</span>
+                                  <button onClick={handleDelete} className="text-red-600 hover:text-red-800 transition-colors">Excluir</button>
+                                </div>
+                              </td>
                               <td className="py-4 px-6 font-medium">{formatDate(inv.due_date)}</td>
                               <td className="py-4 px-6 text-right font-bold text-foreground">{formatCurrencyBRL(inv.amount)}</td>
                               <td className="py-4 px-6">
@@ -1164,50 +1204,8 @@ export default function EnrollmentView() {
                                   {statusLabel}
                                 </Badge>
                               </td>
-                              <td className="py-4 px-6 font-medium text-muted-foreground">
+                              <td className="py-4 px-6 font-medium text-muted-foreground align-top">
                                 {inv.payment_date ? formatDate(inv.payment_date) : '---'}
-                              </td>
-                              <td className="py-4 px-6 text-right">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-muted">
-                                      <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-56 bg-white border shadow-lg rounded-xl p-1 z-50">
-                                    {inv.status !== 'paid' && (
-                                      <DropdownMenuItem onClick={handleReceive} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-muted text-sm font-semibold text-emerald-600 focus:text-emerald-700">
-                                        <CheckSquare className="h-4 w-4" /> Lançar Recebimento
-                                      </DropdownMenuItem>
-                                    )}
-
-                                    {bankSlipUrl && (
-                                      <DropdownMenuItem asChild className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-muted text-sm font-semibold text-foreground">
-                                        <a href={bankSlipUrl} target="_blank" rel="noopener noreferrer">
-                                          <ExternalLink className="h-4 w-4" /> Visualizar Boleto
-                                        </a>
-                                      </DropdownMenuItem>
-                                    )}
-                                    
-                                    <DropdownMenuItem onClick={() => {
-                                      toast({ title: 'Integração', description: 'Enviando para o gateway de pagamento (Legado)...' });
-                                    }} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-muted text-sm font-semibold text-foreground">
-                                      <ExternalLink className="h-4 w-4" /> Enviar para Gateway
-                                    </DropdownMenuItem>
-
-                                    {inv.status !== 'paid' && (
-                                      <DropdownMenuItem onClick={handleCancel} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-muted text-sm font-semibold text-amber-600 focus:text-amber-700">
-                                        <PauseCircle className="h-4 w-4" /> Cancelar Fatura
-                                      </DropdownMenuItem>
-                                    )}
-
-                                    <DropdownMenuSeparator className="my-1 border-t" />
-
-                                    <DropdownMenuItem onClick={handleDelete} className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg hover:bg-red-50 text-sm font-semibold text-red-600 focus:text-red-700 focus:bg-red-50">
-                                      <Trash2 className="h-4 w-4" /> Excluir Fatura
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
                               </td>
                             </tr>
                           );
@@ -1302,6 +1300,17 @@ export default function EnrollmentView() {
           .border-primary\\/10 { border-color: #eee !important; }
         }
       ` }} />
+      {/* Modal de Edição de Fatura */}
+      <AccountReceivableForm
+        isOpen={isInvoiceFormOpen}
+        onClose={() => setIsInvoiceFormOpen(false)}
+        account={selectedInvoiceToEdit}
+        categories={categories}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['enrollment', String(id)] });
+          setIsInvoiceFormOpen(false);
+        }}
+      />
     </div>
   );
 }

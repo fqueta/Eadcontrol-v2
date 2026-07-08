@@ -92,17 +92,18 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
    */
   useEffect(() => {
     if (account) {
-      const selectedClientId = String(account.clientId || account.customerId || clientId || '');
+      const dueDate = account.dueDate || (account as any).due_date || '';
+      const selectedClientId = String(account.clientId || (account as any).client_id || account.customerId || (account as any).customer_id || clientId || '');
       setFormData({
-        description: account.description,
-        amount: account.amount,
-        dueDate: account.dueDate.split('T')[0], // Formato YYYY-MM-DD
-        category: account.category,
+        description: account.description || '',
+        amount: account.amount || 0,
+        dueDate: dueDate ? dueDate.split('T')[0] : '', // Formato YYYY-MM-DD
+        category: account.category || (account as any).category_id || '',
         clientId: selectedClientId,
-        customerName: account.customerName || '',
-        serviceOrderId: account.serviceOrderId || '',
-        invoiceNumber: account.invoiceNumber || '',
-        paymentMethod: account.paymentMethod || PaymentMethod.CASH,
+        customerName: account.customerName || (account as any).customer_name || '',
+        serviceOrderId: account.serviceOrderId || (account as any).service_order_id || '',
+        invoiceNumber: account.invoiceNumber || (account as any).invoice_number || '',
+        paymentMethod: account.paymentMethod || (account as any).payment_method || PaymentMethod.CASH,
         notes: account.notes || '',
         recurrence: account.recurrence || RecurrenceType.NONE,
         installments: account.installments || 1,

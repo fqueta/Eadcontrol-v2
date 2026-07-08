@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
@@ -132,6 +133,8 @@ export function ClassForm({
   const courseOptions = useMemo(
     () => (coursesQuery.data?.data ?? []).map((c: any) => ({ 
       id: String(c.id), 
+      value: String(c.id),
+      label: c.titulo || c.nome || String(c.id),
       nome: c.titulo || c.nome || String(c.id),
       valor: c.valor || c.Valor || 0,
       matricula: c.matricula || c.Matricula || 0
@@ -241,20 +244,16 @@ export function ClassForm({
                           <span className="text-sm text-muted-foreground">Carregando cursos...</span>
                         </div>
                       ) : (
-                        <Select value={field.value ? String(field.value) : undefined} onValueChange={(v) => field.onChange(Number(v))}>
-                          <FormControl>
-                            <SelectTrigger className="h-11 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200">
-                              <SelectValue placeholder="Selecione um curso..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="rounded-xl">
-                            {courseOptions.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Combobox
+                          options={courseOptions}
+                          value={field.value ? String(field.value) : ''}
+                          onValueChange={(val) => field.onChange(val ? Number(val) : undefined)}
+                          placeholder="Selecione um curso..."
+                          searchPlaceholder="Buscar curso..."
+                          className="h-11 border-slate-200 dark:border-slate-800 rounded-xl"
+                        />
                       )}
-                      <FormMessage />
+                      <FormMessage className="text-xs" />
                     </FormItem>
                   )}
                 />
