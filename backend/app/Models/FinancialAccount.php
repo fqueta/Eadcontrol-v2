@@ -69,9 +69,15 @@ class FinancialAccount extends Model
     {
         static::addGlobalScope('notDeleted', function (Builder $builder) {
             $builder->where(function($query) {
-                $query->whereNull('excluido')->orWhere('excluido', '!=', 's');
+                $query->whereNull('excluido')
+                      ->orWhere('excluido', false)
+                      ->orWhere('excluido', 0)
+                      ->orWhere('excluido', '0');
             })->where(function($query) {
-                $query->whereNull('deletado')->orWhere('deletado', '!=', 's');
+                $query->whereNull('deletado')
+                      ->orWhere('deletado', false)
+                      ->orWhere('deletado', 0)
+                      ->orWhere('deletado', '0');
             });
         });
     }

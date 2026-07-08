@@ -43,15 +43,17 @@ class AdminMenuPermissionSeeder extends Seeder
             // Financeiro (section)
             ['menu_id' => 31, 'parent_id' => 30,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
             ['menu_id' => 32, 'parent_id' => 30,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 33, 'parent_id' => 30,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 34, 'parent_id' => 30,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
             // Configurações (shifted)
-            ['menu_id' => 34, 'parent_id' => 33,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
-            ['menu_id' => 35, 'parent_id' => 33,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
-            ['menu_id' => 36, 'parent_id' => 33,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
-            ['menu_id' => 37, 'parent_id' => 33,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
-            ['menu_id' => 38, 'parent_id' => 33,   'can_view' => false, 'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
-            ['menu_id' => 39, 'parent_id' => 33,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
-            ['menu_id' => 40, 'parent_id' => 33,   'can_view' => false, 'can_create' => false, 'can_edit' => false, 'can_delete' => false, 'can_upload' => false],
-            ['menu_id' => 41, 'parent_id' => 33,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => false, 'can_upload' => false],
+            ['menu_id' => 36, 'parent_id' => 35,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 37, 'parent_id' => 35,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 38, 'parent_id' => 35,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 39, 'parent_id' => 35,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 40, 'parent_id' => 35,   'can_view' => false, 'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 41, 'parent_id' => 35,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => true,  'can_upload' => true],
+            ['menu_id' => 42, 'parent_id' => 35,   'can_view' => false, 'can_create' => false, 'can_edit' => false, 'can_delete' => false, 'can_upload' => false],
+            ['menu_id' => 43, 'parent_id' => 35,   'can_view' => true,  'can_create' => true,  'can_edit' => true,  'can_delete' => false, 'can_upload' => false],
         ];
 
         $rows = array_map(function ($item) use ($adminPermissionId) {

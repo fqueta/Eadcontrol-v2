@@ -57,7 +57,9 @@
     "title": "Financeiro",
     "icon": "DollarSign",
     "submenu": [
-      { "title": "Contas", "url": "/admin/financial" },
+      { "title": "Resumo", "url": "/admin/financial" },
+      { "title": "Contas a Receber", "url": "/admin/financial?tab=receivables" },
+      { "title": "Contas a Pagar", "url": "/admin/financial?tab=payables" },
       { "title": "Categorias", "url": "/admin/financial/categories" }
     ]
   },

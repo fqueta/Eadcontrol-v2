@@ -55,8 +55,9 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 
-import { useEnrollment } from '@/hooks/enrollments';
+import { useEnrollment, useUpdateEnrollment } from '@/hooks/enrollments';
 import { useClientById } from '@/hooks/clients';
+import { enrollmentSituationsService } from '@/services/enrollmentSituationsService';
 import { usersService } from '@/services/usersService';
 import { coursesService } from '@/services/coursesService';
 import { progressService } from '@/services/progressService';
@@ -81,6 +82,53 @@ export default function EnrollmentView() {
 
   // 1. Fetch Enrollment & Relatives
   const { data: enrollment, isLoading: loadingEnroll } = useEnrollment(String(id || ''));
+
+  // Fetch situations list to find "Matriculado" situation
+  const { data: situationsData } = useQuery({
+    queryKey: ['enrollment_situations', 'list', { per_page: 200 }],
+    queryFn: () => enrollmentSituationsService.list({ per_page: 200 } as any),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const matriculadoSituationId = useMemo(() => {
+    const list = Array.isArray((situationsData as any)?.data) ? (situationsData as any).data : [];
+    // Find situation where name/slug/post_name starts with 'mat' (Matriculado)
+    const found = list.find((s: any) => {
+      const name = String(s?.name || s?.nome || s?.slug || '').toLowerCase();
+      return name.startsWith('mat');
+    });
+    return found?.id ? String(found.id) : '';
+  }, [situationsData]);
+
+  const enrollmentSituacao = (enrollment as any)?.situacao || '';
+  const enrollmentSituacaoId = (enrollment as any)?.situacao_id || '';
+  const isInteressado = useMemo(() => {
+    const sit = String(enrollmentSituacao).toLowerCase();
+    return sit.includes('interessado') || sit.includes('int');
+  }, [enrollmentSituacao]);
+
+  // Mutation to confirm enrollment (change situation to Matriculado)
+  const confirmEnrollment = useUpdateEnrollment({
+    onSuccess: () => {
+      toast({ title: 'Sucesso', description: 'Matrícula efetivada com sucesso!' });
+      queryClient.invalidateQueries({ queryKey: ['enrollment', String(id)] });
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || 'Erro ao efetivar matrícula';
+      toast({ title: 'Erro', description: msg, variant: 'destructive' });
+    },
+  });
+
+  const handleConfirmEnrollment = () => {
+    if (!matriculadoSituationId) {
+      toast({ title: 'Erro', description: 'Situação de matriculado não encontrada.', variant: 'destructive' });
+      return;
+    }
+    confirmEnrollment.mutate({
+      id: String(id),
+      data: { situacao_id: matriculadoSituationId } as any,
+    });
+  };
 
   const clientId = useMemo(() => {
     const v = (enrollment as any)?.id_cliente ?? (enrollment as any)?.client_id;
@@ -557,6 +605,17 @@ export default function EnrollmentView() {
           <Button variant="outline" size="sm" onClick={() => navigate(`/admin/sales/proposals/edit/${id}`)} className="shadow-sm border-muted-foreground/20 hover:bg-muted font-semibold">
             <Settings className="h-4 w-4 mr-2" /> Editar Matrícula
           </Button>
+          {isInteressado && matriculadoSituationId && !loadingEnroll && (
+            <Button
+              size="sm"
+              onClick={handleConfirmEnrollment}
+              disabled={confirmEnrollment.isLoading}
+              className="font-bold shadow-sm bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              {confirmEnrollment.isLoading ? 'Efetivando...' : 'Efetivar Matrícula'}
+            </Button>
+          )}
           <Button size="sm" onClick={handlePrint} className="font-bold shadow-sm bg-primary text-primary-foreground hover:bg-primary/90">
              <Printer className="h-4 w-4 mr-2" /> Imprimir
           </Button>
@@ -971,8 +1030,12 @@ export default function EnrollmentView() {
                       <tbody className="divide-y text-sm text-foreground/80">
                         {invoices.map((inv: any) => {
                           const paymentMethodLabel = inv.payment_method === 'credit_card' ? 'Cartão de Crédito' 
-                            : inv.payment_method === 'pix' ? 'Pix' 
-                            : inv.payment_method === 'bank_transfer' ? 'Boleto' 
+                            : inv.payment_method === 'pix' ? 'PIX' 
+                            : inv.payment_method === 'bank_transfer' ? 'Transferência' 
+                            : inv.payment_method === 'cash' ? 'Dinheiro'
+                            : inv.payment_method === 'debit_card' ? 'Cartão de Débito'
+                            : inv.payment_method === 'check' ? 'Cheque'
+                            : inv.payment_method === 'boleto' ? 'Boleto'
                             : 'Outro';
 
                           const statusColorClass = inv.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-50'

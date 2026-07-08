@@ -141,7 +141,9 @@ export function Combobox({
                 >
                   <div className="flex w-full items-start gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{option.label}</div>
+                      <div className="text-sm font-medium truncate text-slate-900 dark:text-slate-100">
+                        {option.label || 'Sem nome'}
+                      </div>
                       {option.description ? (
                         <div className="text-xs text-muted-foreground truncate">{option.description}</div>
                       ) : null}
@@ -179,8 +181,8 @@ export function useComboboxOptions<T extends Record<string, any>>(
 ): ComboboxOption[] {
   return React.useMemo(() => {
     return items.map((item) => ({
-      value: String(item[valueKey]),
-      label: String(item[labelKey]),
+      value: String(item[valueKey] || ''),
+      label: String(item[labelKey] || 'Sem identificação'),
       description: buildDescription ? buildDescription(item) : undefined,
       disabled: disabledKey ? Boolean(item[disabledKey]) : false,
     }))

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
@@ -721,6 +721,16 @@ export default function ClientEdit() {
                     fixed={true}
                     onCancel={handleCancel}
                     isLoading={isLoading}
+                    extraActions={
+                      <Button
+                        variant="secondary"
+                        type="button"
+                        onClick={() => navigate(`/admin/clients/${client.id}/view`)}
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        Visualizar Cadastro
+                      </Button>
+                    }
                   />
                 }
               />

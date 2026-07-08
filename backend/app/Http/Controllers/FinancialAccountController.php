@@ -561,6 +561,13 @@ class FinancialAccountController extends Controller
      */
     private function mapRequestToModel(array $requestData, $typeFromRoute = null)
     {
+        // Converte strings vazias para null para evitar erros de tipagem no banco (ex: Incorrect integer value para service_order_id)
+        foreach ($requestData as $key => $value) {
+            if ($value === '') {
+                $requestData[$key] = null;
+            }
+        }
+
         $mappedData = [];
 
         // Definir tipo baseado na rota se disponível

@@ -52,12 +52,14 @@ import AccountReceivableForm from './AccountReceivableForm';
 
 interface AccountsReceivableTableProps {
   categories: FinancialCategory[];
+  clientId?: string;
+  title?: string;
 }
 
 /**
  * Componente de tabela para contas a receber
  */
-export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = ({ categories }) => {
+export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = ({ categories, clientId, title }) => {
   const [accounts, setAccounts] = useState<AccountReceivable[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -66,7 +68,8 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
     page: 1,
     limit: 10,
     sortBy: 'dueDate',
-    sortOrder: 'asc'
+    sortOrder: 'asc',
+    client_id: clientId,
   });
   const [totalPages, setTotalPages] = useState(0);
   const [total, setTotal] = useState(0);
@@ -77,9 +80,9 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
   const loadAccounts = async () => {
     setIsLoading(true);
     try {
-      const response = await financialService.accountsReceivable.getAll(filters);
+      const response: any = await financialService.accountsReceivable.getAll(filters);
       setAccounts(response?.data || []);
-      setTotalPages(response?.totalPages || 0);
+      setTotalPages(response?.last_page || response?.totalPages || 0);
       setTotal(response?.total || 0);
     } catch (error: any) {
       console.error('Erro ao carregar contas a receber:', error);
@@ -95,6 +98,15 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
   useEffect(() => {
     loadAccounts();
   }, [filters]);
+
+  /**
+   * Atualiza client_id se mudar externamente
+   */
+  useEffect(() => {
+    if (clientId && clientId !== filters.client_id) {
+      setFilters(prev => ({ ...prev, client_id: clientId }));
+    }
+  }, [clientId]);
 
   /**
    * Formata valor monetário
@@ -255,7 +267,9 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
     <Card>
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle>Contas a Receber</CardTitle>
+          {title !== null && (
+            <CardTitle>{title || 'Contas a Receber'}</CardTitle>
+          )}
           <Button onClick={handleNewAccount}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Conta
@@ -414,6 +428,7 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
         onSuccess={handleFormSuccess}
         account={selectedAccount}
         categories={categories}
+        clientId={clientId}
       />
     </Card>
   );

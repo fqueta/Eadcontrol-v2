@@ -41,6 +41,9 @@ export default defineConfig(({ mode }) => ({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Desabilita o service worker em desenvolvimento para evitar conflitos com HMR
+      disable: mode === 'development',
+      selfDestroying: mode === 'development',
       includeAssets: ['favicon.ico', 'logo.png', 'robots.txt'],
       manifest: {
         name: 'Ead Control',

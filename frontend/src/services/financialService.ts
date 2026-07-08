@@ -39,8 +39,8 @@ export const accountsPayableService = {
       }
     });
     
-    const response = await api.get(`/financial/accounts-payable?${params}`);
-    return response.data;
+    const response = await api.get<PaginatedResponse<AccountPayable>>(`/financial/accounts-payable?${params}`);
+    return response;
   },
 
   /**
@@ -107,8 +107,8 @@ export const accountsReceivableService = {
       }
     });
     
-    const response = await api.get(`/financial/accounts-receivable?${params}`);
-    return response.data;
+    const response = await api.get<PaginatedResponse<AccountReceivable>>(`/financial/accounts-receivable?${params}`);
+    return response;
   },
 
   /**

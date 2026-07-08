@@ -4,6 +4,7 @@ namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Curso;
+use App\Models\FinancialAccount;
 use App\Models\Matricula;
 use App\Models\Parcelamento;
 use App\Models\Turma;
@@ -400,6 +401,13 @@ class MatriculaController extends Controller
             // Parcelamentos vinculados ao curso da matrícula (máximo 2)
             'parcelamento_ids' => ['nullable', 'array', 'max:2'],
             'parcelamento_ids.*' => ['integer', 'exists:parcelamentos,id'],
+            // Faturas a serem geradas automaticamente no contas a receber
+            // PT: Array de faturas para criar registros em financial_accounts vinculados à matrícula
+            'invoices' => ['nullable', 'array'],
+            'invoices.*.amount' => ['required', 'numeric', 'min:0'],
+            'invoices.*.due_date' => ['required', 'date'],
+            'invoices.*.payment_method' => ['nullable', 'string'],
+            'invoices.*.description' => ['nullable', 'string', 'max:500'],
         ];
 
         return $base;
@@ -590,6 +598,14 @@ class MatriculaController extends Controller
             $this->persistMatriculaMeta($matricula->id, $requestMeta);
         }
 
+        // Gerar faturas no contas a receber, se informado no payload
+        if (array_key_exists('invoices', $validated) && is_array($validated['invoices'])) {
+            $this->generateInvoices($matricula, $validated['invoices']);
+        } elseif (!empty($requestMeta)) {
+            // Auto-gerar faturas com base nos metadados de parcelamento
+            $this->autoGenerateInvoicesFromMeta($matricula, $requestMeta, $validated);
+        }
+
         return response()->json($matricula, 201);
     }
 
@@ -738,6 +754,16 @@ class MatriculaController extends Controller
                     ->all();
                 $matricula->parcelamentos()->sync($validIds);
             }
+        }
+
+        // Se faturas forem enviadas no update, substitui as existentes
+        if (array_key_exists('invoices', $validated) && is_array($validated['invoices'])) {
+            // Remove faturas anteriores vinculadas a esta matrícula
+            FinancialAccount::where('config->matricula_id', $matricula->id)->delete();
+            $this->generateInvoices($matricula, $validated['invoices']);
+        } elseif (!empty($requestMeta)) {
+            // Auto-gerar faturas com base nos metadados de parcelamento
+            $this->autoGenerateInvoicesFromMeta($matricula, $requestMeta, $validated);
         }
 
         return response()->json($matricula);
@@ -948,5 +974,89 @@ class MatriculaController extends Controller
         $data['link_orcamento'] = Qlib::qoption('front_url') . $link;
         $data['link_assinatura'] = Qlib::qoption('front_url') . str_replace('matricula','assinatura',$link);
         return $data;
+    }
+
+    /**
+     * Gera faturas (contas a receber) vinculadas a uma matrícula.
+     * Generate invoices (accounts receivable) linked to an enrollment.
+     *
+     * PT: Cria registros em financial_accounts com type='receivable' e
+     * config->matricula_id apontando para a matrícula.
+     *
+     * @param Matricula $matricula Matrícula recém-criada/atualizada
+     * @param array $invoices Array de faturas com amount, due_date, payment_method, description
+     */
+    /**
+     * Auto-gera faturas com base nos metadados de parcelamento da matrícula.
+     * Auto-generate invoices based on enrollment payment meta.
+     *
+     * PT: Se a matrícula tiver meta.parcelada='s' e total > 0, gera faturas
+     * automaticamente sem precisar do array invoices explícito no payload.
+     */
+    private function autoGenerateInvoicesFromMeta(Matricula $matricula, array $meta, array $validated): void
+    {
+        $parcelada = $meta['parcelada'] ?? null;
+        if ($parcelada !== 's') {
+            return;
+        }
+
+        $parcelas = max(1, (int)($meta['parcelas'] ?? 1));
+        $total = (float)($validated['total'] ?? $meta['total'] ?? 0);
+        if ($total <= 0) {
+            return;
+        }
+
+        $paymentMethod = $meta['forma_pagamento'] ?? 'other';
+        $installmentValue = round($total / $parcelas, 2);
+        $firstDueDate = $meta['primeiro_vencimento'] ?? now()->addDays(30)->format('Y-m-d');
+
+        $invoices = [];
+        for ($i = 1; $i <= $parcelas; $i++) {
+            $due = \Carbon\Carbon::parse($firstDueDate)->addMonths($i - 1);
+            $invoices[] = [
+                'amount'         => ($i === $parcelas)
+                    ? round($total - ($installmentValue * ($parcelas - 1)), 2) // última parcela ajusta diferença
+                    : $installmentValue,
+                'due_date'       => $due->format('Y-m-d'),
+                'payment_method' => $paymentMethod,
+                'description'    => "Parcela {$i}/{$parcelas} - Curso",
+            ];
+        }
+
+        $this->generateInvoices($matricula, $invoices);
+    }
+
+    private function generateInvoices(Matricula $matricula, array $invoices): void
+    {
+        // Buscar nome do cliente para preencher customer_name
+        $client = User::find($matricula->id_cliente);
+        $clientName = $client ? $client->name : 'Cliente';
+        $totalInvoices = count($invoices);
+
+        foreach ($invoices as $i => $invoice) {
+            $installmentIndex = $i + 1;
+            $description = $invoice['description']
+                ?? "Parcela {$installmentIndex}/{$totalInvoices} - Curso";
+
+            FinancialAccount::create([
+                'type'           => 'receivable',
+                'amount'         => $invoice['amount'],
+                'customer_name'  => $clientName,
+                'client_id'      => $matricula->id_cliente,
+                'description'    => $description,
+                'due_date'       => $invoice['due_date'],
+                'invoice_number' => $matricula->id . '-' . $installmentIndex,
+                'payment_method' => $invoice['payment_method'] ?? 'other',
+                'status'         => 'pending',
+                'installments'   => $totalInvoices,
+                'config'         => [
+                    'matricula_id'     => $matricula->id,
+                    'installment_index' => $installmentIndex,
+                ],
+                'token'          => Qlib::token(),
+                'excluido'       => false,
+                'deletado'       => false,
+            ]);
+        }
     }
 }

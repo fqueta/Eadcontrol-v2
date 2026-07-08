@@ -70,6 +70,7 @@ export interface AccountPayable extends BaseAccount {
 
 // Contas a Receber
 export interface AccountReceivable extends BaseAccount {
+  clientId?: string;
   customerId?: string;
   customerName?: string;
   serviceOrderId?: string;
@@ -264,6 +265,7 @@ export interface CreateAccountReceivableDto {
   amount: number;
   dueDate: string;
   category: string;
+  clientId?: string;
   customerId?: string;
   customerName?: string;
   serviceOrderId?: string;
@@ -289,6 +291,7 @@ export interface UpdateAccountDto {
   amount?: number;
   dueDate?: string;
   category?: string;
+  clientId?: string;
   paymentMethod?: PaymentMethod;
   notes?: string;
   status?: AccountStatus;
@@ -330,6 +333,7 @@ export interface AccountsFilter {
   startDate?: string;
   endDate?: string;
   paymentMethod?: PaymentMethod;
+  client_id?: string;
   sortBy?: 'dueDate' | 'amount' | 'createdAt';
   sortOrder?: 'asc' | 'desc';
 }

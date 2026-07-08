@@ -357,6 +357,30 @@
         </style>
       </div>
     </div>
+    <!--
+      pt-BR: Desregistra Service Workers antigos e limpa caches antes de carregar o app.
+            Isso previne o erro "dispatcher is null" causado por SW antigo servindo
+            bundles JS incompatíveis com o HMR do Vite em desenvolvimento.
+      en-US: Unregisters old Service Workers and clears caches before loading the app.
+            This prevents the "dispatcher is null" error caused by old SW serving
+            stale JS bundles incompatible with Vite's HMR in development.
+    -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          for (var i = 0; i < regs.length; i++) {
+            regs[i].unregister();
+          }
+        });
+        if (caches) {
+          caches.keys().then(function(names) {
+            for (var i = 0; i < names.length; i++) {
+              caches.delete(names[i]);
+            }
+          });
+        }
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

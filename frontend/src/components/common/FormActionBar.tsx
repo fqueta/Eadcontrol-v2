@@ -27,6 +27,7 @@ export function FormActionBar({
   showSaveExit = true,
   showCancel = true,
   showSubmit = true,
+  extraActions,
 }: {
   mode?: "create" | "edit";
   fixed?: boolean;
@@ -47,6 +48,7 @@ export function FormActionBar({
   showSaveExit?: boolean;     // Oculta/mostra ação "Salvar e sair" (create)
   showCancel?: boolean;       // Oculta/mostra ação "Cancelar" (edit)
   showSubmit?: boolean;       // Oculta/mostra botão de submit (edit)
+  extraActions?: React.ReactNode; // Ações extras (ex: Visualizar Cadastro)
 }) {
   const backLabel = labels?.back ?? "Voltar";
   const saveContinueLabel = labels?.saveContinue ?? "Salvar e continuar";
@@ -57,24 +59,19 @@ export function FormActionBar({
   const fixedWrapper = (
     <div className={`fixed bottom-0 left-0 right-0 z-50 border-t bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 ${className ?? ""}`}>
       <div className="container mx-auto py-3 flex items-center justify-between gap-2">
-        {/* Left side (Back) for create mode */}
-        {mode === "create" && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onBack}
-            className="flex items-center gap-2"
-            type="button"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {backLabel}
-          </Button>
-        )}
-
-        {/* Right side actions */}
-        <div className="flex items-center gap-2">
-          {mode === "create" ? (
-            <>
+        {mode === "create" ? (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onBack}
+              className="flex items-center gap-2"
+              type="button"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {backLabel}
+            </Button>
+            <div className="flex items-center gap-2">
               {showSaveContinue && (
                 <Button
                   variant="default"
@@ -101,8 +98,10 @@ export function FormActionBar({
                   {saveExitLabel}
                 </Button>
               )}
-            </>
-          ) : (
+            </div>
+          </>
+        ) : (
+          <div className="flex w-full items-center justify-between">
             <div className="flex items-center gap-2">
               {showCancel && (
                 <Button
@@ -115,6 +114,10 @@ export function FormActionBar({
                   {cancelLabel}
                 </Button>
               )}
+              {extraActions}
+            </div>
+            
+            <div className="flex items-center">
               {showSubmit && (
                 <Button type="submit" disabled={isLoading}>
                   {isLoading ? (
@@ -131,8 +134,8 @@ export function FormActionBar({
                 </Button>
               )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -181,29 +184,35 @@ export function FormActionBar({
           </div>
         </div>
       ) : (
-        <>
-          {showCancel && (
-            <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-              <X className="mr-2 h-4 w-4" />
-              {cancelLabel}
-            </Button>
-          )}
-          {showSubmit && (
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  {saveEditLabel}
-                </>
-              )}
-            </Button>
-          )}
-        </>
+        <div className="flex w-full items-center justify-between">
+          <div className="flex items-center gap-2">
+            {showCancel && (
+              <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+                <X className="mr-2 h-4 w-4" />
+                {cancelLabel}
+              </Button>
+            )}
+            {extraActions}
+          </div>
+          
+          <div className="flex items-center">
+            {showSubmit && (
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    {saveEditLabel}
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

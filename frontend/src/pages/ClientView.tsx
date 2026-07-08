@@ -23,6 +23,7 @@ import { useFunnel, useStagesList } from '@/hooks/funnels';
 import { phoneApplyMask } from '@/lib/masks/phone-apply-mask';
 import { useEnrollmentsList } from '@/hooks/enrollments';
 import EnrollmentTable from '@/components/enrollments/EnrollmentTable';
+import { AccountsReceivableTable } from '@/components/financial/AccountsReceivableTable';
 import { useClientLogs } from '@/hooks/clients';
 import { currencyRemoveMaskToNumber } from '@/lib/masks/currency';
 import { useQuery } from '@tanstack/react-query';
@@ -793,6 +794,12 @@ export default function ClientView() {
               resolveAmountBRL={resolveEnrollmentAmountBRL}
             />
           </div>
+          
+          <div className="mt-8 pt-6 border-t border-muted">
+            <div className="rounded-md shadow-sm border border-border/50">
+              <AccountsReceivableTable categories={[]} clientId={client.id} title="Faturas deste contato" />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -858,6 +865,8 @@ export default function ClientView() {
           </div>
         </CardContent>
       </Card>
+
+
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Endereço */}

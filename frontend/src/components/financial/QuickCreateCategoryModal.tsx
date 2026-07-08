@@ -135,7 +135,8 @@ export const QuickCreateCategoryModal: React.FC<QuickCreateCategoryModalProps> =
         isActive: formData.isActive
       };
       
-      const newCategory = await createMutation.mutateAsync(createData);
+      const response: any = await createMutation.mutateAsync(createData);
+      const newCategory = response.data || response;
       onCategoryCreated(newCategory);
       onClose();
     } catch (error: any) {

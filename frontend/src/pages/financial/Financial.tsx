@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
@@ -35,6 +36,16 @@ import AccountsReceivableTable from '../../components/financial/AccountsReceivab
  * Componente principal do módulo financeiro
  */
 export const Financial: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabParam || 'receivables');
+
+  // Sincroniza a aba ativa quando a URL muda (ex: clique no menu)
+  useEffect(() => {
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
   const [dashboardData, setDashboardData] = useState<FinancialDashboardData | null>(null);
   const [categories, setCategories] = useState<FinancialCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -333,7 +344,7 @@ export const Financial: React.FC = () => {
       </div>
 
       {/* Abas de Gerenciamento */}
-      <Tabs defaultValue="receivables" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="receivables">Contas a Receber</TabsTrigger>
           <TabsTrigger value="payables">Contas a Pagar</TabsTrigger>

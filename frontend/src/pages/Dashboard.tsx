@@ -39,27 +39,27 @@ import {
  * pt-BR: Página principal modernizada com KPI cards premium e visual SaaS 3.0.
  * en-US: Modernized main dashboard with premium KPI cards and SaaS 3.0 visuals.
  */
+/**
+ * KpiCardLink
+ * pt-BR: Componente auxiliar para tornar um Card inteiro clicável (Premium).
+ * en-US: Helper component to make a whole Card clickable (Premium).
+ */
+function KpiCardLink({ to, children }: { to: string; children: React.ReactNode }) {
+  return (
+    <Link
+      to={to}
+      className="block focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-3xl transition-all active:scale-95 group"
+      aria-label="Abrir seção"
+    >
+      <div className="h-full transition-all duration-300">
+        {children}
+      </div>
+    </Link>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
-
-  /**
-   * KpiCardLink
-   * pt-BR: Componente auxiliar para tornar um Card inteiro clicável (Premium).
-   * en-US: Helper component to make a whole Card clickable (Premium).
-   */
-  function KpiCardLink({ to, children }: { to: string; children: React.ReactNode }) {
-    return (
-      <Link
-        to={to}
-        className="block focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-3xl transition-all active:scale-95 group"
-        aria-label="Abrir seção"
-      >
-        <div className="h-full transition-all duration-300">
-          {children}
-        </div>
-      </Link>
-    );
-  }
 
   const coursesTotalQuery = useQuery({
     queryKey: ["courses", "count"],

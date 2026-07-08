@@ -228,8 +228,9 @@ export default function ProposalsCreate() {
     undefined,
     (c: any) => {
       const nome = c?.nome || '';
+      const tipo = getCourseTypeLabel(c?.tipo);
       const valor = c?.valor ? `R$ ${c.valor}` : '';
-      return [nome, valor].filter(Boolean).join(' • ');
+      return [`${tipo} • ${nome}`.trim(), valor].filter(Boolean).join(' • ');
     }
   );
   const classOptions = useComboboxOptions<any>(
@@ -277,6 +278,57 @@ export default function ProposalsCreate() {
     const list = coursesList || [];
     return list.find((c: any) => String(c.id) === id);
   }, [coursesList, selectedCourseId]);
+
+  /**
+   * Estados para geração de faturas
+   */
+  const [firstDueDate, setFirstDueDate] = useState('');
+  const [invoicePaymentMethod, setInvoicePaymentMethod] = useState('pix');
+  const [generatedInvoices, setGeneratedInvoices] = useState<Array<{amount: string; due_date: string; payment_method: string; description: string}>>([]);
+
+  /**
+   * getCourseTypeLabel
+   * pt-BR: Mapeia o valor do campo 'tipo' do curso para um rótulo legível.
+   */
+  function getCourseTypeLabel(tipo: string): string {
+    const map: Record<string, string> = {
+      '1': 'EAD',
+      '2': 'Presencial',
+      '3': 'Especialização',
+      '4': 'Semi-presencial',
+    };
+    return map[tipo] || 'Desconhecido';
+  }
+
+  // Recalcula as faturas automaticamente quando os parâmetros mudam
+  const parceladaWatched = form.watch('parcelada');
+  const parcelasWatched = form.watch('parcelas');
+  const totalWatched = form.watch('total');
+  useEffect(() => {
+    if (parceladaWatched !== 's') {
+      setGeneratedInvoices([]);
+      return;
+    }
+    const totalNum = currencyRemoveMaskToNumber(totalWatched || '');
+    const qty = Math.max(1, Number(parcelasWatched || '12'));
+    if (!totalNum || !firstDueDate) {
+      setGeneratedInvoices([]);
+      return;
+    }
+    const installmentValue = totalNum / qty;
+    const courseName = selectedCourse?.titulo || selectedCourse?.nome || 'Curso';
+    const invoices = Array.from({ length: qty }, (_, i) => {
+      const due = new Date(firstDueDate);
+      due.setMonth(due.getMonth() + i);
+      return {
+        amount: installmentValue.toFixed(2),
+        due_date: due.toISOString().split('T')[0],
+        payment_method: invoicePaymentMethod,
+        description: `Parcela ${i + 1}/${qty} - ${courseName}`,
+      };
+    });
+    setGeneratedInvoices(invoices);
+  }, [parceladaWatched, parcelasWatched, totalWatched, firstDueDate, invoicePaymentMethod, selectedCourse]);
 
   // Removido selectedModule: campo "Gerar Valor" foi retirado da UI
 
@@ -436,9 +488,12 @@ export default function ProposalsCreate() {
          * pt-BR: Usa API de objeto do useToast.
          * en-US: Uses object-based API from useToast.
          */
-        toast({ title: 'Sucesso', description: 'Proposta enviada com sucesso!' });
-      }
-      form.reset();
+      toast({ title: 'Sucesso', description: 'Proposta enviada com sucesso!' });
+    }
+    form.reset();
+    setFirstDueDate('');
+    setInvoicePaymentMethod('pix');
+    setGeneratedInvoices([]);
     },
     onError: (error: any) => {
       /**
@@ -536,6 +591,11 @@ export default function ProposalsCreate() {
         campo_id: 'id',
         modulos: [],
       };
+    }
+
+    // Incluir faturas geradas, se houver
+    if (generatedInvoices.length > 0) {
+      payload.invoices = generatedInvoices;
     }
 
     // Removido: orc.parcelamento (tabela de parcelamento e texto de desconto)
@@ -745,6 +805,19 @@ export default function ProposalsCreate() {
                         searchTerm={courseSearch}
                         debounceMs={250}
                       />
+                      {selectedCourse && (
+                        <div className="mt-1">
+                          <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${
+                            selectedCourse.tipo === '1' ? 'bg-blue-100 text-blue-800' :
+                            selectedCourse.tipo === '2' ? 'bg-green-100 text-green-800' :
+                            selectedCourse.tipo === '3' ? 'bg-purple-100 text-purple-800' :
+                            selectedCourse.tipo === '4' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {getCourseTypeLabel(selectedCourse.tipo)}
+                          </span>
+                        </div>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -948,44 +1021,120 @@ export default function ProposalsCreate() {
                 />
               </div>
 
-              {/* Seleção de Parcelas e visualização quando parcelada = "s" */}
+              {/* Seleção de Parcelas e geração de faturas quando parcelada = "s" */}
               {form.watch('parcelada') === 's' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Parcelas */}
-                  <FormField
-                    control={form.control}
-                    name="parcelas"
-                    render={({ field }) => (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Gerar Faturas</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Parcelas */}
+                      <FormField
+                        control={form.control}
+                        name="parcelas"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Parcelas</FormLabel>
+                            <Select value={field.value || ''} onValueChange={field.onChange}>
+                              <SelectTrigger className="w-full h-10">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 24 }, (_, i) => (
+                                  <SelectItem key={i + 1} value={String(i + 1)}>
+                                    {i + 1}{i === 0 ? ' (À vista)' : ''}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      {/* Primeiro Vencimento */}
                       <FormItem>
-                        <FormLabel>Parcelas</FormLabel>
-                        <Select value={field.value || ''} onValueChange={field.onChange}>
+                        <FormLabel>Primeiro Vencimento</FormLabel>
+                        <Input
+                          type="date"
+                          value={firstDueDate}
+                          onChange={(e) => setFirstDueDate(e.target.value)}
+                        />
+                      </FormItem>
+                      {/* Método de Pagamento */}
+                      <FormItem>
+                        <FormLabel>Método de Pagamento</FormLabel>
+                        <Select value={invoicePaymentMethod} onValueChange={setInvoicePaymentMethod}>
                           <SelectTrigger className="w-full h-10">
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="6">6</SelectItem>
-                            <SelectItem value="12">12</SelectItem>
-                            <SelectItem value="18">18</SelectItem>
+                            <SelectItem value="pix">PIX</SelectItem>
+                            <SelectItem value="cash">Dinheiro</SelectItem>
+                            <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
+                            <SelectItem value="debit_card">Cartão de Débito</SelectItem>
+                            <SelectItem value="bank_transfer">Transferência</SelectItem>
+                            <SelectItem value="check">Cheque</SelectItem>
+                            <SelectItem value="boleto">Boleto</SelectItem>
+                            <SelectItem value="other">Outro</SelectItem>
                           </SelectContent>
                         </Select>
-                        <FormMessage />
                       </FormItem>
+                    </div>
+
+                    {/* Preview das faturas */}
+                    {generatedInvoices.length > 0 && (
+                      <div className="space-y-2">
+                        <FormLabel>Faturas a Gerar ({generatedInvoices.length})</FormLabel>
+                        <div className="border rounded-md overflow-hidden">
+                          <table className="w-full text-sm">
+                            <thead className="bg-muted/50">
+                              <tr>
+                                <th className="text-left px-3 py-2 font-medium">#</th>
+                                <th className="text-left px-3 py-2 font-medium">Descrição</th>
+                                <th className="text-right px-3 py-2 font-medium">Valor</th>
+                                <th className="text-center px-3 py-2 font-medium">Vencimento</th>
+                                <th className="text-center px-3 py-2 font-medium">Método</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                              {generatedInvoices.map((inv, idx) => (
+                                <tr key={idx} className="hover:bg-muted/30">
+                                  <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
+                                  <td className="px-3 py-2">{inv.description}</td>
+                                  <td className="px-3 py-2 text-right font-medium">
+                                    {formatCurrencyBRL(Number(inv.amount))}
+                                  </td>
+                                  <td className="px-3 py-2 text-center">
+                                    {new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                                  </td>
+                                  <td className="px-3 py-2 text-center capitalize">
+                                    {invoicePaymentMethod === 'pix' ? 'PIX' :
+                                     invoicePaymentMethod === 'cash' ? 'Dinheiro' :
+                                     invoicePaymentMethod === 'credit_card' ? 'Cartão Crédito' :
+                                     invoicePaymentMethod === 'debit_card' ? 'Cartão Débito' :
+                                     invoicePaymentMethod === 'bank_transfer' ? 'Transferência' :
+                                     invoicePaymentMethod === 'check' ? 'Cheque' :
+                                     invoicePaymentMethod === 'boleto' ? 'Boleto' : 'Outro'}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                            <tfoot className="bg-muted/30 font-medium">
+                              <tr>
+                                <td colSpan={2} className="px-3 py-2 text-right">Total:</td>
+                                <td className="px-3 py-2 text-right">
+                                  {formatCurrencyBRL(generatedInvoices.reduce((s, i) => s + Number(i.amount), 0))}
+                                </td>
+                                <td colSpan={2} />
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                      </div>
                     )}
-                  />
-                  {/* Preview do valor por parcela */}
-                  <FormItem>
-                    <FormLabel>
-                      {`Valor da Parcela (${form.watch('parcelas') || '12'}x)`}
-                    </FormLabel>
-                    <Input
-                      value={computeInstallmentPreview(
-                        form.watch('total'),
-                        Number(form.watch('parcelas') || '12')
-                      )}
-                      readOnly
-                    />
-                  </FormItem>
-                </div>
+                  </CardContent>
+                </Card>
               )}
 
               {/* Preview visual do orçamento (substitui o campo JSON) */}

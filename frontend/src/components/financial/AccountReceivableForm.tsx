@@ -2,7 +2,7 @@
  * Formulário para criação e edição de contas a receber
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -28,10 +28,14 @@ import {
   CreateAccountReceivableDto,
   PaymentMethod,
   RecurrenceType,
-  FinancialCategory
+  FinancialCategory,
+  TransactionType
 } from '../../types/financial';
 import { financialService } from '../../services/financialService';
 import QuickCreateCategoryModal from './QuickCreateCategoryModal';
+import { useClientsList } from '../../hooks/clients';
+import { Combobox, useComboboxOptions } from '../ui/combobox';
+import { currencyApplyMask, currencyRemoveMaskToNumber } from '../../lib/masks/currency';
 
 interface AccountReceivableFormProps {
   isOpen: boolean;
@@ -39,6 +43,7 @@ interface AccountReceivableFormProps {
   onSuccess: () => void;
   account?: AccountReceivable;
   categories: FinancialCategory[];
+  clientId?: string;
 }
 
 /**
@@ -49,7 +54,8 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
   onClose,
   onSuccess,
   account,
-  categories
+  categories,
+  clientId
 }) => {
   const [formData, setFormData] = useState<CreateAccountReceivableDto>({
     description: '',
@@ -70,48 +76,76 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [localCategories, setLocalCategories] = useState<FinancialCategory[]>(categories);
 
+  const { data: clientsData } = useClientsList({ page: 1, per_page: 200 });
+  const clients = useMemo(() =>
+    Array.isArray(clientsData?.data) ? clientsData.data : [],
+  [clientsData]);
+  
+  // Opções para o Combobox
+  const clientOptions = useComboboxOptions(clients, 'id', 'name');
+
+  // Adiciona o valor formatado no estado local para gerenciar o input
+  const [formattedAmount, setFormattedAmount] = useState('R$ 0,00');
+
   /**
    * Preenche o formulário quando editando uma conta existente
    */
   useEffect(() => {
     if (account) {
+      const selectedClientId = String(account.clientId || account.customerId || clientId || '');
       setFormData({
         description: account.description,
         amount: account.amount,
         dueDate: account.dueDate.split('T')[0], // Formato YYYY-MM-DD
         category: account.category,
+        clientId: selectedClientId,
         customerName: account.customerName || '',
         serviceOrderId: account.serviceOrderId || '',
         invoiceNumber: account.invoiceNumber || '',
         paymentMethod: account.paymentMethod || PaymentMethod.CASH,
         notes: account.notes || '',
         recurrence: account.recurrence || RecurrenceType.NONE,
-        installments: account.installments || 1
+        installments: account.installments || 1,
+        customerId: selectedClientId
       });
+      setFormattedAmount(currencyApplyMask(String(account.amount * 100)));
     } else {
       // Reset form for new account
+      const defaultClient = clients.find(c => String(c.id) === clientId);
       setFormData({
         description: '',
         amount: 0,
         dueDate: '',
         category: '',
-        customerName: '',
+        clientId: clientId || '',
+        customerName: defaultClient?.name || '',
         serviceOrderId: '',
         invoiceNumber: '',
         paymentMethod: PaymentMethod.CASH,
         notes: '',
         recurrence: RecurrenceType.NONE,
-        installments: 1
+        installments: 1,
+        customerId: clientId || ''
       });
+      setFormattedAmount('R$ 0,00');
     }
     setErrors({});
-  }, [account, isOpen]);
+  }, [account, isOpen, clientId, clients]);
 
   /**
    * Atualiza categorias locais quando as props mudam
    */
   useEffect(() => {
-    setLocalCategories(categories);
+    setLocalCategories(prev => {
+      const merged = [...categories];
+      // Mantém categorias locais recém-criadas que podem não ter vindo no refetch (ex: devido a paginação)
+      prev.forEach(localCat => {
+        if (!merged.some(c => c.id === localCat.id)) {
+          merged.push(localCat);
+        }
+      });
+      return merged;
+    });
   }, [categories]);
 
   /**
@@ -182,7 +216,22 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
       onClose();
     } catch (error: any) {
       console.error('Erro ao salvar conta a receber:', error);
-      toast.error(error.response?.data?.message || 'Erro ao salvar conta a receber');
+      
+      const backendErrors = error.body?.errors || error.response?.data?.errors;
+      if (backendErrors && typeof backendErrors === 'object') {
+        const newErrors: Record<string, string> = {};
+        Object.entries(backendErrors).forEach(([key, messages]) => {
+          if (Array.isArray(messages) && messages.length > 0) {
+            newErrors[key] = String(messages[0]);
+          } else if (typeof messages === 'string') {
+            newErrors[key] = messages;
+          }
+        });
+        setErrors(prev => ({ ...prev, ...newErrors }));
+        toast.error(error.body?.message || error.response?.data?.message || 'Verifique os erros no formulário');
+      } else {
+        toast.error(error.body?.message || error.response?.data?.message || 'Erro ao salvar conta a receber');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -193,14 +242,14 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
    */
   const handleCategoryCreated = (newCategory: FinancialCategory) => {
     setLocalCategories(prev => [...prev, newCategory]);
-    setFormData(prev => ({ ...prev, category: newCategory.id }));
+    setFormData(prev => ({ ...prev, category: String(newCategory.id) }));
     setShowCategoryModal(false);
   };
 
   /**
    * Filtra categorias de receita
    */
-  const incomeCategories = localCategories.filter(cat => cat.type === 'income' && cat.isActive);
+  const incomeCategories = localCategories.filter(cat => cat.type === TransactionType.INCOME && cat.isActive);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -233,12 +282,15 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
               <Label htmlFor="amount">Valor *</Label>
               <Input
                 id="amount"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.amount}
-                onChange={(e) => handleInputChange('amount', parseFloat(e.target.value) || 0)}
-                placeholder="0,00"
+                type="text"
+                value={formattedAmount}
+                onChange={(e) => {
+                  const rawValue = e.target.value;
+                  const masked = currencyApplyMask(rawValue);
+                  setFormattedAmount(masked);
+                  handleInputChange('amount', currencyRemoveMaskToNumber(masked));
+                }}
+                placeholder="R$ 0,00"
                 className={errors.amount ? 'border-red-500' : ''}
               />
               {errors.amount && (
@@ -274,7 +326,7 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
                   </SelectTrigger>
                   <SelectContent>
                     {incomeCategories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
+                      <SelectItem key={category.id} value={String(category.id)}>
                         {category.name}
                       </SelectItem>
                     ))}
@@ -297,13 +349,25 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
 
             {/* Cliente */}
             <div>
-              <Label htmlFor="customerName">Cliente</Label>
-              <Input
-                id="customerName"
-                value={formData.customerName}
-                onChange={(e) => handleInputChange('customerName', e.target.value)}
-                placeholder="Nome do cliente"
+              <Label>Cliente</Label>
+              <Combobox
+                options={clientOptions}
+                value={formData.customerId || ''}
+                onValueChange={(val) => {
+                  const client = clients.find(c => String(c.id) === val);
+                  handleInputChange('clientId', val);
+                  handleInputChange('customerId', val);
+                  handleInputChange('customerName', client?.name || '');
+                }}
+                placeholder="Selecione um cliente"
+                searchPlaceholder="Buscar cliente..."
+                emptyText="Nenhum cliente encontrado."
               />
+              {(errors.customerId || errors.customerName) && (
+                <span className="text-sm text-red-500 mt-1 block">
+                  {errors.customerId || errors.customerName}
+                </span>
+              )}
             </div>
 
             {/* Ordem de Serviço */}
@@ -314,7 +378,11 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
                 value={formData.serviceOrderId}
                 onChange={(e) => handleInputChange('serviceOrderId', e.target.value)}
                 placeholder="Número da OS"
+                className={errors.serviceOrderId ? 'border-red-500' : ''}
               />
+              {errors.serviceOrderId && (
+                <span className="text-sm text-red-500 mt-1 block">{errors.serviceOrderId}</span>
+              )}
             </div>
 
             {/* Número da Nota Fiscal */}
@@ -325,7 +393,11 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
                 value={formData.invoiceNumber}
                 onChange={(e) => handleInputChange('invoiceNumber', e.target.value)}
                 placeholder="Número da nota fiscal"
+                className={errors.invoiceNumber ? 'border-red-500' : ''}
               />
+              {errors.invoiceNumber && (
+                <span className="text-sm text-red-500 mt-1 block">{errors.invoiceNumber}</span>
+              )}
             </div>
 
             {/* Forma de Pagamento */}
@@ -335,7 +407,7 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
                 value={formData.paymentMethod}
                 onValueChange={(value) => handleInputChange('paymentMethod', value as PaymentMethod)}
               >
-                <SelectTrigger>
+                <SelectTrigger className={errors.paymentMethod ? 'border-red-500' : ''}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -348,6 +420,9 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
                   <SelectItem value={PaymentMethod.BOLETO}>Boleto</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.paymentMethod && (
+                <span className="text-sm text-red-500 mt-1 block">{errors.paymentMethod}</span>
+              )}
             </div>
 
             {/* Recorrência */}
@@ -423,7 +498,7 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
         isOpen={showCategoryModal}
         onClose={() => setShowCategoryModal(false)}
         onCategoryCreated={handleCategoryCreated}
-        categoryType="income"
+        categoryType={TransactionType.INCOME}
       />
     </Dialog>
   );
