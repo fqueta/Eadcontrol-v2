@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { coursesService } from '@/services/coursesService';
@@ -13,7 +13,7 @@ import { Table, TableHeader, TableRow, TableHead, TableCell, TableBody } from '@
 import { useToast } from '@/components/ui/use-toast';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Search, ChevronLeft, ChevronRight, MoreHorizontal, Plus, BookOpen, Image as ImageIcon } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, MoreHorizontal, Plus, BookOpen, Image as ImageIcon, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,14 @@ import { Badge } from '@/components/ui/badge';
  * pt-BR: Lista, cria, edita e exclui cursos; persiste filtros na URL.
  * en-US: Lists, creates, edits and deletes courses; persists filters in URL.
  */
+type SortDir = 'asc' | 'desc';
+type SortableColumn = 'id' | 'titulo' | 'ativo' | 'publicar' | 'destaque' | 'valor';
+
+interface SortState {
+  column: SortableColumn;
+  dir: SortDir;
+}
+
 export default function Courses() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -38,6 +46,8 @@ export default function Courses() {
       perPage: Number.isNaN(per) ? 10 : per,
       page: Number.isNaN(p) ? 1 : p,
       searchTerm: qs.get('search') || '',
+      sortColumn: (qs.get('order_by') || 'updated_at') as SortableColumn,
+      sortDir: (qs.get('sort_order') || 'desc') as SortDir,
     };
   };
 
@@ -45,6 +55,7 @@ export default function Courses() {
   const [perPage, setPerPage] = useState<number>(init.perPage);
   const [page, setPage] = useState<number>(init.page);
   const [searchTerm, setSearchTerm] = useState<string>(init.searchTerm);
+  const [sort, setSort] = useState<SortState>({ column: init.sortColumn, dir: init.sortDir });
   const debouncedSearch = useDebounce(searchTerm, 400);
 
   // --- URL persistence effect ---
@@ -53,18 +64,35 @@ export default function Courses() {
     params.set('per_page', String(perPage));
     params.set('page', String(page));
     params.set('search', String(searchTerm || ''));
+    params.set('order_by', sort.column);
+    params.set('sort_order', sort.dir);
     navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
-  }, [perPage, page, searchTerm, location.pathname, navigate]);
+  }, [perPage, page, searchTerm, sort, location.pathname, navigate]);
 
   // --- Listagem de cursos ---
   const listQuery = useQuery({
-    queryKey: ['courses', 'list', perPage, debouncedSearch, page],
+    queryKey: ['courses', 'list', perPage, debouncedSearch, page, sort.column, sort.dir],
     queryFn: async (): Promise<PaginatedResponse<CourseRecord>> => {
-      const params: any = { page, per_page: perPage };
+      const params: any = { page, per_page: perPage, order_by: sort.column, sort_order: sort.dir };
       if (debouncedSearch?.trim()) params.search = debouncedSearch.trim();
       return coursesService.listCourses(params);
     },
   });
+
+  const handleSort = useCallback((column: SortableColumn) => {
+    setSort((prev) => ({
+      column,
+      dir: prev.column === column && prev.dir === 'asc' ? 'desc' : 'asc',
+    }));
+    setPage(1);
+  }, []);
+
+  const SortIcon = ({ column }: { column: SortableColumn }) => {
+    if (sort.column !== column) return <ArrowUpDown className="ml-1 h-3 w-3 inline opacity-30" />;
+    return sort.dir === 'asc'
+      ? <ArrowUp className="ml-1 h-3 w-3 inline" />
+      : <ArrowDown className="ml-1 h-3 w-3 inline" />;
+  };
 
   // --- Mutations ---
   const deleteMutation = useMutation({
@@ -182,13 +210,25 @@ export default function Courses() {
             <Table>
               <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
                 <TableRow>
-                  <TableHead className="w-[60px] pl-6 font-bold text-xs uppercase tracking-wider text-slate-500">ID</TableHead>
+                  <TableHead className="w-[60px] pl-6 font-bold text-xs uppercase tracking-wider text-slate-500 cursor-pointer select-none" onClick={() => handleSort('id')}>
+                    ID <SortIcon column="id" />
+                  </TableHead>
                   <TableHead className="w-[80px] text-center font-bold text-xs uppercase tracking-wider text-slate-500">Imagem</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider text-slate-500">Título do Curso</TableHead>
-                  <TableHead className="w-[100px] text-center font-bold text-xs uppercase tracking-wider text-slate-500">Ativo</TableHead>
-                  <TableHead className="w-[100px] text-center font-bold text-xs uppercase tracking-wider text-slate-500">Publicar</TableHead>
-                  <TableHead className="w-[100px] text-center font-bold text-xs uppercase tracking-wider text-slate-500">Destaque</TableHead>
-                  <TableHead className="w-[140px] font-bold text-xs uppercase tracking-wider text-slate-500">Valor</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider text-slate-500 cursor-pointer select-none" onClick={() => handleSort('titulo')}>
+                    Título do Curso <SortIcon column="titulo" />
+                  </TableHead>
+                  <TableHead className="w-[100px] text-center font-bold text-xs uppercase tracking-wider text-slate-500 cursor-pointer select-none" onClick={() => handleSort('ativo')}>
+                    Ativo <SortIcon column="ativo" />
+                  </TableHead>
+                  <TableHead className="w-[100px] text-center font-bold text-xs uppercase tracking-wider text-slate-500 cursor-pointer select-none" onClick={() => handleSort('publicar')}>
+                    Publicar <SortIcon column="publicar" />
+                  </TableHead>
+                  <TableHead className="w-[100px] text-center font-bold text-xs uppercase tracking-wider text-slate-500 cursor-pointer select-none" onClick={() => handleSort('destaque')}>
+                    Destaque <SortIcon column="destaque" />
+                  </TableHead>
+                  <TableHead className="w-[140px] font-bold text-xs uppercase tracking-wider text-slate-500 cursor-pointer select-none" onClick={() => handleSort('valor')}>
+                    Valor <SortIcon column="valor" />
+                  </TableHead>
                   <TableHead className="w-[80px] text-right pr-6 font-bold text-xs uppercase tracking-wider text-slate-500">Ações</TableHead>
                 </TableRow>
               </TableHeader>

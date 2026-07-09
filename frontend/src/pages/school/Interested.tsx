@@ -10,8 +10,19 @@ import { useQuery } from '@tanstack/react-query';
 import { coursesService } from '@/services/coursesService';
 import { useTurmasList } from '@/hooks/turmas';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useEnrollmentsList } from '@/hooks/enrollments';
+import { useEnrollmentsList, useDeleteEnrollment } from '@/hooks/enrollments';
 import { toast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import EnrollmentTable from '@/components/enrollments/EnrollmentTable';
 
 /**
@@ -39,6 +50,21 @@ export default function Interested() {
   // Paginação
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
+  const queryClient = useQueryClient();
+
+  // Exclusão
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selected, setSelected] = useState<any>(null);
+
+  const deleteMutation = useDeleteEnrollment({
+    onSuccess: () => {
+      toast({ title: 'Sucesso', description: 'Registro de interessado excluído.' });
+      queryClient.invalidateQueries({ queryKey: ['matriculas', 'list', 'int'] });
+    },
+    onError: (err: any) => {
+      toast({ title: 'Erro', description: String(err?.message ?? 'Falha ao excluir registro'), variant: 'destructive' });
+    }
+  });
 
   // Filtros
   const [studentFilter, setStudentFilter] = useState<string>('');
@@ -265,7 +291,10 @@ export default function Interested() {
                 const query = tab ? `?tab=${tab}` : '';
                 navigate(`/admin/sales/proposals/edit/${String(enroll.id)}${query}`, { state: { returnTo } });
               }}
-              onDelete={() => {}}
+              onDelete={(enroll: any) => {
+                setSelected(enroll);
+                setDeleteOpen(true);
+              }}
             />
           </div>
 
@@ -297,6 +326,31 @@ export default function Interested() {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8">
+          <AlertDialogHeader className="space-y-3">
+            <AlertDialogTitle className="text-2xl font-black tracking-tight text-red-600">Excluir Registro?</AlertDialogTitle>
+            <AlertDialogDescription className="text-base font-medium text-muted-foreground">
+              Esta ação removerá todos os dados deste interessado <span className="text-foreground font-bold">#{selected?.id}</span>. Este processo é irreversível.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-8 gap-3">
+            <AlertDialogCancel className="h-12 rounded-xl border-slate-200 font-bold px-6">Manter Registro</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!selected?.id) return;
+                deleteMutation.mutate(String(selected.id), {
+                  onSettled: () => setDeleteOpen(false),
+                });
+              }}
+              className="h-12 rounded-xl bg-red-600 hover:bg-red-700 font-black px-8 shadow-lg shadow-red-200 transition-all active:scale-95"
+            >
+              Excluir Definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

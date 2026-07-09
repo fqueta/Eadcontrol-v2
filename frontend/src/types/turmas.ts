@@ -167,4 +167,8 @@ export interface TurmasListParams {
    * en-US: Filters classes by course ID.
    */
   id_curso?: number;
+  /** order_by — coluna para ordenação */
+  order_by?: string;
+  /** sort_order — direção: asc ou desc */
+  sort_order?: string;
 }

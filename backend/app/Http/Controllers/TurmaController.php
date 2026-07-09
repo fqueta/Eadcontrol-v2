@@ -100,7 +100,18 @@ class TurmaController extends Controller
             }
         ]);
 
-        return response()->json($query->orderBy('id', 'desc')->paginate($perPage));
+        // Ordenação dinâmica (ex: ?order_by=nome&sort_order=asc)
+        $orderBy = $request->input('order_by', 'id');
+        $sortOrder = $request->input('sort_order', 'desc');
+        $allowedColumns = ['id', 'nome', 'inicio', 'fim', 'ativo', 'min_alunos', 'max_alunos', 'Valor', 'created_at'];
+        if (!in_array($orderBy, $allowedColumns)) {
+            $orderBy = 'id';
+        }
+        if (!in_array($sortOrder, ['asc', 'desc'])) {
+            $sortOrder = 'desc';
+        }
+
+        return response()->json($query->orderBy($orderBy, $sortOrder)->paginate($perPage));
     }
 
     /**

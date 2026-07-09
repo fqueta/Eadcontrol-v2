@@ -226,15 +226,18 @@ class CursoController extends Controller
             }
         }
 
-        // Filtro por destaque
-        if ($request->filled('destaque')) {
-            $v = strtolower($request->string('destaque')->toString());
-            if (in_array($v, ['s','n'])) {
-                $query->where('destaque', $v);
-            }
+        // Ordenação dinâmica (ex: ?order_by=titulo&sort_order=asc)
+        $orderBy = $request->input('order_by', 'updated_at');
+        $sortOrder = $request->input('sort_order', 'desc');
+        $allowedColumns = ['id', 'nome', 'titulo', 'ativo', 'publicar', 'destaque', 'valor', 'updated_at'];
+        if (!in_array($orderBy, $allowedColumns)) {
+            $orderBy = 'updated_at';
+        }
+        if (!in_array($sortOrder, ['asc', 'desc'])) {
+            $sortOrder = 'desc';
         }
 
-        $cursos = $query->orderByDesc('updated_at')->paginate($perPage);
+        $cursos = $query->orderBy($orderBy, $sortOrder)->paginate($perPage);
         return response()->json($cursos);
     }
 
