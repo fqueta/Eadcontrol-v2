@@ -50,6 +50,9 @@ export default function Interested() {
   // Paginação
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
+  // Ordenação
+  const [sortField, setSortField] = useState('data');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const queryClient = useQueryClient();
 
   // Exclusão
@@ -93,6 +96,18 @@ export default function Interested() {
    * pt-BR: Parâmetros para GET `/matriculas?situacao=int` com paginação e filtros.
    * en-US: Params for GET `/matriculas?situacao=int` with pagination and filters.
    */
+  const handleSort = (field: string) => {
+    setSortField((prev) => {
+      if (prev === field) {
+        setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'));
+        return prev;
+      }
+      setSortOrder('asc');
+      return field;
+    });
+    setPage(1);
+  };
+
   const listParams = useMemo(() => ({
     situacao: 'int',
     page,
@@ -101,7 +116,9 @@ export default function Interested() {
     id_curso: selectedCourseId ? Number(selectedCourseId) : undefined,
     id_turma: selectedClassId ? Number(selectedClassId) : undefined,
     student: studentFilter || undefined,
-  }), [page, perPage, debouncedSearch, selectedCourseId, selectedClassId, studentFilter]);
+    order_by: sortField,
+    order: sortOrder,
+  }), [page, perPage, debouncedSearch, selectedCourseId, selectedClassId, studentFilter, sortField, sortOrder]);
 
   /**
    * useEnrollmentsList
@@ -273,6 +290,9 @@ export default function Interested() {
           <EnrollmentTable
               items={items}
               isLoading={isLoading}
+              sortField={sortField}
+              sortOrder={sortOrder}
+              onSort={handleSort}
               resolveAmountBRL={(item) => resolveAmountBRL(item)}
               /**
                * onView

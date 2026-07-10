@@ -23,7 +23,10 @@ import {
   BookOpen,
   CalendarDays,
   DollarSign,
-  Activity
+  Activity,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
@@ -79,6 +82,9 @@ export interface EnrollmentTableProps {
    */
   onGenerateCertificate?: (item: any) => void;
   onToggleActive?: (item: any, isActive: boolean) => void;
+  sortField?: string;
+  sortOrder?: 'asc' | 'desc';
+  onSort?: (field: string) => void;
 }
 
 /**
@@ -86,6 +92,26 @@ export interface EnrollmentTableProps {
  * pt-BR: Componente de tabela reutilizável para listar matrículas, com visual premium e ações em cada linha.
  * en-US: Reusable table component to list enrollments, with premium visuals and per-row actions.
  */
+function SortIcon({ field, sortField, sortOrder }: { field: string; sortField?: string; sortOrder?: 'asc' | 'desc' }) {
+  if (sortField !== field) return <ArrowUpDown className="h-3 w-3 opacity-30 group-hover:opacity-100 transition-opacity" />;
+  return sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+}
+
+function SortableHeader({ field, label, sortField, sortOrder, onSort, className, children }: any) {
+  return (
+    <TableHead className={className}>
+      <button
+        type="button"
+        onClick={() => onSort?.(field)}
+        className="group inline-flex items-center gap-1.5 hover:text-foreground transition-colors"
+      >
+        {children || label}
+        <SortIcon field={field} sortField={sortField} sortOrder={sortOrder} />
+      </button>
+    </TableHead>
+  );
+}
+
 export default function EnrollmentTable({ 
   items, 
   isLoading, 
@@ -95,7 +121,10 @@ export default function EnrollmentTable({
   resolveAmountBRL, 
   onProgress, 
   onGenerateCertificate,
-  onToggleActive
+  onToggleActive,
+  sortField,
+  sortOrder,
+  onSort
 }: EnrollmentTableProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -201,17 +230,17 @@ export default function EnrollmentTable({
       <Table>
         <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
           <TableRow className="hover:bg-transparent">
-            <TableHead className="w-[80px] px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground/70">ID</TableHead>
-            <TableHead className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground/70">
+            <SortableHeader field="id" label="ID" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="w-[80px] px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground/70" />
+            <SortableHeader field="cliente_nome" label="Cliente" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground/70">
               <div className="flex items-center gap-2">
                 <User className="h-3 w-3" /> Cliente
               </div>
-            </TableHead>
-            <TableHead className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground/70">
+            </SortableHeader>
+            <SortableHeader field="curso_nome" label="Curso" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground/70">
               <div className="flex items-center gap-2">
                 <BookOpen className="h-3 w-3" /> Curso / Turma
               </div>
-            </TableHead>
+            </SortableHeader>
             <TableHead className="px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70">Situação</TableHead>
             <TableHead className="px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70 min-w-[120px]">
                <div className="flex items-center justify-center gap-2">
@@ -219,11 +248,11 @@ export default function EnrollmentTable({
                </div>
             </TableHead>
             <TableHead className="px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70">Ativo</TableHead>
-            <TableHead className="px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-muted-foreground/70">
+            <SortableHeader field="valor" label="Valor" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-muted-foreground/70">
               <div className="flex items-center justify-end gap-2">
                 <DollarSign className="h-3 w-3" /> Valor
               </div>
-            </TableHead>
+            </SortableHeader>
             <TableHead className="px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-muted-foreground/70">Ações</TableHead>
           </TableRow>
         </TableHeader>
