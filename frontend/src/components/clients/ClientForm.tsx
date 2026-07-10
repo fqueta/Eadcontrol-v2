@@ -155,12 +155,12 @@ export function ClientForm({
    * pt-BR: Carrega funis (filtrando por place = 'atendimento') e etapas do funil selecionado.
    * en-US: Loads funnels (filtering by place = 'atendimento') and stages for the selected funnel.
    */
-  const { data: funnelsData, isLoading: isLoadingFunnels } = useFunnelsList({ page: 1, per_page: 100 });
-  const allFunnels = useMemo(() => funnelsData?.data ?? [], [funnelsData?.data]);
-  const atendimentoFunnels = useMemo(() => allFunnels.filter((f) => f.settings?.place === 'atendimento'), [allFunnels]);
+  const { data: funnelsData, isLoading: isLoadingFunnels } = useFunnelsList({ page: 1, per_page: 100, place: 'atendimento' });
+  const allFunnels = useMemo(() => (funnelsData as any)?.data ?? [], [funnelsData]);
+  const atendimentoFunnels = useMemo(() => allFunnels.filter((f: any) => f.settings?.place === 'atendimento'), [allFunnels]);
   const selectedFunnelId = form.watch('config.funnelId');
   const { data: stagesData, isLoading: isLoadingStages } = useStagesList(selectedFunnelId || '', { per_page: 100 });
-  const stages = useMemo(() => stagesData?.data ?? [], [stagesData?.data]);
+  const stages = useMemo(() => (stagesData as any)?.data ?? [], [stagesData]);
 
   /**
     * Função para buscar CEP e preencher campos de endereço automaticamente

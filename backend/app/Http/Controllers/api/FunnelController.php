@@ -28,6 +28,12 @@ class FunnelController extends Controller
             $query->where('isActive', $isActive);
         }
 
+        // Filter by place if provided
+        if ($request->has('place')) {
+            $place = $request->input('place');
+            $query->where('settings->place', $place);
+        }
+
         // Search by name if provided
         if ($request->has('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');

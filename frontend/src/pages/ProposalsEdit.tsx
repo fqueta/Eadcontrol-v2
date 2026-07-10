@@ -23,6 +23,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, User, GraduationCap, DollarSign, AlignLeft, Save, CheckCircle2, CreditCard, Users, Pencil, Info, Award, Clock, ShieldAlert, Calendar, LogIn, Edit2, Loader2 } from 'lucide-react';
 import { usersService } from '@/services/usersService';
+import { useFunnelsList, useStagesList } from '@/hooks/funnels';
 import { Combobox, useComboboxOptions } from '@/components/ui/combobox';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import SelectGeraValor from '@/components/school/SelectGeraValor';
@@ -72,6 +73,8 @@ import jsPDF from 'jspdf';
   // pt-BR: Novo campo para vincular a situação via select (GET /situacoes-matricula)
   // en-US: New field to bind situation via select (GET /situacoes-matricula)
   situacao_id: z.string().optional(),
+  funnel_id: z.string().optional().nullable(),
+  stage_id: z.string().optional().nullable(),
   id_responsavel: z.string().optional(),
   orc_json: z.string().optional(),
   desconto: z.string().optional(),
@@ -162,6 +165,8 @@ export default function ProposalsEdit() {
       id_consultor: '',
       gera_valor: '',
       situacao_id: '',
+      funnel_id: '',
+      stage_id: '',
       id_responsavel: user?.id || '',
       orc_json: '',
       desconto: '0,00',
@@ -273,6 +278,13 @@ export default function ProposalsEdit() {
   const situationsQuery = useEnrollmentSituationsList({ page: 1, per_page: 200 });
   const situationsData = situationsQuery.data;
   const isLoadingSituations = situationsQuery.isPending;
+
+  const { data: funnelsData, isLoading: isLoadingFunnels } = useFunnelsList({ per_page: 200, place: 'vendas' });
+  const funnels = useMemo(() => (funnelsData as any)?.data || [], [funnelsData]);
+
+  const selectedFunnelId = form.watch('funnel_id');
+  const { data: stagesData, isLoading: isLoadingStages } = useStagesList(selectedFunnelId || '', { per_page: 200 }, { enabled: !!selectedFunnelId });
+  const stages = useMemo(() => (stagesData as any)?.data || [], [stagesData]);
 
   const clientsList = useMemo(() => (clientsData?.data || []), [clientsData]);
   const clientOptions = useComboboxOptions<any>(
@@ -441,12 +453,20 @@ export default function ProposalsEdit() {
    */
   const selectedSituacaoId = form.watch('situacao_id');
   
-  // Efeito para garantir que o campo situacao_id seja preenchido quando a matrícula carrega
+  // Efeito para garantir que os campos sejam preenchidos quando a matrícula carrega
   useEffect(() => {
-    if (enrollment && !form.getValues('situacao_id')) {
-        const sitId = String((enrollment as any)?.situacao_id || '');
-        if (sitId) {
-            form.setValue('situacao_id', sitId);
+    if (enrollment) {
+        if (!form.getValues('situacao_id')) {
+            const sitId = String((enrollment as any)?.situacao_id || '');
+            if (sitId) form.setValue('situacao_id', sitId);
+        }
+        if (!form.getValues('funnel_id')) {
+            const funnelId = String((enrollment as any)?.funnel_id || '');
+            if (funnelId) form.setValue('funnel_id', funnelId);
+        }
+        if (!form.getValues('stage_id')) {
+            const stageId = String((enrollment as any)?.stage_id || '');
+            if (stageId) form.setValue('stage_id', stageId);
         }
     }
   }, [enrollment, form]);
@@ -748,6 +768,8 @@ export default function ProposalsEdit() {
       // pt-BR: Envia o novo campo situacao_id conforme seleção do usuário
       // en-US: Sends the new situacao_id field as selected by the user
       situacao_id: values.situacao_id || '',
+      funnel_id: values.funnel_id || null,
+      stage_id: values.stage_id || null,
       // pt-BR: Envia a validade (em dias) conforme valor do formulário
       // en-US: Sends validity (in days) as provided by the form
       ativo: values.ativo ? 's' : 'n',
@@ -829,6 +851,8 @@ export default function ProposalsEdit() {
       // pt-BR: Preenche situacao_id se existir no registro
       // en-US: Fills situacao_id if present in the record
       situacao_id: safe('situacao_id', ''),
+      funnel_id: safe('funnel_id', form.getValues('funnel_id')),
+      stage_id: safe('stage_id', form.getValues('stage_id')),
       id_responsavel: safe('id_responsavel', form.getValues('id_responsavel')),
       orc_json: JSON.stringify((enrollment as any)?.orc ?? {}),
       desconto: descontoMaskedInit,
@@ -1356,6 +1380,56 @@ export default function ProposalsEdit() {
                                     </SelectItem>
                                   )))
                                 : null}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Funil */}
+                    <FormField
+                      control={form.control}
+                      name="funnel_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="font-bold text-foreground/70">Funil de Vendas</FormLabel>
+                          <Select value={field.value || ''} onValueChange={(val) => { field.onChange(val); form.setValue('stage_id', ''); }} disabled={isLoadingFunnels}>
+                            <SelectTrigger className="w-full h-12 border-2 rounded-xl font-bold">
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl">
+                              {funnels.map((f: any) => (
+                                <SelectItem key={String(f.id)} value={String(f.id)} className="font-medium p-3">
+                                  {String(f.name || f.nome || `Funil ${f.id}`)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    {/* Etapa */}
+                    <FormField
+                      control={form.control}
+                      name="stage_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="font-bold text-foreground/70">Etapa do Funil</FormLabel>
+                          <Select value={field.value || ''} onValueChange={field.onChange} disabled={!selectedFunnelId || isLoadingStages}>
+                            <SelectTrigger className="w-full h-12 border-2 rounded-xl font-bold">
+                              <SelectValue placeholder={!selectedFunnelId ? "Selecione um funil primeiro" : "Selecione a etapa"} />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl">
+                              {stages.map((s: any) => (
+                                <SelectItem key={String(s.id)} value={String(s.id)} className="font-medium p-3">
+                                  {String(s.name || s.nome || `Etapa ${s.id}`)}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />

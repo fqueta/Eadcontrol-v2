@@ -496,7 +496,7 @@ class FunnelStageSeeder extends Seeder
                 'autoAdvance' => false,
                 'requiresApproval' => false,
                 'notificationEnabled' => true,
-                'place' => 'atendimento',
+                'place' => 'vendas',
             ]
         ]);
 

@@ -137,6 +137,7 @@ export interface FunnelsListParams {
   per_page?: number;
   search?: string;
   active?: boolean;
+  place?: string;
 }
 
 export interface StagesListParams {
