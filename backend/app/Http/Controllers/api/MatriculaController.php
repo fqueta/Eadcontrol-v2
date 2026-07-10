@@ -821,6 +821,116 @@ class MatriculaController extends Controller
             'data' => $matricula->fresh(),
         ], 200);
     }
+
+    /**
+     * PT-BR: Lista matrículas na lixeira (excluídas).
+     * EN: List trashed enrollments.
+     */
+    public function trash(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+        if (!$this->permissionService->isHasPermission('view')) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+
+        $perPage = $request->input('per_page', 10);
+        $order_by = $request->input('order_by', 'atualizado');
+        $order = $request->input('order', 'desc');
+
+        $matriculas = Matricula::withoutGlobalScope('notDeleted')
+            ->where(function($query) {
+                $query->where('excluido', 's')->orWhere('deletado', 's');
+            })
+            ->orderBy($order_by, $order)
+            ->paginate($perPage);
+
+        return response()->json($matriculas);
+    }
+
+    /**
+     * PT-BR: Restaura uma matrícula da lixeira.
+     * EN: Restore an enrollment from trash.
+     */
+    public function restore(Request $request, string $id)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+        if (!$this->permissionService->isHasPermission('edit')) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+
+        $matricula = Matricula::withoutGlobalScope('notDeleted')
+            ->where('id', $id)
+            ->where(function($query) {
+                $query->where('excluido', 's')->orWhere('deletado', 's');
+            })
+            ->first();
+
+        if (!$matricula) {
+            return response()->json([
+                'message' => 'Matrícula não encontrada na lixeira',
+                'status' => 404,
+            ], 404);
+        }
+
+        $matricula->update([
+            'excluido' => 'n',
+            'deletado' => 'n',
+            'excluido_por' => null,
+            'deletado_por' => null,
+            'reg_excluido' => null,
+            'reg_deletado' => null,
+        ]);
+
+        return response()->json([
+            'exec' => true,
+            'message' => 'Matrícula restaurada com sucesso',
+            'status' => 200,
+        ]);
+    }
+
+    /**
+     * PT-BR: Exclui permanentemente uma matrícula da lixeira.
+     * EN: Permanently delete an enrollment from trash.
+     */
+    public function forceDelete(Request $request, string $id)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+        if (!$this->permissionService->isHasPermission('delete')) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+
+        $matricula = Matricula::withoutGlobalScope('notDeleted')
+            ->where('id', $id)
+            ->where(function($query) {
+                $query->where('excluido', 's')->orWhere('deletado', 's');
+            })
+            ->first();
+
+        if (!$matricula) {
+            return response()->json([
+                'message' => 'Matrícula não encontrada na lixeira',
+                'status' => 404,
+            ], 404);
+        }
+
+        $matricula->forceDelete();
+
+        return response()->json([
+            'exec' => true,
+            'message' => 'Matrícula excluída permanentemente',
+            'status' => 200,
+        ]);
+    }
+
     /**
      * PT-BR: Retorna dados completos da matrícula (Matricula) com aliases úteis para o front-end,
      * incluindo metadados, parcelamentos e links públicos. Se o parâmetro $id_cliente for informado,

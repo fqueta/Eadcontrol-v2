@@ -119,8 +119,26 @@ class PermissionService
 
         // Verifica permissão para a rota atual
         $routeName = request()->route()->getName();
+        if($this->get_url_by_route_exception($routeName)){
+            return true;
+        }
         $ret = $this->can($user, $routeName, $permissao);
         return $ret;
+    }
+    /**
+     * Metodo de exeção de rotas para url, para que todos podem ter acesso
+     */
+    private function get_url_by_route_exception($name = '')
+    {
+        
+        $map = [
+            'api.situacoes-matricula.index' => true,
+            'api.situacoes-matricula.show' => true,
+            'api.categories.show' => true,
+            'api.categories.index' => true,
+        ];
+
+        return $map[$name] ?? false;
     }
     private function get_url_by_route($name = '')
     {

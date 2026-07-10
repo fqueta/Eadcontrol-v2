@@ -4,15 +4,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Filter, Trash2, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Combobox, useComboboxOptions } from '@/components/ui/combobox';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { coursesService } from '@/services/coursesService';
 import { useTurmasList } from '@/hooks/turmas';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useEnrollmentsList, useDeleteEnrollment } from '@/hooks/enrollments';
+import { enrollmentsService } from '@/services/enrollmentsService';
 import { toast } from '@/hooks/use-toast';
-import { useQueryClient } from '@tanstack/react-query';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import EnrollmentTable from '@/components/enrollments/EnrollmentTable';
 
 /**
@@ -58,6 +66,37 @@ export default function Interested() {
   // Exclusão
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selected, setSelected] = useState<any>(null);
+
+  // Lixeira
+  const [trashOpen, setTrashOpen] = useState(false);
+
+  const trashedQuery = useQuery({
+    queryKey: ['enrollments', 'trash'],
+    queryFn: () => enrollmentsService.listTrashed({ per_page: 50 }),
+    enabled: trashOpen,
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: (id: string) => enrollmentsService.restoreEnrollment(id),
+    onSuccess: () => {
+      toast({ title: 'Restaurado', description: 'Registro restaurado com sucesso.' });
+      trashedQuery.refetch();
+    },
+    onError: (err: any) => {
+      toast({ title: 'Erro ao restaurar', description: err?.message || 'Tente novamente.', variant: 'destructive' });
+    },
+  });
+
+  const forceDeleteMutation = useMutation({
+    mutationFn: (id: string) => enrollmentsService.forceDeleteEnrollment(id),
+    onSuccess: () => {
+      toast({ title: 'Excluída', description: 'Registro excluído permanentemente.' });
+      trashedQuery.refetch();
+    },
+    onError: (err: any) => {
+      toast({ title: 'Erro ao excluir', description: err?.message || 'Tente novamente.', variant: 'destructive' });
+    },
+  });
 
   const deleteMutation = useDeleteEnrollment({
     onSuccess: () => {
@@ -232,9 +271,19 @@ export default function Interested() {
           <h1 className="text-3xl font-bold tracking-tight">Interessados</h1>
           <p className="text-muted-foreground">Listagem de interessados</p>
         </div>
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por aluno, curso, descrição" className="pl-8" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setTrashOpen(true)}
+            className="h-10 rounded-xl border-red-200 font-bold px-4 hover:bg-red-50 transition-all gap-2 text-red-600 hover:text-red-700"
+          >
+            <Trash2 className="h-4 w-4" />
+            Lixeira
+          </Button>
+          <div className="relative w-full sm:w-80">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar por aluno, curso, descrição" className="pl-8" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
         </div>
       </div>
 
@@ -347,7 +396,90 @@ export default function Interested() {
         </CardContent>
       </Card>
 
+      {/* Lixeira Dialog */}
+      <Dialog open={trashOpen} onOpenChange={setTrashOpen}>
+        <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-500" />
+              Lixeira - Interessados
+            </DialogTitle>
+            <DialogDescription>
+              Registros excluídos. Você pode restaurá-los ou excluí-los permanentemente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {trashedQuery.isLoading ? (
+              <div className="py-12 text-center text-muted-foreground animate-pulse">Carregando...</div>
+            ) : (trashedQuery.data?.data ?? []).length === 0 ? (
+              <div className="py-12 text-center flex flex-col items-center gap-2 text-muted-foreground">
+                <Trash2 className="h-12 w-12 opacity-20" />
+                <p>Nenhum registro na lixeira.</p>
+              </div>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Aluno</TableHead>
+                      <TableHead>Curso</TableHead>
+                      <TableHead>Excluído em</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(trashedQuery.data?.data ?? []).map((item: any) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-mono text-xs">#{item.id}</TableCell>
+                        <TableCell className="font-medium">{item.student_name || item.student?.name || '-'}</TableCell>
+                        <TableCell className="text-muted-foreground">{item.course_name || item.course?.nome || '-'}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {item.reg_excluido?.data ? new Date(item.reg_excluido.data).toLocaleString('pt-BR') : '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                              onClick={() => restoreMutation.mutate(String(item.id))}
+                              disabled={restoreMutation.isPending && restoreMutation.variables === String(item.id)}
+                            >
+                              <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                              Restaurar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => {
+                                if (confirm('Excluir permanentemente este registro?')) {
+                                  forceDeleteMutation.mutate(String(item.id));
+                                }
+                              }}
+                              disabled={forceDeleteMutation.isPending && forceDeleteMutation.variables === String(item.id)}
+                            >
+                              <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                              Excluir
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end pt-2 border-t">
+            <Button variant="outline" onClick={() => setTrashOpen(false)}>Fechar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+
         <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8">
           <AlertDialogHeader className="space-y-3">
             <AlertDialogTitle className="text-2xl font-black tracking-tight text-red-600">Excluir Registro?</AlertDialogTitle>

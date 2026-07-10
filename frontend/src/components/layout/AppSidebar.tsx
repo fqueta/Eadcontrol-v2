@@ -190,22 +190,22 @@ export function AppSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent>
-        {/* Input de busca (visível apenas quando não colapsado) */}
-        {!collapsed && (
-          <div className="px-4 py-2 mt-2 mb-1">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar menu..."
-                className="h-9 pl-9 bg-muted/50 border-none focus-visible:ring-1 text-sm rounded-xl"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+      {/* Input de busca fixo (visível apenas quando não colapsado) */}
+      {!collapsed && (
+        <div className="px-4 py-2 mt-2 mb-1 shrink-0">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar menu..."
+              className="h-9 pl-9 bg-muted/50 border-none focus-visible:ring-1 text-sm rounded-xl"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-        )}
+        </div>
+      )}
 
+      <SidebarContent>
         <SidebarGroup>
           {/*
            * SidebarGroupLabel color override

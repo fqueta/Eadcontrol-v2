@@ -15,7 +15,6 @@ import { Plus, X, GripVertical, ChevronDown, ChevronUp, ChevronLeft, Save, Loade
 import { ImageUpload } from '@/components/lib/ImageUpload';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { coursesService } from '@/services/coursesService';
-import { useCursoCategorias } from '@/hooks/cursoCategorias';
 import { fileStorageService, type FileStorageItem } from '@/services/fileStorageService';
 import MediaLibraryModal from '@/components/media/MediaLibraryModal';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -821,7 +820,6 @@ export function CourseForm({
         adc: c.config?.adc ?? { recheck: 'n', recorrente: 'n', cor: 'FFFFFF' },
         ead: c.config?.ead ?? { id_eadcontrol: '' },
         incluir_opcao_cartao_parcelas: c.config?.incluir_opcao_cartao_parcelas ?? 'n',
-        cobrar_matricula_separada: c.config?.cobrar_matricula_separada ?? 'n',
         cover: {
           url: String(c.config?.cover?.url || '').trim(),
           file_id: c.config?.cover?.file_id,
@@ -886,9 +884,6 @@ export function CourseForm({
      */
     queryFn: async () => usersService.listUsers({ page: 1, per_page: 200, sort: 'name' }),
   });
-
-  // --- Categorias de curso ---
-  const cursoCategoriasQuery = useCursoCategorias();
 
   // --- Módulos existentes ---
   const modulesQuery = useQuery({
@@ -2654,19 +2649,6 @@ export function CourseForm({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-bold text-foreground/80">Categoria</Label>
-                    <Select value={form.watch('categoria_id') ? String(form.watch('categoria_id')) : ''} onValueChange={(v) => form.setValue('categoria_id', v)}>
-                      <SelectTrigger className="h-11 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800">
-                        <SelectValue placeholder="Selecione uma categoria" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl shadow-2xl border-slate-200 dark:border-slate-800">
-                        {(cursoCategoriasQuery.data ?? []).map((cat: any) => (
-                          <SelectItem key={String(cat.id)} value={String(cat.id)} className="rounded-lg my-1">{cat.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
@@ -2998,25 +2980,19 @@ export function CourseForm({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-bold text-foreground/80">Max. Parcelas</Label>
-                    <Controller
-                      control={form.control}
-                      name="parcelas"
-                      render={({ field }) => (
-                        <Select value={field.value || ''} onValueChange={(v) => {
-                          field.onChange(v);
-                          recalcInstallment(form.getValues('valor'), v);
-                        }}>
-                          <SelectTrigger className="h-11 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800">
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl">
-                            {[1,2,3,4,5,6,7,8,9,10,11,12].map(p => (
-                              <SelectItem key={p} value={String(p)}>{p}x</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
+                    <Select value={form.watch('parcelas') || ''} onValueChange={(v) => {
+                      form.setValue('parcelas', v, { shouldValidate: true });
+                      recalcInstallment(form.getValues('valor'), v);
+                    }}>
+                      <SelectTrigger className="h-11 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        {[1,2,3,4,5,6,7,8,9,10,11,12].map(p => (
+                          <SelectItem key={p} value={String(p)}>{p}x</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-bold text-foreground/80">Valor da Parcela</Label>
@@ -3050,22 +3026,6 @@ export function CourseForm({
                   <Switch
                     checked={form.watch('config.incluir_opcao_cartao_parcelas') === 's'}
                     onCheckedChange={(checked) => form.setValue('config.incluir_opcao_cartao_parcelas', checked ? 's' : 'n')}
-                    className="data-[state=checked]:bg-primary scale-110"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between rounded-2xl border-2 p-4 transition-all duration-300 border-slate-200 dark:border-slate-800 bg-white/30 mt-4">
-                  <div className="space-y-1">
-                    <Label className="text-base font-bold text-foreground/90">
-                      Cobrar Taxa de Matrícula Separadamente
-                    </Label>
-                    <p className="text-xs text-muted-foreground font-medium">
-                      Se ativo, a taxa de inscrição será cobrada como uma transação separada. O aluno receberá cobranças isoladas para a Matrícula e para o Valor do Curso.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={form.watch('config.cobrar_matricula_separada') === 's'}
-                    onCheckedChange={(checked) => form.setValue('config.cobrar_matricula_separada', checked ? 's' : 'n')}
                     className="data-[state=checked]:bg-primary scale-110"
                   />
                 </div>

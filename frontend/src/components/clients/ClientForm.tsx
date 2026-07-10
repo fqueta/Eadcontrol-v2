@@ -78,7 +78,58 @@ export function ClientForm({
   // en-US: Load consultants with larger page size and sorted by name.
   const { data: usersData, isLoading: isLoadingUsers } = useUsersList({ consultores: true, per_page: 100, sort: 'name' });
   const usersList = usersData?.data || [];
-  
+
+  // pt-BR: Controle dos accordions para abrir automaticamente quando houver erros
+  // en-US: Accordion control to auto-open when there are validation errors
+  const [accordionSingleValue, setAccordionSingleValue] = useState<string | undefined>("atendimento");
+  const [accordionMultipleValue, setAccordionMultipleValue] = useState<string[]>([]);
+
+  const fieldToAccordion: Record<string, string> = {
+    'config.funnelId': 'atendimento',
+    'config.stage_id': 'atendimento',
+    'config.celular': 'contatos',
+    'config.telefone_residencial': 'contatos',
+    'config.nascimento': 'pessoais',
+    'config.escolaridade': 'pessoais',
+    'config.profissao': 'pessoais',
+    'config.tipo_pj': 'empresa',
+    'config.cep': 'endereco',
+    'config.endereco': 'endereco',
+    'config.numero': 'endereco',
+    'config.complemento': 'endereco',
+    'config.bairro': 'endereco',
+    'config.cidade': 'endereco',
+    'config.uf': 'endereco',
+    'config.observacoes': 'observacoes',
+  };
+
+  const flattenErrorPaths = (obj: any, prefix = ''): string[] => {
+    if (!obj || typeof obj !== 'object') return [];
+    if (obj.message && obj.type) {
+      return prefix ? [prefix] : [];
+    }
+    return Object.entries(obj).flatMap(([key, val]) =>
+      flattenErrorPaths(val, prefix ? `${prefix}.${key}` : key)
+    );
+  };
+
+  useEffect(() => {
+    const errorPaths = flattenErrorPaths(form.formState.errors);
+    if (errorPaths.length === 0) return;
+
+    const sections = errorPaths
+      .map(p => fieldToAccordion[p])
+      .filter(Boolean) as string[];
+
+    if (sections.includes('atendimento')) {
+      setAccordionSingleValue('atendimento');
+    }
+
+    if (sections.length > 0) {
+      setAccordionMultipleValue(prev => [...new Set([...prev, ...sections])]);
+    }
+  }, [form.formState.errors]);
+
   // Watch para validação em tempo real
   const emailWatch = form.watch("email");
   const nameWatch = form.watch("name");
@@ -418,7 +469,7 @@ export function ClientForm({
         </div>
 
         {/* Seção: Sessão de Atendimento */}
-        <Accordion type="single" collapsible className="w-full space-y-4">
+        <Accordion type="single" collapsible value={accordionSingleValue} onValueChange={setAccordionSingleValue} className="w-full space-y-4">
           <AccordionItem value="atendimento" className="bg-gray-50 rounded-lg border px-6">
             <AccordionTrigger className="text-lg font-semibold text-gray-900 hover:no-underline">
               <div className="flex items-center">
@@ -649,7 +700,7 @@ export function ClientForm({
           </div>
         </div>
 
-        <Accordion type="multiple" className="w-full space-y-4">
+        <Accordion type="multiple" value={accordionMultipleValue} onValueChange={setAccordionMultipleValue} className="w-full space-y-4">
           {/* Seção: Contatos */}
           <AccordionItem value="contatos" className="bg-gray-50 rounded-lg border px-6">
             <AccordionTrigger className="text-lg font-semibold text-gray-900 hover:no-underline">

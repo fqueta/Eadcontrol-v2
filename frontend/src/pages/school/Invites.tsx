@@ -640,7 +640,7 @@ export default function InvitesAdminPage() {
               {historyQuery.isLoading ? (
                 <div className="py-8 text-center text-muted-foreground animate-pulse">Carregando histórico...</div>
               ) : (historyQuery.data as any)?.length > 0 ? (
-                <div className="max-h-[400px] overflow-y-auto border rounded-lg">
+                <div className="max-h-[400px] overflow-auto border rounded-lg">
                   <Table>
                     <TableHeader className="bg-muted/50 sticky top-0">
                       <TableRow>

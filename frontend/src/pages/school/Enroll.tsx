@@ -18,15 +18,19 @@ import {
   Sparkles,
   LayoutGrid,
   Target,
-  CheckCircle2
+  CheckCircle2,
+  Trash2,
+  RotateCcw,
+  AlertTriangle
 } from 'lucide-react';
 import { Combobox, useComboboxOptions } from '@/components/ui/combobox';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { coursesService } from '@/services/coursesService';
 import { useTurmasList } from '@/hooks/turmas';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useEnrollmentsList, useDeleteEnrollment, useUpdateEnrollment } from '@/hooks/enrollments';
 import { useEnrollmentSituationsList } from '@/hooks/enrollmentSituations';
+import { enrollmentsService } from '@/services/enrollmentsService';
 import { toast } from '@/hooks/use-toast';
 import EnrollmentTable from '@/components/enrollments/EnrollmentTable';
 import { 
@@ -46,6 +50,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 
 /**
  * Enroll
@@ -106,6 +111,37 @@ export default function Enroll() {
   const [selected, setSelected] = useState<any | null>(null);
   const [editStatus, setEditStatus] = useState<string>('');
   const [editAmount, setEditAmount] = useState<string>('');
+
+  // Lixeira
+  const [trashOpen, setTrashOpen] = useState(false);
+
+  const trashedQuery = useQuery({
+    queryKey: ['enrollments', 'trash'],
+    queryFn: () => enrollmentsService.listTrashed({ per_page: 50 }),
+    enabled: trashOpen,
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: (id: string) => enrollmentsService.restoreEnrollment(id),
+    onSuccess: () => {
+      toast({ title: 'Restaurado', description: 'Matrícula restaurada com sucesso.' });
+      trashedQuery.refetch();
+    },
+    onError: (err: any) => {
+      toast({ title: 'Erro ao restaurar', description: err?.message || 'Tente novamente.', variant: 'destructive' });
+    },
+  });
+
+  const forceDeleteMutation = useMutation({
+    mutationFn: (id: string) => enrollmentsService.forceDeleteEnrollment(id),
+    onSuccess: () => {
+      toast({ title: 'Excluída', description: 'Matrícula excluída permanentemente.' });
+      trashedQuery.refetch();
+    },
+    onError: (err: any) => {
+      toast({ title: 'Erro ao excluir', description: err?.message || 'Tente novamente.', variant: 'destructive' });
+    },
+  });
 
   const debouncedSearch = useDebounce(search, 300);
 
@@ -225,6 +261,14 @@ export default function Enroll() {
         </div>
         
         <div className="flex flex-col sm:flex-row w-full lg:w-auto items-center gap-3">
+          <Button 
+            variant="outline" 
+            onClick={() => setTrashOpen(true)}
+            className="h-12 w-full sm:w-auto rounded-xl border-red-200 font-bold px-4 hover:bg-red-50 transition-all gap-2 text-red-600 hover:text-red-700"
+          >
+            <Trash2 className="h-4 w-4" />
+            Lixeira
+          </Button>
           <Button 
             variant="outline" 
             onClick={() => navigate('/admin/school/interested')}
@@ -454,6 +498,88 @@ export default function Enroll() {
           </div>
         </div>
       </div>
+
+      {/* Lixeira Dialog */}
+      <Dialog open={trashOpen} onOpenChange={setTrashOpen}>
+        <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-500" />
+              Lixeira - Matrículas
+            </DialogTitle>
+            <DialogDescription>
+              Registros excluídos. Você pode restaurá-los ou excluí-los permanentemente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {trashedQuery.isLoading ? (
+              <div className="py-12 text-center text-muted-foreground animate-pulse">Carregando...</div>
+            ) : (trashedQuery.data?.data ?? []).length === 0 ? (
+              <div className="py-12 text-center flex flex-col items-center gap-2 text-muted-foreground">
+                <Trash2 className="h-12 w-12 opacity-20" />
+                <p>Nenhum registro na lixeira.</p>
+              </div>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Aluno</TableHead>
+                      <TableHead>Curso</TableHead>
+                      <TableHead>Excluído em</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(trashedQuery.data?.data ?? []).map((item: any) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-mono text-xs">#{item.id}</TableCell>
+                        <TableCell className="font-medium">{item.student_name || item.student?.name || '-'}</TableCell>
+                        <TableCell className="text-muted-foreground">{item.course_name || item.course?.nome || '-'}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {item.reg_excluido?.data ? new Date(item.reg_excluido.data).toLocaleString('pt-BR') : '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                              onClick={() => restoreMutation.mutate(String(item.id))}
+                              disabled={restoreMutation.isPending && restoreMutation.variables === String(item.id)}
+                            >
+                              <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                              Restaurar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => {
+                                if (confirm('Excluir permanentemente esta matrícula?')) {
+                                  forceDeleteMutation.mutate(String(item.id));
+                                }
+                              }}
+                              disabled={forceDeleteMutation.isPending && forceDeleteMutation.variables === String(item.id)}
+                            >
+                              <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                              Excluir
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end pt-2 border-t">
+            <Button variant="outline" onClick={() => setTrashOpen(false)}>Fechar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete alert */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>

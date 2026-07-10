@@ -68,6 +68,34 @@ class EnrollmentsService extends BaseApiService {
    * generateEnrollmentFee
    * pt-BR: Gera a cobrança da taxa de matrícula.
    */
+  /**
+   * listTrashed
+   * pt-BR: Lista matrículas na lixeira.
+   * en-US: Lists trashed enrollments.
+   */
+  async listTrashed(params?: EnrollmentsListParams): Promise<PaginatedResponse<EnrollmentRecord>> {
+    const response = await this.get<any>('/matriculas/trash', params);
+    return this.normalizePaginatedResponse<EnrollmentRecord>(response);
+  }
+
+  /**
+   * restoreEnrollment
+   * pt-BR: Restaura matrícula da lixeira.
+   * en-US: Restores an enrollment from trash.
+   */
+  async restoreEnrollment(id: string): Promise<any> {
+    return this.put<any>(`/matriculas/${id}/restore`);
+  }
+
+  /**
+   * forceDeleteEnrollment
+   * pt-BR: Exclui permanentemente matrícula da lixeira.
+   * en-US: Permanently deletes an enrollment from trash.
+   */
+  async forceDeleteEnrollment(id: string): Promise<any> {
+    return super.delete<any>(`/matriculas/${id}/force`);
+  }
+
   async generateEnrollmentFee(id: string): Promise<any> {
     return this.post<any>(`/matriculas/${id}/gerar-cobranca-matricula`, {});
   }

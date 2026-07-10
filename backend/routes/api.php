@@ -280,9 +280,13 @@ Route::name('api.')->prefix('v1')->middleware([
             'tracking' => 'id'
         ]])->only(['index', 'store', 'destroy']);
         // Rotas para matriculas
+        // trash deve vir ANTES do apiResource para evitar que "trash" seja interpretado como {id}
+        Route::get('matriculas/trash', [\App\Http\Controllers\api\MatriculaController::class, 'trash'])->name('matriculas.trash');
         Route::apiResource('matriculas', \App\Http\Controllers\api\MatriculaController::class, ['parameters' => [
             'matriculas' => 'id'
         ]]);
+        Route::put('matriculas/{id}/restore', [\App\Http\Controllers\api\MatriculaController::class, 'restore'])->name('matriculas.restore');
+        Route::delete('matriculas/{id}/force', [\App\Http\Controllers\api\MatriculaController::class, 'forceDelete'])->name('matriculas.forceDelete');
         Route::post('matriculas/{id}/gerar-cobranca-matricula', [\App\Http\Controllers\api\MatriculaController::class, 'gerarCobrancaMatricula']);
 
         // Rotas para sessões ao vivo (agenda de aulas)

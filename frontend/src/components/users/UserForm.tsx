@@ -128,7 +128,7 @@ export function UserForm({
           </TabsList>
 
           <TabsContent value="personal" className="space-y-4">
-            <Card border-none bg-transparent shadow-none>
+            <Card className="border-none bg-transparent shadow-none">
               <CardContent className="pt-0 px-0 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -304,7 +304,7 @@ export function UserForm({
           </TabsContent>
 
           <TabsContent value="security" className="space-y-4">
-            <Card border-none bg-transparent shadow-none>
+            <Card className="border-none bg-transparent shadow-none">
               <CardContent className="pt-0 px-0 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
