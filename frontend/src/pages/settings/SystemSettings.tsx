@@ -55,7 +55,8 @@ export default function SystemSettings() {
    * en-US: Returns current option value, prioritizing local edits.
    */
   const getCurrentOptionValue = (option: any) => {
-    return localApiOptions[option.id] !== undefined ? localApiOptions[option.id] : option.value;
+    const key = option.id !== undefined ? option.id : option.url;
+    return localApiOptions[key] !== undefined ? localApiOptions[key] : option.value;
   };
   /**
    * Funis/Etapas para selects de padrão
@@ -73,6 +74,15 @@ export default function SystemSettings() {
   const defaultStageOption = React.useMemo(() => (
     (apiOptions || []).find((o: any) => o.url === 'default_etapa_vendas_id') || null
   ), [apiOptions]);
+
+  // Novas opções para Interessados (Leads)
+  const defaultFunnelInteressadosOption = React.useMemo(() => (
+    (apiOptions || []).find((o: any) => o.url === 'default_funil_interessados_id') || { url: 'default_funil_interessados_id', name: 'Funil Padrão para Interessados' }
+  ), [apiOptions]);
+  const defaultStageInteressadosOption = React.useMemo(() => (
+    (apiOptions || []).find((o: any) => o.url === 'default_etapa_interessados_id') || { url: 'default_etapa_interessados_id', name: 'Etapa Padrão para Interessados' }
+  ), [apiOptions]);
+
   const selectedDefaultFunnelId = React.useMemo(() => (
     defaultFunnelOption ? String(getCurrentOptionValue(defaultFunnelOption) || '') : ''
   ), [defaultFunnelOption, localApiOptions]);
@@ -80,6 +90,15 @@ export default function SystemSettings() {
   const stagesForDefaultFunnel = React.useMemo(() => (
     (stagesData as any)?.data || (stagesData as any)?.items || []
   ), [stagesData]);
+
+  // Fetch stages para o funil de interessados
+  const selectedDefaultFunnelInteressadosId = React.useMemo(() => (
+    defaultFunnelInteressadosOption ? String(getCurrentOptionValue(defaultFunnelInteressadosOption) || '') : ''
+  ), [defaultFunnelInteressadosOption, localApiOptions]);
+  const { data: stagesInteressadosData, isLoading: isLoadingStagesInteressados } = useStagesList(String(selectedDefaultFunnelInteressadosId || ''), { per_page: 200 }, { enabled: !!selectedDefaultFunnelInteressadosId });
+  const stagesForDefaultFunnelInteressados = React.useMemo(() => (
+    (stagesInteressadosData as any)?.data || (stagesInteressadosData as any)?.items || []
+  ), [stagesInteressadosData]);
 
   // Estados para configurações básicas - Switch
   const [basicSwitchSettings, setBasicSwitchSettings] = useState(() => {
@@ -724,7 +743,7 @@ export default function SystemSettings() {
   /**
    * Manipula mudanças nas configurações de API (apenas localmente)
    */
-  const handleApiOptionChange = (id: number, value: string) => {
+  const handleApiOptionChange = (id: number | string, value: string) => {
     setLocalApiOptions(prev => ({
       ...prev,
       [id]: value
@@ -775,15 +794,26 @@ export default function SystemSettings() {
   const handleSaveFunctionalityOptions = async () => {
     setIsLoading(true);
     try {
-      const dataToSave: { [key: string]: string } = {};
+      // Prepara os dados das opções da API normais
+      const dataToSave: Record<string, string> = {};
       (apiOptions || []).forEach((option: any) => {
         const currentValue = getCurrentOptionValue(option);
         dataToSave[option.url] = currentValue || '';
       });
+
+      // Inclui explicitamente as opções de interessados caso não venham da API inicialmente
+      if (!dataToSave['default_funil_interessados_id']) {
+         dataToSave['default_funil_interessados_id'] = getCurrentOptionValue(defaultFunnelInteressadosOption) || '';
+      }
+      if (!dataToSave['default_etapa_interessados_id']) {
+         dataToSave['default_etapa_interessados_id'] = getCurrentOptionValue(defaultStageInteressadosOption) || '';
+      }
+
       if (Object.keys(dataToSave).length === 0) {
         toast.info('Nenhuma configuração encontrada para salvar');
         return;
       }
+      
       const success = await saveMultipleOptions(dataToSave);
       if (success) {
         toast.success('Configurações de funcionalidade salvas com sucesso!');
@@ -2237,6 +2267,65 @@ export default function SystemSettings() {
 
                   {(apiOptions || []).length === 0 && (
                     <div className="text-center p-8 text-muted-foreground">Nenhuma configuração encontrada.</div>
+                  )}
+
+                  {/* Configurações explicitamente adicionadas se não vierem da API: Interessados */}
+                  {!(apiOptions || []).find((o: any) => o.url === 'default_funil_interessados_id') && (
+                    <div className="space-y-2">
+                      <Label htmlFor={`func-option-default_funil_interessados_id`}>{defaultFunnelInteressadosOption.name}</Label>
+                      <Select
+                        value={String(getCurrentOptionValue(defaultFunnelInteressadosOption) || '')}
+                        onValueChange={(val) => {
+                          handleApiOptionChange(defaultFunnelInteressadosOption.url, val); // Aqui usaremos url como id improvisado localmente, a API pode usar name
+                          if (defaultStageInteressadosOption) {
+                            handleApiOptionChange(defaultStageInteressadosOption.url, '');
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Selecione o funil para Interessados" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {isLoadingFunnels ? (
+                            <SelectItem value="__loading_funnels__" disabled>Carregando funis...</SelectItem>
+                          ) : (
+                            salesFunnels.map((f: any) => (
+                              <SelectItem key={String(f.id)} value={String(f.id)}>
+                                {f.name}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {!(apiOptions || []).find((o: any) => o.url === 'default_etapa_interessados_id') && (
+                    <div className="space-y-2">
+                      <Label htmlFor={`func-option-default_etapa_interessados_id`}>{defaultStageInteressadosOption.name}</Label>
+                      <Select
+                        value={String(getCurrentOptionValue(defaultStageInteressadosOption) || '')}
+                        onValueChange={(val) => handleApiOptionChange(defaultStageInteressadosOption.url, val)}
+                        disabled={!selectedDefaultFunnelInteressadosId}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder={!selectedDefaultFunnelInteressadosId ? "Selecione o funil primeiro" : "Selecione a etapa para Interessados"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {isLoadingStagesInteressados ? (
+                            <SelectItem value="__loading_stages__" disabled>Carregando etapas...</SelectItem>
+                          ) : stagesForDefaultFunnelInteressados.length === 0 ? (
+                            <SelectItem value="__no_stages__" disabled>Nenhuma etapa encontrada neste funil</SelectItem>
+                          ) : (
+                            stagesForDefaultFunnelInteressados.map((stage: any) => (
+                              <SelectItem key={String(stage.id)} value={String(stage.id)}>
+                                {stage.name}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   )}
                 </div>
               )}

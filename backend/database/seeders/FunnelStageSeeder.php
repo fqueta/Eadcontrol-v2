@@ -316,7 +316,8 @@ class FunnelStageSeeder extends Seeder
             'settings' => [
                 'autoAdvance' => false,
                 'requiresApproval' => true,
-                'notificationEnabled' => true
+                'notificationEnabled' => true,
+                'place' => 'vendas',
             ]
         ]);
         /**
@@ -419,7 +420,8 @@ class FunnelStageSeeder extends Seeder
             'settings' => [
                 'autoAdvance' => false,
                 'requiresApproval' => false,
-                'notificationEnabled' => true
+                'notificationEnabled' => true,
+                'place' => 'atendimento',
             ]
         ]);
 
@@ -494,6 +496,7 @@ class FunnelStageSeeder extends Seeder
                 'autoAdvance' => false,
                 'requiresApproval' => false,
                 'notificationEnabled' => true,
+                'place' => 'atendimento',
             ]
         ]);
 

@@ -37,6 +37,7 @@ class DatabaseSeeder extends Seeder
                     FunnelStageSeeder::class,
                     AircraftAttendanceSeeder::class,
                     AeronavesSeeder::class,
+                    CursoCategoriaSeeder::class,
                     CursosSeeder::class,
                     TurmasSeeder::class,
                     StripeCredentialSeeder::class,

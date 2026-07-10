@@ -29,23 +29,27 @@ export function FaviconUpdater({ src, defaultSrc = '/logo.png' }: FaviconUpdater
   useEffect(() => {
     const chosen = (src && src.trim() !== '' ? src.trim() : getBrandFaviconUrl()) || defaultSrc;
 
-    // Resolve basic MIME type based on extension
     const resolveType = (url: string) => {
       if (/\.svg$/i.test(url)) return 'image/svg+xml';
       if (/\.ico$/i.test(url)) return 'image/x-icon';
+      if (/\.jpe?g$/i.test(url)) return 'image/jpeg';
+      if (/\.webp$/i.test(url)) return 'image/webp';
       return 'image/png';
     };
 
     const type = resolveType(chosen);
-    let linkEl = document.getElementById('app-favicon') as HTMLLinkElement | null;
-    if (!linkEl) {
-      linkEl = document.createElement('link');
-      linkEl.id = 'app-favicon';
-      linkEl.rel = 'icon';
-      document.head.appendChild(linkEl);
+    let oldLink = document.getElementById('app-favicon');
+    
+    let newLink = document.createElement('link');
+    newLink.id = 'app-favicon';
+    newLink.rel = 'icon';
+    newLink.setAttribute('type', type);
+    newLink.setAttribute('href', chosen);
+
+    if (oldLink) {
+      oldLink.parentNode?.removeChild(oldLink);
     }
-    linkEl.setAttribute('type', type);
-    linkEl.setAttribute('href', chosen);
+    document.head.appendChild(newLink);
   }, [src, defaultSrc]);
 
   return null;

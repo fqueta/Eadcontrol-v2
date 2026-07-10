@@ -135,6 +135,7 @@ export interface CoursePayload {
   id?: string; // fornecido para atualizações
   tipo: string; // ex: "2"
   categoria: string; // ex: "cursos_online"
+  categoria_id?: string | number | null;
   /**
    * slug
    * pt-BR: Slug público do curso (utilizado em URLs e edição pela API).

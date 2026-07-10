@@ -30,6 +30,7 @@ class Curso extends Model
         'unidade_duracao',
         'tipo',
         'categoria',
+        'categoria_id',
         'token',
         'autor',
         'config',
@@ -388,5 +389,10 @@ class Curso extends Model
         }
 
         return $candidate;
+    }
+
+    public function categoria(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(CursoCategoria::class, 'categoria_id');
     }
 }

@@ -149,6 +149,12 @@ export const defaultMenu: MenuItemDTO[] = [
         can_view: true
       },
       {
+        title: "Categorias de curso",
+        url: "/admin/school/course-categories",
+        permission: "school.view",
+        can_view: true
+      },
+      {
         title: "Certificados",
         url: "/admin/school/certificados/modelo",
         permission: "school.view",

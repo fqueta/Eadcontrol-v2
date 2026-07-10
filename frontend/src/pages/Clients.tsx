@@ -393,6 +393,10 @@ export default function Clients() {
     setIsDialogOpen(true);
   }, [form]);
   
+  // Force Delete dialog state
+  const [openForceDeleteDialog, setOpenForceDeleteDialog] = useState(false);
+  const [clientToForceDelete, setClientToForceDelete] = useState<ClientRecord | null>(null);
+
   // Handle delete confirmation - memoized for performance
   const handleDeleteClient = useCallback((client: ClientRecord) => {
     setClientToDelete(client);
@@ -688,10 +692,34 @@ export default function Clients() {
   const { mutate: forceDeleteClient } = useForceDeleteClient();
 
   const handleForceDelete = useCallback((client: ClientRecord) => {
-    if (confirm(`Tem certeza que deseja excluir permanentemente o cliente ${client.name}? Esta ação não pode ser desfeita.`)) {
-      forceDeleteClient(client.id);
+    setClientToForceDelete(client);
+    setOpenForceDeleteDialog(true);
+  }, []);
+
+  const confirmForceDeleteClient = useCallback(() => {
+    if (clientToForceDelete) {
+      forceDeleteClient(clientToForceDelete.id, {
+        onSuccess: () => {
+          toast({
+            title: "Sucesso",
+            description: "Cliente excluído permanentemente com sucesso.",
+          });
+          setOpenForceDeleteDialog(false);
+          setClientToForceDelete(null);
+          queryClient.invalidateQueries({ queryKey: ['clients'] });
+        },
+        onError: (error: any) => {
+          toast({
+            title: "Erro",
+            description: error.message || "Erro ao excluir o cliente permanentemente.",
+            variant: "destructive",
+          });
+          setOpenForceDeleteDialog(false);
+          setClientToForceDelete(null);
+        }
+      });
     }
-  }, [forceDeleteClient]);
+  }, [clientToForceDelete, forceDeleteClient, toast, queryClient]);
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -868,6 +896,7 @@ export default function Clients() {
               clients={filteredClients}
               onEdit={handleEditClient}
               onDelete={handleDeleteClient}
+              onForceDelete={handleForceDelete}
               isLoading={useMock ? false : clientsQuery.isLoading}
               trashEnabled={showTrash}
             />
@@ -931,6 +960,30 @@ export default function Clients() {
               variant="destructive"
             >
               Excluir
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Force Delete Confirmation Dialog */}
+      <AlertDialog open={openForceDeleteDialog} onOpenChange={setOpenForceDeleteDialog}>
+        <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8">
+          <AlertDialogHeader className="space-y-3">
+            <AlertDialogTitle className="text-2xl font-black tracking-tight text-red-600">Excluir Permanentemente?</AlertDialogTitle>
+            <AlertDialogDescription className="text-base font-medium text-muted-foreground">
+              Esta ação <span className="font-bold text-foreground">apagará definitivamente o cadastro do cliente {clientToForceDelete?.name}</span> e 
+              todos os <span className="font-bold text-foreground">dados de matrícula vinculados a ele</span>.
+              <br /><br />
+              <span className="text-red-500 font-bold">Aviso:</span> Este processo é 100% irreversível e os dados não poderão ser restaurados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-8 gap-3">
+            <AlertDialogCancel className="h-12 rounded-xl border-slate-200 font-bold px-6">Manter Cadastro</AlertDialogCancel>
+            <Button 
+              onClick={confirmForceDeleteClient} 
+              className="h-12 rounded-xl bg-red-600 hover:bg-red-700 font-black px-8 shadow-lg shadow-red-200 transition-all active:scale-95 text-white"
+            >
+              Apagar Definitivamente
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -15,6 +15,7 @@ import { Plus, X, GripVertical, ChevronDown, ChevronUp, ChevronLeft, Save, Loade
 import { ImageUpload } from '@/components/lib/ImageUpload';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { coursesService } from '@/services/coursesService';
+import { useCursoCategorias } from '@/hooks/cursoCategorias';
 import { fileStorageService, type FileStorageItem } from '@/services/fileStorageService';
 import MediaLibraryModal from '@/components/media/MediaLibraryModal';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -885,6 +886,9 @@ export function CourseForm({
      */
     queryFn: async () => usersService.listUsers({ page: 1, per_page: 200, sort: 'name' }),
   });
+
+  // --- Categorias de curso ---
+  const cursoCategoriasQuery = useCursoCategorias();
 
   // --- Módulos existentes ---
   const modulesQuery = useQuery({
@@ -2646,6 +2650,19 @@ export function CourseForm({
                       <SelectContent className="rounded-xl shadow-2xl border-slate-200 dark:border-slate-800">
                         {((usersQuery.data?.data ?? []) as any[]).map((u: any) => (
                           <SelectItem key={String(u.id)} value={String(u.id)} className="rounded-lg my-1">{u.name ?? String(u.id)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-bold text-foreground/80">Categoria</Label>
+                    <Select value={form.watch('categoria_id') ? String(form.watch('categoria_id')) : ''} onValueChange={(v) => form.setValue('categoria_id', v)}>
+                      <SelectTrigger className="h-11 rounded-xl bg-white/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800">
+                        <SelectValue placeholder="Selecione uma categoria" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl shadow-2xl border-slate-200 dark:border-slate-800">
+                        {(cursoCategoriasQuery.data ?? []).map((cat: any) => (
+                          <SelectItem key={String(cat.id)} value={String(cat.id)} className="rounded-lg my-1">{cat.nome}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

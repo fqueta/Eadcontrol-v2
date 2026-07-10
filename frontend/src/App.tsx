@@ -136,6 +136,7 @@ const SiteComponents = lazy(() => import("./pages/site/Components"));
 const FastCheckout = lazy(() => import("./pages/school/FastCheckout"));
 const VideoTips = lazy(() => import("./pages/school/VideoTips"));
 const VideoTipForm = lazy(() => import("./pages/school/VideoTipForm"));
+const CursoCategorias = lazy(() => import("./pages/school/CursoCategorias"));
 const LiveSessionsCalendar = lazy(() => import("./pages/school/LiveSessionsCalendar"));
 const StudentLiveCalendar = lazy(() => import("./pages/school/StudentLiveCalendar"));
 const PublicVideoTip = lazy(() => import("./pages/public/PublicVideoTip"));
@@ -492,6 +493,14 @@ const App = () => {
                 <AdminProtectedRoute>
                   <AppLayout>
                     <Interested />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              {/* Escola / Categorias de Curso */}
+              <Route path="/admin/school/course-categories" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <CursoCategorias />
                   </AppLayout>
                 </AdminProtectedRoute>
               } />

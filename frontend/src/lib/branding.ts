@@ -505,23 +505,37 @@ export function applyBrandingFavicon(defaultFavicon: string = '/favicon.ico'): v
     const fav = getBrandFaviconUrl() || getBrandLogoUrl(defaultFavicon);
     if (!fav || typeof document === 'undefined') return;
     const head = document.head || document.getElementsByTagName('head')[0];
+    
+    // Resolve type
+    let type = 'image/png';
+    if (/\.svg$/i.test(fav)) type = 'image/svg+xml';
+    else if (/\.ico$/i.test(fav)) type = 'image/x-icon';
+    else if (/\.jpe?g$/i.test(fav)) type = 'image/jpeg';
+    else if (/\.webp$/i.test(fav)) type = 'image/webp';
+
     // rel="icon"
-    let iconLink = head.querySelector('link[rel="icon"]') as HTMLLinkElement | null;
-    if (!iconLink) {
-      iconLink = document.createElement('link');
-      iconLink.setAttribute('rel', 'icon');
-      head.appendChild(iconLink);
+    const oldIconLink = head.querySelector('link[rel="icon"]');
+    const newIconLink = document.createElement('link');
+    newIconLink.setAttribute('rel', 'icon');
+    newIconLink.setAttribute('type', type);
+    newIconLink.setAttribute('href', fav);
+    if (oldIconLink) {
+      // Preserve ID se existir
+      if (oldIconLink.id) newIconLink.id = oldIconLink.id;
+      head.removeChild(oldIconLink);
     }
-    iconLink.setAttribute('href', fav);
+    head.appendChild(newIconLink);
 
     // rel="shortcut icon" (compat)
-    let shortcutLink = head.querySelector('link[rel="shortcut icon"]') as HTMLLinkElement | null;
-    if (!shortcutLink) {
-      shortcutLink = document.createElement('link');
-      shortcutLink.setAttribute('rel', 'shortcut icon');
-      head.appendChild(shortcutLink);
+    const oldShortcutLink = head.querySelector('link[rel="shortcut icon"]');
+    const newShortcutLink = document.createElement('link');
+    newShortcutLink.setAttribute('rel', 'shortcut icon');
+    newShortcutLink.setAttribute('type', type);
+    newShortcutLink.setAttribute('href', fav);
+    if (oldShortcutLink) {
+      head.removeChild(oldShortcutLink);
     }
-    shortcutLink.setAttribute('href', fav);
+    head.appendChild(newShortcutLink);
   } catch {
     // ignore
   }

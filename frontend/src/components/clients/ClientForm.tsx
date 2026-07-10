@@ -35,6 +35,7 @@ import { SmartDocumentInput } from '@/components/lib/SmartDocumentInput';
 import { ImageUpload } from '@/components/lib/ImageUpload';
 import { useUsersList } from '@/hooks/users';
 import { useFunnelsList, useStagesList } from '@/hooks/funnels';
+import { phoneApplyMask } from '@/lib/masks/phone-apply-mask';
 /**
  * ClientFormProps
  * Props do formulário de cliente. Suporta `renderActions` para permitir que páginas

@@ -530,6 +530,10 @@ Route::name('api.')->prefix('api/v1')->middleware([
         Route::get('cursos/trash', [CursoController::class, 'trash'])->name('cursos.trash');
         Route::put('cursos/{id}/restore', [CursoController::class, 'restore'])->name('cursos.restore');
         Route::delete('cursos/{id}/force', [CursoController::class, 'forceDelete'])->name('cursos.forceDelete');
+        Route::apiResource('cursos-categorias', CursoCategoriaController::class, ['parameters' => [
+            'cursos-categorias' => 'id'
+        ]]);
+        Route::get('cursos-categorias-lista', [CursoController::class, 'categorias'])->name('cursos.categorias.lista');
         Route::apiResource('cursos', CursoController::class, ['parameters' => [
             'cursos' => 'id'
         ]]);

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCursoRequest;
 use App\Http\Requests\UpdateCursoRequest;
 use App\Models\Curso;
+use App\Models\CursoCategoria;
 use App\Models\Module;
 use App\Models\Activity;
 use App\Models\Question;
@@ -1158,6 +1159,17 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
                 })->toArray()
             ];
         })->toArray();
+    }
+
+    public function categorias(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+
+        $categorias = CursoCategoria::orderBy('nome')->get();
+        return response()->json(['data' => $categorias]);
     }
 }
 

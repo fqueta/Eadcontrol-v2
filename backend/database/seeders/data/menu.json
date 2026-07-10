@@ -9,7 +9,7 @@
     "title": "Clientes",
     "icon": "Users",
     "submenu": [
-        { "title": "Atendimento (FloW)", "url": "/customers/leads" },
+        { "title": "Suporte (FloW)", "url": "/customers/leads" },
         { "title": "Lista de clientes", "url": "/clients" }
     ]
   },
@@ -17,11 +17,13 @@
     "title": "Escola",
     "icon": "GraduationCap",
     "submenu": [
+      { "title": "Vendas (FloW)", "url": "/sales" },
       { "title": "Interessados", "url": "/school/interested" },
       { "title": "Matrículas", "url": "/school/enroll" },
       { "title": "Convites", "url": "/school/invites" },
       { "title": "Todos cursos", "url": "/school/courses" },
       { "title": "Todas turmas", "url": "/school/classes" },
+      { "title": "Categorias de curso", "url": "/school/course-categories" },
       { "title": "Agenda de Aulas", "url": "/school/live-sessions" },
       { "title": "Todos módulos", "url": "/school/modules" },
       { "title": "Todos atividades", "url": "/school/activities" },

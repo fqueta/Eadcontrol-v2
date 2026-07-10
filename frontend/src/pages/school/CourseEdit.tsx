@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,8 +14,21 @@ import { ChevronLeft, Loader2 } from 'lucide-react';
  */
 export default function CourseEdit() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+
+  const goBack = () => {
+    const from = (location.state as any)?.from;
+    if (from && typeof from === 'object') {
+      const path = String(from.pathname || '/');
+      const search = String(from.search || '');
+      const hash = String(from.hash || '');
+      navigate(`${path}${search}${hash}`);
+    } else {
+      navigate('/admin/school/courses');
+    }
+  };
 
   const { data: course, isLoading } = useQuery<CourseRecord | null>({
     queryKey: ['courses', 'detail', id],
@@ -31,7 +44,7 @@ export default function CourseEdit() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses', 'list'] });
       queryClient.invalidateQueries({ queryKey: ['courses', 'detail', id] });
-      navigate('/admin/school/courses');
+      goBack();
     },
   });
 
@@ -47,7 +60,7 @@ export default function CourseEdit() {
           <p className="text-sm text-muted-foreground font-medium">Gerencie o conteúdo, configurações e alunos matriculados.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="shadow-sm border-muted-foreground/20 hover:bg-muted font-semibold transition-all" onClick={() => navigate('/admin/school/courses')}>
+          <Button variant="outline" className="shadow-sm border-muted-foreground/20 hover:bg-muted font-semibold transition-all" onClick={goBack}>
             <ChevronLeft className="mr-2 h-4 w-4" /> Voltar
           </Button>
         </div>

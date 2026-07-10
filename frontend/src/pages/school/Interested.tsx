@@ -59,7 +59,7 @@ export default function Interested() {
   const deleteMutation = useDeleteEnrollment({
     onSuccess: () => {
       toast({ title: 'Sucesso', description: 'Registro de interessado excluído.' });
-      queryClient.invalidateQueries({ queryKey: ['matriculas', 'list', 'int'] });
+      queryClient.invalidateQueries({ queryKey: ['enrollments'] });
     },
     onError: (err: any) => {
       toast({ title: 'Erro', description: String(err?.message ?? 'Falha ao excluir registro'), variant: 'destructive' });

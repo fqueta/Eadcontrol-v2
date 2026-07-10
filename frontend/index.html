@@ -102,15 +102,24 @@
 
           // Favicon
           if (favicon) {
-            var linkEl = document.getElementById('app-favicon');
-            if (linkEl) {
-              // Detecta MIME básico pelo sufixo
-              var type = 'image/png';
-              if (/\.svg$/i.test(favicon)) type = 'image/svg+xml';
-              if (/\.ico$/i.test(favicon)) type = 'image/x-icon';
-              linkEl.setAttribute('type', type);
-              linkEl.setAttribute('href', favicon);
+            var oldLink = document.getElementById('app-favicon');
+            var type = 'image/png';
+            if (/\.svg$/i.test(favicon)) type = 'image/svg+xml';
+            else if (/\.ico$/i.test(favicon)) type = 'image/x-icon';
+            else if (/\.jpe?g$/i.test(favicon)) type = 'image/jpeg';
+            else if (/\.webp$/i.test(favicon)) type = 'image/webp';
+            
+            var newLink = document.createElement('link');
+            newLink.id = 'app-favicon';
+            newLink.rel = 'icon';
+            newLink.type = type;
+            newLink.href = favicon;
+            
+            if (oldLink) {
+              oldLink.parentNode.removeChild(oldLink);
             }
+            document.head.appendChild(newLink);
+            
             // Disponibiliza para consumidores globais
             win.__APP_FAVICON_URL__ = favicon;
           }

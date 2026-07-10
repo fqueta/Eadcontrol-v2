@@ -16,12 +16,14 @@ import { useUsersList } from '@/hooks/users';
 // Removido hooks de funis/etapas: campos desativados temporariamente
 import { useCreateEnrollment } from '@/hooks/enrollments';
 import { useEnrollmentSituationsList } from '@/hooks/enrollmentSituations';
+import { useApiOptions } from '@/hooks/useApiOptions';
+import { useFunnelsList, useStagesList } from '@/hooks/funnels';
 import { coursesService } from '@/services/coursesService';
 import { turmasService } from '@/services/turmasService';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Pencil, Filter } from 'lucide-react';
 import { Combobox, useComboboxOptions } from '@/components/ui/combobox';
 // SelectGeraValor removido: campo "Gerar Valor" não será exibido
 import { currencyApplyMask, currencyRemoveMaskToNumber, currencyRemoveMaskToString } from '@/lib/masks/currency';
@@ -52,6 +54,8 @@ const proposalSchema = z.object({
   // Novo campo: identificador de situação da matrícula selecionada no formulário
   // New field: enrollment situation identifier selected from the form
   situacao_id: z.string().optional(),
+  funnel_id: z.string().optional(),
+  stage_id: z.string().optional(),
   /**
    * parcelada
    * pt-BR: Indica se a proposta será parcelada ("s" ou "n"). Opcional.
@@ -129,6 +133,8 @@ export default function ProposalsCreate() {
       // pt-BR: Valor padrão vazio para situacao_id até o usuário selecionar.
       // en-US: Empty default for situacao_id until user selects.
       situacao_id: '',
+      funnel_id: navState.funnelId || '',
+      stage_id: navState.stageId || '',
       // pt-BR: Indica se a proposta será parcelada ("s" ou "n")
       // en-US: Indicates whether the proposal will be installment-based ("s" or "n")
       parcelada: 'n',
@@ -166,6 +172,29 @@ export default function ProposalsCreate() {
   });
   const selectedCourseId = form.watch('id_curso');
   const selectedClientId = form.watch('id_cliente');
+
+  const isInterested = navState.returnTo?.includes('interested');
+  const { options: apiOptions } = useApiOptions();
+  const { data: funnelsData, isLoading: isLoadingFunnels } = useFunnelsList({ per_page: 100 });
+  const funnels = funnelsData?.data || (funnelsData as any)?.items || [];
+  const selectedFunnelId = form.watch('funnel_id');
+  const { data: stagesData, isLoading: isLoadingStages } = useStagesList(selectedFunnelId, { per_page: 200 }, { enabled: !!selectedFunnelId });
+  const stages = stagesData?.data || (stagesData as any)?.items || [];
+
+  useEffect(() => {
+    if (!apiOptions || !apiOptions.length) return;
+    const defaultFunnelKey = isInterested ? 'default_funil_interessados_id' : 'default_funil_vendas_id';
+    const defaultStageKey = isInterested ? 'default_etapa_interessados_id' : 'default_etapa_vendas_id';
+    const dFunnel = apiOptions.find((o: any) => o.url === defaultFunnelKey)?.value;
+    const dStage = apiOptions.find((o: any) => o.url === defaultStageKey)?.value;
+    if (!form.getValues('funnel_id') && dFunnel) {
+      form.setValue('funnel_id', String(dFunnel));
+    }
+    if (!form.getValues('stage_id') && dStage) {
+      form.setValue('stage_id', String(dStage));
+    }
+  }, [apiOptions, isInterested, form]);
+
   // Turmas: busca remota filtrando por curso selecionado
   // Classes: remote search filtered by selected course
   const { data: classes, isLoading: isLoadingClasses } = useQuery({
@@ -564,6 +593,8 @@ export default function ProposalsCreate() {
         parcelas: values.parcelas || '',
       },
       id: values.id || '',
+      funnel_id: values.funnel_id,
+      stage_id: values.stage_id,
     };
 
     // Removido: envio de tag[] temporariamente
