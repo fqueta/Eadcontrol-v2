@@ -128,6 +128,14 @@ export function ClientForm({
     if (sections.length > 0) {
       setAccordionMultipleValue(prev => [...new Set([...prev, ...sections])]);
     }
+
+    // Rolar para o primeiro campo com erro após accordion abrir (200ms animação)
+    const firstErrorPath = errorPaths[0];
+    setTimeout(() => {
+      try {
+        form.setFocus(firstErrorPath);
+      } catch {}
+    }, 250);
   }, [form.formState.errors]);
 
   // Watch para validação em tempo real
@@ -265,7 +273,7 @@ export function ClientForm({
                   <FormLabel className="text-sm font-medium text-gray-700">Tipo de Pessoa *</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value || ''}
                   >
                     <FormControl>
                       <SelectTrigger className="h-11">
@@ -610,7 +618,7 @@ export function ClientForm({
                       <FormLabel className="text-sm font-medium text-gray-700">Gênero *</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value || ''}
                       >
                         <FormControl>
                           <SelectTrigger className="h-11">
