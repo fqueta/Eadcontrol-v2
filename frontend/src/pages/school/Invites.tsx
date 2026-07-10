@@ -629,7 +629,7 @@ export default function InvitesAdminPage() {
 
         {/* History Dialog */}
         <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-          <DialogContent className="sm:max-w-[950px]">
+          <DialogContent className="sm:max-w-[1200px]">
             <DialogHeader>
               <DialogTitle>Histórico de Uso - {historyInvite?.nome}</DialogTitle>
               <DialogDescription>
