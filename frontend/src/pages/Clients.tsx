@@ -183,8 +183,8 @@ const clientSchema = z.object({
       const birthDate = new Date(val);
       const today = new Date();
       const age = today.getFullYear() - birthDate.getFullYear();
-      return age >= 0 && age <= 120;
-    }, "Data de nascimento inválida"),
+      return age >= 0 && age <= 120 && age >= 18;
+    }, "Data de nascimento inválida — deve ser maior de 18 anos"),
     escolaridade: z.string().nullable().optional(),
     profissao: z.string().nullable().optional(),
     tipo_pj: z.string().nullable().optional(),
