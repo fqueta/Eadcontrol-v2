@@ -21,12 +21,13 @@ import { getMockClientById } from '@/mocks/clients';
 import { ClientRecord } from '@/types/clients';
 import { useFunnel, useStagesList } from '@/hooks/funnels';
 import { phoneApplyMask } from '@/lib/masks/phone-apply-mask';
-import { useEnrollmentsList } from '@/hooks/enrollments';
+import { useEnrollmentsList, useDeleteEnrollment } from '@/hooks/enrollments';
 import EnrollmentTable from '@/components/enrollments/EnrollmentTable';
 import { AccountsReceivableTable } from '@/components/financial/AccountsReceivableTable';
 import { useClientLogs } from '@/hooks/clients';
 import { currencyRemoveMaskToNumber } from '@/lib/masks/currency';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
 import { coursesService } from '@/services/coursesService';
 import { useTurmasList } from '@/hooks/turmas';
 
@@ -119,7 +120,7 @@ export default function ClientView() {
     id_curso: selectedCourseId !== 'all' && selectedCourseId ? selectedCourseId : undefined,
     id_turma: selectedClassId !== 'all' && selectedClassId ? selectedClassId : undefined,
   } as any;
-  const { data: enrollmentsResp, isLoading: isEnrollmentsLoading, isFetching: isEnrollmentsFetching } = useEnrollmentsList(enrollmentListParams, { enabled: !!clientId });
+  const { data: enrollmentsResp, isLoading: isEnrollmentsLoading, isFetching: isEnrollmentsFetching, refetch: refetchEnrollments } = useEnrollmentsList(enrollmentListParams, { enabled: !!clientId });
   const enrollments = Array.isArray(enrollmentsResp?.data) ? (enrollmentsResp!.data as any[]) : [];
 
   /**
@@ -134,8 +135,23 @@ export default function ClientView() {
     per_page: perPageInterest,
     id_cliente: clientId,
   } as any;
-  const { data: interestResp, isLoading: isInterestLoading, isFetching: isInterestFetching } = useEnrollmentsList(interestListParams, { enabled: !!clientId });
+  const { data: interestResp, isLoading: isInterestLoading, isFetching: isInterestFetching, refetch: refetchInterests } = useEnrollmentsList(interestListParams, { enabled: !!clientId });
   const interestedCourses = Array.isArray(interestResp?.data) ? (interestResp!.data as any[]) : [];
+
+  // Delete dialog state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selectedEnroll, setSelectedEnroll] = useState<any>(null);
+
+  const deleteMutation = useDeleteEnrollment({
+    onSuccess: () => {
+      toast({ title: 'Matrícula excluída', description: 'A matrícula foi removida com sucesso.' });
+      refetchEnrollments();
+      refetchInterests();
+    },
+    onError: (err: any) => {
+      toast({ title: 'Erro ao excluir', description: err?.message || 'Tente novamente.', variant: 'destructive' });
+    },
+  });
 
   /**
    * getClientLogs (client scope)
@@ -198,15 +214,9 @@ export default function ClientView() {
     navigate(`/admin/sales/proposals/edit/${id}${query}`, { state: { returnTo } });
   }
 
-  /**
-   * handleDeleteEnrollment
-   * pt-BR: Encaminha para a listagem de matrículas, onde a exclusão está disponível.
-   * en-US: Redirects to the enrollments listing, where deletion is available.
-   */
   function handleDeleteEnrollment(enroll: any) {
-    const id = String(enroll?.id || '');
-    const qs = id ? new URLSearchParams({ search: id }) : new URLSearchParams();
-    navigate(`/admin/school/enroll?${qs.toString()}`);
+    setSelectedEnroll(enroll);
+    setDeleteOpen(true);
   }
 
   /**
@@ -823,7 +833,7 @@ export default function ClientView() {
               resolveAmountBRL={resolveEnrollmentAmountBRL}
               onView={handleViewEnrollment}
               onEdit={handleEditEnrollment}
-              onDelete={() => {}}
+              onDelete={handleDeleteEnrollment}
             />
           </div>
           
@@ -1180,6 +1190,32 @@ export default function ClientView() {
               className="bg-blue-600 hover:bg-blue-700"
             >
               Confirmar Promoção
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete enrollment alert */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8">
+          <AlertDialogHeader className="space-y-3">
+            <AlertDialogTitle className="text-2xl font-black tracking-tight text-red-600">Excluir Matrícula?</AlertDialogTitle>
+            <AlertDialogDescription className="text-base font-medium text-muted-foreground">
+              Esta ação removerá todos os registros associados à matrícula <span className="text-foreground font-bold">#{selectedEnroll?.id}</span>. Este processo é irreversível.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-8 gap-3">
+            <AlertDialogCancel className="h-12 rounded-xl border-slate-200 font-bold px-6">Manter Registro</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!selectedEnroll?.id) return;
+                deleteMutation.mutate(String(selectedEnroll.id), {
+                  onSettled: () => setDeleteOpen(false),
+                });
+              }}
+              className="h-12 rounded-xl bg-red-600 hover:bg-red-700 font-black px-8 shadow-lg shadow-red-200 transition-all active:scale-95"
+            >
+              Excluir Definitivamente
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
