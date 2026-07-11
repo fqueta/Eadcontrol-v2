@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://i.ytimg.com" />
     <link rel="preconnect" href="https://player.vimeo.com" />
     <!-- Favicon default (substituído dinamicamente se houver em localStorage) -->
-    <link id="app-favicon" rel="icon" type="image/svg+xml" href="/logo.png" />
+    <link id="app-favicon" rel="icon" type="image/png" href="/logo.png" />
     <title id="app-title">Incluireeducar - Controle de EAD</title>
     <meta id="app-description" name="description" content="Plataforma de controle de ead" />
     <meta name="author" content="Fernando" />
@@ -217,11 +217,13 @@
             document.head.appendChild(manifestEl);
           }
 
-          var logoType = 'image/png';
-          if (logo) {
-            if (/\.svg$/i.test(logo)) logoType = 'image/svg+xml';
-            else if (/\.webp$/i.test(logo)) logoType = 'image/webp';
-            else if (/\.jpe?g$/i.test(logo)) logoType = 'image/jpeg';
+          var pwaIcon = favicon || logo || '/logo.png';
+          var pwaIconType = 'image/png';
+          if (pwaIcon) {
+            if (/\.svg$/i.test(pwaIcon)) pwaIconType = 'image/svg+xml';
+            else if (/\.webp$/i.test(pwaIcon)) pwaIconType = 'image/webp';
+            else if (/\.jpe?g$/i.test(pwaIcon)) pwaIconType = 'image/jpeg';
+            else if (/\.ico$/i.test(pwaIcon)) pwaIconType = 'image/x-icon';
           }
 
           var manifestObj = {
@@ -235,15 +237,15 @@
             start_url: '/',
             icons: [
               {
-                src: logo || '/logo.png',
+                src: pwaIcon,
                 sizes: '192x192',
-                type: logoType,
+                type: pwaIconType,
                 purpose: 'any maskable'
               },
               {
-                src: logo || '/logo.png',
+                src: pwaIcon,
                 sizes: '512x512',
-                type: logoType
+                type: pwaIconType
               }
             ]
           };
