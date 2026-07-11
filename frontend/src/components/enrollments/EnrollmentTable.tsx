@@ -230,6 +230,7 @@ export default function EnrollmentTable({
       <Table>
         <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
           <TableRow className="hover:bg-transparent">
+            <TableHead className="w-[50px] px-2 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70">Ações</TableHead>
             <SortableHeader field="id" label="ID" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="w-[80px] px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground/70" />
             <SortableHeader field="cliente_nome" label="Cliente" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground/70">
               <div className="flex items-center gap-2">
@@ -253,14 +254,13 @@ export default function EnrollmentTable({
                 <DollarSign className="h-3 w-3" /> Valor
               </div>
             </SortableHeader>
-            <TableHead className="px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-muted-foreground/70">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className="divide-y divide-slate-100 dark:divide-slate-800">
           {isLoading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <TableRow key={i} className="animate-pulse">
-                <TableCell colSpan={7} className="px-6 py-10">
+                <TableCell colSpan={8} className="px-6 py-10">
                    <div className="flex items-center gap-4">
                      <div className="h-10 w-10 rounded-xl bg-slate-200 dark:bg-slate-800" />
                      <div className="flex flex-col gap-2 flex-1">
@@ -273,7 +273,7 @@ export default function EnrollmentTable({
             ))
           ) : items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="h-40 text-center">
+              <TableCell colSpan={8} className="h-40 text-center">
                 <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
                   <div className="h-12 w-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 mb-2">
                     <User className="h-6 w-6 text-slate-300" />
@@ -292,6 +292,55 @@ export default function EnrollmentTable({
                   onDoubleClick={() => onView?.(enroll)}
                   className="group transition-all hover:bg-slate-50/80 dark:hover:bg-slate-800/80 items-center border-transparent cursor-pointer"
                 >
+                  <TableCell className="px-2 py-4 text-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0 rounded-xl hover:bg-primary/5 group/btn focus-visible:ring-0">
+                          <MoreHorizontal className="h-4 w-4 text-muted-foreground group-hover/btn:text-primary transition-colors" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-[180px] rounded-xl border-slate-100 dark:border-slate-800 shadow-xl p-1">
+                        <DropdownMenuLabel className="text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2 py-2">Gerenciamento</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => onView?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                          <Eye className="h-3.5 w-3.5 text-primary" /> 
+                          Visualizar
+                        </DropdownMenuItem>
+                        {isMatriculated(enroll) && Number(user?.permission_id) <= 3 && (
+                          <DropdownMenuItem onClick={() => {
+                            const courseId = enroll?.id_curso || enroll?.curso_id || enroll?.course_id || '';
+                            navigate(`/admin/school/enrollments/${enroll.id}/progress?id_curso=${courseId}`);
+                          }} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                            <BarChart3 className="h-3.5 w-3.5 text-emerald-500" /> 
+                            Ver Progresso
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator className="my-1 bg-slate-50 dark:bg-slate-800" />
+                        <DropdownMenuLabel className="text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2 py-2">Edição Rápida</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'principal')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                          <User className="h-3.5 w-3.5 text-slate-500" /> 
+                          Dados Principais
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'academico')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                          <BookOpen className="h-3.5 w-3.5 text-slate-500" /> 
+                          Acadêmico
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'financeiro')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                          <DollarSign className="h-3.5 w-3.5 text-slate-500" /> 
+                          Financeiro
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'acesso')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                          <CalendarDays className="h-3.5 w-3.5 text-slate-500" /> 
+                          Acesso e Validade
+                        </DropdownMenuItem>
+
+                        <DropdownMenuSeparator className="my-1 bg-slate-50 dark:bg-slate-800" />
+                        <DropdownMenuItem className="text-red-500 cursor-pointer focus:bg-red-50 focus:text-red-600 gap-2 font-bold text-xs rounded-lg" onClick={() => onDelete?.(enroll)}>
+                          <Trash2 className="h-3.5 w-3.5" /> 
+                          Excluir Registro
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                   <TableCell className="px-6 py-4 font-mono text-[10px] font-bold text-muted-foreground/60 group-hover:text-primary transition-colors">
                     {String(enroll.id).padStart(4, '0')}
                   </TableCell>
@@ -337,55 +386,6 @@ export default function EnrollmentTable({
                     <span className="font-black text-sm text-primary/90 tabular-nums">
                       {amountFormatter(enroll)}
                     </span>
-                  </TableCell>
-                  <TableCell className="px-6 py-4 text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-9 w-9 p-0 rounded-xl hover:bg-primary/5 group/btn focus-visible:ring-0">
-                          <MoreHorizontal className="h-4 w-4 text-muted-foreground group-hover/btn:text-primary transition-colors" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[180px] rounded-xl border-slate-100 dark:border-slate-800 shadow-xl p-1">
-                        <DropdownMenuLabel className="text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2 py-2">Gerenciamento</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => onView?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
-                          <Eye className="h-3.5 w-3.5 text-primary" /> 
-                          Visualizar
-                        </DropdownMenuItem>
-                        {isMatriculated(enroll) && Number(user?.permission_id) <= 3 && (
-                          <DropdownMenuItem onClick={() => {
-                            const courseId = enroll?.id_curso || enroll?.curso_id || enroll?.course_id || '';
-                            navigate(`/admin/school/enrollments/${enroll.id}/progress?id_curso=${courseId}`);
-                          }} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
-                            <BarChart3 className="h-3.5 w-3.5 text-emerald-500" /> 
-                            Ver Progresso
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuSeparator className="my-1 bg-slate-50 dark:bg-slate-800" />
-                        <DropdownMenuLabel className="text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2 py-2">Edição Rápida</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'principal')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
-                          <User className="h-3.5 w-3.5 text-slate-500" /> 
-                          Dados Principais
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'academico')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
-                          <BookOpen className="h-3.5 w-3.5 text-slate-500" /> 
-                          Acadêmico
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'financeiro')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
-                          <DollarSign className="h-3.5 w-3.5 text-slate-500" /> 
-                          Financeiro
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'acesso')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
-                          <CalendarDays className="h-3.5 w-3.5 text-slate-500" /> 
-                          Acesso e Validade
-                        </DropdownMenuItem>
-
-                        <DropdownMenuSeparator className="my-1 bg-slate-50 dark:bg-slate-800" />
-                        <DropdownMenuItem className="text-red-500 cursor-pointer focus:bg-red-50 focus:text-red-600 gap-2 font-bold text-xs rounded-lg" onClick={() => onDelete?.(enroll)}>
-                          <Trash2 className="h-3.5 w-3.5" /> 
-                          Excluir Registro
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               );
