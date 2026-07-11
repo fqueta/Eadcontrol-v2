@@ -25,6 +25,7 @@ import {
   Edit,
   Loader2,
   Users,
+  UserPlus,
   Keyboard,
 } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -369,6 +370,18 @@ export function GlobalClientSearch({
           {isLoading && (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
           )}
+          <Button
+            variant="default"
+            size="sm"
+            className="shrink-0 gap-2 h-8 px-3"
+            onClick={() => {
+              setOpen(false);
+              navigate('/admin/clients/create');
+            }}
+          >
+            <UserPlus className="h-4 w-4" />
+            <span className="hidden sm:inline">Novo Cliente</span>
+          </Button>
         </div>
 
         {/* ── Corpo ────────────────────────────────────────────────────── */}
