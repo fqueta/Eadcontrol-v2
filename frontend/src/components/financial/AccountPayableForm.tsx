@@ -81,14 +81,15 @@ export const AccountPayableForm: React.FC<AccountPayableFormProps> = ({
    */
   useEffect(() => {
     if (account) {
+      const dueDate = account.dueDate || (account as any).due_date || '';
       setFormData({
-        description: account.description,
-        amount: account.amount,
-        dueDate: account.dueDate.split('T')[0], // Formato YYYY-MM-DD
-        category: account.category,
-        supplierName: account.supplierName || '',
-        invoiceNumber: account.invoiceNumber || '',
-        paymentMethod: account.paymentMethod || PaymentMethod.CASH,
+        description: account.description || '',
+        amount: account.amount || 0,
+        dueDate: dueDate ? dueDate.split('T')[0] : '', // Formato YYYY-MM-DD
+        category: String(account.category || (account as any).category_id || ''),
+        supplierName: account.supplierName || (account as any).supplier_name || '',
+        invoiceNumber: account.invoiceNumber || (account as any).invoice_number || '',
+        paymentMethod: account.paymentMethod || (account as any).payment_method || PaymentMethod.CASH,
         notes: account.notes || '',
         recurrence: account.recurrence || RecurrenceType.NONE,
         installments: account.installments || 1

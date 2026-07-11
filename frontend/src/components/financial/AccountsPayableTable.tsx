@@ -131,8 +131,8 @@ export const AccountsPayableTable: React.FC<AccountsPayableTableProps> = ({ cate
   /**
    * Retorna nome da categoria
    */
-  const getCategoryName = (categoryId: string): string => {
-    const category = categories.find(cat => cat.id === categoryId);
+  const getCategoryName = (categoryId: string | number): string => {
+    const category = categories.find(cat => String(cat.id) === String(categoryId));
     return category?.name || 'Categoria não encontrada';
   };
 

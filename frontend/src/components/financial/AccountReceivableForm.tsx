@@ -98,7 +98,7 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
         description: account.description || '',
         amount: account.amount || 0,
         dueDate: dueDate ? dueDate.split('T')[0] : '', // Formato YYYY-MM-DD
-        category: account.category || (account as any).category_id || '',
+        category: String(account.category || (account as any).category_id || ''),
         clientId: selectedClientId,
         customerName: account.customerName || (account as any).customer_name || '',
         serviceOrderId: account.serviceOrderId || (account as any).service_order_id || '',
