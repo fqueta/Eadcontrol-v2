@@ -122,6 +122,9 @@ class FinancialAccountController extends Controller
         if ($request->filled('invoice_number')) {
             $query->where('invoice_number', 'like', '%' . $request->input('invoice_number') . '%');
         }
+        if ($request->filled('matricula_id')) {
+            $query->where('config->matricula_id', $request->input('matricula_id'));
+        }
 
         $accounts = $query->paginate($perPage);
 
@@ -465,11 +468,7 @@ class FinancialAccountController extends Controller
         // Mover para lixeira em vez de excluir permanentemente
         $account->update([
             'deletado' => true,
-            'reg_deletado' => json_encode([
-                'usuario' => $user->id,
-                'nome' => $user->name,
-                'created_at' => now(),
-            ])
+            'reg_deletado' => now()
         ]);
 
         return response()->json([

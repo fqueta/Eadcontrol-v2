@@ -400,6 +400,19 @@ class ClientController extends Controller
         $validated['permission_id'] = $this->cliente_permission_id;
         $validated['config'] = isset($validated['config']) ? $this->sanitizeInput($validated['config']) : [];
 
+        // Verifica se stage_id está válido, senão define fallback para o primeiro stage do "Funil de Suporte"
+        $stageId = $validated['config']['stage_id'] ?? null;
+        if (!$stageId || !\App\Models\Stage::where('id', $stageId)->exists()) {
+            $supportFunnel = \App\Models\Funnel::where('name', 'like', '%Suporte%')->first();
+            if ($supportFunnel) {
+                $firstStage = $supportFunnel->stages()->orderBy('order')->first();
+                if ($firstStage) {
+                    $validated['config']['stage_id'] = $firstStage->id;
+                    $validated['config']['funnelId'] = $supportFunnel->id;
+                }
+            }
+        }
+
         if(is_array($validated['config'])){
             $validated['config'] = json_encode($validated['config']);
         }

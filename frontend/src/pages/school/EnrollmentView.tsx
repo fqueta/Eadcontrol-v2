@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { AccountReceivableForm } from '@/components/financial/AccountReceivableForm';
+import { AccountsReceivableTable } from '@/components/financial/AccountsReceivableTable';
 import { useToast } from '@/hooks/use-toast';
-import { accountsReceivableService, categoriesService } from '@/services/financialService';
+import { categoriesService } from '@/services/financialService';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -75,8 +75,6 @@ import InstallmentPreviewCard from '@/components/school/InstallmentPreviewCard';
 
 export default function EnrollmentView() {
   const [isGeneratingFee, setIsGeneratingFee] = useState(false);
-  const [isInvoiceFormOpen, setIsInvoiceFormOpen] = useState(false);
-  const [selectedInvoiceToEdit, setSelectedInvoiceToEdit] = useState<any>(undefined);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -387,9 +385,7 @@ export default function EnrollmentView() {
     return (enrollment as any)?.ativo === 's' || (enrollment as any)?.ativo === 1;
   }, [enrollment]);
 
-  const invoices = useMemo(() => {
-    return ((enrollment as any)?.financial_invoices ?? []) as any[];
-  }, [enrollment]);
+
 
   // Progress Calculations
   const { total, completed, percent } = useMemo(() => {
@@ -1051,171 +1047,14 @@ export default function EnrollmentView() {
             )}
 
             {/* Faturas Locais (Contas a Receber) */}
-            {invoices.length > 0 && (
-              <Card className="shadow-sm border-muted/60 overflow-hidden lg:col-span-2">
-                <CardHeader className="bg-muted/10 border-b py-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="h-5 w-5 text-primary" />
-                      <CardTitle className="text-lg">Faturas Locais (Contas a Receber)</CardTitle>
-                    </div>
-                    <div className="flex gap-2">
-                        <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-0 font-bold px-3 py-1">
-                          {invoices.length} {invoices.length === 1 ? 'Parcela' : 'Parcelas'}
-                        </Badge>
-                    </div>
-                  </div>
-                  <CardDescription>Sincronização em tempo real das parcelas geradas com o financeiro local.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-muted/30 border-b text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                          <th className="py-3 px-6">Fatura</th>
-                          <th className="py-3 px-6">Descrição</th>
-                          <th className="py-3 px-6">Vencimento</th>
-                          <th className="py-3 px-6 text-right">Valor</th>
-                          <th className="py-3 px-6">Método</th>
-                          <th className="py-3 px-6">Status</th>
-                          <th className="py-3 px-6">Data Pagto</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y text-sm text-foreground/80">
-                        {invoices.map((inv: any) => {
-                          const paymentMethodLabel = inv.payment_method === 'credit_card' ? 'Cartão de Crédito' 
-                            : inv.payment_method === 'pix' ? 'PIX' 
-                            : inv.payment_method === 'bank_transfer' ? 'Transferência' 
-                            : inv.payment_method === 'cash' ? 'Dinheiro'
-                            : inv.payment_method === 'debit_card' ? 'Cartão de Débito'
-                            : inv.payment_method === 'check' ? 'Cheque'
-                            : inv.payment_method === 'boleto' ? 'Boleto'
-                            : 'Outro';
-
-                          const statusColorClass = inv.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-50'
-                            : inv.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-50'
-                            : 'bg-red-50 text-red-700 border-red-100 hover:bg-red-50';
-
-                          const statusLabel = inv.status === 'paid' ? 'Pago'
-                            : inv.status === 'pending' ? 'Pendente'
-                            : 'Vencido';
-
-                          const handleReceive = async () => {
-                            if (window.confirm(`Deseja lançar o recebimento local da fatura ${inv.invoice_number} no valor de ${formatCurrencyBRL(inv.amount)}?`)) {
-                              try {
-                                const todayStr = new Date().toISOString().split('T')[0];
-                                await accountsReceivableService.markAsReceived(String(inv.id), todayStr, inv.payment_method || 'pix');
-                                toast({
-                                  title: "Recebimento Lançado",
-                                  description: "O recebimento foi registrado com sucesso no financeiro.",
-                                });
-                                queryClient.invalidateQueries({ queryKey: ['enrollment', String(id)] });
-                              } catch (err: any) {
-                                toast({
-                                  title: "Erro no Recebimento",
-                                  description: err.message || 'Ocorreu um erro desconhecido.',
-                                  variant: "destructive",
-                                });
-                              }
-                            }
-                          };
-
-                          const handleDelete = async () => {
-                            if (window.confirm(`Tem certeza que deseja excluir permanentemente a fatura ${inv.invoice_number}?`)) {
-                              try {
-                                await accountsReceivableService.delete(String(inv.id));
-                                toast({
-                                  title: "Fatura Excluída",
-                                  description: "A fatura foi excluída com sucesso.",
-                                });
-                                queryClient.invalidateQueries({ queryKey: ['enrollment', String(id)] });
-                              } catch (err: any) {
-                                toast({
-                                  title: "Erro ao Excluir",
-                                  description: err.message || 'Ocorreu um erro desconhecido.',
-                                  variant: "destructive",
-                                });
-                              }
-                            }
-                          };
-
-                          const handleCancel = async () => {
-                            if (window.confirm(`Deseja cancelar a fatura ${inv.invoice_number}?`)) {
-                              try {
-                                await accountsReceivableService.cancel(String(inv.id));
-                                toast({
-                                  title: "Fatura Cancelada",
-                                  description: "A fatura foi cancelada com sucesso.",
-                                });
-                                queryClient.invalidateQueries({ queryKey: ['enrollment', String(id)] });
-                              } catch (err: any) {
-                                toast({
-                                  title: "Erro ao Cancelar",
-                                  description: err.message || 'Ocorreu um erro desconhecido.',
-                                  variant: "destructive",
-                                });
-                              }
-                            }
-                          };
-
-                          const bankSlipUrl = inv.config?.bankSlipUrl || inv.config?.reg_asaas?.bankSlipUrl || null;
-
-                          return (
-                            <tr key={inv.id} className="group hover:bg-muted/10 transition-colors">
-                              <td className="py-4 px-6 font-mono font-bold text-primary align-top">{inv.invoice_number}</td>
-                              <td className="py-4 px-6 align-top">
-                                <div className="font-medium max-w-[250px] truncate" title={inv.description}>{inv.description}</div>
-                                <div className="flex items-center gap-2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold">
-                                  {inv.status !== 'paid' && (
-                                    <>
-                                      <button onClick={() => {
-                                        setSelectedInvoiceToEdit(inv);
-                                        setIsInvoiceFormOpen(true);
-                                      }} className="text-blue-600 hover:text-blue-800 transition-colors">Editar</button>
-                                      <span className="text-muted-foreground/30">|</span>
-                                      <button onClick={handleReceive} className="text-emerald-600 hover:text-emerald-800 transition-colors">Lançar</button>
-                                      <span className="text-muted-foreground/30">|</span>
-                                    </>
-                                  )}
-                                  {bankSlipUrl && (
-                                    <>
-                                      <a href={bankSlipUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 transition-colors">Boleto</a>
-                                      <span className="text-muted-foreground/30">|</span>
-                                    </>
-                                  )}
-                                  <button onClick={() => toast({ title: 'Integração', description: 'Enviando para o gateway de pagamento (Legado)...' })} className="text-primary hover:text-primary/80 transition-colors">Gateway</button>
-                                  {inv.status !== 'paid' && (
-                                    <>
-                                      <span className="text-muted-foreground/30">|</span>
-                                      <button onClick={handleCancel} className="text-amber-600 hover:text-amber-800 transition-colors">Cancelar</button>
-                                    </>
-                                  )}
-                                  <span className="text-muted-foreground/30">|</span>
-                                  <button onClick={handleDelete} className="text-red-600 hover:text-red-800 transition-colors">Excluir</button>
-                                </div>
-                              </td>
-                              <td className="py-4 px-6 font-medium">{formatDate(inv.due_date)}</td>
-                              <td className="py-4 px-6 text-right font-bold text-foreground">{formatCurrencyBRL(inv.amount)}</td>
-                              <td className="py-4 px-6">
-                                <span className="bg-muted px-2.5 py-1 rounded text-xs font-semibold">{paymentMethodLabel}</span>
-                              </td>
-                              <td className="py-4 px-6">
-                                <Badge variant="outline" className={`${statusColorClass} font-bold px-2 py-0.5 text-xs`}>
-                                  {statusLabel}
-                                </Badge>
-                              </td>
-                              <td className="py-4 px-6 font-medium text-muted-foreground align-top">
-                                {inv.payment_date ? formatDate(inv.payment_date) : '---'}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            <div className="lg:col-span-2">
+              <AccountsReceivableTable
+                categories={categories}
+                clientId={client?.id ? String(client.id) : undefined}
+                enrollmentId={id}
+                title="Faturas Locais (Contas a Receber)"
+              />
+            </div>
           </div>
         </TabsContent>
 
@@ -1300,17 +1139,6 @@ export default function EnrollmentView() {
           .border-primary\\/10 { border-color: #eee !important; }
         }
       ` }} />
-      {/* Modal de Edição de Fatura */}
-      <AccountReceivableForm
-        isOpen={isInvoiceFormOpen}
-        onClose={() => setIsInvoiceFormOpen(false)}
-        account={selectedInvoiceToEdit}
-        categories={categories}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['enrollment', String(id)] });
-          setIsInvoiceFormOpen(false);
-        }}
-      />
     </div>
   );
 }

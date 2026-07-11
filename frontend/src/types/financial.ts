@@ -335,6 +335,7 @@ export interface AccountsFilter {
   endDate?: string;
   paymentMethod?: PaymentMethod;
   client_id?: string;
+  matricula_id?: string;
   sortBy?: 'dueDate' | 'amount' | 'createdAt';
   sortOrder?: 'asc' | 'desc';
 }

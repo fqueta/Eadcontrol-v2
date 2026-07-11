@@ -662,6 +662,7 @@ export function CourseForm({
         adc: { recheck: 'n', recorrente: 'n', cor: 'FFFFFF' },
         ead: { id_eadcontrol: '' },
         incluir_opcao_cartao_parcelas: 'n',
+        cobrar_taxa_separadamente: 'n',
         cover: { url: '', file_id: undefined as any, title: '' },
         banner: { url: '', file_id: undefined as any, title: '' },
         product_ids: [],
@@ -820,6 +821,7 @@ export function CourseForm({
         adc: c.config?.adc ?? { recheck: 'n', recorrente: 'n', cor: 'FFFFFF' },
         ead: c.config?.ead ?? { id_eadcontrol: '' },
         incluir_opcao_cartao_parcelas: c.config?.incluir_opcao_cartao_parcelas ?? 'n',
+        cobrar_taxa_separadamente: c.config?.cobrar_taxa_separadamente ?? 'n',
         cover: {
           url: String(c.config?.cover?.url || '').trim(),
           file_id: c.config?.cover?.file_id,
@@ -3026,6 +3028,22 @@ export function CourseForm({
                   <Switch
                     checked={form.watch('config.incluir_opcao_cartao_parcelas') === 's'}
                     onCheckedChange={(checked) => form.setValue('config.incluir_opcao_cartao_parcelas', checked ? 's' : 'n')}
+                    className="data-[state=checked]:bg-primary scale-110"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between rounded-2xl border-2 p-4 transition-all duration-300 border-slate-200 dark:border-slate-800 bg-white/30 mt-4">
+                  <div className="space-y-1">
+                    <Label className="text-base font-bold text-foreground/90">
+                      Cobrar Taxa de Matrícula Separadamente
+                    </Label>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      Se ativo, a taxa de inscrição será cobrada como uma transação separada. O aluno receberá cobranças isoladas para a Matrícula e para o Valor do Curso.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={form.watch('config.cobrar_taxa_separadamente') === 's'}
+                    onCheckedChange={(checked) => form.setValue('config.cobrar_taxa_separadamente', checked ? 's' : 'n')}
                     className="data-[state=checked]:bg-primary scale-110"
                   />
                 </div>

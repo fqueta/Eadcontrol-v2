@@ -449,6 +449,13 @@ class MatriculaController extends Controller
             $data['descricao'] = $data['obs'];
             unset($data['obs']);
         }
+        // Remove stage_id se for inválido ou vazio para evitar erro de validação (exists)
+        if (array_key_exists('stage_id', $data)) {
+            if (empty($data['stage_id']) || !\App\Models\Stage::where('id', $data['stage_id'])->exists()) {
+                unset($data['stage_id']);
+                unset($data['funnel_id']);
+            }
+        }
         // alias "etapa" -> "stage_id"
         if (array_key_exists('etapa', $data) && !array_key_exists('stage_id', $data)) {
             $data['stage_id'] = $data['etapa'];
@@ -566,14 +573,38 @@ class MatriculaController extends Controller
         // Pós-validação removida: validação via regra exists já garante integridade
 
         $matricula = new Matricula();
-        // se o funnel_id não foi informado, usar o default
-        if (!array_key_exists('funnel_id', $validated)) {
-            $matricula->funnel_id = $this->default_funil_vendas_id;
+        // Se o stage_id não foi informado ou é inválido, usar o default dinâmico (Funil de Vendas)
+        if (!array_key_exists('stage_id', $validated) || empty($validated['stage_id'])) {
+            $defaultStageId = $this->default_etapa_vendas_id;
+            
+            // Verifica se o ID configurado como padrão realmente existe
+            if (!$defaultStageId || !\App\Models\Stage::where('id', $defaultStageId)->exists()) {
+                // Se não existe (ex: após rodar seeder), busca o primeiro stage do "Funil de Vendas"
+                $vendasFunnel = \App\Models\Funnel::where('name', 'like', '%Vendas%')->first();
+                if ($vendasFunnel) {
+                    $firstStage = $vendasFunnel->stages()->orderBy('order')->first();
+                    if ($firstStage) {
+                        $defaultStageId = $firstStage->id;
+                        $matricula->funnel_id = $vendasFunnel->id;
+                    }
+                }
+            }
+
+            $matricula->stage_id = $defaultStageId;
         }
-        // se o stage_id não foi informado, usar o default
-        if (!array_key_exists('stage_id', $validated)) {
-            $matricula->stage_id = $this->default_etapa_vendas_id;
+
+        // Se o funnel_id não foi informado, inferir do stage_id
+        if (!array_key_exists('funnel_id', $validated) || empty($validated['funnel_id'])) {
+            if ($matricula->stage_id) {
+                $stage = \App\Models\Stage::find($matricula->stage_id);
+                if ($stage) {
+                    $matricula->funnel_id = $stage->funnel_id;
+                }
+            } else {
+                $matricula->funnel_id = $this->default_funil_vendas_id;
+            }
         }
+        
         // se o situacao_id não foi informado, usar o default
         if (!array_key_exists('situacao_id', $validated)) {
             $matricula->situacao_id = $this->default_proposal_situacao_id;

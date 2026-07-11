@@ -54,13 +54,14 @@ import AccountReceivableForm from './AccountReceivableForm';
 interface AccountsReceivableTableProps {
   categories: FinancialCategory[];
   clientId?: string;
+  enrollmentId?: string;
   title?: string;
 }
 
 /**
  * Componente de tabela para contas a receber
  */
-export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = ({ categories, clientId, title }) => {
+export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = ({ categories, clientId, enrollmentId, title }) => {
   const [accounts, setAccounts] = useState<AccountReceivable[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -72,6 +73,7 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
     sortBy: 'dueDate',
     sortOrder: 'asc',
     client_id: clientId,
+    matricula_id: enrollmentId,
   });
   const [totalPages, setTotalPages] = useState(0);
   const [total, setTotal] = useState(0);
@@ -109,6 +111,12 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
       setFilters(prev => ({ ...prev, client_id: clientId }));
     }
   }, [clientId]);
+
+  useEffect(() => {
+    if (enrollmentId && enrollmentId !== filters.matricula_id) {
+      setFilters(prev => ({ ...prev, matricula_id: enrollmentId }));
+    }
+  }, [enrollmentId]);
 
   /**
    * Formata valor monetário
@@ -275,6 +283,35 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
   /**
    * Gera cobranças em massa
    */
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedAccountIds);
+    if (ids.length === 0) return;
+
+    if (!confirm(`Tem certeza que deseja excluir ${ids.length} ${ids.length === 1 ? 'fatura' : 'faturas'}? Esta ação não pode ser desfeita.`)) return;
+
+    const toastId = toast.loading(`Excluindo ${ids.length} ${ids.length === 1 ? 'fatura' : 'faturas'}...`);
+    let successCount = 0;
+    for (const id of ids) {
+      try {
+        await financialService.accountsReceivable.delete(id);
+        successCount++;
+      } catch (error) {
+        console.error(`Erro ao excluir fatura ${id}:`, error);
+      }
+    }
+
+    if (successCount === ids.length) {
+      toast.success(`${successCount} ${successCount === 1 ? 'fatura excluída' : 'faturas excluídas'} com sucesso!`, { id: toastId });
+    } else if (successCount > 0) {
+      toast.warning(`${successCount} excluídas, ${ids.length - successCount} falharam.`, { id: toastId });
+    } else {
+      toast.error('Falha ao excluir as faturas. Verifique o console.', { id: toastId });
+    }
+
+    setSelectedAccountIds(new Set());
+    loadAccounts();
+  };
+
   const handleGenerateBulkCharges = async (billingType: string) => {
     const ids = Array.from(selectedAccountIds);
     if (ids.length === 0) return;
@@ -408,6 +445,10 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
                     <Download className="h-4 w-4 mr-2" />
                     Gerar PIX
                   </Button>
+                  <Button size="sm" onClick={handleBulkDelete} variant="destructive" className="shadow-sm">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir Selecionadas
+                  </Button>
                 </div>
               </div>
             )}
@@ -420,6 +461,7 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
+                  <TableHead className="w-[60px] text-center">Ações</TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Valor</TableHead>
@@ -438,6 +480,52 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
                         onCheckedChange={() => toggleSelect(account.id)}
                       />
                     </TableCell>
+                    <TableCell className="text-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0 rounded-xl hover:bg-primary/5 focus-visible:ring-0">
+                            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-[180px] rounded-xl border-slate-100 dark:border-slate-800 shadow-xl p-1">
+                          <DropdownMenuItem onClick={() => handleEditAccount(account)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                            <Edit className="h-3.5 w-3.5 text-primary" /> Editar
+                          </DropdownMenuItem>
+
+                          {account.status === AccountStatus.PENDING && (
+                            <>
+                              <DropdownMenuItem onClick={() => handleMarkAsReceived(account)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                                <Check className="h-3.5 w-3.5 text-green-600" /> Receber
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleCancelAccount(account)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                                <X className="h-3.5 w-3.5 text-orange-600" /> Cancelar
+                              </DropdownMenuItem>
+                            </>
+                          )}
+
+                          {account.status === AccountStatus.PENDING && !account.config?.invoice_url && (
+                            <>
+                              <DropdownMenuItem onClick={() => handleGenerateCharge(account, 'BOLETO')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                                <Download className="h-3.5 w-3.5 text-blue-600" /> Gerar Boleto
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleGenerateCharge(account, 'PIX')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                                <Download className="h-3.5 w-3.5 text-blue-600" /> Gerar PIX
+                              </DropdownMenuItem>
+                            </>
+                          )}
+
+                          {account.config?.invoice_url && (
+                            <DropdownMenuItem onClick={() => window.open(account.config.invoice_url, '_blank')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                              <Download className="h-3.5 w-3.5 text-blue-600" /> Ver Fatura
+                            </DropdownMenuItem>
+                          )}
+
+                          <DropdownMenuItem onClick={() => handleDeleteAccount(account)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg text-red-600">
+                            <Trash2 className="h-3.5 w-3.5" /> Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex flex-col">
                         <span>{account.description}</span>
@@ -451,37 +539,6 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
                             OS: {account.serviceOrderId}
                           </span>
                         )}
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex flex-wrap gap-2 mt-2 text-xs font-normal">
-                          <button onClick={() => handleEditAccount(account)} className="text-primary hover:underline">Editar</button>
-                          
-                          {account.status === AccountStatus.PENDING && (
-                            <>
-                              <span className="text-muted-foreground">|</span>
-                              <button onClick={() => handleMarkAsReceived(account)} className="text-green-600 hover:underline">Receber</button>
-                              <span className="text-muted-foreground">|</span>
-                              <button onClick={() => handleCancelAccount(account)} className="text-orange-600 hover:underline">Cancelar</button>
-                            </>
-                          )}
-                          
-                          {account.status === AccountStatus.PENDING && !account.config?.invoice_url && (
-                            <>
-                              <span className="text-muted-foreground">|</span>
-                              <button onClick={() => handleGenerateCharge(account, 'BOLETO')} className="text-blue-600 hover:underline">Gerar Boleto</button>
-                              <span className="text-muted-foreground">|</span>
-                              <button onClick={() => handleGenerateCharge(account, 'PIX')} className="text-blue-600 hover:underline">Gerar PIX</button>
-                            </>
-                          )}
-
-                          {account.config?.invoice_url && (
-                            <>
-                              <span className="text-muted-foreground">|</span>
-                              <button onClick={() => window.open(account.config.invoice_url, '_blank')} className="text-blue-600 hover:underline">Ver Fatura</button>
-                            </>
-                          )}
-                          
-                          <span className="text-muted-foreground">|</span>
-                          <button onClick={() => handleDeleteAccount(account)} className="text-red-600 hover:underline">Excluir</button>
-                        </div>
                       </div>
                     </TableCell>
                     <TableCell>{account.customerName || '-'}</TableCell>

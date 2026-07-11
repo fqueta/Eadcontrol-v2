@@ -8,7 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// Removido Select: campos de Funil/Etapa/Tag serão ocultados temporariamente
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useClientById, useClientsList } from '@/hooks/clients';
@@ -64,6 +66,7 @@ const proposalSchema = z.object({
   parcelada: z.enum(['s','n']).optional(),
   id_responsavel: z.string().optional(),
   orc_json: z.string().optional(),
+  separar_taxa: z.boolean().optional().default(false),
   desconto: z.string().optional(),
   inscricao: z.string().optional(),
   subtotal: z.string().optional(),
@@ -140,10 +143,11 @@ export default function ProposalsCreate() {
       parcelada: 'n',
       id_responsavel: user?.id || '',
       orc_json: '',
+      separar_taxa: false,
       desconto: '0,00',
       inscricao: '',
-    subtotal: '',
-    total: '',
+      subtotal: '',
+      total: '',
       validade: '14',
       // meta_texto_desconto removido
       id: '',
@@ -288,13 +292,9 @@ export default function ProposalsCreate() {
 
   /**
    * useEnrollmentSituationsList
-   * pt-BR: Busca a lista de situações de matrícula usando paginação fixa
-   *        conforme solicitado (GET /situacoes-matricula?page=1&per_page=1).
-   * en-US: Fetches enrollment situations list using fixed pagination
-   *        as requested (GET /situacoes-matricula?page=1&per_page=1).
    */
   const { data: enrollmentSituationsData, isLoading: isLoadingEnrollmentSituations } =
-    useEnrollmentSituationsList({ page: 1, per_page: 1 });
+    useEnrollmentSituationsList({ page: 1, per_page: 200 });
   const enrollmentSituations = useMemo(() => normalizeSituationsList(enrollmentSituationsData), [enrollmentSituationsData]);
 
   /**
@@ -333,31 +333,73 @@ export default function ProposalsCreate() {
   const parceladaWatched = form.watch('parcelada');
   const parcelasWatched = form.watch('parcelas');
   const totalWatched = form.watch('total');
+  
+  // As variáveis abaixo já são declaradas mais à frente no código original,
+  // vamos apenas pegá-las via form.getValues() no useEffect para evitar conflitos,
+  // ou renomeá-las aqui:
+  const subWatched = form.watch('subtotal');
+  const inscWatched = form.watch('inscricao');
+  const descWatched = form.watch('desconto');
+  const separarTaxaWatched = form.watch('separar_taxa');
+
+  // Sincroniza o toggle separar_taxa com o padrão do curso
+  useEffect(() => {
+    if (selectedCourse?.config?.cobrar_taxa_separadamente === 's') {
+      form.setValue('separar_taxa', true);
+    } else {
+      form.setValue('separar_taxa', false);
+    }
+  }, [selectedCourse, form]);
+
   useEffect(() => {
     if (parceladaWatched !== 's') {
       setGeneratedInvoices([]);
       return;
     }
     const totalNum = currencyRemoveMaskToNumber(totalWatched || '');
+    const inscNum = currencyRemoveMaskToNumber(inscWatched || '');
+    
+    // Se a taxa for separada e houver taxa de inscrição > 0
+    const shouldSeparate = separarTaxaWatched && inscNum > 0;
+    
+    // Montante a ser dividido nas parcelas
+    const installmentTotal = shouldSeparate ? (totalNum - inscNum) : totalNum;
     const qty = Math.max(1, Number(parcelasWatched || '12'));
+    
     if (!totalNum || !firstDueDate) {
       setGeneratedInvoices([]);
       return;
     }
-    const installmentValue = totalNum / qty;
+    
+    const installmentValue = installmentTotal / qty;
     const courseName = selectedCourse?.titulo || selectedCourse?.nome || 'Curso';
-    const invoices = Array.from({ length: qty }, (_, i) => {
+    
+    const invoices: Array<{amount: string; due_date: string; payment_method: string; description: string}> = [];
+    
+    if (shouldSeparate) {
+      invoices.push({
+        amount: inscNum.toFixed(2),
+        due_date: new Date(firstDueDate).toISOString().split('T')[0],
+        payment_method: invoicePaymentMethod,
+        description: `Taxa de Matrícula - ${courseName}`,
+      });
+    }
+    
+    for (let i = 0; i < qty; i++) {
       const due = new Date(firstDueDate);
+      // Se tivermos separado a taxa, podemos avançar 1 mês a primeira parcela?
+      // Ou a primeira parcela tem a mesma data da matrícula. Vamos usar a mesma regra original.
       due.setMonth(due.getMonth() + i);
-      return {
+      invoices.push({
         amount: installmentValue.toFixed(2),
         due_date: due.toISOString().split('T')[0],
         payment_method: invoicePaymentMethod,
         description: `Parcela ${i + 1}/${qty} - ${courseName}`,
-      };
-    });
+      });
+    }
+    
     setGeneratedInvoices(invoices);
-  }, [parceladaWatched, parcelasWatched, totalWatched, firstDueDate, invoicePaymentMethod, selectedCourse]);
+  }, [parceladaWatched, parcelasWatched, totalWatched, subWatched, inscWatched, descWatched, separarTaxaWatched, firstDueDate, invoicePaymentMethod, selectedCourse]);
 
   // Removido selectedModule: campo "Gerar Valor" foi retirado da UI
 
@@ -1051,6 +1093,28 @@ export default function ProposalsCreate() {
                   )}
                 />
               </div>
+
+              {/* Toggle de Separar Taxa de Inscrição (só exibido se houver taxa) */}
+              {currencyRemoveMaskToNumber(form.watch('inscricao') || '') > 0 && form.watch('parcelada') === 's' && (
+                <div className="flex items-center justify-between rounded-xl border p-4 mb-4 mt-6 bg-slate-50 dark:bg-slate-900/50">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-bold">Cobrar Taxa de Inscrição Separadamente?</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Isso irá gerar uma fatura separada apenas para a taxa de inscrição. O valor das demais parcelas será descontado dessa taxa.
+                    </p>
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="separar_taxa"
+                    render={({ field }) => (
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    )}
+                  />
+                </div>
+              )}
 
               {/* Seleção de Parcelas e geração de faturas quando parcelada = "s" */}
               {form.watch('parcelada') === 's' && (

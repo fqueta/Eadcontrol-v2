@@ -58,7 +58,7 @@ class FinancialAccount extends Model
         'config' => 'array',
         'excluido' => 'boolean',
         'deletado' => 'boolean',
-        'reg_excluido' => 'datetime',
+        'reg_excluido' => 'array',
         'reg_deletado' => 'datetime',
     ];
 
