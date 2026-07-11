@@ -29,7 +29,8 @@ import {
   CreateAccountPayableDto,
   PaymentMethod,
   RecurrenceType,
-  FinancialCategory
+  FinancialCategory,
+  TransactionType
 } from '../../types/financial';
 import { financialService } from '../../services/financialService';
 
@@ -73,7 +74,16 @@ export const AccountPayableForm: React.FC<AccountPayableFormProps> = ({
    * Atualiza as categorias locais quando as categorias prop mudam
    */
   useEffect(() => {
-    setLocalCategories(categories);
+    setLocalCategories(prev => {
+      const merged = [...categories];
+      // Mantém categorias locais recém-criadas que podem não ter vindo no refetch (ex: devido a paginação)
+      prev.forEach(localCat => {
+        if (!merged.some(c => c.id === localCat.id)) {
+          merged.push(localCat);
+        }
+      });
+      return merged;
+    });
   }, [categories]);
 
   /**
@@ -410,7 +420,7 @@ export const AccountPayableForm: React.FC<AccountPayableFormProps> = ({
         isOpen={showCategoryModal}
         onClose={() => setShowCategoryModal(false)}
         onCategoryCreated={handleCategoryCreated}
-        categoryType="expense"
+        categoryType={TransactionType.EXPENSE}
       />
     </Dialog>
   );

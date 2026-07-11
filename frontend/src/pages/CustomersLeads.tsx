@@ -1,15 +1,16 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Layers, Plus, NotebookPen, MoreHorizontal, Eye, MessageSquare, FileText } from 'lucide-react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Combobox, useComboboxOptions } from '@/components/ui/combobox';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useFunnelsList, useStagesList } from '@/hooks/funnels';
+import { useFunnelsList, useStagesList, useUpdateStage } from '@/hooks/funnels';
 import { useUsersList } from '@/hooks/users';
 import { useAuth } from '@/contexts/AuthContext';
 import { FunnelRecord, StageRecord } from '@/types/pipelines';
@@ -1740,7 +1741,7 @@ function EnrollmentKanbanCard({ enrollment, dense, funnelId, onDragStart, onDrag
    */
   const goToView = () => {
     const q = funnelId ? `?funnel=${encodeURIComponent(String(funnelId))}` : '';
-    navigate(`/admin/sales/proposals/view/${encodeURIComponent(String(enrollment.id))}${q}`, { state: { returnTo } });
+    navigate(`/admin/school/enrollments/view/${encodeURIComponent(String(enrollment.id))}${q}`);
   };
   /**
    * goToEdit
@@ -1826,11 +1827,39 @@ function StageColumnSales({
   // en-US: Navigates to the proposal creation page, carrying current location to enable going back.
   const navigate = useNavigate();
   const location = useLocation();
+  const updateStageMutation = useUpdateStage(funnelId);
+  const [editingStageId, setEditingStageId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const stageColor = stage.color || funnelColor || '#CBD5E1';
   const totalCards = enrollments.length;
   const totalAmount = enrollments.reduce((sum, e) => sum + getEnrollmentAmountBRL(e), 0);
   const totalAmountBRL = formatBRL(totalAmount);
+
+  const isEditing = editingStageId === String(stage.id);
+
+  function startEditing() {
+    setEditName(stage.name);
+    setEditingStageId(String(stage.id));
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
+  function saveEdit() {
+    const trimmed = editName.trim();
+    if (!trimmed || trimmed === stage.name) {
+      setEditingStageId(null);
+      return;
+    }
+    updateStageMutation.mutate(
+      { stageId: String(stage.id), data: { name: trimmed } },
+      { onSettled: () => setEditingStageId(null) }
+    );
+  }
+
+  function cancelEdit() {
+    setEditingStageId(null);
+  }
 
   /**
    * handleAddProposal
@@ -1856,12 +1885,32 @@ function StageColumnSales({
       <div className="sticky top-0 z-10 bg-background">
         <div className="h-1 w-full rounded-t-md" style={{ backgroundColor: stageColor }} />
         <div className="flex items-center justify-between p-3 border-b" style={{ borderBottomColor: '#E5E7EB' }}>
-          <div className="flex items-center gap-2">
-            <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: stageColor }} />
-            <span className="font-medium text-sm">{stage.name}</span>
-            <Badge variant="secondary">{totalCards}</Badge>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="inline-block h-3 w-3 rounded-sm shrink-0" style={{ backgroundColor: stageColor }} />
+            {isEditing ? (
+              <Input
+                ref={inputRef}
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onBlur={saveEdit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveEdit();
+                  if (e.key === 'Escape') cancelEdit();
+                }}
+                className="h-7 text-sm font-medium py-0 px-1.5 w-32"
+              />
+            ) : (
+              <span
+                className="font-medium text-sm cursor-pointer hover:bg-muted/60 px-1.5 py-0.5 rounded transition-colors"
+                onClick={startEditing}
+                title="Clique para editar o nome da etapa"
+              >
+                {stage.name}
+              </span>
+            )}
+            <Badge variant="secondary" className="shrink-0">{totalCards}</Badge>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <span className="text-xs text-muted-foreground">{totalAmountBRL}</span>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

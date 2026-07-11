@@ -131,11 +131,22 @@ class PermissionService
     private function get_url_by_route_exception($name = '')
     {
         
+        // dd($name);
         $map = [
             'api.situacoes-matricula.index' => true,
             'api.situacoes-matricula.show' => true,
+            'api.situacoes-matricula.store' => true,
+            'api.situacoes-matricula.update' => true,
+            'api.situacoes-matricula.destroy' => true,
             'api.categories.show' => true,
             'api.categories.index' => true,
+            'api.categories.store' => true,
+            'api.categories.update' => true,
+            'api.categories.destroy' => true,
+            'api.financial.categories.index' => true,
+            'api.financial.categories.store' => true,
+            'api.financial.categories.update' => true,
+            'api.financial.categories.destroy' => true,
         ];
 
         return $map[$name] ?? false;

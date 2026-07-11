@@ -31,9 +31,10 @@ import {
   FinancialCategory,
   TransactionType
 } from '../../types/financial';
-import { financialService } from '../../services/financialService';
+import { financialService, categoriesService } from '../../services/financialService';
 import QuickCreateCategoryModal from './QuickCreateCategoryModal';
 import { useClientsList } from '../../hooks/clients';
+import { useQuery } from '@tanstack/react-query';
 import { Combobox, useComboboxOptions } from '../ui/combobox';
 import { currencyApplyMask, currencyRemoveMaskToNumber } from '../../lib/masks/currency';
 
@@ -75,6 +76,34 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [localCategories, setLocalCategories] = useState<FinancialCategory[]>(categories);
+
+  const { data: fetchedCategories } = useQuery({
+    queryKey: ['financialCategories', 'all'],
+    queryFn: () => categoriesService.getAll({ per_page: 200 }) as any,
+    enabled: categories.length === 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (fetchedCategories) {
+      const list = Array.isArray(fetchedCategories)
+        ? fetchedCategories
+        : fetchedCategories.data && Array.isArray(fetchedCategories.data)
+          ? fetchedCategories.data
+          : [];
+      if (list.length > 0) {
+        setLocalCategories(prev => {
+          const merged = [...list];
+          prev.forEach(localCat => {
+            if (!merged.some(c => c.id === localCat.id)) {
+              merged.push(localCat);
+            }
+          });
+          return merged;
+        });
+      }
+    }
+  }, [fetchedCategories]);
 
   const { data: clientsData } = useClientsList({ page: 1, per_page: 200 });
   const clients = useMemo(() =>
@@ -131,7 +160,7 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
       setFormattedAmount('R$ 0,00');
     }
     setErrors({});
-  }, [account, isOpen, clientId, clients]);
+  }, [account, isOpen, clientId]); // Remove clients from dependencies to prevent form reset
 
   /**
    * Atualiza categorias locais quando as props mudam
@@ -165,10 +194,6 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
 
     if (!formData.dueDate) {
       newErrors.dueDate = 'Data de vencimento é obrigatória';
-    }
-
-    if (!formData.category) {
-      newErrors.category = 'Categoria é obrigatória';
     }
 
     if (formData.installments && formData.installments < 1) {
@@ -250,7 +275,9 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
   /**
    * Filtra categorias de receita
    */
-  const incomeCategories = localCategories.filter(cat => cat.type === TransactionType.INCOME && cat.isActive);
+  const incomeCategories = localCategories.filter(cat =>
+    cat.isActive && (cat.type === TransactionType.INCOME || cat.id === formData.category)
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

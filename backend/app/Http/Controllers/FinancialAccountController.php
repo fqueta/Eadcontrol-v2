@@ -734,7 +734,7 @@ class FinancialAccountController extends Controller
     {
         $rules = [
             'amount' => 'required|numeric|min:0.01|max:999999999.99',
-            'category' => 'required|exists:categories,id',
+            'category' => 'nullable|exists:categories,id',
             'customerName' => 'nullable|string|max:255',
             'description' => 'required|string|min:3|max:500',
             // 'dueDate' => 'required|date|after_or_equal:today',
@@ -742,7 +742,7 @@ class FinancialAccountController extends Controller
             'installments' => 'nullable|integer|min:1|max:999',
             'invoiceNumber' => 'nullable|string|max:100',
             'notes' => 'nullable|string|max:1000',
-            'paymentMethod' => 'required|string|in:cash,credit_card,debit_card,bank_transfer,pix,check,other',
+            'paymentMethod' => 'required|string|in:cash,credit_card,debit_card,bank_transfer,pix,check,boleto,other',
             'recurrence' => 'nullable|string|in:none,daily,weekly,monthly,yearly',
             'serviceOrderId' => 'nullable|exists:service_orders,id',
             'type' => 'nullable|string|in:receivable,payable',
@@ -761,10 +761,10 @@ class FinancialAccountController extends Controller
         // Para updates, tornar campos opcionais
         if ($isUpdate) {
             $rules['amount'] = 'sometimes|required|numeric|min:0.01|max:999999999.99';
-            $rules['category'] = 'sometimes|required|exists:categories,id';
+            $rules['category'] = 'sometimes|nullable|exists:categories,id';
             $rules['description'] = 'sometimes|required|string|min:3|max:500';
             $rules['dueDate'] = 'sometimes|required|date';
-            $rules['paymentMethod'] = 'sometimes|required|string|in:cash,credit_card,debit_card,bank_transfer,pix,check,other';
+            $rules['paymentMethod'] = 'sometimes|required|string|in:cash,credit_card,debit_card,bank_transfer,pix,check,boleto,other';
         }
 
         return $rules;
@@ -780,7 +780,6 @@ class FinancialAccountController extends Controller
             'amount.numeric' => 'O valor deve ser um número',
             'amount.min' => 'O valor deve ser maior que zero',
             'amount.max' => 'O valor não pode exceder R$ 999.999.999,99',
-            'category.required' => 'A categoria é obrigatória',
             'category.exists' => 'A categoria selecionada é inválida',
             'description.required' => 'A descrição é obrigatória',
             'description.min' => 'A descrição deve ter pelo menos 3 caracteres',
@@ -868,12 +867,7 @@ class FinancialAccountController extends Controller
                 $validator->errors()->add('paidAmount', 'O valor pago é obrigatório quando há data de pagamento');
             }
 
-            // Validação customizada: parcelas só fazem sentido para recorrência mensal ou anual
-            if ($request->filled('installments') && $request->installments > 1) {
-                if (!in_array($request->recurrence, ['monthly', 'yearly'])) {
-                    $validator->errors()->add('installments', 'Parcelas só são permitidas para recorrência mensal ou anual');
-                }
-            }
+
         });
 
         if ($validator->fails()) {

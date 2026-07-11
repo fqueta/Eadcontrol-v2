@@ -232,8 +232,8 @@ export const categoriesService = {
   /**
    * Lista todas as categorias financeiras
    */
-  async getAll(): Promise<FinancialCategory[]> {
-    const response = await api.get('/financial/categories');
+  async getAll(params?: Record<string, any>): Promise<FinancialCategory[]> {
+    const response = await api.get('/financial/categories', params);
     return response.data;
   },
 

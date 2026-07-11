@@ -132,7 +132,11 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
    * Formata data
    */
   const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    if (!dateString) return '-';
+    const datePart = dateString.split('T')[0].split(' ')[0];
+    const [y, m, d] = datePart.split('-');
+    if (!y || !m || !d) return dateString;
+    return `${d}/${m}/${y}`;
   };
 
   /**

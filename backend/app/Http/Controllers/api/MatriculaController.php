@@ -767,6 +767,20 @@ class MatriculaController extends Controller
         // Pós-validação removida: validação via regra exists já garante integridade
         $matricula->fill($validated);
 
+        // Quando o card é movido para o funil "Matriculado", auto-define situacao_id como "Matriculado"
+        if ($matricula->isDirty('stage_id') && !empty($matricula->stage_id)) {
+            $stage = \App\Models\Stage::with('funnel')->find($matricula->stage_id);
+            if ($stage && $stage->funnel && strtolower($stage->funnel->name) === 'matriculado') {
+                $matriculadoSit = DB::table('posts')
+                    ->where('post_type', 'situacao_matricula')
+                    ->where('post_name', 'like', 'mat%')
+                    ->first();
+                if ($matriculadoSit && $matricula->situacao_id != $matriculadoSit->ID) {
+                    $matricula->situacao_id = (int) $matriculadoSit->ID;
+                }
+            }
+        }
+
         // Verifica mudança de situação para "Matriculado" (post_name inicia com 'mat') e grava data de início da matrícula
         if ($matricula->isDirty('situacao_id') && !empty($matricula->situacao_id)) {
             $newSituacaoName = DB::table('posts')->where('ID', $matricula->situacao_id)->value('post_name');

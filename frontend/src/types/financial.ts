@@ -265,7 +265,7 @@ export interface CreateAccountReceivableDto {
   description: string;
   amount: number;
   dueDate: string;
-  category: string;
+  category?: string;
   clientId?: string;
   customerId?: string;
   customerName?: string;

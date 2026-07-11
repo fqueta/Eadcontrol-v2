@@ -325,14 +325,17 @@ export default function ClientCreate() {
     createClientMutation.mutate(
       clientData as CreateClientInput,
       {
-        onSuccess: () => {
+        onSuccess: (created: any) => {
           toast({
             title: "Cliente criado",
             description: `Cliente ${data.name} criado com sucesso`,
           });
           const shouldRedirect = options?.redirectAfterSave ?? true;
+          const clientId = created?.id || created?.data?.id || '';
           if (shouldRedirect) {
             navigate('/admin/clients');
+          } else if (clientId) {
+            navigate(`/admin/clients/${clientId}/edit`);
           }
         },
         onError: (error: any) => {

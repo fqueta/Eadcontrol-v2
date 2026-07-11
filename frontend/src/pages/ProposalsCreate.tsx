@@ -20,12 +20,20 @@ import { useCreateEnrollment } from '@/hooks/enrollments';
 import { useEnrollmentSituationsList } from '@/hooks/enrollmentSituations';
 import { useApiOptions } from '@/hooks/useApiOptions';
 import { useFunnelsList, useStagesList } from '@/hooks/funnels';
+import { clientsService } from '@/services/clientsService';
 import { coursesService } from '@/services/coursesService';
 import { turmasService } from '@/services/turmasService';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Pencil, Filter } from 'lucide-react';
+import { ArrowLeft, Pencil, Filter, Plus, Loader2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Combobox, useComboboxOptions } from '@/components/ui/combobox';
 // SelectGeraValor removido: campo "Gerar Valor" não será exibido
 import { currencyApplyMask, currencyRemoveMaskToNumber, currencyRemoveMaskToString } from '@/lib/masks/currency';
@@ -110,6 +118,10 @@ export default function ProposalsCreate() {
   // Responsible: visibility toggle and search term
   const [showResponsible, setShowResponsible] = useState(false);
   const [responsibleSearch, setResponsibleSearch] = useState('');
+  const [newClientOpen, setNewClientOpen] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientEmail, setNewClientEmail] = useState('');
+  const [isCreatingClient, setIsCreatingClient] = useState(false);
   
   /**
    * finishAfterSaveRef
@@ -214,7 +226,7 @@ export default function ProposalsCreate() {
 
   const clientsList = useMemo(() => (clientsData?.data || clientsData?.items || []), [clientsData]);
   // Mapeia clientes para opções do Combobox, incluindo descrição (email • telefone)
-  const clientOptions = useComboboxOptions<any>(
+  const clientOptionsRaw = useComboboxOptions<any>(
     clientsList,
     'id',
     'name',
@@ -225,6 +237,17 @@ export default function ProposalsCreate() {
       return [email, phone].filter(Boolean).join(' • ');
     }
   );
+  const clientOptions = useMemo(() => {
+    const newOption = { value: '__new__', label: 'Criar cadastro de cliente' };
+    return [newOption, ...clientOptionsRaw];
+  }, [clientOptionsRaw]);
+  const handleClientChange = (value: string) => {
+    if (value === '__new__') {
+      setNewClientOpen(true);
+    } else {
+      form.setValue('id_cliente', value);
+    }
+  };
   const consultantsList = useMemo(() => (consultantsData?.data || consultantsData?.items || []), [consultantsData]);
   const consultantOptions = useComboboxOptions<any>(
     consultantsList,
@@ -760,7 +783,7 @@ export default function ProposalsCreate() {
                         <Combobox
                           options={clientOptions}
                           value={field.value}
-                          onValueChange={field.onChange}
+                          onValueChange={handleClientChange}
                           placeholder="Selecione o cliente"
                           searchPlaceholder="Pesquisar cliente pelo nome..."
                           emptyText={clientOptions.length === 0 ? 'Nenhum cliente encontrado' : 'Digite para filtrar'}
@@ -1249,6 +1272,72 @@ export default function ProposalsCreate() {
 
               {/* Espaço para o rodapé fixo não cobrir o conteúdo */}
               <div className="h-16" />
+
+              {/* Dialog rápido de criação de cliente */}
+              <Dialog open={newClientOpen} onOpenChange={setNewClientOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Novo Cliente</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Nome *</Label>
+                      <Input
+                        value={newClientName}
+                        onChange={(e) => setNewClientName(e.target.value)}
+                        placeholder="Nome do cliente"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>E-mail</Label>
+                      <Input
+                        value={newClientEmail}
+                        onChange={(e) => setNewClientEmail(e.target.value)}
+                        placeholder="email@exemplo.com"
+                        type="email"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setNewClientOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={async () => {
+                        if (!newClientName.trim()) return;
+                        setIsCreatingClient(true);
+                        try {
+                          const created = await clientsService.createClient({
+                            name: newClientName.trim(),
+                            email: newClientEmail.trim() || '',
+                            tipo_pessoa: 'pf',
+                            config: {} as any,
+                            genero: 'ni',
+                            status: 'pre_registred',
+                          });
+                          form.setValue('id_cliente', String(created.id));
+                          setNewClientOpen(false);
+                          setNewClientName('');
+                          setNewClientEmail('');
+                          queryClient.invalidateQueries({ queryKey: ['clients'] });
+                        } catch (err: any) {
+                          toast({
+                            title: 'Erro',
+                            description: err?.response?.data?.message || 'Erro ao criar cliente',
+                            variant: 'destructive',
+                          });
+                        } finally {
+                          setIsCreatingClient(false);
+                        }
+                      }}
+                      disabled={!newClientName.trim() || isCreatingClient}
+                    >
+                      {isCreatingClient && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Salvar
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </form>
           </Form>
         </CardContent>
