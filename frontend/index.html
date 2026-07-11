@@ -81,17 +81,25 @@
       function updateBranding() {
         try {
           var win = window;
-          var logo = localStorage.getItem('app_logo_url') || '';
-          var favicon = localStorage.getItem('app_favicon_url') || '';
-          var social = localStorage.getItem('app_social_image_url') || '';
+          // Função auxiliar para forçar HTTPS caso a página esteja em HTTPS
+          var ensureHttps = function(url) {
+            if (url && window.location.protocol === 'https:' && url.indexOf('http://') === 0) {
+              return url.replace('http://', 'https://');
+            }
+            return url;
+          };
+
+          var logo = ensureHttps(localStorage.getItem('app_logo_url')) || '';
+          var favicon = ensureHttps(localStorage.getItem('app_favicon_url')) || '';
+          var social = ensureHttps(localStorage.getItem('app_social_image_url')) || '';
           var instName = (localStorage.getItem('app_institution_name') || localStorage.getItem('site_name') || localStorage.getItem('app_name') || '');
           var slogan = localStorage.getItem('app_institution_slogan') || '';
           var descr = localStorage.getItem('app_institution_description') || '';
 
           // Fallback para variáveis globais se localStorage estiver vazio
-          if (!logo && typeof win.__APP_LOGO_URL__ === 'string') logo = win.__APP_LOGO_URL__;
-          if (!favicon && typeof win.__APP_FAVICON_URL__ === 'string') favicon = win.__APP_FAVICON_URL__;
-          if (!social && typeof win.__APP_SOCIAL_IMAGE_URL__ === 'string') social = win.__APP_SOCIAL_IMAGE_URL__;
+          if (!logo && typeof win.__APP_LOGO_URL__ === 'string') logo = ensureHttps(win.__APP_LOGO_URL__);
+          if (!favicon && typeof win.__APP_FAVICON_URL__ === 'string') favicon = ensureHttps(win.__APP_FAVICON_URL__);
+          if (!social && typeof win.__APP_SOCIAL_IMAGE_URL__ === 'string') social = ensureHttps(win.__APP_SOCIAL_IMAGE_URL__);
           if (!instName) {
             if (typeof win.__APP_INSTITUTION_NAME__ === 'string') instName = win.__APP_INSTITUTION_NAME__;
             else if (typeof win.__APP_SITE_NAME__ === 'string') instName = win.__APP_SITE_NAME__;
@@ -314,7 +322,11 @@
               };
               for (var k in keysMap) {
                 if (dataObj[k] !== undefined) {
-                  localStorage.setItem(keysMap[k], String(dataObj[k]).trim());
+                  var valStr = String(dataObj[k]).trim();
+                  if (valStr && window.location.protocol === 'https:' && valStr.indexOf('http://') === 0) {
+                    valStr = valStr.replace('http://', 'https://');
+                  }
+                  localStorage.setItem(keysMap[k], valStr);
                 }
               }
 
