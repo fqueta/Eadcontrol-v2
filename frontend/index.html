@@ -90,7 +90,7 @@
           };
 
           var logo = ensureHttps(localStorage.getItem('app_logo_url')) || '';
-          var favicon = ensureHttps(localStorage.getItem('app_favicon_url')) || '';
+          var favicon = ensureHttps(localStorage.getItem('app_favicon_url')) || logo || '';
           var social = ensureHttps(localStorage.getItem('app_social_image_url')) || '';
           var instName = (localStorage.getItem('app_institution_name') || localStorage.getItem('site_name') || localStorage.getItem('app_name') || '');
           var slogan = localStorage.getItem('app_institution_slogan') || '';
@@ -119,9 +119,9 @@
             
             var newLink = document.createElement('link');
             newLink.id = 'app-favicon';
-            newLink.rel = 'icon';
+            newLink.rel = 'shortcut icon';
             newLink.type = type;
-            newLink.href = favicon;
+            newLink.href = favicon + (favicon.indexOf('?') === -1 ? '?' : '&') + 't=' + new Date().getTime();
             
             if (oldLink) {
               oldLink.parentNode.removeChild(oldLink);
