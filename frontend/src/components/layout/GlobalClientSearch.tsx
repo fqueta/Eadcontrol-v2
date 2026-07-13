@@ -10,7 +10,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Search,
@@ -347,7 +346,7 @@ export function GlobalClientSearch({
 
   function handleSelectCourse(course: CourseRecord) {
     setOpen(false);
-    navigate(`/admin/school/courses/${course.id}`);
+    navigate(`/admin/school/courses/${course.id}/edit?tab=info`);
   }
 
   function handleSelectFromHistory(entry: SearchHistoryEntry) {
@@ -358,7 +357,7 @@ export function GlobalClientSearch({
   // ── Determinar o que renderizar ───────────────────────────────────────────
   const showResults = searchTerm.trim().length >= 2;
   const showHistory = !showResults && history.length > 0;
-  const showEmpty = showResults && hasSearched && !isLoading && results.length === 0;
+  const showEmpty = showResults && hasSearched && !isLoading && clientResults.length === 0 && enrollmentResults.length === 0 && courseResults.length === 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
@@ -385,7 +384,6 @@ export function GlobalClientSearch({
               setSearchTerm(e.target.value);
               setActiveIndex(-1);
             }}
-            onKeyDown={handleKeyDown}
             placeholder="Buscar cliente, matrícula ou curso por nome, email, CPF..."
             className="border-0 shadow-none focus-visible:ring-0 h-10 text-base placeholder:text-muted-foreground/60"
           />
