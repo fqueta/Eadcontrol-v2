@@ -30,7 +30,11 @@ import {
 } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { clientsService } from "@/services/clientsService";
+import { enrollmentsService } from "@/services/enrollmentsService";
+import { coursesService } from "@/services/coursesService";
 import { ClientRecord } from "@/types/clients";
+import { EnrollmentRecord } from "@/types/enrollments";
+import type { CourseRecord } from "@/types/courses";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -173,7 +177,9 @@ export function GlobalClientSearch({
   // Busca
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 300);
-  const [results, setResults] = useState<ClientRecord[]>([]);
+  const [clientResults, setClientResults] = useState<ClientRecord[]>([]);
+  const [enrollmentResults, setEnrollmentResults] = useState<EnrollmentRecord[]>([]);
+  const [courseResults, setCourseResults] = useState<CourseRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
@@ -201,7 +207,9 @@ export function GlobalClientSearch({
   useEffect(() => {
     if (isOpen) {
       setSearchTerm("");
-      setResults([]);
+      setClientResults([]);
+      setEnrollmentResults([]);
+      setCourseResults([]);
       setHasSearched(false);
       setActiveIndex(-1);
       setHistory(loadHistory());
@@ -213,26 +221,35 @@ export function GlobalClientSearch({
   // ── Buscar na API ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!debouncedSearch || debouncedSearch.trim().length < 2) {
-      setResults([]);
+      setClientResults([]);
+      setEnrollmentResults([]);
+      setCourseResults([]);
       setHasSearched(false);
       return;
     }
 
     let cancelled = false;
     setIsLoading(true);
+    setActiveIndex(-1);
 
-    clientsService
-      .listClients({ search: debouncedSearch.trim(), per_page: 10 })
-      .then((res) => {
+    Promise.all([
+      clientsService.listClients({ search: debouncedSearch.trim(), per_page: 5 }).catch(() => ({ data: [] })),
+      enrollmentsService.listEnrollments({ search: debouncedSearch.trim(), per_page: 5 }).catch(() => ({ data: [] })),
+      coursesService.listCourses({ search: debouncedSearch.trim(), per_page: 5 }).catch(() => ({ data: [] })),
+    ])
+      .then(([clientsRes, enrollmentsRes, coursesRes]) => {
         if (!cancelled) {
-          setResults(res.data || []);
+          setClientResults((clientsRes as any).data || []);
+          setEnrollmentResults((enrollmentsRes as any).data || []);
+          setCourseResults((coursesRes as any).data || []);
           setHasSearched(true);
-          setActiveIndex(-1);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setResults([]);
+          setClientResults([]);
+          setEnrollmentResults([]);
+          setCourseResults([]);
           setHasSearched(true);
         }
       })
@@ -246,7 +263,9 @@ export function GlobalClientSearch({
   }, [debouncedSearch]);
 
   // ── Navegação por teclado ─────────────────────────────────────────────────
-  const totalItems = searchTerm.trim().length >= 2 ? results.length : history.length;
+  const totalItems = searchTerm.trim().length >= 2
+    ? clientResults.length + enrollmentResults.length + courseResults.length
+    : history.length;
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "ArrowDown") {
@@ -257,8 +276,16 @@ export function GlobalClientSearch({
       setActiveIndex((prev) => (prev > 0 ? prev - 1 : totalItems - 1));
     } else if (e.key === "Enter" && activeIndex >= 0) {
       e.preventDefault();
-      if (searchTerm.trim().length >= 2 && results[activeIndex]) {
-        handleSelectClient(results[activeIndex]);
+      const clientCount = clientResults.length;
+      const enrollmentCount = enrollmentResults.length;
+      if (searchTerm.trim().length >= 2) {
+        if (activeIndex < clientCount) {
+          handleSelectClient(clientResults[activeIndex]);
+        } else if (activeIndex < clientCount + enrollmentCount) {
+          handleSelectEnrollment(enrollmentResults[activeIndex - clientCount]);
+        } else {
+          handleSelectCourse(courseResults[activeIndex - clientCount - enrollmentCount]);
+        }
       } else if (history[activeIndex]) {
         handleSelectFromHistory(history[activeIndex]);
       }
@@ -313,6 +340,16 @@ export function GlobalClientSearch({
     navigate(`/admin/clients/${clientId}/edit`);
   }
 
+  function handleSelectEnrollment(enrollment: EnrollmentRecord) {
+    setOpen(false);
+    navigate(`/admin/school/enrollments/view/${enrollment.id}`);
+  }
+
+  function handleSelectCourse(course: CourseRecord) {
+    setOpen(false);
+    navigate(`/admin/school/courses/${course.id}`);
+  }
+
   function handleSelectFromHistory(entry: SearchHistoryEntry) {
     setOpen(false);
     navigate(`/admin/clients/${entry.id}/view`);
@@ -327,7 +364,7 @@ export function GlobalClientSearch({
     <Dialog open={isOpen} onOpenChange={setOpen}>
       <DialogContent
         className={cn(
-          "sm:max-w-[800px] p-0 gap-0 overflow-hidden",
+          "sm:max-w-[1100px] p-0 gap-0 overflow-hidden",
           "border-border/50 shadow-2xl",
           "[&>button]:!hidden" // Força a ocultação do X padrão do Dialog
         )}
@@ -349,7 +386,7 @@ export function GlobalClientSearch({
               setActiveIndex(-1);
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Buscar cliente por nome, email, CPF, celular ou ID..."
+            placeholder="Buscar cliente, matrícula ou curso por nome, email, CPF..."
             className="border-0 shadow-none focus-visible:ring-0 h-10 text-base placeholder:text-muted-foreground/60"
           />
           {searchTerm && (
@@ -460,90 +497,217 @@ export function GlobalClientSearch({
           )}
 
           {/* Resultados da Busca */}
-          {showResults && !isLoading && results.length > 0 && (
+          {showResults && !isLoading && (clientResults.length > 0 || enrollmentResults.length > 0 || courseResults.length > 0) && (
             <div className="py-2">
-              <div className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground">
-                <Users className="h-4 w-4" />
-                {results.length} resultado{results.length !== 1 ? "s" : ""} encontrado{results.length !== 1 ? "s" : ""}
-              </div>
-              <Separator className="mb-1 opacity-50" />
-              {results.map((client, idx) => (
-                <div
-                  key={client.id}
-                  data-search-item
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 cursor-pointer transition-all group",
-                    "hover:bg-accent/50",
-                    activeIndex === idx && "bg-accent"
-                  )}
-                  onClick={() => handleSelectClient(client)}
-                >
-                  <Avatar className="h-10 w-10 shrink-0 ring-2 ring-primary/10 transition-all group-hover:ring-primary/30">
-                    <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary text-sm font-bold">
-                      {getInitials(client.name)}
-                    </AvatarFallback>
-                  </Avatar>
+              {/* Clientes */}
+              {clientResults.length > 0 && (
+                <>
+                  <div className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    Clientes
+                  </div>
+                  <Separator className="mb-1 opacity-50" />
+                  {clientResults.map((client, idx) => (
+                    <div
+                      key={client.id}
+                      data-search-item
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 cursor-pointer transition-all group",
+                        "hover:bg-accent/50",
+                        activeIndex === idx && "bg-accent"
+                      )}
+                      onClick={() => handleSelectClient(client)}
+                    >
+                      <Avatar className="h-10 w-10 shrink-0 ring-2 ring-primary/10 transition-all group-hover:ring-primary/30">
+                        <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary text-sm font-bold">
+                          {getInitials(client.name)}
+                        </AvatarFallback>
+                      </Avatar>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm truncate">
-                        <HighlightText text={client.name} query={searchTerm} />
-                      </span>
-                      <Badge
-                        variant={client.status === "actived" ? "default" : "secondary"}
-                        className="text-[10px] px-1.5 py-0 h-4 shrink-0"
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm truncate">
+                            <HighlightText text={client.name} query={searchTerm} />
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          {client.email && (
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+                              <Mail className="h-3 w-3 shrink-0" />
+                              <HighlightText text={client.email} query={searchTerm} />
+                            </span>
+                          )}
+                          {(client.cpf || client.cnpj) && (
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                              <FileText className="h-3 w-3" />
+                              <HighlightText text={client.cpf ? formatCpf(client.cpf) : client.cnpj} query={searchTerm} />
+                            </span>
+                          )}
+                        </div>
+                        {(client.config?.celular || client.celular) && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                            <Phone className="h-3 w-3 shrink-0" />
+                            <HighlightText text={client.config?.celular || client.celular} query={searchTerm} />
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Ações rápidas */}
+                      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Ver perfil"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectClient(client);
+                          }}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Editar cliente"
+                          onClick={(e) => handleEditClient(e, client.id)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Matrículas */}
+              {enrollmentResults.length > 0 && (
+                <>
+                  <div className={cn("flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground", clientResults.length > 0 && "mt-2")}>
+                    <FileText className="h-4 w-4" />
+                    Matrículas
+                  </div>
+                  <Separator className="mb-1 opacity-50" />
+                  {enrollmentResults.map((enrollment, idx) => {
+                    const globalIdx = clientResults.length + idx;
+                    return (
+                      <div
+                        key={enrollment.id}
+                        data-search-item
+                        className={cn(
+                          "flex items-center gap-3 px-4 py-3 cursor-pointer transition-all group",
+                          "hover:bg-accent/50",
+                          activeIndex === globalIdx && "bg-accent"
+                        )}
+                        onClick={() => handleSelectEnrollment(enrollment)}
                       >
-                        {client.status === "actived" ? "Ativo" : client.status === "inactived" ? "Inativo" : "Pré-cadastro"}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-3 mt-0.5">
-                      {client.email && (
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground truncate">
-                          <Mail className="h-3 w-3 shrink-0" />
-                          <HighlightText text={client.email} query={searchTerm} />
-                        </span>
-                      )}
-                      {(client.cpf || client.cnpj) && (
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                          <FileText className="h-3 w-3" />
-                          <HighlightText text={client.cpf ? formatCpf(client.cpf) : client.cnpj} query={searchTerm} />
-                        </span>
-                      )}
-                    </div>
-                    {(client.config?.celular || client.celular) && (
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                        <Phone className="h-3 w-3 shrink-0" />
-                        <HighlightText text={client.config?.celular || client.celular} query={searchTerm} />
-                      </span>
-                    )}
-                  </div>
+                        <Avatar className="h-10 w-10 shrink-0 ring-2 ring-primary/10 transition-all group-hover:ring-primary/30">
+                          <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary text-sm font-bold">
+                            {getInitials(enrollment.cliente_nome || enrollment.id)}
+                          </AvatarFallback>
+                        </Avatar>
 
-                  {/* Ações rápidas */}
-                  <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      title="Ver perfil"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelectClient(client);
-                      }}
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      title="Editar cliente"
-                      onClick={(e) => handleEditClient(e, client.id)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm truncate">
+                              <HighlightText text={enrollment.cliente_nome || enrollment.id} query={searchTerm} />
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                            {enrollment.curso_nome && (
+                              <span className="truncate">
+                                <HighlightText text={enrollment.curso_nome} query={searchTerm} />
+                              </span>
+                            )}
+                            <span className="shrink-0">#{enrollment.id}</span>
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Ver matrícula"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectEnrollment(enrollment);
+                            }}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+
+              {/* Cursos */}
+              {courseResults.length > 0 && (
+                <>
+                  <div className={cn("flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground", (clientResults.length > 0 || enrollmentResults.length > 0) && "mt-2")}>
+                    <FileText className="h-4 w-4" />
+                    Cursos
                   </div>
-                </div>
-              ))}
+                  <Separator className="mb-1 opacity-50" />
+                  {courseResults.map((course, idx) => {
+                    const globalIdx = clientResults.length + enrollmentResults.length + idx;
+                    return (
+                      <div
+                        key={course.id}
+                        data-search-item
+                        className={cn(
+                          "flex items-center gap-3 px-4 py-3 cursor-pointer transition-all group",
+                          "hover:bg-accent/50",
+                          activeIndex === globalIdx && "bg-accent"
+                        )}
+                        onClick={() => handleSelectCourse(course)}
+                      >
+                        <Avatar className="h-10 w-10 shrink-0 ring-2 ring-primary/10 transition-all group-hover:ring-primary/30">
+                          <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary text-sm font-bold">
+                            {getInitials(course.nome)}
+                          </AvatarFallback>
+                        </Avatar>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm truncate">
+                              <HighlightText text={course.nome} query={searchTerm} />
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                            {course.titulo && (
+                              <span className="truncate">
+                                <HighlightText text={course.titulo} query={searchTerm} />
+                              </span>
+                            )}
+                            {course.valor && (
+                              <span className="shrink-0">{course.valor}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Ver curso"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectCourse(course);
+                            }}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
             </div>
           )}
 
@@ -569,10 +733,10 @@ export function GlobalClientSearch({
                 <User className="h-6 w-6 text-muted-foreground" />
               </div>
               <p className="text-sm font-medium text-muted-foreground">
-                Nenhum cliente encontrado
+                Nenhum resultado encontrado
               </p>
               <p className="text-xs text-muted-foreground/60 mt-1">
-                Tente buscar por nome, email, CPF ou celular
+                Tente buscar por nome, email, CPF, matrícula ou curso
               </p>
             </div>
           )}
@@ -584,7 +748,7 @@ export function GlobalClientSearch({
                 <Search className="h-6 w-6 text-primary" />
               </div>
               <p className="text-sm font-medium text-foreground">
-                Pesquise clientes rapidamente
+                Pesquise clientes, matrículas e cursos
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Digite pelo menos 2 caracteres para buscar

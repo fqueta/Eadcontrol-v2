@@ -275,6 +275,7 @@ export interface CreateAccountReceivableDto {
   notes?: string;
   recurrence?: RecurrenceType;
   installments?: number;
+  enrollmentId?: string;
 }
 
 export interface CreateCashFlowEntryDto {

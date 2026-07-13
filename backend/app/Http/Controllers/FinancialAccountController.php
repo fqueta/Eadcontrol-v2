@@ -656,6 +656,13 @@ class FinancialAccountController extends Controller
             $mappedData['client_id'] = $requestData['clientId'];
         }
 
+        // Armazenar matricula_id no config JSON
+        if (isset($requestData['enrollmentId'])) {
+            $config = isset($mappedData['config']) ? $mappedData['config'] : [];
+            $config['matricula_id'] = $requestData['enrollmentId'];
+            $mappedData['config'] = $config;
+        }
+
         return $mappedData;
     }
 
@@ -755,7 +762,8 @@ class FinancialAccountController extends Controller
             'clientId' => 'nullable|exists:users,id,permission_id,7',
             'contractNumber' => 'nullable|string|max:100',
             'discountAmount' => 'nullable|numeric|min:0|max:999999999.99',
-            'interestAmount' => 'nullable|numeric|min:0|max:999999999.99'
+            'interestAmount' => 'nullable|numeric|min:0|max:999999999.99',
+            'enrollmentId' => 'nullable|string|max:100'
         ];
 
         // Para updates, tornar campos opcionais

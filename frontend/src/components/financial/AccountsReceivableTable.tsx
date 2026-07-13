@@ -613,6 +613,7 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
         account={selectedAccount}
         categories={categories}
         clientId={clientId}
+        enrollmentId={enrollmentId}
       />
     </Card>
   );

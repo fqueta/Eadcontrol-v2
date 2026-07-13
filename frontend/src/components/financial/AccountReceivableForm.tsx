@@ -34,6 +34,7 @@ import {
 import { financialService, categoriesService } from '../../services/financialService';
 import QuickCreateCategoryModal from './QuickCreateCategoryModal';
 import { useClientsList } from '../../hooks/clients';
+import { useEnrollmentsList } from '../../hooks/enrollments';
 import { useQuery } from '@tanstack/react-query';
 import { Combobox, useComboboxOptions } from '../ui/combobox';
 import { currencyApplyMask, currencyRemoveMaskToNumber } from '../../lib/masks/currency';
@@ -45,6 +46,7 @@ interface AccountReceivableFormProps {
   account?: AccountReceivable;
   categories: FinancialCategory[];
   clientId?: string;
+  enrollmentId?: string;
 }
 
 /**
@@ -56,7 +58,8 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
   onSuccess,
   account,
   categories,
-  clientId
+  clientId,
+  enrollmentId
 }) => {
   const [formData, setFormData] = useState<CreateAccountReceivableDto>({
     description: '',
@@ -69,7 +72,8 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
     paymentMethod: PaymentMethod.CASH,
     notes: '',
     recurrence: RecurrenceType.NONE,
-    installments: 1
+    installments: 1,
+    enrollmentId: ''
   });
   
   const [isLoading, setIsLoading] = useState(false);
@@ -113,6 +117,24 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
   // Opções para o Combobox
   const clientOptions = useComboboxOptions(clients, 'id', 'name');
 
+  // Matrículas para o Combobox de enrollment
+  const { data: enrollmentsData } = useEnrollmentsList({
+    per_page: 200,
+    ...(formData.clientId ? { id_cliente: formData.clientId } : {}),
+  });
+  const enrollments = useMemo(() =>
+    Array.isArray(enrollmentsData?.data) ? enrollmentsData.data : [],
+  [enrollmentsData]);
+
+  const enrollmentOptions = useMemo(() =>
+    enrollments.map((e) => ({
+      value: String(e.id || ''),
+      label: `${e.id || '?'} - ${e.cliente_nome || 'Sem identificação'}`,
+      description: e.curso_nome || '',
+      disabled: false,
+    })),
+  [enrollments]);
+
   // Adiciona o valor formatado no estado local para gerenciar o input
   const [formattedAmount, setFormattedAmount] = useState('R$ 0,00');
 
@@ -136,7 +158,8 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
         notes: account.notes || '',
         recurrence: account.recurrence || RecurrenceType.NONE,
         installments: account.installments || 1,
-        customerId: selectedClientId
+        customerId: selectedClientId,
+        enrollmentId: enrollmentId || ''
       });
       setFormattedAmount(currencyApplyMask(String(account.amount * 100)));
     } else {
@@ -155,7 +178,8 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
         notes: '',
         recurrence: RecurrenceType.NONE,
         installments: 1,
-        customerId: clientId || ''
+        customerId: clientId || '',
+        enrollmentId: enrollmentId || ''
       });
       setFormattedAmount('R$ 0,00');
     }
@@ -426,6 +450,19 @@ export const AccountReceivableForm: React.FC<AccountReceivableFormProps> = ({
               {errors.invoiceNumber && (
                 <span className="text-sm text-red-500 mt-1 block">{errors.invoiceNumber}</span>
               )}
+            </div>
+
+            {/* Matrícula */}
+            <div>
+              <Label>Matrícula</Label>
+              <Combobox
+                options={enrollmentOptions}
+                value={formData.enrollmentId || ''}
+                onValueChange={(val) => handleInputChange('enrollmentId', val)}
+                placeholder="Selecione uma matrícula"
+                searchPlaceholder="Buscar matrícula..."
+                emptyText="Nenhuma matrícula encontrada."
+              />
             </div>
 
             {/* Forma de Pagamento */}
