@@ -798,6 +798,7 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
    * en-US: Syncs curriculum and progress with backend.
    */
   const fetchCurriculum = async () => {
+    if (!enrollmentId) return;
     setProgressLoading(true);
     try {
       const cur = await progressService.getEnrollmentCurriculum(enrollmentId);

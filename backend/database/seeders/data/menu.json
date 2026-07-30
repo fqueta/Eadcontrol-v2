@@ -6,6 +6,13 @@
     "order": 1
   },
   {
+    "title": "Atendimento",
+    "icon": "Headset",
+    "submenu": [
+        { "title": "Alunos (FloW)", "url": "/support" }
+    ]
+  },
+  {
     "title": "Clientes",
     "icon": "Users",
     "submenu": [
@@ -17,7 +24,6 @@
     "title": "Escola",
     "icon": "GraduationCap",
     "submenu": [
-      { "title": "Vendas (FloW)", "url": "/sales" },
       { "title": "Interessados", "url": "/school/interested" },
       { "title": "Matrículas", "url": "/school/enroll" },
       { "title": "Convites", "url": "/school/invites" },
@@ -32,6 +38,15 @@
       { "title": "Certificados", "url": "/school/certificados/modelo" },
       { "title": "Vídeos / Dicas", "url": "/school/video-tips" },
       { "title": "Produtos", "url": "/admin/products" }
+    ]
+  },
+  {
+    "title": "Marketing",
+    "icon": "Megaphone",
+    "submenu": [
+      { "title": "Vendas (FloW)", "url": "/sales" },
+      { "title": "Campanhas", "url": "/marketing/campaigns" },
+      { "title": "Automação", "url": "/marketing/automation" }
     ]
   },
   {

@@ -394,7 +394,9 @@ export function GlobalClientSearch({
               className="h-7 w-7 shrink-0"
               onClick={() => {
                 setSearchTerm("");
-                setResults([]);
+                setClientResults([]);
+                setEnrollmentResults([]);
+                setCourseResults([]);
                 setHasSearched(false);
                 inputRef.current?.focus();
               }}

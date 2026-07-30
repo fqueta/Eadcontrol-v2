@@ -89,6 +89,7 @@ import LandingPage from "./pages/LandingPage";
  *        missing modules at app load time.
  */
 const CustomersLeads = lazy(() => import("./pages/CustomersLeads"));
+const SupportLeads = lazy(() => import("./pages/SupportLeads"));
 const Sales = lazy(() => import("./pages/Sales"));
 const ProposalsCreate = lazy(() => import("./pages/ProposalsCreate"));
 const ProposalsEdit = lazy(() => import("./pages/ProposalsEdit"));
@@ -755,6 +756,15 @@ const App = () => {
                 <AdminProtectedRoute>
                   <AppLayout>
                     <ProductView />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+
+              {/* Atendimento de Alunos (Kanban de matrículas ativas) */}
+              <Route path="/admin/support" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <SupportLeads />
                   </AppLayout>
                 </AdminProtectedRoute>
               } />
