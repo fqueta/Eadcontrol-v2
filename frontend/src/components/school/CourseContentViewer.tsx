@@ -3414,41 +3414,48 @@ function htmlEquals(a: string, b: string): boolean {
         </main>
       </div>
 
-      {/* ── Certificate Preview Dialog ────────────────────── */}
+      {/* ── Certificate Download Dialog ────────────────────── */}
       <Dialog open={showCertDialog} onOpenChange={setShowCertDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <GraduationCap className="h-5 w-5 text-amber-600" />
               Certificado de Conclusão
             </DialogTitle>
             <DialogDescription>
-              Confira os dados do seu certificado antes de baixar.
+              Seu certificado está pronto para ser baixado.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="my-2 border-2 border-amber-200 rounded-xl overflow-hidden">
-            <div className="bg-gradient-to-r from-amber-600 to-yellow-500 h-1.5 w-full" />
-            <div className="p-8 text-center space-y-4 bg-amber-50/30">
-              <p className="text-xs tracking-[0.3em] uppercase text-amber-700/70 font-semibold">Certificado de Conclusão</p>
-              <p className="text-sm text-muted-foreground">Certificamos que</p>
-              <p className="text-2xl font-bold italic text-foreground">
-                {(course as any)?._studentName || 'Aluno'}
+          <div className="my-4 flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+              <Award className="h-8 w-8 text-amber-600" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-lg font-bold text-foreground">
+                Parabéns, {(() => {
+                  try {
+                    const userData = JSON.parse(localStorage.getItem('user_data') || '{}');
+                    return userData?.name || userData?.nome || 'Aluno';
+                  } catch { return 'Aluno'; }
+                })()}!
               </p>
-              <p className="text-sm text-muted-foreground">concluiu com êxito o curso de</p>
-              <p className="text-lg font-bold text-amber-700">
+              <p className="text-sm text-muted-foreground">
+                Você concluiu com êxito o curso de
+              </p>
+              <p className="text-base font-semibold text-amber-700">
                 {course?.titulo || course?.nome || 'Curso'}
               </p>
               <p className="text-xs text-muted-foreground">
-                realizado em {new Date().toLocaleDateString('pt-BR')}
-                {courseTotalLabel ? `, com carga horária de ${courseTotalLabel}.` : '.'}
+                concluído em {new Date().toLocaleDateString('pt-BR')}
+                {courseTotalLabel ? ` • ${courseTotalLabel}` : ''}
               </p>
-              <div className="pt-4">
-                <div className="mx-auto w-48 border-t border-amber-300" />
-                <p className="mt-1 text-xs text-muted-foreground">Diretoria Acadêmica</p>
-              </div>
             </div>
-            <div className="bg-gradient-to-r from-amber-600 to-yellow-500 h-1.5 w-full" />
+            <div className="w-full max-w-xs border-t border-border pt-3">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Para acessar seu certificado oficial, clique no botão abaixo. O documento será gerado em PDF com o modelo padrão da instituição.
+              </p>
+            </div>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
