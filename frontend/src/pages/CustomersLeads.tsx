@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Combobox, useComboboxOptions } from '@/components/ui/combobox';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -164,9 +164,7 @@ export default function CustomersLeads({ place = 'atendimento' }: { place?: 'ven
    */
   const { data: funnelsData, isLoading } = useFunnelsList({ page: 1, per_page: 50 });
   const funnels = useMemo(() => funnelsData?.data ?? [], [funnelsData?.data]);
-  const filteredFunnels = useMemo(() => (
-    funnels.filter((f) => f.settings?.place === place)
-  ), [funnels, place]);
+  const filteredFunnels = useMemo(() => funnels, [funnels]);
 
   /**
    * selectedFunnelId
@@ -240,6 +238,10 @@ export default function CustomersLeads({ place = 'atendimento' }: { place?: 'ven
     funnels.find((f) => String(f.id) === String(selectedFunnelId || '')) ?? null
   ), [funnels, selectedFunnelId]);
   const selectedFunnelColor = selectedFunnel?.color;
+
+  const effectivePlace = useMemo(() => (
+    selectedFunnel?.settings?.place || place
+  ), [selectedFunnel, place]);
 
   /**
    * useClientsList
@@ -344,15 +346,15 @@ export default function CustomersLeads({ place = 'atendimento' }: { place?: 'ven
    * pt-BR: Carrega lista de matrículas com filtro dinâmico pela área de vendas.
    * en-US: Loads enrollments list with dynamic filter for sales area.
    */
-  const { data: enrollmentsData } = useEnrollmentsList(enrollmentListParams, { enabled: place === 'vendas' && !!selectedFunnelId });
+  const { data: enrollmentsData } = useEnrollmentsList(enrollmentListParams, { enabled: effectivePlace === 'vendas' && !!selectedFunnelId });
   const updateEnrollmentMutation = useUpdateEnrollment();
   const allEnrollments = useMemo<EnrollmentRecord[]>(() => (
     Array.isArray(enrollmentsData?.data) ? (enrollmentsData!.data as EnrollmentRecord[]) : []
   ), [enrollmentsData?.data]);
   const [localEnrollments, setLocalEnrollments] = useState<EnrollmentRecord[]>([]);
   useEffect(() => {
-    if (place === 'vendas') setLocalEnrollments(allEnrollments);
-  }, [place, allEnrollments]);
+    if (effectivePlace === 'vendas') setLocalEnrollments(allEnrollments);
+  }, [effectivePlace, allEnrollments]);
 
   /**
    * loadLastAttendanceFromStorage
@@ -573,8 +575,8 @@ export default function CustomersLeads({ place = 'atendimento' }: { place?: 'ven
    */
   const summary = useMemo(() => {
     const stageIds = stages.map((s) => String(s.id));
-    const total = place === 'vendas' ? localEnrollments.length : localClients.length;
-    const visibleMap = place === 'vendas' ? enrollmentsByStage : clientsByStage;
+    const total = effectivePlace === 'vendas' ? localEnrollments.length : localClients.length;
+    const visibleMap = effectivePlace === 'vendas' ? enrollmentsByStage : clientsByStage;
     const visibleTotal = visibleMap instanceof Map
       ? Array.from(visibleMap.values()).reduce((acc, arr) => acc + (arr?.length || 0), 0)
       : 0;
@@ -584,7 +586,7 @@ export default function CustomersLeads({ place = 'atendimento' }: { place?: 'ven
       totalClients: total,
       visibleTotal,
     };
-  }, [stages, localClients, localEnrollments, clientsByStage, enrollmentsByStage, selectedFunnelId, place]);
+  }, [stages, localClients, localEnrollments, clientsByStage, enrollmentsByStage, selectedFunnelId, effectivePlace]);
 
   /**
    * stageTotals
@@ -593,16 +595,16 @@ export default function CustomersLeads({ place = 'atendimento' }: { place?: 'ven
    */
   const stageTotals = useMemo(() => {
     return stages.map((s) => {
-      const arr = place === 'vendas'
+      const arr = effectivePlace === 'vendas'
         ? (enrollmentsByStage.get(String(s.id)) || [])
         : (clientsByStage.get(String(s.id)) || []);
       const count = arr.length;
-      const amount = place === 'vendas'
+      const amount = effectivePlace === 'vendas'
         ? (arr as EnrollmentRecord[]).reduce((sum, e) => sum + getEnrollmentAmountBRL(e), 0)
         : (arr as ClientRecord[]).reduce((sum, c) => sum + getClientAmountBRL(c), 0);
       return { id: String(s.id), name: s.name, count, amountBRL: formatBRL(amount) };
     });
-  }, [stages, clientsByStage, enrollmentsByStage, place]);
+  }, [stages, clientsByStage, enrollmentsByStage, effectivePlace]);
 
   /**
    * diagnostics
@@ -1028,25 +1030,34 @@ export default function CustomersLeads({ place = 'atendimento' }: { place?: 'ven
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Layers className="h-5 w-5" /> {place === 'vendas' ? 'Funis de Vendas' : 'Leads de Atendimento'}
+            <Layers className="h-5 w-5" /> {effectivePlace === 'vendas' ? 'Funis de Vendas' : 'Leads de Atendimento'}
           </CardTitle>
           <CardDescription>
-            {`Funis e etapas da área de ${place === 'vendas' ? 'vendas' : 'atendimento'}, para acompanhamento.`}
+            {`Funis e etapas da área de ${effectivePlace === 'vendas' ? 'vendas' : 'atendimento'}, para acompanhamento.`}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {/* Controls: selecionar funil de atendimento */}
           <div className="flex items-center gap-3 mb-4 w-full max-w-xs">
             <div className="w-full max-w-xs">
-              <label className="text-xs text-muted-foreground">{place === 'vendas' ? 'Funil de Vendas' : 'Funil de Atendimento'}</label>
+              <label className="text-xs text-muted-foreground">{effectivePlace === 'vendas' ? 'Funil de Vendas' : 'Funil de Atendimento'}</label>
               <Select value={selectedFunnelId ?? undefined} onValueChange={setSelectedFunnelId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um funil" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredFunnels.map(f => (
-                    <SelectItem key={f.id} value={String(f.id)}>{f.name}</SelectItem>
-                  ))}
+                  <SelectGroup>
+                    <SelectLabel>Vendas</SelectLabel>
+                    {filteredFunnels.filter(f => f.settings?.place === 'vendas').map(f => (
+                      <SelectItem key={f.id} value={String(f.id)}>{f.name}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                  <SelectGroup>
+                    <SelectLabel>Atendimento</SelectLabel>
+                    {filteredFunnels.filter(f => f.settings?.place === 'atendimento').map(f => (
+                      <SelectItem key={f.id} value={String(f.id)}>{f.name}</SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
@@ -1153,7 +1164,7 @@ export default function CustomersLeads({ place = 'atendimento' }: { place?: 'ven
           {/* Estados de carregamento/empty */}
           {isLoading && <p className="text-sm text-muted-foreground">Carregando funis...</p>}
           {!isLoading && filteredFunnels.length === 0 && (
-            <p className="text-sm text-muted-foreground">{`Nenhum funil de ${place === 'vendas' ? 'vendas' : 'atendimento'} encontrado.`}</p>
+            <p className="text-sm text-muted-foreground">{`Nenhum funil de ${effectivePlace === 'vendas' ? 'vendas' : 'atendimento'} encontrado.`}</p>
           )}
 
           {!!selectedFunnelId && (
@@ -1169,7 +1180,7 @@ export default function CustomersLeads({ place = 'atendimento' }: { place?: 'ven
                   <div className="col-span-full p-4 text-sm text-muted-foreground">Nenhuma etapa cadastrada neste funil.</div>
                 ) : (
                   stages.map((stage) => (
-                    place === 'vendas' ? (
+                    effectivePlace === 'vendas' ? (
                       <StageColumnSales
                         key={stage.id}
                         stage={stage}

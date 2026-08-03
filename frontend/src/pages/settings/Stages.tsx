@@ -32,6 +32,7 @@ export default function Stages() {
   // Listagem e estado
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [placeFilter, setPlaceFilter] = useState<string>('all');
   /**
    * debouncedSearch
    * pt-BR: Valor de busca com debounce para evitar filtragens a cada tecla.
@@ -129,10 +130,14 @@ export default function Stages() {
    * en-US: Filters funnels by the debounced term, improving UX on rapid typing.
    */
   const filteredFunnels = useMemo(() => {
-    if (!debouncedSearch.trim()) return orderedFunnels;
+    let result = orderedFunnels;
+    if (placeFilter !== 'all') {
+      result = result.filter(f => (f.settings?.place || 'vendas') === placeFilter);
+    }
+    if (!debouncedSearch.trim()) return result;
     const s = debouncedSearch.toLowerCase();
-    return orderedFunnels.filter(f => f.name.toLowerCase().includes(s) || (f.description || '').toLowerCase().includes(s));
-  }, [orderedFunnels, debouncedSearch]);
+    return result.filter(f => f.name.toLowerCase().includes(s) || (f.description || '').toLowerCase().includes(s));
+  }, [orderedFunnels, debouncedSearch, placeFilter]);
 
   // Hooks de mutação para funis
   const createFunnelMutation = useCreateFunnel();
@@ -831,7 +836,7 @@ export default function Stages() {
           <CardTitle className="flex items-center gap-2">
             <Layers className="h-5 w-5" /> Configurações de Funis
           </CardTitle>
-          <CardDescription>Crie, edite e exclua funis para organizar sua pipeline de vendas.</CardDescription>
+          <CardDescription>Crie, edite e exclua funis para organizar suas pipelines de vendas e atendimento.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between gap-2 mb-4">
@@ -839,6 +844,16 @@ export default function Stages() {
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar funis..." className="pl-8" />
             </div>
+            <Select value={placeFilter} onValueChange={setPlaceFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Todos os funis" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="vendas">Vendas</SelectItem>
+                <SelectItem value="atendimento">Atendimento</SelectItem>
+              </SelectContent>
+            </Select>
             <Button onClick={() => openFunnelModal()} className="flex items-center gap-2">
               <Plus className="h-4 w-4" /> Novo Funil
             </Button>

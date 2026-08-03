@@ -1,16 +1,16 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { Layers, Plus, MoreHorizontal, Eye, FileText, UserRoundX, Search } from 'lucide-react';
+import { Layers, Plus, MoreHorizontal, Eye, FileText, UserRoundX, Search, Phone } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Combobox, useComboboxOptions } from '@/components/ui/combobox';
-import { useFunnelsList, useStagesList } from '@/hooks/funnels';
+import { useFunnelsList, useStagesList, useUpdateStage } from '@/hooks/funnels';
 import { useEnrollmentsList, useUpdateEnrollment } from '@/hooks/enrollments';
 import { useAuth } from '@/contexts/AuthContext';
 import { FunnelRecord, StageRecord } from '@/types/pipelines';
@@ -46,7 +46,27 @@ const getEnrollmentAmountBRL = (enroll: EnrollmentRecord): number => {
     if (v === undefined || v === null) return undefined;
     if (typeof v === 'number' && !Number.isNaN(v)) return v;
     if (typeof v === 'string') {
-      const s = v.replace(/\./g, '').replace(',', '.');
+      const s = v.trim();
+      if (s === '') return undefined;
+      const hasComma = s.includes(',');
+      const hasDot = s.includes('.');
+      if (hasComma && hasDot) {
+        const lastDot = s.lastIndexOf('.');
+        const lastComma = s.lastIndexOf(',');
+        if (lastComma > lastDot) {
+          const n = parseFloat(s.replace(/\./g, '').replace(',', '.'));
+          if (!Number.isNaN(n)) return n;
+        } else if (lastDot > lastComma) {
+          const n = parseFloat(s.replace(/,/g, ''));
+          if (!Number.isNaN(n)) return n;
+        }
+      } else if (hasComma) {
+        const n = parseFloat(s.replace('.', '').replace(',', '.'));
+        if (!Number.isNaN(n)) return n;
+      } else if (hasDot) {
+        const n = parseFloat(s);
+        if (!Number.isNaN(n)) return n;
+      }
       const n = parseFloat(s);
       if (!Number.isNaN(n)) return n;
     }
@@ -106,11 +126,10 @@ const extractEnrollmentStageId = (enroll: EnrollmentRecord): string | null => {
 export default function SupportLeads() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const canManageFlow = Number(user?.permission_id ?? 999) <= 5;
 
   const { data: funnelsData, isLoading: funnelsLoading } = useFunnelsList({ page: 1, per_page: 50 });
   const funnels = useMemo(() => funnelsData?.data ?? [], [funnelsData?.data]);
-  const supportFunnels = useMemo(() => funnels.filter((f) => f.settings?.place === 'atendimento'), [funnels]);
+  const supportFunnels = useMemo(() => funnels, [funnels]);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const initialFunnelFromUrl = useMemo(() => searchParams.get('funnel') || null, [searchParams]);
@@ -289,18 +308,19 @@ export default function SupportLeads() {
 
   const addableEnrollments = useMemo(() => (
     searchEnrollments.filter((e) => !enrollmentInFlowIds.has(String(e.id)))
+    .map(e => ({
+      ...e,
+      _label: `#${e.id} - ${(e as any)?.cliente_nome || (e as any)?.student_name || (e as any)?.name || 'Sem nome'}`,
+      _desc: (e as any)?.curso_nome || (e as any)?.course_name || '',
+    }))
   ), [searchEnrollments, enrollmentInFlowIds]);
 
-  const enrollmentComboboxOptions = useComboboxOptions(addableEnrollments, 'id', (e: EnrollmentRecord) => {
-    const name = (e as any)?.cliente_nome || (e as any)?.student_name || (e as any)?.name || `Matrícula ${e.id}`;
-    const course = (e as any)?.curso_nome || (e as any)?.course_name || '';
-    return course ? `${name} - ${course}` : name;
-  });
+  const enrollmentComboboxOptions = useComboboxOptions(addableEnrollments as any[], 'id', '_label', undefined, (e: any) => e._desc || undefined);
 
   const [selectedEnrollmentToAdd, setSelectedEnrollmentToAdd] = useState('');
 
   const addToFlow = async () => {
-    if (!selectedEnrollmentToAdd || !addTargetStageId || !selectedFunnelId || !canManageFlow) return;
+    if (!selectedEnrollmentToAdd || !addTargetStageId || !selectedFunnelId) return;
     try {
       await updateEnrollmentMutation.mutateAsync({
         id: selectedEnrollmentToAdd,
@@ -345,9 +365,18 @@ export default function SupportLeads() {
                   <SelectValue placeholder="Selecione um funil" />
                 </SelectTrigger>
                 <SelectContent>
-                  {supportFunnels.map(f => (
-                    <SelectItem key={f.id} value={String(f.id)}>{f.name}</SelectItem>
-                  ))}
+                  <SelectGroup>
+                    <SelectLabel>Vendas</SelectLabel>
+                    {supportFunnels.filter(f => f.settings?.place === 'vendas').map(f => (
+                      <SelectItem key={f.id} value={String(f.id)}>{f.name}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                  <SelectGroup>
+                    <SelectLabel>Atendimento</SelectLabel>
+                    {supportFunnels.filter(f => f.settings?.place === 'atendimento').map(f => (
+                      <SelectItem key={f.id} value={String(f.id)}>{f.name}</SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
@@ -389,10 +418,8 @@ export default function SupportLeads() {
                       onDragEnd={onEnrollmentDragEnd}
                       onDropEnrollmentOnStage={onDropEnrollmentOnStage}
                       recentlyMovedEnrollmentId={recentlyMovedEnrollmentId}
-                      canManageFlow={canManageFlow}
                       onRemoveFromFlow={removeFromFlow}
                       onAddToFlowClick={(stageId) => {
-                        if (!canManageFlow) return;
                         setAddTargetStageId(stageId);
                         setSelectedEnrollmentToAdd('');
                         setEnrollmentSearchTerm('');
@@ -471,7 +498,6 @@ function SupportStageColumn({
   onDragEnd,
   onDropEnrollmentOnStage,
   recentlyMovedEnrollmentId,
-  canManageFlow,
   onRemoveFromFlow,
   onAddToFlowClick,
 }: {
@@ -486,7 +512,6 @@ function SupportStageColumn({
   onDragEnd: () => void;
   onDropEnrollmentOnStage: (toStageId: string) => void;
   recentlyMovedEnrollmentId?: string | null;
-  canManageFlow: boolean;
   onRemoveFromFlow: (enrollmentId: string) => void;
   onAddToFlowClick: (stageId: string) => void;
 }) {
@@ -494,6 +519,24 @@ function SupportStageColumn({
   const totalCards = enrollments.length;
   const totalAmount = enrollments.reduce((sum, e) => sum + getEnrollmentAmountBRL(e), 0);
   const totalAmountBRL = formatBRL(totalAmount);
+  const updateStageMutation = useUpdateStage(funnelId);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editNameValue, setEditNameValue] = useState(stage.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleStartEdit = () => {
+    setEditNameValue(stage.name);
+    setIsEditingName(true);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const handleSaveName = () => {
+    const trimmed = editNameValue.trim();
+    if (trimmed && trimmed !== stage.name) {
+      updateStageMutation.mutate({ stageId: String(stage.id), data: { name: trimmed } });
+    }
+    setIsEditingName(false);
+  };
 
   return (
     <div
@@ -507,22 +550,34 @@ function SupportStageColumn({
         <div className="flex items-center justify-between p-3 border-b" style={{ borderBottomColor: '#E5E7EB' }}>
           <div className="flex items-center gap-2 min-w-0">
             <span className="inline-block h-3 w-3 rounded-sm shrink-0" style={{ backgroundColor: stageColor }} />
-            <span className="font-medium text-sm">{stage.name}</span>
+            {isEditingName ? (
+              <input
+                ref={inputRef}
+                type="text"
+                value={editNameValue}
+                onChange={(e) => setEditNameValue(e.target.value)}
+                onBlur={handleSaveName}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setIsEditingName(false); }}
+                className="font-medium text-sm border rounded px-1 py-0.5 w-32 bg-background"
+              />
+            ) : (
+              <span className="font-medium text-sm cursor-pointer hover:text-primary transition-colors" onClick={handleStartEdit} title="Clique para editar o nome da etapa">
+                {stage.name}
+              </span>
+            )}
             <Badge variant="secondary" className="shrink-0">{totalCards}</Badge>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-xs text-muted-foreground">{totalAmountBRL}</span>
-            {canManageFlow && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 px-2"
-                onClick={() => onAddToFlowClick(String(stage.id))}
-                title="Adicionar matrícula a esta etapa"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => onAddToFlowClick(String(stage.id))}
+              title="Adicionar matrícula a esta etapa"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
           </div>
         </div>
       </div>
@@ -539,7 +594,6 @@ function SupportStageColumn({
               onDragStart={() => onDragStart(e)}
               onDragEnd={onDragEnd}
               isRecentlyMoved={recentlyMovedEnrollmentId === String(e.id)}
-              canManageFlow={canManageFlow}
               onRemoveFromFlow={onRemoveFromFlow}
             />
           ))
@@ -556,7 +610,6 @@ function SupportEnrollmentCard({
   onDragStart,
   onDragEnd,
   isRecentlyMoved,
-  canManageFlow,
   onRemoveFromFlow,
 }: {
   enrollment: EnrollmentRecord;
@@ -565,15 +618,22 @@ function SupportEnrollmentCard({
   onDragStart?: () => void;
   onDragEnd?: () => void;
   isRecentlyMoved?: boolean;
-  canManageFlow: boolean;
   onRemoveFromFlow: (enrollmentId: string) => void;
 }) {
   const navigate = useNavigate();
   const title = (enrollment as any)?.cliente_nome || (enrollment as any)?.student_name || (enrollment as any)?.name || `Matrícula ${enrollment.id}`;
   const course = (enrollment as any)?.curso_nome || (enrollment as any)?.course_name || (enrollment as any)?.curso || '';
   const turma = (enrollment as any)?.turma_nome || '';
-  const status = (enrollment as any)?.status || '—';
   const amountBRL = formatBRL(getEnrollmentAmountBRL(enrollment));
+
+  const rawPhone = (enrollment as any)?.meta?.celular || (enrollment as any)?.meta?.phone || (enrollment as any)?.meta?.telefone || (enrollment as any)?.celular || (enrollment as any)?.phone || '';
+  const phone = rawPhone ? String(rawPhone).replace(/\D/g, '') : '';
+  const formatPhone = (p: string) => {
+    if (p.length === 11) return `(${p.slice(0,2)}) ${p.slice(2,7)}-${p.slice(7)}`;
+    if (p.length === 10) return `(${p.slice(0,2)}) ${p.slice(2,6)}-${p.slice(6)}`;
+    return p;
+  };
+  const whatsappUrl = phone ? `https://wa.me/55${phone}` : '';
 
   const goToView = () => {
     const q = funnelId ? `?funnel=${encodeURIComponent(String(funnelId))}` : '';
@@ -592,7 +652,6 @@ function SupportEnrollmentCard({
       <div className="flex items-center justify-between">
         <div className="font-medium text-sm truncate" title={title}>{title}</div>
         <div className="flex items-center gap-1">
-          <Badge variant="outline" className="text-xs">{status}</Badge>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex h-7 w-7 items-center justify-center rounded-md border hover:bg-muted" onClick={(e) => e.stopPropagation()} title="Ações">
@@ -603,17 +662,20 @@ function SupportEnrollmentCard({
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); goToView(); }}>
                 <Eye className="mr-2 h-4 w-4" /> Visualizar
               </DropdownMenuItem>
-              {canManageFlow && (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemoveFromFlow(String(enrollment.id));
-                  }}
-                  className="text-destructive"
-                >
-                  <UserRoundX className="mr-2 h-4 w-4" /> Remover do Flow
+              {whatsappUrl && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(whatsappUrl, '_blank'); }}>
+                  <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/whatsapp.svg" className="mr-2 h-4 w-4" alt="" /> WhatsApp
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemoveFromFlow(String(enrollment.id));
+                }}
+                className="text-destructive"
+              >
+                <UserRoundX className="mr-2 h-4 w-4" /> Remover do Flow
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -621,6 +683,11 @@ function SupportEnrollmentCard({
       <div className="text-xs text-muted-foreground truncate mt-1" title={course}>{course || 'Curso não informado'}</div>
       {turma && (
         <div className="text-[11px] text-muted-foreground truncate mt-1" title={turma}>{turma}</div>
+      )}
+      {phone && (
+        <div className="text-[11px] text-muted-foreground truncate mt-1 flex items-center gap-1" title={phone}>
+          <Phone className="h-3 w-3 shrink-0" /> {formatPhone(phone)}
+        </div>
       )}
       <div className="text-xs text-muted-foreground mt-1">{amountBRL}</div>
     </div>

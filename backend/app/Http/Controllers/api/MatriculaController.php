@@ -85,7 +85,7 @@ class MatriculaController extends Controller
             ->leftJoin('turmas', 'matriculas.id_turma', '=', 'turmas.id')
             ->leftJoin('users', 'matriculas.id_cliente', '=', 'users.id')
             ->leftJoin('posts', 'matriculas.situacao_id', '=', 'posts.id')
-            ->select('matriculas.*', 'cursos.nome as curso_nome','cursos.tipo as curso_tipo', 'turmas.nome as turma_nome', 'users.name as cliente_nome', 'users.email as email', 'posts.post_title as situacao','cursos.slug as curso_slug','cursos.config as curso_config', 'cursos.modulos as curso_modulos')
+            ->select('matriculas.*', 'cursos.nome as curso_nome','cursos.tipo as curso_tipo', 'turmas.nome as turma_nome', 'users.name as cliente_nome', 'users.email as email', 'users.celular as celular', 'posts.post_title as situacao','cursos.slug as curso_slug','cursos.config as curso_config', 'cursos.modulos as curso_modulos')
             ->where(function($q) {
                 $q->whereNull('matriculas.excluido')
                   ->orWhere('matriculas.excluido', '!=', 's');
@@ -450,8 +450,9 @@ class MatriculaController extends Controller
             unset($data['obs']);
         }
         // Remove stage_id se for inválido ou vazio para evitar erro de validação (exists)
+        // Permite null explícito (significa remover do flow)
         if (array_key_exists('stage_id', $data)) {
-            if (empty($data['stage_id']) || !\App\Models\Stage::where('id', $data['stage_id'])->exists()) {
+            if ($data['stage_id'] !== null && (empty($data['stage_id']) || !\App\Models\Stage::where('id', $data['stage_id'])->exists())) {
                 unset($data['stage_id']);
                 unset($data['funnel_id']);
             }

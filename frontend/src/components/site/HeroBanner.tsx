@@ -231,7 +231,7 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
 
       {/* Editor do Banner fora do loop para não quebrar layout */}
       <HeroImageEditor 
-        className="absolute top-8 right-8 z-50 pointer-events-auto"
+        className="absolute bottom-4 left-4 z-40 pointer-events-auto"
       />
     </section>
   );
@@ -398,7 +398,7 @@ function StaticCarousel({ name, slogan, description }: { name: string; slogan: s
 
       {/* Editor do Banner fora do loop para não quebrar layout */}
       <HeroImageEditor 
-        className="absolute top-8 right-8 z-50 pointer-events-auto"
+        className="absolute bottom-4 left-4 z-40 pointer-events-auto"
       />
     </section>
   );
