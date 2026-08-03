@@ -10,6 +10,8 @@ import { ImagePlus, Save, Layout, Edit3, Eye, QrCode } from 'lucide-react';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 /**
  * CertificateTemplate
@@ -27,6 +29,7 @@ export default function CertificateTemplate() {
   const saveTemplate = useSaveCertificateTemplate();
   
   const [title, setTitle] = useState('Certificado de Conclusão');
+  const [showTitle, setShowTitle] = useState(true);
   const [body, setBody] = useState(
     'Certificamos que {studentName} concluiu o curso {courseName} em {completionDate}, com carga horária de {hours}.'
   );
@@ -49,6 +52,7 @@ export default function CertificateTemplate() {
       if (Array.isArray(tpl) && tpl.length === 0) return;
 
       if (tpl.title) setTitle(String(tpl.title));
+      if (tpl.showTitle !== undefined) setShowTitle(Boolean(tpl.showTitle));
       if (tpl.body) setBody(String(tpl.body));
       if (tpl.footerLeft) setFooterLeft(String(tpl.footerLeft));
       if (tpl.footerRight) setFooterRight(String(tpl.footerRight));
@@ -118,7 +122,7 @@ export default function CertificateTemplate() {
   }, [qrPosition]);
 
   async function handleSave() {
-    const payload = { title, body, footerLeft, footerRight, signatureLeftUrl, signatureRightUrl, bgUrl, accentColor, qrPosition, logoPosition };
+    const payload = { title, showTitle, body, footerLeft, footerRight, signatureLeftUrl, signatureRightUrl, bgUrl, accentColor, qrPosition, logoPosition };
     try {
       await saveTemplate.mutateAsync(payload);
       toast({ title: 'Modelo salvo', description: 'Modelo de certificado salvo no backend com sucesso.' });
@@ -173,13 +177,21 @@ export default function CertificateTemplate() {
                 </CardHeader>
                 <CardContent className="space-y-6 pt-6">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Título do Certificado</label>
-                    <Input 
-                      value={title} 
-                      onChange={(e) => setTitle(e.target.value)} 
-                      placeholder="Ex: Certificado de Conclusão" 
-                      className="text-lg font-semibold h-12"
-                    />
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Título do Certificado</label>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="show-title" className="text-xs text-muted-foreground cursor-pointer">Exibir título</Label>
+                        <Switch id="show-title" checked={showTitle} onCheckedChange={setShowTitle} />
+                      </div>
+                    </div>
+                    {showTitle && (
+                      <Input 
+                        value={title} 
+                        onChange={(e) => setTitle(e.target.value)} 
+                        placeholder="Ex: Certificado de Conclusão" 
+                        className="text-lg font-semibold h-12"
+                      />
+                    )}
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Corpo do Texto (Editor HTML)</label>
@@ -335,9 +347,11 @@ export default function CertificateTemplate() {
                   )}
 
                   <div className="relative z-10 w-full h-full p-12 md:p-24 flex flex-col items-center justify-center text-center">
-                    <h2 className="text-3xl md:text-6xl font-black mb-8 md:mb-14 tracking-tight drop-shadow-sm select-none" style={{ color: accentColor }}>
-                      {title || 'CERTIFICADO'}
-                    </h2>
+                    {showTitle && (
+                      <h2 className="text-3xl md:text-6xl font-black mb-8 md:mb-14 tracking-tight drop-shadow-sm select-none" style={{ color: accentColor }}>
+                        {title || 'CERTIFICADO'}
+                      </h2>
+                    )}
                     
                     <div 
                       className="text-lg md:text-3xl md:leading-[1.4] max-w-[90%] mx-auto w-full prose prose-sm md:prose-2xl font-serif text-gray-800 select-none antialiased" 

@@ -34,6 +34,7 @@ class CertificatesController extends Controller
             $config = $model ? json_decode($model->value, true) : [];
 
             $title = $config['title'] ?? 'Certificado de Conclusão';
+            $showTitle = $config['showTitle'] ?? true;
             $body = $config['body'] ?? 'Certificamos que {studentName} concluiu o curso {courseName}...';
             $footerLeft = $config['footerLeft'] ?? 'Coordenador';
             $footerRight = $config['footerRight'] ?? 'Diretor';
@@ -177,6 +178,7 @@ class CertificatesController extends Controller
 
             $html = view('certificates.pdf', [
                 'title' => $title,
+                'showTitle' => $showTitle,
                 'body' => $bodyResolved,
                 'footerLeft' => $footerLeft,
                 'footerRight' => $footerRight,
@@ -216,7 +218,7 @@ class CertificatesController extends Controller
     {
         try {
             $data = $request->only([
-                'title', 'body', 'footerLeft', 'footerRight', 
+                'title', 'showTitle', 'body', 'footerLeft', 'footerRight', 
                 'signatureLeftUrl', 'signatureRightUrl', 'bgUrl', 
                 'accentColor', 'qrPosition', 'logoPosition'
             ]);

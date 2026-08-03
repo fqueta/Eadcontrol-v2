@@ -131,7 +131,9 @@
     @endif
     
     <div class="content">
-        <h1 class="title">{{ $title }}</h1>
+        @if($showTitle ?? true)
+            <h1 class="title">{{ $title }}</h1>
+        @endif
         
         <div class="body-text">
             {!! $body !!}
