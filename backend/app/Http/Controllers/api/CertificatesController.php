@@ -44,6 +44,10 @@ class CertificatesController extends Controller
             $accentColor = $config['accentColor'] ?? '#111827';
             $qrPosition = $config['qrPosition'] ?? 'integrated';
             $logoPosition = $config['logoPosition'] ?? 'integrated';
+            $marginTop = $config['marginTop'] ?? 8;
+            $marginRight = $config['marginRight'] ?? 8;
+            $marginBottom = $config['marginBottom'] ?? 8;
+            $marginLeft = $config['marginLeft'] ?? 8;
 
             // Prepara placeholders
             $studentName = $matricula->student ? ($matricula->student->name . ' ' . $matricula->student->lastname) : 'Aluno';
@@ -190,7 +194,11 @@ class CertificatesController extends Controller
                 'qrPosition' => $qrPosition,
                 'qrImgHtml' => $qrImgHtml,
                 'logoPosition' => $logoPosition,
-                'logoHtml' => $logoHtml
+                'logoHtml' => $logoHtml,
+                'marginTop' => $marginTop,
+                'marginRight' => $marginRight,
+                'marginBottom' => $marginBottom,
+                'marginLeft' => $marginLeft
             ])->render();
 
             Pdf::setOptions([
@@ -220,7 +228,8 @@ class CertificatesController extends Controller
             $data = $request->only([
                 'title', 'showTitle', 'body', 'footerLeft', 'footerRight', 
                 'signatureLeftUrl', 'signatureRightUrl', 'bgUrl', 
-                'accentColor', 'qrPosition', 'logoPosition'
+                'accentColor', 'qrPosition', 'logoPosition',
+                'marginTop', 'marginRight', 'marginBottom', 'marginLeft'
             ]);
 
             Option::updateOrCreate(

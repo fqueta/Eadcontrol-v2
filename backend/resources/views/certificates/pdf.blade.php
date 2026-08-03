@@ -31,7 +31,7 @@
             width: 297mm;
             height: 210mm;
             z-index: 10;
-            padding: 30px;
+            padding: {{ $marginTop ?? 8 }}mm {{ $marginRight ?? 8 }}mm {{ $marginBottom ?? 8 }}mm {{ $marginLeft ?? 8 }}mm;
             text-align: center;
         }
         .title {

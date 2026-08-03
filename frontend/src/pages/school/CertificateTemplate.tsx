@@ -41,6 +41,10 @@ export default function CertificateTemplate() {
   const [accentColor, setAccentColor] = useState('#111827');
   const [qrPosition, setQrPosition] = useState('integrated');
   const [logoPosition, setLogoPosition] = useState('integrated');
+  const [marginTop, setMarginTop] = useState(8);
+  const [marginRight, setMarginRight] = useState(8);
+  const [marginBottom, setMarginBottom] = useState(8);
+  const [marginLeft, setMarginLeft] = useState(8);
   
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
   const [mediaTarget, setMediaTarget] = useState<'bg' | 'sigLeft' | 'sigRight'>('bg');
@@ -62,6 +66,10 @@ export default function CertificateTemplate() {
       if (tpl.accentColor) setAccentColor(String(tpl.accentColor));
       if (tpl.qrPosition) setQrPosition(String(tpl.qrPosition));
       if (tpl.logoPosition) setLogoPosition(String(tpl.logoPosition));
+      if (tpl.marginTop !== undefined) setMarginTop(Number(tpl.marginTop));
+      if (tpl.marginRight !== undefined) setMarginRight(Number(tpl.marginRight));
+      if (tpl.marginBottom !== undefined) setMarginBottom(Number(tpl.marginBottom));
+      if (tpl.marginLeft !== undefined) setMarginLeft(Number(tpl.marginLeft));
     }
   }, [backendTemplate]);
 
@@ -122,7 +130,7 @@ export default function CertificateTemplate() {
   }, [qrPosition]);
 
   async function handleSave() {
-    const payload = { title, showTitle, body, footerLeft, footerRight, signatureLeftUrl, signatureRightUrl, bgUrl, accentColor, qrPosition, logoPosition };
+    const payload = { title, showTitle, body, footerLeft, footerRight, signatureLeftUrl, signatureRightUrl, bgUrl, accentColor, qrPosition, logoPosition, marginTop, marginRight, marginBottom, marginLeft };
     try {
       await saveTemplate.mutateAsync(payload);
       toast({ title: 'Modelo salvo', description: 'Modelo de certificado salvo no backend com sucesso.' });
@@ -299,6 +307,28 @@ export default function CertificateTemplate() {
                   </div>
 
                   <div className="space-y-3 pt-2 border-t">
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Margens do Conteúdo (mm)</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-muted-foreground">Superior</label>
+                        <Input type="number" min={0} max={80} value={marginTop} onChange={(e) => setMarginTop(Number(e.target.value))} className="h-9 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-muted-foreground">Direita</label>
+                        <Input type="number" min={0} max={80} value={marginRight} onChange={(e) => setMarginRight(Number(e.target.value))} className="h-9 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-muted-foreground">Inferior</label>
+                        <Input type="number" min={0} max={80} value={marginBottom} onChange={(e) => setMarginBottom(Number(e.target.value))} className="h-9 text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-muted-foreground">Esquerda</label>
+                        <Input type="number" min={0} max={80} value={marginLeft} onChange={(e) => setMarginLeft(Number(e.target.value))} className="h-9 text-sm" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 pt-2 border-t">
                     <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Cor de Destaque (Título)</label>
                     <div className="flex items-center gap-4">
                       <div className="h-11 w-20 rounded-lg border-2 p-1 bg-background shadow-sm overflow-hidden flex items-center">
@@ -346,7 +376,7 @@ export default function CertificateTemplate() {
                     <LogoPlaceholder className={logoFixedStyles} />
                   )}
 
-                  <div className="relative z-10 w-full h-full p-12 md:p-24 flex flex-col items-center justify-center text-center">
+                  <div className="relative z-10 w-full h-full flex flex-col items-center justify-center text-center" style={{ padding: `${marginTop * 4.3}px ${marginRight * 4.3}px ${marginBottom * 4.3}px ${marginLeft * 4.3}px` }}>
                     {showTitle && (
                       <h2 className="text-3xl md:text-6xl font-black mb-8 md:mb-14 tracking-tight drop-shadow-sm select-none" style={{ color: accentColor }}>
                         {title || 'CERTIFICADO'}
