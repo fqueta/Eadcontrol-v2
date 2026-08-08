@@ -27,6 +27,7 @@ class InvitesService extends BaseApiService {
   async create(payload: {
     nome: string;
     id_curso: number;
+    id_turma?: number | null;
     total_convites: number;
     validade?: string;
   }): Promise<any> {
@@ -52,6 +53,7 @@ class InvitesService extends BaseApiService {
   async update(id: number, payload: {
     nome?: string;
     id_curso?: number;
+    id_turma?: number | null;
     total_convites?: number;
     validade?: string;
   }): Promise<any> {

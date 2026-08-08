@@ -70,6 +70,9 @@ export interface CourseConfig {
   };
   product_ids?: string[];
   duracao_manual?: boolean;
+  mostrar_botao_certificado?: 's' | 'n';
+  certificado_requisito?: 'inicio' | 'percentual';
+  certificado_percentual?: number;
 }
 
 /**

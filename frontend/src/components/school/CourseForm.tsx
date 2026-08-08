@@ -667,6 +667,9 @@ export function CourseForm({
         banner: { url: '', file_id: undefined as any, title: '' },
         product_ids: [],
         duracao_manual: false,
+        mostrar_botao_certificado: 's',
+        certificado_requisito: 'percentual',
+        certificado_percentual: 100,
       },
       inscricao: '0,00',
       valor: '0,00',
@@ -834,6 +837,9 @@ export function CourseForm({
         },
         product_ids: c.config?.product_ids ?? [],
         duracao_manual: !!c.config?.duracao_manual,
+        mostrar_botao_certificado: c.config?.mostrar_botao_certificado ?? 's',
+        certificado_requisito: c.config?.certificado_requisito ?? 'percentual',
+        certificado_percentual: Number(c.config?.certificado_percentual ?? 100),
       },
       aeronaves: c.aeronaves ?? [],
       modulos: (c.modulos ?? []).map((m: any) => ({
@@ -3155,6 +3161,36 @@ export function CourseForm({
                       <SelectTrigger className="rounded-xl border-slate-200"><SelectValue placeholder="Selecione" /></SelectTrigger>
                       <SelectContent className="rounded-xl"><SelectItem value="s">Ativo</SelectItem><SelectItem value="n">Inativo</SelectItem></SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold">Botão de Certificado</Label>
+                    <Select value={form.watch('config.mostrar_botao_certificado') ?? 's'} onValueChange={(v) => form.setValue('config.mostrar_botao_certificado', v as any)}>
+                      <SelectTrigger className="rounded-xl border-slate-200"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent className="rounded-xl"><SelectItem value="s">Mostrar</SelectItem><SelectItem value="n">Ocultar</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold">Liberação do Certificado</Label>
+                    <Select value={form.watch('config.certificado_requisito') ?? 'percentual'} onValueChange={(v) => form.setValue('config.certificado_requisito', v as any)}>
+                      <SelectTrigger className="rounded-xl border-slate-200"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="inicio">Desde o início</SelectItem>
+                        <SelectItem value="percentual">Após % de consumo do conteúdo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {form.watch('config.certificado_requisito') === 'percentual' && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          className="rounded-xl border-slate-200 w-24"
+                          value={form.watch('config.certificado_percentual') ?? 100}
+                          onChange={(e) => form.setValue('config.certificado_percentual', Math.min(100, Math.max(0, Number(e.target.value) || 0)), { shouldValidate: true })}
+                        />
+                        <span className="text-sm text-muted-foreground">%</span>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-2"><Label className="font-bold">ID Externo (EADControl)</Label><Input className="rounded-xl border-slate-200" {...form.register('config.ead.id_eadcontrol')} /></div>
                 </div>

@@ -54,6 +54,12 @@ class InviteController extends Controller
             $finalSlug = $courseSlug ?: $slug ?: (string) $courseId;
             $link = $frontendBase ? $frontendBase . '/cursos/' . $finalSlug . '/inscricao/' . $token : null;
 
+            $idTurma = (int) ($cfg['id_turma'] ?? 0);
+            $turmaNome = null;
+            if ($idTurma > 0) {
+                $turmaNome = \App\Models\Turma::where('id', $idTurma)->value('nome');
+            }
+
             return [
                 'id' => $p->ID,
                 'nome' => $p->post_title,
@@ -65,6 +71,8 @@ class InviteController extends Controller
                 'validade' => (string) ($cfg['validade'] ?? ''),
                 'criado_em' => optional($p->created_at)->toDateTimeString(),
                 'id_curso' => $courseId,
+                'id_turma' => $idTurma,
+                'turma_nome' => $turmaNome,
                 'token' => $token,
             ];
         })->toArray();
@@ -90,12 +98,14 @@ class InviteController extends Controller
         $payload = [
             'nome' => $request->input('nome'),
             'id_curso' => $request->input('id_curso'),
+            'id_turma' => $request->input('id_turma'),
             'total_convites' => $request->input('total_convites'),
             'validade' => $request->input('validade'),
         ];
         $validator = \Illuminate\Support\Facades\Validator::make($payload, [
             'nome' => ['required','string','max:255'],
             'id_curso' => ['required','integer','min:1'],
+            'id_turma' => ['nullable','integer','min:0'],
             'total_convites' => ['required','integer','min:1'],
             'validade' => ['nullable','date'],
         ]);
@@ -114,10 +124,22 @@ class InviteController extends Controller
             $slug .= '-' . ($count + 1);
         }
         $token = Str::random(32);
+        $idTurma = (int) $payload['id_turma'];
+        // Se informou uma turma, valida que ela pertence ao curso selecionado
+        if ($idTurma > 0) {
+            $turma = \App\Models\Turma::where('id', $idTurma)->where('id_curso', (int) $payload['id_curso'])->first();
+            if (!$turma) {
+                return response()->json([
+                    'message' => 'Erro de validação',
+                    'errors' => ['id_turma' => ['A turma selecionada não pertence ao curso escolhido.']],
+                ], 422);
+            }
+        }
         $cfg = [
             'total_convites' => (int) $payload['total_convites'],
             'convites_usados' => 0,
             'validade' => $payload['validade'] ? date('Y-m-d', strtotime((string) $payload['validade'])) : null,
+            'id_turma' => $idTurma,
         ];
 
         $invite = new Post();
@@ -144,6 +166,12 @@ class InviteController extends Controller
         $finalSlug = $courseSlug ?: (string) $courseId;
         $link = $frontendBase ? $frontendBase . '/cursos/' . $finalSlug . '/inscricao/' . $token : null;
 
+        $idTurma = (int) ($invite->config['id_turma'] ?? 0);
+        $turmaNome = null;
+        if ($idTurma > 0) {
+            $turmaNome = \App\Models\Turma::where('id', $idTurma)->value('nome');
+        }
+
         return response()->json([
             'id' => $invite->ID,
             'nome' => $invite->post_title,
@@ -155,6 +183,8 @@ class InviteController extends Controller
             'validade' => (string) ($invite->config['validade'] ?? ''),
             'criado_em' => optional($invite->created_at)->toDateTimeString(),
             'id_curso' => $courseId,
+            'id_turma' => $idTurma,
+            'turma_nome' => $turmaNome,
             'token' => $token,
         ], 201);
     }
@@ -185,6 +215,12 @@ class InviteController extends Controller
         $finalSlug = $courseSlug ?: (string) $courseId;
         $link = $frontendBase ? $frontendBase . '/cursos/' . $finalSlug . '/inscricao/' . $token : null;
 
+        $idTurma = (int) ($cfg['id_turma'] ?? 0);
+        $turmaNome = null;
+        if ($idTurma > 0) {
+            $turmaNome = \App\Models\Turma::where('id', $idTurma)->value('nome');
+        }
+
         return response()->json([
             'id' => $p->ID,
             'nome' => $p->post_title,
@@ -195,6 +231,8 @@ class InviteController extends Controller
             'validade' => (string) ($cfg['validade'] ?? ''),
             'criado_em' => optional($p->created_at)->toDateTimeString(),
             'id_curso' => $courseId,
+            'id_turma' => $idTurma,
+            'turma_nome' => $turmaNome,
             'token' => $token,
         ], 200);
     }
@@ -214,12 +252,14 @@ class InviteController extends Controller
         $payload = [
             'nome' => $request->input('nome'),
             'id_curso' => $request->input('id_curso'),
+            'id_turma' => $request->input('id_turma'),
             'total_convites' => $request->input('total_convites'),
             'validade' => $request->input('validade'),
         ];
         $validator = Validator::make($payload, [
             'nome' => ['nullable','string','max:255'],
             'id_curso' => ['nullable','integer','min:1'],
+            'id_turma' => ['nullable','integer','min:0'],
             'total_convites' => ['nullable','integer','min:1'],
             'validade' => ['nullable','date'],
         ]);
@@ -243,6 +283,22 @@ class InviteController extends Controller
         }
         if (!is_null($payload['id_curso'])) {
             $invite->post_parent = (int) $payload['id_curso'];
+        }
+        if (!is_null($payload['id_turma'])) {
+            $idTurma = (int) $payload['id_turma'];
+            $courseId = (int) ($invite->post_parent ?? $payload['id_curso'] ?? 0);
+            if ($idTurma > 0) {
+                $turma = \App\Models\Turma::where('id', $idTurma)->where('id_curso', $courseId)->first();
+                if (!$turma) {
+                    return response()->json([
+                        'message' => 'Erro de validação',
+                        'errors' => ['id_turma' => ['A turma selecionada não pertence ao curso escolhido.']],
+                    ], 422);
+                }
+            }
+            $cfg = (array) ($invite->config ?? []);
+            $cfg['id_turma'] = $idTurma;
+            $invite->config = $cfg;
         }
         if (!is_null($payload['total_convites']) || !is_null($payload['validade'])) {
             $cfg = (array) ($invite->config ?? []);
@@ -270,6 +326,12 @@ class InviteController extends Controller
         $token = (string) ($invite->token ?? '');
         $link = $frontendBase ? $frontendBase . '/cursos/' . $finalSlug . '/inscricao/' . $token : null;
 
+        $idTurma = (int) ($invite->config['id_turma'] ?? 0);
+        $turmaNome = null;
+        if ($idTurma > 0) {
+            $turmaNome = \App\Models\Turma::where('id', $idTurma)->value('nome');
+        }
+
         return response()->json([
             'id' => $invite->ID,
             'nome' => $invite->post_title,
@@ -280,6 +342,8 @@ class InviteController extends Controller
             'validade' => (string) ($invite->config['validade'] ?? ''),
             'criado_em' => optional($invite->created_at)->toDateTimeString(),
             'id_curso' => $courseId,
+            'id_turma' => $idTurma,
+            'turma_nome' => $turmaNome,
             'token' => $token,
         ], 200);
     }

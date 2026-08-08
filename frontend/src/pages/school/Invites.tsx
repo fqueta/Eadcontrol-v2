@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { invitesService } from '@/services/invitesService';
 import { coursesService } from '@/services/coursesService';
+import { useTurmasList } from '@/hooks/turmas';
 import { Combobox, useComboboxOptions } from '@/components/ui/combobox';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -34,9 +35,11 @@ export default function InvitesAdminPage() {
   // Form state
   const [nome, setNome] = useState('');
   const [idCurso, setIdCurso] = useState<number>(0);
+  const [idTurma, setIdTurma] = useState<string>('');
   const [totalConvites, setTotalConvites] = useState<number>(1);
   const [validade, setValidade] = useState<string>('');
   const [courseSearch, setCourseSearch] = useState<string>('');
+  const [turmaSearch, setTurmaSearch] = useState<string>('');
   // Edit/Delete state
   const [editingInvite, setEditingInvite] = useState<any | null>(null);
   const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
@@ -135,6 +138,27 @@ export default function InvitesAdminPage() {
   const courseOptions = useComboboxOptions(courseItems, 'id', 'nome', undefined, (c: any) => String(c?.titulo || ''));
 
   /**
+   * effectiveCourseId
+   * pt-BR: Curso efetivo para buscar turmas (form de criação ou edição).
+   * en-US: Effective course used to fetch classes (create form or edit).
+   */
+  const effectiveCourseId = editingInvite?.id_curso ? Number(editingInvite.id_curso) : idCurso;
+
+  /**
+   * turmasQuery
+   * pt-BR: Busca turmas do curso selecionado para alimentar o Combobox de turma.
+   * en-US: Fetches classes of the selected course to feed the class Combobox.
+   */
+  const turmasQuery = useTurmasList(
+    { page: 1, per_page: 200, search: turmaSearch || undefined, id_curso: effectiveCourseId > 0 ? effectiveCourseId : undefined },
+    { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false, refetchOnReconnect: false }
+  );
+  const turmaItems = ((turmasQuery.data as any)?.data || (turmasQuery.data as any)?.items || []) as any[];
+  const turmaOptions = useComboboxOptions(turmaItems, 'id', 'nome', undefined, (t: any) =>
+    t?.curso?.nome ? `Curso: ${t.curso.nome}` : undefined
+  );
+
+  /**
    * createMutation
    * pt-BR: Cria novo convite via serviço.
    * en-US: Creates a new invite via service.
@@ -143,6 +167,7 @@ export default function InvitesAdminPage() {
     mutationFn: async () => invitesService.create({
       nome,
       id_curso: idCurso,
+      id_turma: idTurma ? Number(idTurma) : null,
       total_convites: totalConvites,
       validade: validade || undefined,
     }),
@@ -150,6 +175,7 @@ export default function InvitesAdminPage() {
       toast({ title: 'Convite criado', description: 'Link gerado com sucesso.' });
       setNome('');
       setIdCurso(0);
+      setIdTurma('');
       setTotalConvites(1);
       setValidade('');
       queryClient.invalidateQueries({ queryKey: ['admin', 'invites', 'list'] });
@@ -169,6 +195,7 @@ export default function InvitesAdminPage() {
     mutationFn: async () => invitesService.update(editingInvite.id, {
       nome: editingInvite.nome,
       id_curso: Number(editingInvite.id_curso) || undefined,
+      id_turma: editingInvite.id_turma ? Number(editingInvite.id_turma) : null,
       total_convites: Number(editingInvite.total_convites) || undefined,
       validade: editingInvite.validade || undefined,
     }),
@@ -229,6 +256,8 @@ export default function InvitesAdminPage() {
       validade: i.validade,
       criado_em: i.criado_em,
       id_curso: i.id_curso,
+      id_turma: i.id_turma || 0,
+      turma_nome: i.turma_nome || '',
     }));
   }, [invitesData]);
 
@@ -285,12 +314,32 @@ export default function InvitesAdminPage() {
                  <Combobox
                    options={courseOptions}
                    value={idCurso ? String(idCurso) : ''}
-                   onValueChange={(v) => setIdCurso(Number(v || 0))}
+                   onValueChange={(v) => {
+                     const next = Number(v || 0);
+                     setIdCurso(next);
+                     if (next !== idCurso) setIdTurma('');
+                   }}
                    placeholder="Selecione um curso..."
                    searchPlaceholder="Buscar curso..."
                    onSearch={(term) => setCourseSearch(term)}
                    searchTerm={courseSearch}
                    loading={coursesQuery.isLoading}
+                   className="truncate"
+                 />
+              </div>
+
+              <div className="md:col-span-4 space-y-2">
+                <Label htmlFor="id_turma">Turma (Opcional)</Label>
+                 <Combobox
+                   options={turmaOptions}
+                   value={idTurma}
+                   onValueChange={(v) => setIdTurma(v)}
+                   placeholder={idCurso > 0 ? 'Nenhuma turma específica' : 'Selecione o curso primeiro'}
+                   searchPlaceholder="Buscar turma..."
+                   onSearch={(term) => setTurmaSearch(term)}
+                   searchTerm={turmaSearch}
+                   loading={turmasQuery.isLoading}
+                   disabled={idCurso <= 0}
                    className="truncate"
                  />
               </div>
@@ -352,6 +401,7 @@ export default function InvitesAdminPage() {
                       <TableHead>Link de Acesso</TableHead>
                       <TableHead className="text-center">Utilização</TableHead>
                       <TableHead>Validade</TableHead>
+                      <TableHead>Turma</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -407,6 +457,13 @@ export default function InvitesAdminPage() {
                                 <span className="text-muted-foreground text-sm">-</span>
                             )}
                         </TableCell>
+                        <TableCell>
+                            {r.id_turma ? (
+                                <span className="text-sm">{r.turma_nome || `Turma #${r.id_turma}`}</span>
+                            ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                        </TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -443,6 +500,7 @@ export default function InvitesAdminPage() {
                                   id: r.id,
                                   nome: r.nome,
                                   id_curso: r.id_curso,
+                                  id_turma: r.id_turma || 0,
                                   total_convites: r.total,
                                   validade: r.validade || '',
                                 });
@@ -500,12 +558,34 @@ export default function InvitesAdminPage() {
                   <Combobox
                     options={courseOptions}
                     value={editingInvite.id_curso ? String(editingInvite.id_curso) : ''}
-                    onValueChange={(v) => setEditingInvite({ ...editingInvite, id_curso: Number(v || 0) })}
+                    onValueChange={(v) => {
+                      const next = Number(v || 0);
+                      if (next !== Number(editingInvite.id_curso || 0)) {
+                        setEditingInvite({ ...editingInvite, id_curso: next, id_turma: 0 });
+                      } else {
+                        setEditingInvite({ ...editingInvite, id_curso: next });
+                      }
+                    }}
                     placeholder="Selecione um curso..."
                     searchPlaceholder="Buscar curso..."
                     onSearch={(term) => setCourseSearch(term)}
                     searchTerm={courseSearch}
                     loading={coursesQuery.isLoading}
+                    className="truncate w-full"
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="edit_id_turma">Turma (Opcional)</Label>
+                  <Combobox
+                    options={turmaOptions}
+                    value={editingInvite.id_turma ? String(editingInvite.id_turma) : ''}
+                    onValueChange={(v) => setEditingInvite({ ...editingInvite, id_turma: Number(v || 0) })}
+                    placeholder={editingInvite.id_curso ? 'Nenhuma turma específica' : 'Selecione o curso primeiro'}
+                    searchPlaceholder="Buscar turma..."
+                    onSearch={(term) => setTurmaSearch(term)}
+                    searchTerm={turmaSearch}
+                    loading={turmasQuery.isLoading}
+                    disabled={!editingInvite.id_curso}
                     className="truncate w-full"
                   />
                 </div>

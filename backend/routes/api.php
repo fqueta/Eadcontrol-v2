@@ -305,6 +305,14 @@ Route::name('api.')->prefix('v1')->middleware([
         // EN: Certificate template endpoints (protected)
         Route::get('certificates/template', [CertificatesController::class, 'getTemplate'])->name('certificates.template.get');
         Route::put('certificates/template', [CertificatesController::class, 'saveTemplate'])->name('certificates.template.put');
+        Route::get('certificates/template/{enrollmentId}', [CertificatesController::class, 'getTemplateForEnrollment'])->name('certificates.template.enrollment');
+        Route::get('certificates/models', [CertificatesController::class, 'indexModels'])->name('certificates.models.index');
+        Route::post('certificates/models', [CertificatesController::class, 'storeModel'])->name('certificates.models.store');
+        Route::put('certificates/models/{id}', [CertificatesController::class, 'updateModel'])->name('certificates.models.update');
+        Route::delete('certificates/models/{id}', [CertificatesController::class, 'destroyModel'])->name('certificates.models.destroy');
+        Route::get('certificates/backgrounds', [CertificatesController::class, 'indexBackgrounds'])->name('certificates.backgrounds.index');
+        Route::post('certificates/backgrounds', [CertificatesController::class, 'storeBackground'])->name('certificates.backgrounds.store');
+        Route::delete('certificates/backgrounds/{id}', [CertificatesController::class, 'destroyBackground'])->name('certificates.backgrounds.destroy');
         Route::post('certificates/generate/{enrollmentId}', [CertificatesController::class, 'generatePdf'])->name('certificates.generate');
         Route::get('tracking-events', [TrackingEventController::class, 'index'])->name('tracking-events.index');
         // Rota aninhada para cadastro de etapas de um funil específico

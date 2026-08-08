@@ -145,9 +145,84 @@ export function AppSidebar() {
     }).filter(Boolean);
   }, [menuItems, searchQuery]);
 
-  const isActive = (path: string) => currentPath === resolveUrl(path);
-  const hasActiveChild = (items: any[]) => 
+  // Collect all menu URLs (recursive) for best-match active detection
+  const allMenuUrls = React.useMemo(() => {
+    const urls: string[] = [];
+    const walk = (items: any[]) => {
+      for (const item of items) {
+        if (item.url) urls.push(item.url);
+        if (item.items) walk(item.items);
+      }
+    };
+    walk(menuItems);
+    if (user?.permission_id && parseInt(String(user.permission_id)) === 1) {
+      urls.push('/saas', '/saas/plans', '/saas/subscriptions', '/saas/invoices', '/saas/tenants', '/saas/gateway');
+    }
+    return urls;
+  }, [menuItems, user]);
+
+  // Longest matching menu URL for the current path (detail pages keep parent highlighted)
+  const bestMatchUrl = React.useMemo(() => {
+    let best = '';
+    for (const url of allMenuUrls) {
+      const resolved = resolveUrl(url);
+      if (currentPath === resolved || currentPath.startsWith(resolved + '/')) {
+        if (resolved.length > best.length) best = resolved;
+      }
+    }
+    return best;
+  }, [allMenuUrls, currentPath]);
+
+  const isActive = (path: string) => bestMatchUrl === resolveUrl(path);
+  const hasActiveChild = (items: any[]) =>
     items?.some((item) => isActive(item.url));
+
+  // Auto-expand the group containing the active item so it stays visible/highlighted
+  const activeGroupTitle = React.useMemo(() => {
+    let found: string | null = null;
+    const walk = (items: any[], parentTitle: string | null): boolean => {
+      for (const item of items) {
+        if (item.url && resolveUrl(item.url) === bestMatchUrl) {
+          found = parentTitle;
+          return true;
+        }
+        if (item.items && walk(item.items, item.title)) return true;
+      }
+      return false;
+    };
+    walk(menuItems, null);
+    return found;
+  }, [menuItems, bestMatchUrl]);
+
+  const activeGroupCollapsed = activeGroupTitle ? isGroupCollapsed(activeGroupTitle) : false;
+
+  React.useEffect(() => {
+    if (!activeGroupTitle || !activeGroupCollapsed) return;
+    const key = getGroupKey(activeGroupTitle);
+    setCollapsedGroups((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev, [key]: false };
+      localStorage.setItem(GROUPS_KEY, JSON.stringify(next));
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bestMatchUrl]);
+
+  // Scroll the active menu item to the top of the sidebar content
+  const contentRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!bestMatchUrl || collapsed) return;
+    const raf = requestAnimationFrame(() => {
+      const content = contentRef.current;
+      if (!content) return;
+      const activeEl = content.querySelector('[data-active="true"]');
+      if (!activeEl) return;
+      const contentTop = content.getBoundingClientRect().top;
+      const elTop = activeEl.getBoundingClientRect().top;
+      content.scrollTo({ top: content.scrollTop + (elTop - contentTop), behavior: 'smooth' });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [bestMatchUrl, activeGroupCollapsed, collapsed]);
 
   /**
    * areAllGroupsCollapsed / collapseAllGroups / expandAllGroups
@@ -205,7 +280,7 @@ export function AppSidebar() {
         </div>
       )}
 
-      <SidebarContent>
+      <SidebarContent ref={contentRef}>
         <SidebarGroup>
           {/*
            * SidebarGroupLabel color override

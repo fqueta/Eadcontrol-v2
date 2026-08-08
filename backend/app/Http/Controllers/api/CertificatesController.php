@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CertificateBackground;
+use App\Models\CertificateModel;
 use App\Models\Matricula;
 use App\Models\Option;
 use App\Services\Qlib;
@@ -10,6 +12,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class CertificatesController extends Controller
 {
@@ -29,9 +32,9 @@ class CertificatesController extends Controller
                 return response()->json(['error' => 'Matrícula não encontrada'], 404);
             }
 
-            // Carrega o modelo definido em Option
-            $model = Option::where('name', 'certificateTemplate')->first();
-            $config = $model ? json_decode($model->value, true) : [];
+            // Carrega o modelo (global ou da turma da matrícula) definido em Option
+            // EN: Loads the model (global or from the enrollment's class) defined in Option
+            $config = $this->resolveTemplateConfig($matricula);
 
             $title = $config['title'] ?? 'Certificado de Conclusão';
             $showTitle = $config['showTitle'] ?? true;
@@ -254,6 +257,306 @@ class CertificatesController extends Controller
         return response()->json([
             'config' => $model ? json_decode($model->value, true) : []
         ]);
+    }
+
+    /**
+     * resolveTemplateConfig
+     * pt-BR: Resolve a configuração do modelo de certificado para uma matrícula.
+     *        Prioridade: modelo vinculado à turma da matrícula > modelo global
+     *        (id_turma NULL) > Option legada (certificateTemplate).
+     * en-US: Resolves certificate template config for an enrollment.
+     *        Priority: model bound to the enrollment class > global model
+     *        (id_turma NULL) > legacy Option (certificateTemplate).
+     */
+    protected function resolveTemplateConfig(Matricula $matricula): array
+    {
+        $turmaId = (int) ($matricula->id_turma ?? 0);
+
+        if ($turmaId > 0) {
+            $model = CertificateModel::where('id_turma', $turmaId)->where('ativo', 's')->first();
+            if ($model && !empty($model->config)) {
+                return (array) $model->config;
+            }
+        }
+
+        $global = CertificateModel::whereNull('id_turma')->where('ativo', 's')->first();
+        if ($global && !empty($global->config)) {
+            return (array) $global->config;
+        }
+
+        $model = Option::where('name', 'certificateTemplate')->first();
+        return $model ? (array) json_decode($model->value, true) : [];
+    }
+
+    /**
+     * indexModels
+     * pt-BR: Lista todos os modelos de certificado, incluindo turma vinculada.
+     * en-US: Lists all certificate models, including bound class.
+     */
+    public function indexModels()
+    {
+        $models = CertificateModel::with('turma:id,nome')->orderBy('id_turma')->get();
+
+        $data = $models->map(function (CertificateModel $m) {
+            return [
+                'id' => $m->id,
+                'name' => $m->name,
+                'id_turma' => $m->id_turma,
+                'turma_nome' => $m->turma->nome ?? null,
+                'config' => $m->config ?: [],
+                'ativo' => $m->ativo,
+                'created_at' => optional($m->created_at)->toDateTimeString(),
+                'updated_at' => optional($m->updated_at)->toDateTimeString(),
+            ];
+        });
+
+        return response()->json(['data' => $data]);
+    }
+
+    /**
+     * storeModel
+     * pt-BR: Cria um novo modelo de certificado (opcionalmente vinculado a uma turma).
+     * en-US: Creates a new certificate model (optionally bound to a class).
+     */
+    public function storeModel(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'name' => ['required', 'string', 'max:200'],
+                'id_turma' => ['nullable', 'integer', 'exists:turmas,id'],
+                'config' => ['array'],
+            ]);
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'Erro de validação',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $config = $this->whitelistTemplateConfig($request->input('config', []));
+
+            $model = CertificateModel::create([
+                'name' => trim((string) $request->input('name')),
+                'id_turma' => $request->filled('id_turma') ? (int) $request->input('id_turma') : null,
+                'config' => $config,
+                'ativo' => $request->input('ativo', 's') === 'n' ? 'n' : 's',
+            ]);
+
+            return response()->json([
+                'id' => $model->id,
+                'name' => $model->name,
+                'id_turma' => $model->id_turma,
+                'config' => $model->config ?: [],
+                'ativo' => $model->ativo,
+                'message' => 'Modelo criado com sucesso',
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Erro ao criar modelo de certificado: ' . $e->getMessage());
+            return response()->json(['error' => 'Erro ao criar modelo: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * updateModel
+     * pt-BR: Atualiza um modelo de certificado existente.
+     * en-US: Updates an existing certificate model.
+     */
+    public function updateModel(Request $request, $id)
+    {
+        try {
+            $model = CertificateModel::find($id);
+            if (!$model) {
+                return response()->json(['error' => 'Modelo não encontrado'], 404);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'name' => ['sometimes', 'nullable', 'string', 'max:200'],
+                'id_turma' => ['sometimes', 'nullable', 'integer', 'exists:turmas,id'],
+                'config' => ['sometimes', 'array'],
+                'ativo' => ['sometimes', 'in:s,n'],
+            ]);
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'Erro de validação',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            if ($request->has('name')) {
+                $model->name = trim((string) $request->input('name'));
+            }
+            if ($request->has('id_turma')) {
+                $model->id_turma = $request->filled('id_turma') ? (int) $request->input('id_turma') : null;
+            }
+            if ($request->has('config')) {
+                $model->config = $this->whitelistTemplateConfig($request->input('config', []));
+            }
+            if ($request->has('ativo')) {
+                $model->ativo = $request->input('ativo') === 'n' ? 'n' : 's';
+            }
+            $model->save();
+
+            return response()->json([
+                'id' => $model->id,
+                'name' => $model->name,
+                'id_turma' => $model->id_turma,
+                'config' => $model->config ?: [],
+                'ativo' => $model->ativo,
+                'message' => 'Modelo atualizado com sucesso',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Erro ao atualizar modelo de certificado: ' . $e->getMessage());
+            return response()->json(['error' => 'Erro ao atualizar modelo: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * destroyModel
+     * pt-BR: Exclui um modelo de certificado.
+     * en-US: Deletes a certificate model.
+     */
+    public function destroyModel($id)
+    {
+        try {
+            $model = CertificateModel::find($id);
+            if (!$model) {
+                return response()->json(['error' => 'Modelo não encontrado'], 404);
+            }
+            $model->delete();
+            return response()->json(['message' => 'Modelo excluído com sucesso']);
+        } catch (\Exception $e) {
+            Log::error('Erro ao excluir modelo de certificado: ' . $e->getMessage());
+            return response()->json(['error' => 'Erro ao excluir modelo: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * getTemplateForEnrollment
+     * pt-BR: Retorna o modelo (config) resolvido para uma matrícula específica,
+     *        levando em conta a turma da matrícula.
+     * en-US: Returns the resolved template config for a specific enrollment,
+     *        taking the enrollment class into account.
+     */
+    public function getTemplateForEnrollment($enrollmentId)
+    {
+        $matricula = Matricula::find($enrollmentId);
+        if (!$matricula) {
+            return response()->json(['error' => 'Matrícula não encontrada'], 404);
+        }
+
+        $config = $this->resolveTemplateConfig($matricula);
+
+        $model = null;
+        $turmaId = (int) ($matricula->id_turma ?? 0);
+        if ($turmaId > 0) {
+            $model = CertificateModel::where('id_turma', $turmaId)->where('ativo', 's')->first();
+        }
+        if (!$model) {
+            $model = CertificateModel::whereNull('id_turma')->where('ativo', 's')->first();
+        }
+
+        return response()->json([
+            'config' => $config,
+            'model' => $model ? [
+                'id' => $model->id,
+                'name' => $model->name,
+                'id_turma' => $model->id_turma,
+            ] : null,
+            'turma_id' => $turmaId,
+        ]);
+    }
+
+    /**
+     * indexBackgrounds
+     * pt-BR: Lista todas as imagens de fundo disponíveis na galeria.
+     * en-US: Lists all background images available in the gallery.
+     */
+    public function indexBackgrounds()
+    {
+        $backgrounds = CertificateBackground::orderBy('id')->get();
+
+        return response()->json(['data' => $backgrounds]);
+    }
+
+    /**
+     * storeBackground
+     * pt-BR: Adiciona uma nova imagem de fundo à galeria.
+     * en-US: Adds a new background image to the gallery.
+     */
+    public function storeBackground(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'name' => ['nullable', 'string', 'max:200'],
+                'url' => ['required', 'string', 'max:2000'],
+                'ativo' => ['nullable', 'in:s,n'],
+            ]);
+            if ($validator->fails()) {
+                return response()->json([
+                    'message' => 'Erro de validação',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $background = CertificateBackground::create([
+                'name' => trim((string) $request->input('name', 'Imagem de Fundo')),
+                'url' => trim((string) $request->input('url')),
+                'ativo' => $request->input('ativo', 's') === 'n' ? 'n' : 's',
+            ]);
+
+            return response()->json([
+                'id' => $background->id,
+                'name' => $background->name,
+                'url' => $background->url,
+                'ativo' => $background->ativo,
+                'message' => 'Imagem de fundo adicionada com sucesso',
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Erro ao adicionar imagem de fundo: ' . $e->getMessage());
+            return response()->json(['error' => 'Erro ao adicionar imagem de fundo: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * destroyBackground
+     * pt-BR: Remove uma imagem de fundo da galeria.
+     * en-US: Removes a background image from the gallery.
+     */
+    public function destroyBackground($id)
+    {
+        try {
+            $background = CertificateBackground::find($id);
+            if (!$background) {
+                return response()->json(['error' => 'Imagem de fundo não encontrada'], 404);
+            }
+            $background->delete();
+            return response()->json(['message' => 'Imagem de fundo removida com sucesso']);
+        } catch (\Exception $e) {
+            Log::error('Erro ao remover imagem de fundo: ' . $e->getMessage());
+            return response()->json(['error' => 'Erro ao remover imagem de fundo: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * whitelistTemplateConfig
+     * pt-BR: Mantém apenas as chaves conhecidas do template de certificado.
+     * en-US: Keeps only the known keys of the certificate template.
+     */
+    protected function whitelistTemplateConfig(array $config): array
+    {
+        $keys = [
+            'title', 'showTitle', 'body', 'footerLeft', 'footerRight',
+            'signatureLeftUrl', 'signatureRightUrl', 'bgUrl',
+            'accentColor', 'qrPosition', 'logoPosition',
+            'marginTop', 'marginRight', 'marginBottom', 'marginLeft',
+        ];
+        $data = [];
+        foreach ($keys as $key) {
+            if (array_key_exists($key, $config)) {
+                $data[$key] = $config[$key];
+            }
+        }
+        return $data;
     }
 
     /**

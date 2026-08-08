@@ -273,7 +273,17 @@ class PublicEnrollmentController extends Controller
             Qlib::update_usermeta($client->id, 'institution', $institution);
 
             // Add id_turma com padrão 0 para atender ao schema que exige valor (sem default)
+            // EN: Default id_turma to 0 to satisfy the schema (no default)
             $turmaId = (int) ($request->input('id_turma', 0));
+            // Se o convite possui turma vinculada, ela prevalece sobre o campo do formulário
+            // EN: If the invite has a bound class, it takes precedence over the form field
+            if ($inviteToken !== '' && isset($invite) && $invite) {
+                $inviteCfg = (array) ($invite->config ?? []);
+                $inviteTurma = (int) ($inviteCfg['id_turma'] ?? 0);
+                if ($inviteTurma > 0) {
+                    $turmaId = $inviteTurma;
+                }
+            }
             //valor do curso pelo id (com lock)
             $course = DB::table('cursos')->where('id', $courseId)->lockForUpdate()->first();
             if (!$course) {

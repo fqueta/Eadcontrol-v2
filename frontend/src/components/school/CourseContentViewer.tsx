@@ -2424,6 +2424,22 @@ function htmlEquals(a: string, b: string): boolean {
   }, [flatActivities, completedIds]);
 
   /**
+   * certificateAllowed
+   * pt-BR: Regra de liberação do certificado configurada no curso.
+   *        'inicio' libera desde o início; 'percentual' exige o percentual
+   *        mínimo de consumo definido no curso (padrão: 100%).
+   * en-US: Certificate release rule configured on the course.
+   *        'inicio' unlocks from the start; 'percentual' requires the minimum
+   *        consumption percent set on the course (default: 100%).
+   */
+  const certificateAllowed = useMemo(() => {
+    const requisito = course?.config?.certificado_requisito ?? 'percentual';
+    if (requisito === 'inicio') return true;
+    const percentual = Math.min(100, Math.max(0, Number(course?.config?.certificado_percentual ?? 100) || 100));
+    return courseProgressPercent >= percentual;
+  }, [course?.config?.certificado_requisito, course?.config?.certificado_percentual, courseProgressPercent]);
+
+  /**
    * toggleCompleted
    * pt-BR: Alterna conclusão e persiste em localStorage e API. Envia `seconds`
    *        como inteiro; se a duração do player estiver 0, usa a duração
@@ -2586,16 +2602,23 @@ function htmlEquals(a: string, b: string): boolean {
             >
               <Folder className="h-4 w-4 mr-1" /> Atividades
             </Button>
+            {(course?.config?.mostrar_botao_certificado ?? 's') !== 'n' && (
             <Button
               size="sm"
               className="h-8 px-2 whitespace-nowrap"
               onClick={handleRequestCertificate}
-              disabled={generatingCert || !enrollmentId || courseProgressPercent < 100}
-              title={!enrollmentId ? 'Matrícula não identificada' : (courseProgressPercent < 100 ? 'Conclua todas as atividades para solicitar o certificado' : 'Gerar certificado em PDF')}
+              disabled={generatingCert || !enrollmentId || !certificateAllowed}
+              title={!enrollmentId ? 'Matrícula não identificada'
+                : (course?.config?.certificado_requisito === 'inicio'
+                    ? 'Gerar certificado em PDF'
+                    : (courseProgressPercent < (course?.config?.certificado_percentual ?? 100)
+                        ? `Consuma ${course?.config?.certificado_percentual ?? 100}% do conteúdo para solicitar o certificado`
+                        : 'Gerar certificado em PDF'))}
             >
               <GraduationCap className="h-3.5 w-3.5 mr-1" />
               {generatingCert ? 'Gerando…' : 'Solicitar certificado'}
             </Button>
+            )}
             <Button title="Mostrar ou recolher atividades" variant="outline" size="sm" className="hidden md:inline-flex" onClick={() => setCollapseInactiveModules((v) => !v)}>
               {collapseInactiveModules ? (
                 <><ChevronUp className="h-3.5 w-3.5 mr-1" /> Mostrar todos</>

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useEnrollment } from '@/hooks/enrollments';
-import { useCertificateTemplate } from '@/hooks/certificates';
+import { useCertificateTemplateForEnrollment } from '@/hooks/certificates';
 import { Download, Printer } from 'lucide-react';
 import { generateCertificatePdf } from '@/lib/certificates/generateCertificatePdf';
 
@@ -23,8 +23,8 @@ export default function CertificateView() {
   // en-US: Loads enrollment by ID.
   const { data: enrollment } = useEnrollment(id, { enabled: !!id });
 
-  // pt-BR: Carrega modelo do backend (fallback localStorage) e aplica placeholders.
-  // en-US: Loads template from backend (fallback localStorage) and applies placeholders.
+  // pt-BR: Carrega modelo resolvido para a matrícula (considerando a turma), fallback localStorage.
+  // en-US: Loads template resolved for the enrollment (class-aware), fallback localStorage.
   const [template, setTemplate] = useState({
     title: 'Certificado de Conclusão',
     body: 'Certificamos que {studentName} concluiu o curso {courseName} em {completionDate}, com carga horária de {hours}.',
@@ -35,7 +35,7 @@ export default function CertificateView() {
     bgUrl: '',
     accentColor: '#111827',
   } as any);
-  const { data: backendTemplate } = useCertificateTemplate();
+  const { data: backendTemplate } = useCertificateTemplateForEnrollment(id);
 
   useEffect(() => {
     if (backendTemplate) {
