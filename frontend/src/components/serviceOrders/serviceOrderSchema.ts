@@ -7,10 +7,10 @@ import { z } from "zod";
 export const serviceOrderSchema = z.object({
   doc_type: z.enum(["os", "orc"]),
   title: z.string().min(1, "Título é obrigatório"),
-  description: z.string().min(1, "Descrição é obrigatória"),
+  description: z.string().optional(),
   client_id: z.string().min(1, "Cliente é obrigatório"),
-  aircraft_id: z.string().min(1, "Aeronave é obrigatória"),
-  status: z.enum(["draft","pending", "in_progress", "completed", "cancelled","approved","on_hold"]),
+  aircraft_id: z.string().optional(),
+  status: z.enum(["agendado", "em_atendimento", "aguardando_pagamento", "concluido", "cancelado"]),
   priority: z.enum(["low", "medium", "high", "urgent"]),
   estimated_start_date: z.string().optional(),
   estimated_end_date: z.string().optional(),

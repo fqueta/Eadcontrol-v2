@@ -104,7 +104,7 @@ class ServiceOrdersService extends BaseApiService {
    * Obtém lista de usuários para atribuição
    */
   async getUsers(): Promise<{ id: string; name: string }[]> {
-    const response = await this.get<ApiResponse<{ id: string; name: string }[]>>('/users/list');
+    const response = await this.get<ApiResponse<{ id: string; name: string }[]>>('/users', { per_page: 100 });
     return response.data;
   }
 
@@ -122,7 +122,7 @@ class ServiceOrdersService extends BaseApiService {
    * Obtém lista de serviços disponíveis
    */
   async getAvailableServices(): Promise<{ id: string; name: string; price: number; unit: string }[]> {
-    const response = await this.get<ApiResponse<{ id: string; name: string; price: number; unit: string }[]>>('/services/available');
+    const response = await this.get<ApiResponse<{ id: string; name: string; price: number; unit: string }[]>>('/services', { per_page: 100 });
     return response.data;
   }
 

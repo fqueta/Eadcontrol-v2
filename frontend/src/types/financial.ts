@@ -26,7 +26,8 @@ export enum PaymentMethod {
   BANK_TRANSFER = 'bank_transfer',
   PIX = 'pix',
   CHECK = 'check',
-  BOLETO = 'boleto'
+  BOLETO = 'boleto',
+  OTHER = 'other'
 }
 
 export enum RecurrenceType {
@@ -329,6 +330,7 @@ export interface FinancialDashboardData {
 export interface AccountsFilter {
   page?: number;
   limit?: number;
+  per_page?: number;
   search?: string;
   status?: AccountStatus;
   category?: string;
@@ -337,6 +339,7 @@ export interface AccountsFilter {
   paymentMethod?: PaymentMethod;
   client_id?: string;
   matricula_id?: string;
+  service_order_id?: string;
   sortBy?: 'dueDate' | 'amount' | 'createdAt';
   sortOrder?: 'asc' | 'desc';
 }

@@ -64,7 +64,7 @@ export default function ServicesTable({
    * Navega para a página de visualização do serviço
    */
   const handleViewService = (service: Service) => {
-    navigate(`/services/${service.id}`);
+    navigate(`/admin/services/${service.id}`);
   };
 
   /**

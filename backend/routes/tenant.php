@@ -186,6 +186,20 @@ Route::name('api.')->prefix('api/v1')->middleware([
             ->name('public.produtos.showBySlug')
             ->middleware('throttle:60,1');
 
+        // Agendamento público (salão) — escolha de serviço, horários livres e criação
+        Route::get('booking/services', [\App\Http\Controllers\api\AppointmentController::class, 'publicServices'])
+            ->name('public.booking.services')
+            ->middleware('throttle:120,1');
+        Route::get('booking/professionals', [\App\Http\Controllers\api\AppointmentController::class, 'publicProfessionals'])
+            ->name('public.booking.professionals')
+            ->middleware('throttle:120,1');
+        Route::get('booking/slots', [\App\Http\Controllers\api\AppointmentController::class, 'publicSlots'])
+            ->name('public.booking.slots')
+            ->middleware('throttle:120,1');
+        Route::post('booking', [\App\Http\Controllers\api\AppointmentController::class, 'publicStore'])
+            ->name('public.booking.store')
+            ->middleware('throttle:20,1');
+
     });
 
     // Cadastro de cliente com matrícula automática (sem prefixo "public")
@@ -594,6 +608,23 @@ Route::name('api.')->prefix('api/v1')->middleware([
          Route::put('service-orders/{id}/restore', [ServiceOrderController::class, 'restore'])->name('service-orders.restore');
          Route::put('service-orders/{id}/status ', [ServiceOrderController::class, 'updateStatus'])->name('service-orders.update-status');
          Route::delete('service-orders/{id}/force', [ServiceOrderController::class, 'forceDelete'])->name('service-orders.forceDelete');
+
+         // Rotas para agendamentos (salão)
+         Route::apiResource('appointments', \App\Http\Controllers\api\AppointmentController::class, ['parameters' => [
+             'appointments' => 'id'
+         ]]);
+         Route::patch('appointments/{id}/status', [\App\Http\Controllers\api\AppointmentController::class, 'updateStatus'])->name('appointments.update-status');
+         Route::put('appointments/{id}/status', [\App\Http\Controllers\api\AppointmentController::class, 'updateStatus'])->name('appointments.update-status.put');
+         Route::get('appointments/available/slots', [\App\Http\Controllers\api\AppointmentController::class, 'availableSlots'])->name('appointments.available-slots');
+
+         // Rotas para estoque (auxílio logístico)
+         Route::apiResource('stock-entries', \App\Http\Controllers\api\StockEntryController::class, ['parameters' => [
+             'stock-entries' => 'id'
+         ]]);
+         Route::post('stock-entries/{id}/cancel', [\App\Http\Controllers\api\StockEntryController::class, 'cancel'])->name('stock-entries.cancel');
+         Route::get('stock-movements', [\App\Http\Controllers\api\StockEntryController::class, 'movements'])->name('stock-movements.index');
+         Route::get('stock/summary', [\App\Http\Controllers\api\StockEntryController::class, 'summary'])->name('stock.summary');
+         Route::get('stock/balance/{product_id}', [\App\Http\Controllers\api\StockEntryController::class, 'balance'])->name('stock.balance');
 
          // Rotas para dashboard-metrics
         Route::apiResource('dashboard-metrics', MetricasController::class,['parameters' => [

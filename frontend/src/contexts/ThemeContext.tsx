@@ -51,7 +51,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     const link = document.createElement('link');
     link.id = linkId;
     link.rel = 'stylesheet';
-    link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;500;600;700&display=swap`;
+    // Cache-busting: o CSS do Google Fonts é cacheado e pode referenciar arquivos
+    // .woff2 antigos (404). Alterar o ?v= força o navegador a buscar um CSS novo.
+    link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;500;600;700&display=swap&v=20260813`;
     document.head.appendChild(link);
   };
 

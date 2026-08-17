@@ -24,6 +24,7 @@ class ServiceOrder extends Model
         'object_type',
         'assigned_to',
         'client_id',
+        'appointment_id',
         'status',
         'priority',
         'estimated_start_date',
@@ -103,6 +104,14 @@ class ServiceOrder extends Model
     }
 
     /**
+     * Get the appointment that originated this service order.
+     */
+    public function appointment(): BelongsTo
+    {
+        return $this->belongsTo(Appointment::class, 'appointment_id');
+    }
+
+    /**
      * Get the user assigned to the service order.
      */
     public function assignedUser(): BelongsTo
@@ -169,14 +178,11 @@ class ServiceOrder extends Model
     public static function getStatusOptions(): array
     {
         return [
-            'draft' => 'Rascunho',
-            'pending' => 'Pendente',
-            'in_progress' => 'Em Andamento',
-            'completed' => 'Concluída',
-            'cancelled' => 'Cancelada',
-            'on_hold' => 'Em Espera',
-            'approved' => 'Aprovada',
-            'rejected' => 'Rejeitada',
+            'agendado' => 'Agendado',
+            'em_atendimento' => 'Em Atendimento',
+            'aguardando_pagamento' => 'Aguardando Pagamento',
+            'concluido' => 'Concluído',
+            'cancelado' => 'Cancelado',
         ];
     }
 

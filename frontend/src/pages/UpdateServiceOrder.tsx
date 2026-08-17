@@ -41,24 +41,20 @@ export default function UpdateServiceOrder() {
   const updateServiceOrderMutation = useUpdateServiceOrder();
   // console.log('serviceOrder', serviceOrder);
   
-  // Hook para dados do formulário (clientes, usuários, aeronaves, serviços, produtos)
+  // Hook para dados do formulário (usuários, aeronaves, serviços, produtos)
   const {
-    clients,
     users,
     aircraft,
     services,
     products,
-    isLoadingClients,
     isLoadingUsers,
     isLoadingAircraft,
     isLoadingServices,
     isLoadingProducts,
-    searchClients,
     searchUsers,
     searchAircraft,
     searchServices,
     searchProducts,
-    clientsSearchTerm,
     usersSearchTerm,
     aircraftSearchTerm,
     servicesSearchTerm,
@@ -157,8 +153,8 @@ export default function UpdateServiceOrder() {
       toast.success("Ordem de serviço atualizada com sucesso!");
       
       // Redireciona para a página de visualização da ordem atualizada
-      // navigate(`/service-orders/show/${id}`);
-      navigate(`/service-orders`);
+      // navigate(`/admin/service-orders/show/${id}`);
+      navigate(`/admin/service-orders`);
     } catch (error) {
       console.error("Erro ao atualizar ordem de serviço:", error);
       toast.error("Erro ao atualizar ordem de serviço. Verifique os dados e tente novamente.");
@@ -172,12 +168,12 @@ export default function UpdateServiceOrder() {
    * English: Cancels edit and navigates back to the order details view.
    */
   const handleCancel = () => {
-    navigate(`/service-orders/show/${id}`);
+    navigate(`/admin/service-orders/show/${id}`);
   };
 
   // Volta para a visualização
   const handleBack = () => {
-    navigate(`/service-orders/show/${id}`);
+    navigate(`/admin/service-orders/show/${id}`);
   };
 
   // Verifica se o ID é válido
@@ -320,26 +316,23 @@ export default function UpdateServiceOrder() {
             form={form}
             onSubmit={handleSubmit}
             isSubmitting={updateServiceOrderMutation.isPending}
-            clients={clients}
             users={users}
             aircraft={aircraft}
             availableServices={services}
             availableProducts={products}
-            isLoadingClients={isLoadingClients}
             isLoadingUsers={isLoadingUsers}
             isLoadingAircraft={isLoadingAircraft}
             isLoadingServices={isLoadingServices}
             isLoadingProducts={isLoadingProducts}
             onCancel={handleCancel}
             isEditing={true}
+            showAircraft={false}
             initialServices={serviceOrder.services || []}
             initialProducts={serviceOrder.products || []}
-            searchClients={searchClients}
             searchUsers={searchUsers}
             searchAircraft={searchAircraft}
             searchServices={searchServices}
             searchProducts={searchProducts}
-            clientsSearchTerm={clientsSearchTerm}
             usersSearchTerm={usersSearchTerm}
             aircraftSearchTerm={aircraftSearchTerm}
             servicesSearchTerm={servicesSearchTerm}

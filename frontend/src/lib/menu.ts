@@ -8,6 +8,10 @@ import {
   DollarSign,
   BarChart3,
   Settings,
+  CalendarDays,
+  Store,
+  Sparkles,
+  Truck,
   LucideIcon,
 } from "lucide-react";
 import { MenuItemDTO, MenuItemResolved } from "@/types/menu";
@@ -23,6 +27,10 @@ export const iconMap: Record<string, LucideIcon> = {
   DollarSign,
   BarChart3,
   Settings,
+  CalendarDays,
+  Store,
+  Sparkles,
+  Truck,
 };
 
 // Helper to check if can_view is truthy (considers 1, '1', true as truthy)
@@ -181,6 +189,49 @@ export const defaultMenu: MenuItemDTO[] = [
     icon: "ClipboardList",
     permission: "service-orders.view",
     can_view: true
+  },
+  {
+    title: "Salão",
+    icon: "Sparkles",
+    permission: "salon.view",
+    can_view: true,
+    items: [
+      {
+        title: "Agendamentos",
+        url: "/admin/salon/appointments",
+        icon: "CalendarDays",
+        permission: "salon.appointments.view",
+        can_view: true
+      },
+      {
+        title: "Estoque",
+        url: "/admin/estoque",
+        icon: "Package",
+        permission: "salon.stock.view",
+        can_view: true
+      },
+      {
+        title: "Serviços",
+        url: "/admin/services",
+        icon: "Wrench",
+        permission: "catalog.services.view",
+        can_view: true
+      },
+      {
+        title: "Movimentações",
+        url: "/admin/estoque/movements",
+        icon: "Truck",
+        permission: "salon.stock.view",
+        can_view: true
+      },
+      {
+        title: "Venda Rápida",
+        url: "/admin/service-orders/create",
+        icon: "Store",
+        permission: "salon.sales.view",
+        can_view: true
+      }
+    ]
   },
   {
     title: "Financeiro",

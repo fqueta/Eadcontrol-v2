@@ -45,24 +45,20 @@ export default function CreateServiceOrder() {
     } : null;
   }, [location.state?.quickCreate, location.state?.clientId, location.state?.aircraftId]);
   
-  // Hook para dados do formulário (clientes, usuários, aeronaves, serviços, produtos)
+  // Hook para dados do formulário (usuários, aeronaves, serviços, produtos)
   const {
-    clients,
     users,
     aircraft,
     services,
     products,
-    isLoadingClients,
     isLoadingUsers,
     isLoadingAircraft,
     isLoadingServices,
     isLoadingProducts,
-    searchClients,
     searchUsers,
     searchAircraft,
     searchServices,
     searchProducts,
-    clientsSearchTerm,
     usersSearchTerm,
     aircraftSearchTerm,
     servicesSearchTerm,
@@ -78,7 +74,7 @@ export default function CreateServiceOrder() {
       description: "",
       client_id: quickCreateData?.clientId || "",
       aircraft_id: quickCreateData?.aircraftId || "",
-      status: "draft",
+      status: "agendado",
       priority: "medium",
       estimated_start_date: "",
       estimated_end_date: "",
@@ -96,7 +92,7 @@ export default function CreateServiceOrder() {
         description: duplicateData.description || "",
         client_id: duplicateData.client_id || "",
         aircraft_id: duplicateData.aircraft_id || "",
-        status: "draft", // Sempre inicia como rascunho
+        status: "agendado", // Sempre inicia como agendado
         priority: duplicateData.priority || "medium",
         estimated_start_date: "", // Limpa as datas
         estimated_end_date: "",
@@ -114,12 +110,9 @@ export default function CreateServiceOrder() {
     if (quickCreateData) {
       form.setValue("client_id", quickCreateData.clientId || "");
       form.setValue("aircraft_id", quickCreateData.aircraftId || "");
-      console.log('aircraft',aircraft);      
-      const title = `O.S. - ${quickCreateData.matricula} - ${quickCreateData.aircraftId}`;
-      form.setValue("title", title);
-      toast.success("Cliente e aeronave selecionados automaticamente! Agora preencha os demais dados da ordem de serviço.");
+      toast.success("Cliente selecionado automaticamente! Agora preencha os demais dados da ordem de serviço.");
     }
-  }, [quickCreateData]);
+  }, [quickCreateData, form]);
 
   // Submete o formulário
   /**
@@ -167,7 +160,7 @@ export default function CreateServiceOrder() {
       toast.success("Ordem de serviço criada com sucesso!");
       
       // Redireciona para a página de visualização da ordem criada
-      navigate(`/service-orders/show/${result.id}`);
+      navigate(`/admin/service-orders/show/${result.id}`);
     } catch (error) {
       // console.log('error:',error);
       let arr: Array<any> = [];
@@ -265,22 +258,18 @@ export default function CreateServiceOrder() {
             form={form}
             onSubmit={handleSubmit}
             isSubmitting={createServiceOrderMutation.isPending}
-            clients={clients}
             users={users}
             aircraft={aircraft}
             availableServices={services}
             availableProducts={products}
-            isLoadingClients={isLoadingClients}
             isLoadingUsers={isLoadingUsers}
             isLoadingAircraft={isLoadingAircraft}
             isLoadingServices={isLoadingServices}
             isLoadingProducts={isLoadingProducts}
-            searchClients={searchClients}
             searchUsers={searchUsers}
             searchAircraft={searchAircraft}
             searchServices={searchServices}
             searchProducts={searchProducts}
-            clientsSearchTerm={clientsSearchTerm}
             usersSearchTerm={usersSearchTerm}
             aircraftSearchTerm={aircraftSearchTerm}
             servicesSearchTerm={servicesSearchTerm}

@@ -187,6 +187,22 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
                 } else {
                     Log::warning("Asaas Webhook: Matricula ID {$externalReference} not found.");
                 }
+            } elseif ($externalReference && str_starts_with($externalReference, 'fa_')) {
+                // Conta financeira avulsa (cobrança de conta a receber / Ordem de Serviço)
+                $accountId = substr($externalReference, 3);
+                $account = \App\Models\FinancialAccount::where('id', $accountId)->first();
+
+                if ($account) {
+                    if ($account->status !== 'paid') {
+                        $account->status = 'paid';
+                        $account->paid_amount = $account->amount;
+                        $account->payment_date = now()->toDateString();
+                        $account->save();
+                        Log::info("Asaas Webhook: FinancialAccount {$account->id} marked as paid via webhook (service_order_id: {$account->service_order_id}).");
+                    }
+                } else {
+                    Log::warning("Asaas Webhook: FinancialAccount ID {$accountId} not found.");
+                }
             } elseif ($externalReference && str_starts_with($externalReference, 'course_')) {
                 // Legado: Formato course_{courseId}_{email}
                 $parts = explode('_', $externalReference);

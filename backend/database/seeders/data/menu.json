@@ -36,8 +36,7 @@
       { "title": "Comentários", "url": "/school/comments" },
       { "title": "Situações", "url": "/school/enrollment-situation" },
       { "title": "Certificados", "url": "/school/certificados/modelo" },
-      { "title": "Vídeos / Dicas", "url": "/school/video-tips" },
-      { "title": "Produtos", "url": "/admin/products" }
+      { "title": "Vídeos / Dicas", "url": "/school/video-tips" }
     ]
   },
   {
@@ -78,6 +77,19 @@
       { "title": "Contas a Receber", "url": "/admin/financial?tab=receivables" },
       { "title": "Contas a Pagar", "url": "/admin/financial?tab=payables" },
       { "title": "Categorias", "url": "/admin/financial/categories" }
+    ]
+  },
+  {
+    "title": "Salão",
+    "icon": "Sparkles",
+    "submenu": [
+      { "title": "Agendamentos", "url": "/admin/salon/appointments" },
+      { "title": "Produtos", "url": "/admin/products" },
+      { "title": "Serviços", "url": "/admin/services" },
+      { "title": "Estoque", "url": "/admin/estoque" },
+      { "title": "Movimentações", "url": "/admin/estoque/movements" },
+      { "title": "Ordens de Serviço", "url": "/admin/service-orders" },
+      { "title": "Venda Rápida", "url": "/admin/service-orders/create" }
     ]
   },
   {

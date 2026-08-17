@@ -11,10 +11,12 @@ use App\Models\User;
 use App\Models\Client;
 use App\Models\Aircraft;
 use App\Http\Controllers\api\AircraftController;
+use App\Models\FinancialAccount;
 use App\Models\Funnel;
 use App\Models\Stage;
 use App\Services\PermissionService;
 use App\Services\Qlib;
+use App\Services\Stock\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -253,6 +255,7 @@ class ServiceOrderController extends Controller
 
             // Calculate total amount
             $serviceOrder->calculateTotalAmount();
+            $this->consumeStockIfCompleted($serviceOrder);
 
             DB::commit();
 
@@ -271,6 +274,13 @@ class ServiceOrderController extends Controller
                 'data' => $this->transformServiceOrder($serviceOrder)
             ], 201);
 
+        } catch (\RuntimeException $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'errors' => ['stock' => [$e->getMessage()]],
+            ], 422);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -434,6 +444,7 @@ class ServiceOrderController extends Controller
 
                 // Recalculate total amount
                 $serviceOrder->calculateTotalAmount();
+                $this->consumeStockIfCompleted($serviceOrder);
             }
 
             DB::commit();
@@ -453,6 +464,13 @@ class ServiceOrderController extends Controller
                 'data' => $this->transformServiceOrder($serviceOrder)
             ]);
 
+        } catch (\RuntimeException $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'errors' => ['stock' => [$e->getMessage()]],
+            ], 422);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -572,23 +590,8 @@ class ServiceOrderController extends Controller
             return response()->json(['message' => 'Acesso negado'], 403);
         }
 
-        // $validator = $this->validateServiceOrder($request, [
-        //         'status' => 'required|in:draft,pending,in_progress,completed,cancelled,on_hold,approved'
-        //     ],
-        //     [
-        //         'status.required' => 'O status é obrigatório',
-        //         'status.in' => 'O status selecionado é inválido',
-        //     ]);
-        // if ($validator->fails()) {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Dados inválidos',
-        //         'errors' => $validator->errors()
-        //     ], 422);
-        // }
-
         // Check if status is valid
-        $validStatuses = ['draft', 'pending', 'in_progress', 'completed', 'cancelled', 'on_hold', 'approved'];
+        $validStatuses = ['agendado', 'em_atendimento', 'aguardando_pagamento', 'concluido', 'cancelado'];
         if (!in_array($request->status, $validStatuses)) {
             return response()->json([
                 'success' => false,
@@ -597,21 +600,56 @@ class ServiceOrderController extends Controller
         }
 
         try {
+            DB::beginTransaction();
+
             $serviceOrder = ServiceOrder::findOrFail($id);
-            $serviceOrder->update($request->only([
-                'status'
-            ]));
+            $previousStatus = $serviceOrder->status;
+
+            $serviceOrder->update([
+                'status' => $request->status
+            ]);
+
+            // Ao concluir, baixa os produtos rastreados do estoque (auxílio logístico)
+            if ($request->status === 'concluido' && $previousStatus !== 'concluido') {
+                $this->consumeStockIfCompleted($serviceOrder);
+            }
+
+            DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Status atualizado com sucesso',
                 'data' => $this->transformServiceOrder($serviceOrder)
             ]);
+        } catch (\RuntimeException $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'errors' => ['stock' => [$e->getMessage()]],
+            ], 422);
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Erro ao atualizar ordem de serviço: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Baixa o estoque dos produtos da ordem quando ela é concluída/aprovada.
+     * Executa dentro da transação já aberta pelo chamador (Unit of Work).
+     *
+     * @throws \RuntimeException quando algum produto bloqueante está sem estoque
+     */
+    protected function consumeStockIfCompleted(ServiceOrder $serviceOrder): void
+    {
+        if (!in_array($serviceOrder->status, ['concluido'], true)) {
+            return;
+        }
+
+        app(StockService::class)->consumeFromOrder($serviceOrder);
     }
 
     /**
@@ -690,7 +728,7 @@ class ServiceOrderController extends Controller
                 'assigned_to' => 'required|exists:users,id',
                 'client_id' => 'required',
                 // 'client_id' => 'required|exists:users,id,permission_id,'.$cliente_permission_id,
-                'status' => 'required|in:draft,pending,in_progress,completed,cancelled,on_hold,approved',
+                'status' => 'required|in:agendado,em_atendimento,aguardando_pagamento,concluido,cancelado',
                 'priority' => 'required|in:low,medium,high,urgent',
                 'estimated_start_date' => 'nullable|date',
                 'estimated_end_date' => 'nullable|date|after_or_equal:estimated_start_date',
@@ -839,10 +877,11 @@ class ServiceOrderController extends Controller
             'object_id' => $serviceOrder['object_id'],
             'object_type' => $serviceOrder['object_type'],
             'aircraft_id' => $serviceOrder['object_type'] === 'aircraft' ? $serviceOrder['object_id'] : null, // Para compatibilidade
-            'aricraft_data' => $serviceOrder['object_type'] === 'aircraft' ? (new AircraftController())->get_data($serviceOrder['object_id']) : null,
+            'aricraft_data' => $serviceOrder['object_type'] === 'aircraft' && $serviceOrder['object_id'] ? (new AircraftController())->get_data($serviceOrder['object_id']) : null,
             'assigned_to' => $serviceOrder['assigned_to'],
             'assigned_user' => $assigned_user,
             'client_id' => $serviceOrder['client_id'],
+            'appointment_id' => $serviceOrder['appointment_id'] ?? null,
             'status' => $serviceOrder['status'],
             'priority' => $serviceOrder['priority'],
             'estimated_start_date' => $serviceOrder['estimated_start_date'],
@@ -874,11 +913,13 @@ class ServiceOrderController extends Controller
         }
         //pegar dados da etapa atraves do stage_id
         if (isset($serviceOrder['stage_id'])) {
-            $data['stage'] = Stage::find($serviceOrder['stage_id'])->toArray();
+            $stage = Stage::find($serviceOrder['stage_id']);
+            $data['stage'] = $stage ? $stage->toArray() : null;
         }
         //pegar dados do funnel atraves do funnel_id
         if (isset($serviceOrder['funnel_id'])) {
-            $data['funnel'] = Funnel::find($serviceOrder['funnel_id'])->toArray();
+            $funnel = Funnel::find($serviceOrder['funnel_id']);
+            $data['funnel'] = $funnel ? $funnel->toArray() : null;
         }
 
         // dd($data['funnel'], $data);
@@ -912,7 +953,32 @@ class ServiceOrderController extends Controller
                     $data['services'][] = $itemData;
                 }
             }
+         }
+
+        // Resumo de pagamento (vincula contas a receber desta ordem)
+        $receivables = FinancialAccount::where('service_order_id', $data['id'])
+            ->where('type', 'receivable')
+            ->get();
+
+        $amountPaid = $receivables->where('status', 'paid')->sum('paid_amount');
+        $amountDue = (float) ($data['total_amount'] ?? 0) - $amountPaid;
+
+        if ($amountPaid <= 0) {
+            $paymentStatus = 'unpaid';
+        } elseif ($amountDue <= 0) {
+            $paymentStatus = 'paid';
+        } else {
+            $paymentStatus = 'partial';
         }
+
+        $data['amount_paid'] = (float) $amountPaid;
+        $data['amount_due'] = max((float) 0, round($amountDue, 2));
+        $data['payment_status'] = $paymentStatus;
+        $data['payment_summary'] = [
+            'unpaid' => (int) $receivables->where('status', 'pending')->count(),
+            'paid' => (int) $receivables->where('status', 'paid')->count(),
+            'overdue' => (int) $receivables->where('status', 'overdue')->count(),
+        ];
 
         return $data;
     }

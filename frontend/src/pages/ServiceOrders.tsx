@@ -65,12 +65,12 @@ export default function ServiceOrders() {
 
   // Navega para a página de visualização
   const handleView = (id: string) => {
-    navigate(`/service-orders/show/${id}`);
+    navigate(`/admin/service-orders/show/${id}`);
   };
 
   // Navega para a página de edição
   const handleEdit = (id: string) => {
-    navigate(`/service-orders/update/${id}`);
+    navigate(`/admin/service-orders/update/${id}`);
   };
 
   // Exclui uma ordem de serviço
@@ -292,9 +292,9 @@ export default function ServiceOrders() {
             <CardContent className="p-3 md:p-4">
               <div className="text-center">
                 <p className="text-xl md:text-2xl font-bold text-blue-600">
-                  {serviceOrders.filter(so => so.status === 'pending').length}
+                  {serviceOrders.filter(so => so.status === 'agendado').length}
                 </p>
-                <p className="text-xs md:text-sm text-gray-600">Pendentes</p>
+                <p className="text-xs md:text-sm text-gray-600">Agendados</p>
               </div>
             </CardContent>
           </Card>
@@ -303,9 +303,9 @@ export default function ServiceOrders() {
             <CardContent className="p-3 md:p-4">
               <div className="text-center">
                 <p className="text-xl md:text-2xl font-bold text-yellow-600">
-                  {serviceOrders.filter(so => so.status === 'in_progress').length}
+                  {serviceOrders.filter(so => so.status === 'em_atendimento').length}
                 </p>
-                <p className="text-xs md:text-sm text-gray-600">Em Andamento</p>
+                <p className="text-xs md:text-sm text-gray-600">Em Atendimento</p>
               </div>
             </CardContent>
           </Card>
@@ -314,7 +314,7 @@ export default function ServiceOrders() {
             <CardContent className="p-3 md:p-4">
               <div className="text-center">
                 <p className="text-xl md:text-2xl font-bold text-green-600">
-                  {serviceOrders.filter(so => so.status === 'completed').length}
+                  {serviceOrders.filter(so => so.status === 'concluido').length}
                 </p>
                 <p className="text-xs md:text-sm text-gray-600">Concluídas</p>
               </div>

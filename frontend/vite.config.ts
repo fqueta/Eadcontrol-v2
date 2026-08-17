@@ -11,12 +11,6 @@ export default defineConfig(({ mode }) => ({
     host: true,
     port: 4000,
     strictPort: true,
-    hmr: {
-      host: 'eadcontrol.localhost',
-    },
-    headers: {
-      'Cache-Control': 'public, max-age=31536000',
-    },
   },
   build: {
     chunkSizeWarningLimit: 1000,
@@ -102,5 +96,13 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // pt-BR: Garante uma única instância de React no bundle de dev (evita
+    // "Invalid hook call"/"dispatcher is null" por cópia duplicada do React).
+    // en-US: Ensures a single React instance in the dev bundle (avoids
+    // "Invalid hook call"/"dispatcher is null" from a duplicated React copy).
+    dedupe: ['react', 'react-dom', 'react-dom/client', 'scheduler'],
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-dom/client', 'scheduler', 'react/jsx-dev-runtime'],
   },
 }));

@@ -20,7 +20,6 @@ import {
   Trash2, 
   RefreshCw,
   Printer,
-  Download,
   Copy,
   ChevronDown,
   ChevronUp,
@@ -31,7 +30,7 @@ import {
   MapPin,
   FileText,
   Calendar,
-  
+  Banknote,
 } from "lucide-react";
 import { 
   Table,
@@ -54,6 +53,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import ServiceOrderDetails from "@/components/serviceOrders/ServiceOrderDetails";
+import { ServiceOrderPaymentDialog } from "@/components/serviceOrders/ServiceOrderPaymentPanel";
+import { AccountsReceivableTable } from "@/components/financial/AccountsReceivableTable";
 import {
   useServiceOrder,
   useDeleteServiceOrder
@@ -69,6 +70,8 @@ export default function ShowServiceOrder() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [accountsKey, setAccountsKey] = useState(0);
   
   // Hook para buscar ordem de serviço
   const {
@@ -83,7 +86,7 @@ export default function ShowServiceOrder() {
 
   // Navega para a página de edição
   const handleEdit = () => {
-    navigate(`/service-orders/update/${id}`);
+    navigate(`/admin/service-orders/update/${id}`);
   };
 
   // Exclui a ordem de serviço
@@ -111,22 +114,9 @@ export default function ShowServiceOrder() {
     toast.success("Dados atualizados!");
   };
 
-  // Copia o ID da ordem
-  const handleCopyId = () => {
-    if (serviceOrder?.id) {
-      navigator.clipboard.writeText(serviceOrder.id);
-      toast.success("ID copiado para a área de transferência!");
-    }
-  };
-
   // Simula impressão (pode ser implementado com uma biblioteca de PDF)
   const handlePrint = () => {
     window.print();
-  };
-
-  // Simula download (pode ser implementado com geração de PDF)
-  const handleDownload = () => {
-    toast.info("Funcionalidade de download será implementada em breve.");
   };
 
   // Duplica a ordem de serviço
@@ -258,8 +248,8 @@ export default function ShowServiceOrder() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Cabeçalho */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 print-header">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 print-header">
+        <div className="flex items-center gap-2 no-print service-order-actions flex-wrap">
           <Button
             variant="outline"
             size="sm"
@@ -269,23 +259,6 @@ export default function ShowServiceOrder() {
             <ArrowLeft className="h-4 w-4" />
             Voltar
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{serviceOrder.title}</h1>
-            <div className="flex items-center gap-2 text-gray-600">
-              <span>Ordem #{String(serviceOrder.id).slice(-8).toUpperCase()}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCopyId}
-                className="h-6 px-2"
-              >
-                <Copy className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex flex-wrap gap-2 no-print service-order-actions">
           <Button
             variant="outline"
             size="sm"
@@ -295,7 +268,15 @@ export default function ShowServiceOrder() {
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Atualizar
           </Button>
-          
+
+          <Button
+            size="sm"
+            onClick={() => setIsPaymentOpen(true)}
+          >
+            <Banknote className="h-4 w-4 mr-2" />
+            Registrar Pagamento
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -304,16 +285,16 @@ export default function ShowServiceOrder() {
             <Printer className="h-4 w-4 mr-2" />
             Imprimir
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
-            onClick={handleDownload}
+            onClick={handleDuplicate}
           >
-            <Download className="h-4 w-4 mr-2" />
-            Download
+            <Copy className="h-4 w-4 mr-2" />
+            Duplicar
           </Button>
-          
+
           <Button
             size="sm"
             onClick={handleEdit}
@@ -361,21 +342,49 @@ export default function ShowServiceOrder() {
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
-          </AlertDialog>
+            </AlertDialog>
+          </div>
+
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">{serviceOrder.title}</h1>
+            <p className="text-gray-500 text-sm">
+              Ordem #{String(serviceOrder.id).slice(-8).toUpperCase()}
+            </p>
+          </div>
+      </div>
+
+      {/* Cabeçalho de Recibo (somente impressão) */}
+      <div className="print-only">
+        <div className="text-center mb-4">
+          <h1 className="text-2xl font-bold">
+            {(window as any).__APP_INSTITUTION_NAME__ || 'Salão'}
+          </h1>
+          <p className="text-sm">Ordem de Serviço / Recibo</p>
+        </div>
+        <div className="flex justify-between mb-4">
+          <div>
+            <p className="text-sm">{serviceOrder.title}</p>
+            <p className="text-sm font-semibold">
+              OS #{String(serviceOrder.id).slice(-8).toUpperCase()}
+            </p>
+          </div>
+          <div className="text-right text-sm">
+            <p>Data: {serviceOrder.created_at ? new Date(serviceOrder.created_at).toLocaleDateString('pt-BR') : '-'}</p>
+            <p>
+              Cliente: {serviceOrder.client?.name || serviceOrder.client_name || '-'}
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Conteúdo Principal */}
       <ServiceOrderDetails
         serviceOrder={serviceOrder}
-        onEdit={handleEdit}
-        onPrint={handlePrint}
-        onDownload={handleDownload}
         isLoading={false}
       />
 
       {/* Informações Detalhadas - Cliente e Aeronave */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print-hidden">
         {/* Card de Informações do Cliente */}
         {serviceOrder.client && (
           <ClientDetailsCard client={serviceOrder.client} />
@@ -387,69 +396,43 @@ export default function ShowServiceOrder() {
         )}
       </div>
 
-      {/* Ações Rápidas */}
-      <Card className="no-print quick-actions-card">
-        <CardHeader>
-          <CardTitle>Ações Rápidas</CardTitle>
-          <CardDescription>
-            Ações comuns para esta ordem de serviço
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button
-              variant="outline"
-              className="h-auto p-4 flex flex-col items-center gap-2"
-              onClick={handleEdit}
-            >
-              <Edit className="h-6 w-6" />
-              <div className="text-center">
-                <p className="font-medium">Editar Ordem</p>
-                <p className="text-sm text-gray-600">Modificar informações</p>
-              </div>
-            </Button>
-            
-            <Button
-              variant="outline"
-              className="h-auto p-4 flex flex-col items-center gap-2"
-              onClick={handleDuplicate}
-            >
-              <Copy className="h-6 w-6" />
-              <div className="text-center">
-                <p className="font-medium">Duplicar Ordem</p>
-                <p className="text-sm text-gray-600">Criar ordem similar</p>
-              </div>
-            </Button>
-            
-            <Button
-              variant="outline"
-              className="h-auto p-4 flex flex-col items-center gap-2"
-              onClick={handlePrint}
-            >
-              <Printer className="h-6 w-6" />
-              <div className="text-center">
-                <p className="font-medium">Imprimir</p>
-                <p className="text-sm text-gray-600">Gerar relatório</p>
-              </div>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Contas a receber desta ordem */}
+      <div className="no-print">
+        <AccountsReceivableTable
+          key={accountsKey}
+          categories={[]}
+          serviceOrderId={id}
+          title="Contas a Receber desta Ordem"
+        />
+      </div>
 
-      {/* Histórico (placeholder para futura implementação) */}
-      <Card className="no-print history-card">
-        <CardHeader>
-          <CardTitle>Histórico de Alterações</CardTitle>
-          <CardDescription>
-            Registro de todas as modificações realizadas nesta ordem
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-gray-500">
-            <p>Histórico de alterações será implementado em uma versão futura.</p>
+      {/* Pagamento / Checkout (modal) */}
+      <ServiceOrderPaymentDialog
+        serviceOrder={serviceOrder}
+        open={isPaymentOpen}
+        onOpenChange={setIsPaymentOpen}
+        onAccountsChanged={() => setAccountsKey((k) => k + 1)}
+      />
+
+      {/* Assinatura (somente impressão) */}
+      <div className="print-only mt-8">
+        <div className="grid grid-cols-2 gap-8 mt-16">
+          <div className="text-center">
+            <div className="border-t border-gray-400 pt-2">
+              <p className="text-sm font-medium">
+                {serviceOrder.client?.name || serviceOrder.client_name || 'Cliente'}
+              </p>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+          <div className="text-center">
+            <div className="border-t border-gray-400 pt-2">
+              <p className="text-sm font-medium">
+                {serviceOrder.assigned_user?.name || 'Responsável'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

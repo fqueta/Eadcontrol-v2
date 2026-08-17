@@ -1,5 +1,4 @@
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -23,9 +22,7 @@ import {
   DollarSign,
   Package,
   Settings,
-  Edit,
-  Printer,
-  Download
+  CalendarClock
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -39,9 +36,6 @@ import {
 
 interface ServiceOrderDetailsProps {
   serviceOrder: ServiceOrder;
-  onEdit?: () => void;
-  onPrint?: () => void;
-  onDownload?: () => void;
   isLoading?: boolean;
 }
 
@@ -51,9 +45,6 @@ interface ServiceOrderDetailsProps {
  */
 export default function ServiceOrderDetails({
   serviceOrder,
-  onEdit,
-  onPrint,
-  onDownload,
   isLoading = false
 }: ServiceOrderDetailsProps) {
   // Obtém a configuração de cor para o status
@@ -130,36 +121,8 @@ export default function ServiceOrderDetails({
   
   return (
     <div className="space-y-6">
-      {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">{serviceOrder.title}</h1>
-          <p className="text-gray-600">Ordem #{String(serviceOrder.id).slice(-8).toUpperCase()}</p>
-        </div>
-        <div className="flex gap-2 no-print">
-          {onPrint && (
-            <Button variant="outline" size="sm" onClick={onPrint}>
-              <Printer className="h-4 w-4 mr-2" />
-              Imprimir
-            </Button>
-          )}
-          {onDownload && (
-            <Button variant="outline" size="sm" onClick={onDownload}>
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
-          )}
-          {onEdit && (
-            <Button size="sm" onClick={onEdit}>
-              <Edit className="h-4 w-4 mr-2" />
-              Editar
-            </Button>
-          )}
-        </div>
-      </div>
-
       {/* Informações Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print-hidden">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
@@ -189,20 +152,6 @@ export default function ServiceOrderDetails({
                 >
                   {priorityConfig.label}
                 </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <User className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-sm text-gray-600">Cliente</p>
-                <p className="font-medium">
-                  {serviceOrder.client?.name || serviceOrder.client_name || "-"}
-                </p>
               </div>
             </div>
           </CardContent>
@@ -243,6 +192,16 @@ export default function ServiceOrderDetails({
                   {serviceOrder.assigned_user?.name || "-"}
                 </p>
               </div>
+
+              {serviceOrder.appointment_id && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Origem</label>
+                  <p className="mt-1 flex items-center gap-2">
+                    <CalendarClock className="h-4 w-4 text-gray-400" />
+                    Gerada a partir do Agendamento #{serviceOrder.appointment_id}
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="text-sm font-medium text-gray-600">Data de Criação</label>

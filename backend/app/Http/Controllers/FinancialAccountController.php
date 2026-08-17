@@ -125,6 +125,9 @@ class FinancialAccountController extends Controller
         if ($request->filled('matricula_id')) {
             $query->where('config->matricula_id', $request->input('matricula_id'));
         }
+        if ($request->filled('service_order_id')) {
+            $query->where('service_order_id', $request->input('service_order_id'));
+        }
 
         $accounts = $query->paginate($perPage);
 
@@ -423,14 +426,6 @@ class FinancialAccountController extends Controller
                 'message' => 'Apenas contas a receber podem ser canceladas por esta rota',
                 'status'  => 400,
             ], 400);
-        }
-
-        // Se já está paga, impedir cancelamento direto
-        if ($account->isPaid()) {
-            return response()->json([
-                'message' => 'Não é possível cancelar uma conta já marcada como paga',
-                'status'  => 409,
-            ], 409);
         }
 
         // Atualizar status e limpar campos de pagamento

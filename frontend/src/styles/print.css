@@ -1,9 +1,20 @@
 /* Estilos específicos para impressão */
+
+/* Blocos exclusivos de impressão ficam ocultos na tela */
+.print-only {
+  display: none;
+}
+
 @media print {
   /* Oculta elementos de navegação e ações */
   .no-print,
   .print-hidden {
     display: none !important;
+  }
+
+  /* Blocos exclusivos de impressão (recibo/ordem) */
+  .print-only {
+    display: block !important;
   }
 
   /* Oculta botões de ação */

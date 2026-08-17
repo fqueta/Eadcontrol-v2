@@ -55,13 +55,14 @@ interface AccountsReceivableTableProps {
   categories: FinancialCategory[];
   clientId?: string;
   enrollmentId?: string;
+  serviceOrderId?: string;
   title?: string;
 }
 
 /**
  * Componente de tabela para contas a receber
  */
-export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = ({ categories, clientId, enrollmentId, title }) => {
+export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = ({ categories, clientId, enrollmentId, serviceOrderId, title }) => {
   const [accounts, setAccounts] = useState<AccountReceivable[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -74,6 +75,7 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
     sortOrder: 'asc',
     client_id: clientId,
     matricula_id: enrollmentId,
+    service_order_id: serviceOrderId,
   });
   const [totalPages, setTotalPages] = useState(0);
   const [total, setTotal] = useState(0);
@@ -117,6 +119,12 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
       setFilters(prev => ({ ...prev, matricula_id: enrollmentId }));
     }
   }, [enrollmentId]);
+
+  useEffect(() => {
+    if (serviceOrderId && serviceOrderId !== filters.service_order_id) {
+      setFilters(prev => ({ ...prev, service_order_id: serviceOrderId }));
+    }
+  }, [serviceOrderId]);
 
   /**
    * Formata valor monetário

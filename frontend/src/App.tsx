@@ -72,6 +72,11 @@ const CreateServiceOrder = lazy(() => import("./pages/CreateServiceOrder"));
 const UpdateServiceOrder = lazy(() => import("./pages/UpdateServiceOrder"));
 const ShowServiceOrder = lazy(() => import("./pages/ShowServiceOrder"));
 const QuickCreateServiceOrder = lazy(() => import("./pages/QuickCreateServiceOrder"));
+const SalonAppointments = lazy(() => import("./pages/salon/Appointments"));
+const Inventory = lazy(() => import("./pages/estoque/Inventory"));
+const StockEntryCreate = lazy(() => import("./pages/estoque/StockEntryCreate"));
+const StockMovementsPage = lazy(() => import("./pages/estoque/StockMovements"));
+const PublicBooking = lazy(() => import("./pages/salon/PublicBooking"));
 const Financial = lazy(() => import("./pages/financial/Financial"));
 const FinancialCategories = lazy(() => import("./pages/FinancialCategories"));
 const PublicClientForm = lazy(() => import("@/pages/PublicClientForm"));
@@ -1116,6 +1121,63 @@ const App = () => {
                   </AppLayout>
                 </AdminProtectedRoute>
               } />
+
+              {/* Salão / Agendamentos */}
+              <Route path="/admin/salon/appointments" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <PermissionGuard
+                      required="salon.appointments.view"
+                      menuPath="/admin/salon/appointments"
+                      requireRemote={false}
+                    >
+                      <SalonAppointments />
+                    </PermissionGuard>
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+
+              {/* Estoque */}
+              <Route path="/admin/estoque" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <PermissionGuard
+                      required="salon.stock.view"
+                      menuPath="/admin/estoque"
+                      requireRemote={false}
+                    >
+                      <Inventory />
+                    </PermissionGuard>
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/estoque/create" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <PermissionGuard
+                      required="salon.stock.create"
+                      menuPath="/admin/estoque/create"
+                      requireRemote={false}
+                    >
+                      <StockEntryCreate />
+                    </PermissionGuard>
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/estoque/movements" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <PermissionGuard
+                      required="salon.stock.view"
+                      menuPath="/admin/estoque/movements"
+                      requireRemote={false}
+                    >
+                      <StockMovementsPage />
+                    </PermissionGuard>
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/agendar" element={<PublicBooking />} />
 
               {/* SaaS Management */}
               <Route path="/admin/saas" element={

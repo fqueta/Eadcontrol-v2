@@ -189,6 +189,9 @@ class ProductController extends Controller
             'destaque' => $product->config['destaque'] ?? 'n',
             'parcelas' => $product->config['parcelas'] ?? null,
             'valor_parcela' => $product->config['valor_parcela'] ?? null,
+            'trackStock' => ($product->config['track_stock'] ?? false) ? true : false,
+            'stockMin' => (int)($product->config['stock_min'] ?? 0),
+            'allowNegativeStock' => ($product->config['allow_negative_stock'] ?? false) ? true : false,
             'created_at' => $product->created_at,
             'updated_at' => $product->updated_at,
         ];
@@ -207,6 +210,9 @@ class ProductController extends Controller
             'destaque' => 'nullable|string|in:s,n',
             'parcelas' => 'nullable|integer|min:1',
             'valor_parcela' => 'nullable|numeric|min:0',
+            'trackStock' => 'nullable|boolean',
+            'stockMin' => 'nullable|integer|min:0',
+            'allowNegativeStock' => 'nullable|boolean',
         ];
     }
     /**
@@ -299,6 +305,15 @@ class ProductController extends Controller
         if (isset($validated['valor_parcela'])) {
             $configData['valor_parcela'] = $validated['valor_parcela'];
         }
+        if (isset($validated['trackStock'])) {
+            $configData['track_stock'] = $validated['trackStock'] ? true : false;
+        }
+        if (isset($validated['stockMin'])) {
+            $configData['stock_min'] = max(0, (int) $validated['stockMin']);
+        }
+        if (isset($validated['allowNegativeStock'])) {
+            $configData['allow_negative_stock'] = $validated['allowNegativeStock'] ? true : false;
+        }
         $configData['destaque'] = $validated['destaque'] ?? 'n';
         $mappedData['config'] = $configData;
 
@@ -324,6 +339,21 @@ class ProductController extends Controller
         $mappedData['deletado'] = 'n';
 
         $product = Product::create($mappedData);
+
+        // Abre o livro de estoque quando o produto é rastreado e possui saldo inicial
+        if (($configData['track_stock'] ?? false) && (int) $product->comment_count > 0) {
+            try {
+                app(\App\Services\Stock\StockService::class)->addMovement([
+                    'product_id' => $product->ID,
+                    'type' => 'entrada',
+                    'quantity' => (int) $product->comment_count,
+                    'unit_cost' => (float) $product->cost_price,
+                    'reason' => 'Estoque inicial (cadastro do produto)',
+                ]);
+            } catch (\Throwable $e) {
+                // Não bloqueia a criação do produto; o saldo manual já está gravado
+            }
+        }
 
         // Preparar resposta no formato do frontend
         $responseData = $this->map_product($product);
@@ -384,6 +414,9 @@ class ProductController extends Controller
             'unit' => 'nullable|string|max:100',
             'image' => 'nullable|string|max:500',
             'destaque' => 'nullable|string|in:s,n',
+            'trackStock' => 'nullable|boolean',
+            'stockMin' => 'nullable|integer|min:0',
+            'allowNegativeStock' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -416,7 +449,11 @@ class ProductController extends Controller
             $mappedData['post_value2'] = $validated['salePrice']; // salePrice -> post_value2
         }
         if (isset($validated['stock'])) {
-            $mappedData['comment_count'] = $validated['stock']; // stock -> comment_count
+            // Produto rastreado: o estoque é movimentado no livro (ajuste);
+            // o `comment_count` é sincronizado pelo StockService.
+            if (!($config['track_stock'] ?? false)) {
+                $mappedData['comment_count'] = $validated['stock']; // stock -> comment_count
+            }
         }
         if (isset($validated['active'])) {
             $mappedData['post_status'] = $this->get_status($validated['active']); // active -> post_status
@@ -445,6 +482,18 @@ class ProductController extends Controller
             $config['valor_parcela'] = $validated['valor_parcela'];
             $hasConfigChange = true;
         }
+        if (isset($validated['trackStock'])) {
+            $config['track_stock'] = $validated['trackStock'] ? true : false;
+            $hasConfigChange = true;
+        }
+        if (isset($validated['stockMin'])) {
+            $config['stock_min'] = max(0, (int) $validated['stockMin']);
+            $hasConfigChange = true;
+        }
+        if (isset($validated['allowNegativeStock'])) {
+            $config['allow_negative_stock'] = $validated['allowNegativeStock'] ? true : false;
+            $hasConfigChange = true;
+        }
         if ($hasConfigChange) {
             $mappedData['config'] = $config;
         }
@@ -456,6 +505,30 @@ class ProductController extends Controller
         $mappedData['post_type'] = $this->post_type;
 
         $productToUpdate->update($mappedData);
+
+        // Mantém o livro de estoque consistente quando o produto é rastreado
+        if (($config['track_stock'] ?? false)) {
+            $stockService = app(\App\Services\Stock\StockService::class);
+            $stockService->ensureInitialStock($productToUpdate);
+
+            if (isset($validated['stock'])) {
+                $current = $stockService->balanceFor($productToUpdate)['balance'];
+                $target = (int) $validated['stock'];
+                $delta = $target - $current;
+
+                if ($delta !== 0) {
+                    $stockService->addMovement([
+                        'product_id' => $productToUpdate->ID,
+                        'type' => $delta > 0 ? 'entrada' : 'saida',
+                        'quantity' => abs($delta),
+                        'unit_cost' => $delta > 0 ? (float) ($productToUpdate->cost_price ?? 0) : null,
+                        'reason' => 'Ajuste manual de estoque via edição de produto',
+                    ]);
+                }
+            }
+
+            $productToUpdate->refresh();
+        }
 
         // Preparar resposta no formato do frontend
         $responseData = $this->map_product($productToUpdate);

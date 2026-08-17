@@ -35,13 +35,11 @@ export interface ServiceOrderProductItem {
  * Status possíveis para uma ordem de serviço
  */
 export type ServiceOrderStatus = 
-  | 'draft'        // Rascunho
-  | 'pending'      // Pendente
-  | 'approved'     // Aprovada
-  | 'in_progress'  // Em andamento
-  | 'completed'    // Concluída
-  | 'cancelled'    // Cancelada
-  | 'on_hold';     // Em espera
+  | 'agendado'           // Agendado
+  | 'em_atendimento'     // Em atendimento
+  | 'aguardando_pagamento' // Aguardando pagamento
+  | 'concluido'          // Concluído
+  | 'cancelado';         // Cancelado
 
 /**
  * Prioridade da ordem de serviço
@@ -64,6 +62,7 @@ export interface ServiceOrder {
   description?: string;
   client_id?: string;
   client_name?: string;
+  appointment_id?: number;
   aircraft_id?: string;
   status: ServiceOrderStatus;
   priority: ServiceOrderPriority;
@@ -80,6 +79,10 @@ export interface ServiceOrder {
   internal_notes?: string;
   created_by?: string;
   assigned_to?: string;
+  payment_status?: 'unpaid' | 'partial' | 'paid';
+  amount_paid?: number;
+  amount_due?: number;
+  payment_summary?: { unpaid: number; paid: number; overdue: number };
   created_at?: string;
   updated_at?: string;
 }
@@ -179,13 +182,11 @@ export interface ServiceOrderFilters {
  * Constantes para status
  */
 export const SERVICE_ORDER_STATUSES = [
-  { value: 'draft', label: 'Rascunho', color: 'gray' },
-  { value: 'pending', label: 'Pendente', color: 'yellow' },
-  { value: 'approved', label: 'Aprovada', color: 'blue' },
-  { value: 'in_progress', label: 'Em Andamento', color: 'orange' },
-  { value: 'completed', label: 'Concluída', color: 'green' },
-  { value: 'cancelled', label: 'Cancelada', color: 'red' },
-  { value: 'on_hold', label: 'Em Espera', color: 'purple' }
+  { value: 'agendado', label: 'Agendado', color: 'yellow' },
+  { value: 'em_atendimento', label: 'Em Atendimento', color: 'orange' },
+  { value: 'aguardando_pagamento', label: 'Aguardando Pagamento', color: 'blue' },
+  { value: 'concluido', label: 'Concluído', color: 'green' },
+  { value: 'cancelado', label: 'Cancelado', color: 'red' }
 ] as const;
 
 /**

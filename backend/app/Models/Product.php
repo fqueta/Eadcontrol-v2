@@ -229,6 +229,64 @@ class Product extends Model
     }
 
     /**
+     * Indica se o produto é rastreado pelo livro de estoque (auxílio logístico).
+     */
+    public function getTrackStockAttribute()
+    {
+        return (bool)($this->config['track_stock'] ?? false);
+    }
+
+    /**
+     * Estoque mínimo para alerta de reposição.
+     */
+    public function getStockMinAttribute()
+    {
+        return (int)($this->config['stock_min'] ?? 0);
+    }
+
+    /**
+     * Indica se é permitido estoque negativo (default: bloquear).
+     */
+    public function getAllowNegativeStockAttribute()
+    {
+        return (bool)($this->config['allow_negative_stock'] ?? false);
+    }
+
+    /**
+     * Ajusta a flag de rastreamento no config.
+     */
+    public function setTrackStockAttribute($value)
+    {
+        $this->setConfigValue('track_stock', (bool)$value);
+    }
+
+    /**
+     * Ajusta o estoque mínimo no config.
+     */
+    public function setStockMinAttribute($value)
+    {
+        $this->setConfigValue('stock_min', max(0, (int)$value));
+    }
+
+    /**
+     * Ajusta a flag de estoque negativo no config.
+     */
+    public function setAllowNegativeStockAttribute($value)
+    {
+        $this->setConfigValue('allow_negative_stock', (bool)$value);
+    }
+
+    /**
+     * Grava um valor no JSON de config preservando os demais campos.
+     */
+    private function setConfigValue(string $key, $value): void
+    {
+        $config = $this->config ?? [];
+        $config[$key] = $value;
+        $this->attributes['config'] = $config;
+    }
+
+    /**
      * Mutator para nome do produto
      */
     public function setNameAttribute($value)

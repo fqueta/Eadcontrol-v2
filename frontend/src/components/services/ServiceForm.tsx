@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { currencyApplyMask, currencyRemoveMaskToNumber } from "@/lib/masks/currency";
 import {
   Form,
   FormControl,
@@ -183,12 +184,12 @@ export default function ServiceForm({
               <FormLabel>Preço (R$) *</FormLabel>
               <FormControl>
                 <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0,00"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="R$ 0,00"
                   {...field}
-                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                  value={field.value ? currencyApplyMask(String(Math.round(Number(field.value) * 100)), 'pt-BR', 'BRL') : ''}
+                  onChange={(e) => field.onChange(currencyRemoveMaskToNumber(e.target.value))}
                   disabled={isSubmitting}
                 />
               </FormControl>

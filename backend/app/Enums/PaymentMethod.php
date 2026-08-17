@@ -14,6 +14,7 @@ enum PaymentMethod: string
     case PIX = 'pix';
     case CHECK = 'check';
     case BOLETO = 'boleto';
+    case OTHER = 'other';
 
     /**
      * Retorna lista das strings dos métodos

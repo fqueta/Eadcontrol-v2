@@ -137,7 +137,11 @@ class UsersService {
       body: JSON.stringify(payload),
     });
 
-    return this.handleResponse<UserRecord>(response);
+    // A API retorna um envelope `{ data, message, status }`. Desempacotamos
+    // `data` para manter consistência com os demais serviços (ex.: clientsService)
+    // e evitar `undefined` no front ao acessar `created.id`.
+    const body = await this.handleResponse<{ data: UserRecord }>(response);
+    return body.data;
   }
 
   async updateUser(id: string, payload: UpdateUserInput): Promise<UserRecord> {

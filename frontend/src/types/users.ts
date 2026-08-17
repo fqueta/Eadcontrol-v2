@@ -16,6 +16,7 @@ export interface UserConfig {
   cidade: string;
   uf: string;
   force_password_change?: 's' | 'n';
+  agenda_publica?: 's' | 'n';
 }
 
 export interface UserRecord {

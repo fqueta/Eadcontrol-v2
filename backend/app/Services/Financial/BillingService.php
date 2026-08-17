@@ -50,6 +50,15 @@ class BillingService
             $config['invoice_url'] = $paymentData['invoiceUrl'];
         }
 
+        // Persistir dados do PIX (QR Code + copia-e-cola) para exibição posterior
+        if (strtoupper($billingType) === 'PIX' && isset($paymentData['pix'])) {
+            $config['pix'] = [
+                'encodedImage'   => $paymentData['pix']['encodedImage'] ?? null,
+                'payload'        => $paymentData['pix']['payload'] ?? null,
+                'expirationDate' => $paymentData['pix']['expirationDate'] ?? null,
+            ];
+        }
+
         $account->config = $config;
         $account->save();
 

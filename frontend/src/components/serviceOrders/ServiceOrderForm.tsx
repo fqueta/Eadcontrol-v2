@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { currencyApplyMask, currencyRemoveMaskToNumber } from "@/lib/masks/currency";
 import {
   Form,
   FormControl,
@@ -18,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
+import { ClientPicker } from "@/components/clients/ClientPicker";
 import {
   Card,
   CardContent,
@@ -47,11 +49,6 @@ import { QuickCreateProductModal } from "./QuickCreateProductModal";
 import { QuickCreateServiceModal } from "./QuickCreateServiceModal";
 
 
-
-interface Client {
-  id: string;
-  name: string;
-}
 
 interface User {
   id: string;
@@ -92,28 +89,26 @@ interface ServiceOrderFormProps {
   form: UseFormReturn<ServiceOrderFormData>;
   onSubmit: (data: ServiceOrderFormData & { services: ServiceOrderServiceItem[]; products: ServiceOrderProductItem[] }) => void;
   isSubmitting: boolean;
-  clients: Client[];
   users: User[];
   aircraft: Aircraft[];
   availableServices: AvailableService[];
   availableProducts: AvailableProduct[];
-  isLoadingClients: boolean;
   isLoadingUsers: boolean;
   isLoadingAircraft: boolean;
   isLoadingServices: boolean;
   isLoadingProducts: boolean;
   onCancel: () => void;
   isEditing: boolean;
+  /** pt-BR: Exibe (ou oculta) o campo de aeronave no formulário. */
+  showAircraft?: boolean;
   initialServices?: ServiceOrderServiceItem[];
   initialProducts?: ServiceOrderProductItem[];
   // Funções de busca dinâmica
-  searchClients?: (searchTerm: string) => void;
   searchUsers?: (searchTerm: string) => void;
   searchAircraft?: (searchTerm: string) => void;
   searchServices?: (searchTerm: string) => void;
   searchProducts?: (searchTerm: string) => void;
   // Termos de busca atuais
-  clientsSearchTerm?: string;
   usersSearchTerm?: string;
   aircraftSearchTerm?: string;
   servicesSearchTerm?: string;
@@ -136,26 +131,23 @@ export default function ServiceOrderForm({
   form,
   onSubmit,
   isSubmitting,
-  clients,
   users,
   aircraft,
   availableServices,
   availableProducts,
-  isLoadingClients,
   isLoadingUsers,
   isLoadingAircraft,
   isLoadingServices,
   isLoadingProducts,
   onCancel,
   isEditing,
+  showAircraft = false,
   initialServices = [],
   initialProducts = [],
-  searchClients,
   searchUsers,
   searchAircraft,
   searchServices,
   searchProducts,
-  clientsSearchTerm,
   usersSearchTerm,
   aircraftSearchTerm,
   servicesSearchTerm,
@@ -185,6 +177,7 @@ export default function ServiceOrderForm({
   
   // Sincroniza selectedAircraft com o aircraft_id do formulário quando carregado
   useEffect(() => {
+    if (!showAircraft) return;
     const aircraftId = form.watch('aircraft_id');
     
     if (aircraftId && aircraft.length > 0) {
@@ -200,7 +193,7 @@ export default function ServiceOrderForm({
     } else if (!aircraftId) {
       setSelectedAircraft(null);
     }
-  }, [form.watch('aircraft_id'), aircraft, form]);
+  }, [form.watch('aircraft_id'), aircraft, form, showAircraft]);
   
   // Calcula totais quando serviços ou produtos mudam
   useEffect(() => {
@@ -344,23 +337,37 @@ export default function ServiceOrderForm({
   };
 
   const handleServiceCreated = (service: any) => {
-    // Atualiza a lista de serviços
-    console.log('service:', service);
-    console.log('service.id:', service.id);
     onServiceCreated?.();
-    // Adiciona automaticamente o novo serviço à lista
-    setTimeout(() => {
-      addService(String(service.id));
-    }, 100); // Pequeno delay para garantir que a lista foi atualizada
+    if (!service?.id) return;
+    if (selectedServices.some(item => String(item.service_id) === String(service.id))) return;
+
+    const price = Number(service.price) || 0;
+    const newItem: ServiceOrderServiceItem = {
+      service_id: String(service.id),
+      service,
+      quantity: 1,
+      unit_price: price,
+      total_price: price,
+      notes: ''
+    };
+    setSelectedServices(prev => [...prev, newItem]);
   };
 
   const handleProductCreated = (product: any) => {
-    // Atualiza a lista de produtos
     onProductCreated?.();
-    // Adiciona automaticamente o novo produto à lista
-    setTimeout(() => {
-      addProduct(String(product.id));
-    }, 100); // Pequeno delay para garantir que a lista foi atualizada
+    if (!product?.id) return;
+    if (selectedProducts.some(item => String(item.product_id) === String(product.id))) return;
+
+    const salePrice = Number(product.salePrice) || 0;
+    const newItem: ServiceOrderProductItem = {
+      product_id: String(product.id),
+      product,
+      quantity: 1,
+      unit_price: salePrice,
+      total_price: salePrice,
+      notes: ''
+    };
+    setSelectedProducts(prev => [...prev, newItem]);
   };
   
   
@@ -398,6 +405,7 @@ export default function ServiceOrderForm({
               />
 
               {/* Aeronave */}
+              {showAircraft && (
               <FormField
                 control={form.control}
                 name="aircraft_id"
@@ -426,7 +434,7 @@ export default function ServiceOrderForm({
                              setSelectedAircraft(null);
                              form.setValue('client_id', '');
                            }
-                         }}
+                        }}
                         placeholder="Selecione uma aeronave"
                         searchPlaceholder="Buscar aeronave..."
                         emptyText="Nenhuma aeronave encontrada"
@@ -451,6 +459,7 @@ export default function ServiceOrderForm({
                   </FormItem>
                 )}
               />
+              )}
               <FormField
                 control={form.control}
                 name="title"
@@ -469,7 +478,7 @@ export default function ServiceOrderForm({
                 )}
               />
               {/* Card do Cliente Selecionado */}
-               {selectedAircraft && selectedAircraft.client && (
+               {showAircraft && selectedAircraft && selectedAircraft.client && (
                  <Card className="bg-blue-50 border-blue-200 md:col-span-2">
                    <CardContent className="pt-4">
                      <div className="flex items-center gap-3">
@@ -489,15 +498,22 @@ export default function ServiceOrderForm({
                  </Card>
                )}
 
-               {/* Campo Hidden para Client ID */}
+               {/* Cliente */}
                <FormField
                  control={form.control}
                  name="client_id"
                  render={({ field }) => (
-                   <FormItem className="hidden">
+                   <FormItem>
+                     <FormLabel>Cliente *</FormLabel>
                      <FormControl>
-                       <Input type="hidden" {...field} />
+                       <ClientPicker
+                         value={field.value}
+                         onValueChange={field.onChange}
+                         placeholder="Selecione o cliente"
+                         disabled={isSubmitting}
+                       />
                      </FormControl>
+                     <FormMessage />
                    </FormItem>
                  )}
                />
@@ -720,11 +736,11 @@ export default function ServiceOrderForm({
                       <div>
                         <Label className="text-xs">Preço Unit.</Label>
                         <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={item.unit_price}
-                          onChange={(e) => updateService(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="R$ 0,00"
+                          value={Number(item.unit_price) ? currencyApplyMask(String(Math.round(Number(item.unit_price) * 100)), 'pt-BR', 'BRL') : ''}
+                          onChange={(e) => updateService(index, 'unit_price', currencyRemoveMaskToNumber(e.target.value))}
                           className="h-8"
                         />
                       </div>
@@ -826,11 +842,11 @@ export default function ServiceOrderForm({
                       <div>
                         <Label className="text-xs">Preço Unit.</Label>
                         <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={item.unit_price}
-                          onChange={(e) => updateProduct(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="R$ 0,00"
+                          value={Number(item.unit_price) ? currencyApplyMask(String(Math.round(Number(item.unit_price) * 100)), 'pt-BR', 'BRL') : ''}
+                          onChange={(e) => updateProduct(index, 'unit_price', currencyRemoveMaskToNumber(e.target.value))}
                           className="h-8"
                         />
                       </div>
@@ -958,11 +974,13 @@ export default function ServiceOrderForm({
       </form>
 
       {/* Modais de cadastro rápido */}
+      {showAircraft && (
       <QuickCreateAircraftModal
         open={showAircraftModal}
         onOpenChange={setShowAircraftModal}
         onAircraftCreated={handleAircraftCreated}
       />
+      )}
 
       <QuickCreateServiceModal
         open={showServiceModal}
