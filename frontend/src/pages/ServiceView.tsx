@@ -197,7 +197,7 @@ export default function ServiceView() {
                   <Tag className="h-4 w-4" />
                   Categoria
                 </label>
-                <Badge variant="outline" className="mt-1">{service.category}</Badge>
+                <Badge variant="outline" className="mt-1">{service.categoryData?.name || service.category || 'Sem categoria'}</Badge>
               </div>
               
               <div>

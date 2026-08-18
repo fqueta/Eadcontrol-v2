@@ -95,7 +95,7 @@ export default function ServicesTable({
 
   const filteredServices = services.filter(service =>
     service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    service.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (service.categoryData?.name || service.category).toLowerCase().includes(searchTerm.toLowerCase()) ||
     (service.description || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -210,7 +210,7 @@ export default function ServicesTable({
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{service.category}</Badge>
+                      <Badge variant="outline">{service.categoryData?.name || service.category || 'Sem categoria'}</Badge>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm font-medium">

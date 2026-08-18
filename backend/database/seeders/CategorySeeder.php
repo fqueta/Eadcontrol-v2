@@ -15,28 +15,16 @@ class CategorySeeder extends Seeder
     {
         // Categorias da entidade PRODUTOS
         $categoriasProdutos = [
-            'Lubrificantes',
-            'Filtros',
-            'Pneus',
-            'Elétrica',
-            'Freios',
-            'Suspensão',
-            'Motor',
-            'Diversos',
+            'Cabelos',
+            'Unhas',
+            'Maquiagem',
         ];
 
         // Categorias da entidade SERVIÇOS
         $categoriasServicos = [
-            'Manutenção de 50h',
-            'Manutenção de 100h',
-            'Manutenção de 200h',
-            'Manutenção de 500h',
-            'Manutenção de 1000h',
-            'CVA',
-            'Inspeção de aeronavegabilidade',
-            'Inspeção pré-compra',
-            'Pane',
-            'Outros',
+            'Cabelo',
+            'Unhas (Manicure/Pedicure)',
+            'Estética Facial',
         ];
 
         // 🔹 Mantém apenas as categorias definidas

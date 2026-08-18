@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, addDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -128,8 +127,6 @@ export default function PublicBooking() {
     onError: (e: any) => toast.error(e?.message || 'Erro ao enviar agendamento.'),
   });
 
-  const nextDays = useMemo(() => Array.from({ length: 14 }, (_, i) => addDays(new Date(), i)), []);
-
   const handleSubmit = () => {
     if (done) return;
     if (!slot) { toast.error('Escolha um horário.'); return; }
@@ -246,17 +243,14 @@ export default function PublicBooking() {
 
           <div className="space-y-2">
             <Label>Dia</Label>
-            <select
+            <Input
+              type="date"
               value={date}
+              min={format(new Date(), 'yyyy-MM-dd')}
+              max={format(addDays(new Date(), 13), 'yyyy-MM-dd')}
               onChange={(e) => { setDate(e.target.value); setSlot(''); }}
               className="w-full rounded-md border bg-white px-3 py-2 text-sm shadow-sm focus:outline-none"
-            >
-              {nextDays.map((d) => (
-                <option key={format(d, 'yyyy-MM-dd')} value={format(d, 'yyyy-MM-dd')}>
-                  {format(d, 'EEE, dd/MM', { locale: ptBR })}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           <div className="space-y-2">
@@ -291,6 +285,8 @@ export default function PublicBooking() {
                 <InputMask
                   mask="(__) _____-____"
                   replacement={{ _: /\d/ }}
+                  type="tel"
+                  inputMode="tel"
                   value={clientPhone ? formatMask(clientPhone, { mask: '(__) _____-____', replacement: { _: /\d/ } }) : ''}
                   onChange={(e) => setClientPhone(e.target.value)}
                   placeholder="(00) 00000-0000"

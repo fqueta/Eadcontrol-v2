@@ -11,6 +11,10 @@ export interface Service {
   description?: string;
   category: string;
   category_id?: string;
+  categoryData?: {
+    id: string | number;
+    name: string;
+  } | null;
   price: number;
   estimatedDuration: number; // em minutos
   unit: string; // hora, dia, etc.
