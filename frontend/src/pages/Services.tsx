@@ -76,6 +76,7 @@ export default function Services() {
       active: true,
       requiresMaterials: false,
       skillLevel: "basic",
+      agendaPublica: true,
     },
   });
 
@@ -94,6 +95,7 @@ export default function Services() {
       active: true,
       requiresMaterials: false,
       skillLevel: "basic",
+      agendaPublica: true,
     });
     setIsDialogOpen(true);
   };
@@ -113,6 +115,7 @@ export default function Services() {
       active: service.active,
       requiresMaterials: service.requiresMaterials,
       skillLevel: service.skillLevel,
+      agendaPublica: service.agendaPublica ?? true,
     });
     setIsDialogOpen(true);
   };
@@ -143,7 +146,8 @@ export default function Services() {
           unit: data.unit,
           active: data.active,
           requiresMaterials: data.requiresMaterials,
-          skillLevel: data.skillLevel
+          skillLevel: data.skillLevel,
+          agendaPublica: data.agendaPublica
         };
         await updateMutation.mutateAsync({ id: editingService.id, data: updateData });
       } else {
@@ -156,7 +160,8 @@ export default function Services() {
           unit: data.unit,
           active: data.active,
           requiresMaterials: data.requiresMaterials,
-          skillLevel: data.skillLevel
+          skillLevel: data.skillLevel,
+          agendaPublica: data.agendaPublica
         };
         await createMutation.mutateAsync(createData);
       }

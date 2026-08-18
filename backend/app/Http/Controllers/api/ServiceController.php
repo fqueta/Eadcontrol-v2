@@ -128,6 +128,9 @@ class ServiceController extends Controller
             'unit' => $service->config['unit'] ?? null,
             'requiresMaterials' => $service->config['requiresMaterials'] ?? false,
             'skillLevel' => $service->config['skillLevel'] ?? null,
+            // pt-BR: Serviço liberado para o agendamento público do salão. Ausência
+            // no config (serviços antigos) é tratada como pública para não quebrar o comportamento atual.
+            'agendaPublica' => ($service->config['agendaPublica'] ?? 's') === 's',
             'categoryData' => Qlib::get_category_by_id($service->guid),
             'created_at' => $service->created_at,
             'updated_at' => $service->updated_at,
@@ -149,6 +152,7 @@ class ServiceController extends Controller
             'unit' => 'nullable|string|max:100',
             'requiresMaterials' => 'boolean',
             'skillLevel' => 'nullable|string|max:100',
+            'agendaPublica' => 'boolean',
         ];
     }
 
@@ -215,6 +219,9 @@ class ServiceController extends Controller
         }
         if (isset($validated['skillLevel'])) {
             $config['skillLevel'] = $validated['skillLevel'];
+        }
+        if (isset($validated['agendaPublica'])) {
+            $config['agendaPublica'] = $validated['agendaPublica'] ? 's' : 'n';
         }
 
         if (!empty($config)) {
@@ -338,6 +345,9 @@ class ServiceController extends Controller
         }
         if (isset($validated['skillLevel'])) {
             $config['skillLevel'] = $validated['skillLevel'];
+        }
+        if (isset($validated['agendaPublica'])) {
+            $config['agendaPublica'] = $validated['agendaPublica'] ? 's' : 'n';
         }
 
         if (!empty($config)) {

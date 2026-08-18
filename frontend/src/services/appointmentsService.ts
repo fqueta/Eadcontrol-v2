@@ -27,7 +27,12 @@ class AppointmentsService extends GenericApiService<AppointmentRecord, Appointme
     clientId?: string;
     search?: string;
   }): Promise<{ data: AppointmentRecord[] }> {
-    const response = await this.get<{ data: AppointmentRecord[] }>('/appointments', params);
+    const { assignedTo, clientId, ...rest } = params ?? {};
+    const response = await this.get<{ data: AppointmentRecord[] }>('/appointments', {
+      ...rest,
+      ...(assignedTo ? { assigned_to: assignedTo } : {}),
+      ...(clientId ? { client_id: clientId } : {}),
+    });
     return response ?? { data: [] };
   }
 

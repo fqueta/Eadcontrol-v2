@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight, CalendarDays, Loader2, Plus, UserPlus, Wrench, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, Loader2, Plus, UserPlus, Wrench, Pencil, MessageCircle, Copy } from 'lucide-react';
 import {
   useAppointments,
   useCreateAppointment,
@@ -21,15 +21,18 @@ import {
   useUpdateAppointmentStatus,
   useDeleteAppointment,
 } from '@/hooks/appointments';
-import { useAvailableServices, useServiceOrderUsers, useSearchClients } from '@/hooks/serviceOrders';
+import { useServiceOrderUsers, useSearchClients, useSearchServices } from '@/hooks/serviceOrders';
 import { usePermissionsList } from '@/hooks/permissions';
 import { servicesService } from '@/services/servicesService';
+import { currencyApplyMask, currencyRemoveMaskToNumber } from '@/lib/masks/currency';
 import { usersService } from '@/services/usersService';
 import { clientsService } from '@/services/clientsService';
 import { Combobox } from '@/components/ui/combobox';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useAuth } from '@/contexts/AuthContext';
 import type { AppointmentRecord } from '@/types/appointments';
 import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS } from '@/types/appointments';
+import type { Service } from '@/types/services';
 
 const OPEN_HOUR = 9;
 const CLOSE_HOUR = 18;
@@ -61,12 +64,29 @@ function toHeight(duration?: number | null): number {
 }
 
 /**
+ * pt-BR: Mostra um toast de aviso (amarelo) quando há conflito de horário (409),
+ * e um toast de erro padrão para as demais falhas.
+ */
+function showAppointmentError(e: (Error & { status?: number }) | undefined, fallback: string) {
+  if (e?.status === 409) {
+    toast.warning(e?.message || 'Conflito de horário para este profissional.');
+    return;
+  }
+  toast.error(e?.message || fallback);
+}
+
+/**
  * Appointments — Agenda do salão (painel).
  * pt-BR: Grade semanal de horários com criação, edição e transição de status.
  */
 export default function Appointments() {
+  const { user } = useAuth();
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [filterProfessional, setFilterProfessional] = useState<string>('');
+
+  // pt-BR: Perfis acima de "Auxiliar Administrativo" (id > 3) só enxergam a própria agenda.
+  // en-US: Profiles above "Auxiliar Administrativo" (id > 3) only see their own agenda.
+  const isRestrictedAgenda = Number(user?.permission_id ?? 0) > 3;
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
 
@@ -79,21 +99,22 @@ export default function Appointments() {
   const { data, isLoading } = useAppointments({
     from,
     to,
-    assignedTo: filterProfessional || undefined,
+    assignedTo: isRestrictedAgenda ? undefined : (filterProfessional || undefined),
   });
   const appointments: AppointmentRecord[] = data?.data ?? [];
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [editing, setEditing] = useState<AppointmentRecord | null>(null);
   const [prefillDate, setPrefillDate] = useState<string>(from);
 
   const createMutation = useCreateAppointment({
     onSuccess: () => { toast.success('Agendamento criado.'); setDialogOpen(false); },
-    onError: (e: any) => toast.error(e?.message || 'Erro ao criar agendamento.'),
+    onError: (e: any) => showAppointmentError(e, 'Erro ao criar agendamento.'),
   });
   const updateMutation = useUpdateAppointment({
     onSuccess: () => { toast.success('Agendamento atualizado.'); setDialogOpen(false); },
-    onError: (e: any) => toast.error(e?.message || 'Erro ao atualizar agendamento.'),
+    onError: (e: any) => showAppointmentError(e, 'Erro ao atualizar agendamento.'),
   });
   const statusMutation = useUpdateAppointmentStatus({
     onSuccess: () => toast.success('Status atualizado.'),
@@ -139,16 +160,22 @@ export default function Appointments() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <select
-            value={filterProfessional}
-            onChange={(e) => setFilterProfessional(e.target.value)}
-            className="h-9 rounded-md border bg-background px-2 text-sm shadow-sm focus:outline-none"
-          >
-            <option value="">Todos os profissionais</option>
-            {professionals.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
+          {!isRestrictedAgenda && (
+            <select
+              value={filterProfessional}
+              onChange={(e) => setFilterProfessional(e.target.value)}
+              className="h-9 rounded-md border bg-background px-2 text-sm shadow-sm focus:outline-none"
+            >
+              <option value="">Todos os profissionais</option>
+              {professionals.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          )}
+          <Button variant="outline" onClick={() => setShareOpen(true)} aria-label="Compartilhar agenda">
+            <MessageCircle className="h-4 w-4" />
+            <span className="ml-2 hidden sm:inline">Compartilhar</span>
+          </Button>
           <Button variant="outline" size="icon" onClick={() => setWeekStart((w) => subWeeks(w, 1))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -282,13 +309,20 @@ export default function Appointments() {
         onOpenChange={setDialogOpen}
         editing={editing}
         prefillDate={prefillDate}
-        defaultAssignedTo={filterProfessional}
+        defaultAssignedTo={isRestrictedAgenda ? String(user?.id ?? '') : filterProfessional}
+        restrictToSelf={isRestrictedAgenda}
         isCreating={createMutation.isPending}
         isUpdating={updateMutation.isPending}
         createMutation={createMutation.mutate}
         updateMutation={updateMutation.mutate}
         statusMutation={statusMutation.mutate}
         deleteMutation={deleteMutation.mutate}
+      />
+
+      <ShareAgendaDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        restricted={isRestrictedAgenda}
       />
     </div>
   );
@@ -300,6 +334,7 @@ function AppointmentDialog({
   editing,
   prefillDate,
   defaultAssignedTo,
+  restrictToSelf = false,
   isCreating,
   isUpdating,
   createMutation,
@@ -312,6 +347,7 @@ function AppointmentDialog({
   editing: AppointmentRecord | null;
   prefillDate: string;
   defaultAssignedTo?: string;
+  restrictToSelf?: boolean;
   isCreating: boolean;
   isUpdating: boolean;
   createMutation: (data: any) => void;
@@ -319,12 +355,15 @@ function AppointmentDialog({
   statusMutation: (args: { id: number | string; status: string }) => void;
   deleteMutation: (id: number | string) => void;
 }) {
-  const { data: services = [] } = useAvailableServices();
   const { data: users = [] } = useServiceOrderUsers();
+  const servicesSearch = useSearchServices();
+  const { user } = useAuth();
+  const canAddProfessional = Number(user?.permission_id ?? 0) < 4;
 
   const [title, setTitle] = useState('');
   const [clientId, setClientId] = useState<string>('');
   const [serviceId, setServiceId] = useState<string>('');
+  const [serviceName, setServiceName] = useState('');
   const [assignedTo, setAssignedTo] = useState<string>('');
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
@@ -362,6 +401,28 @@ function AppointmentDialog({
 
     return [newOption, ...opts];
   }, [clientsSearch.data, clientId, clientName]);
+
+  const serviceOptions = useMemo(() => {
+    const rows = servicesSearch.data ?? [];
+    const opts = rows.map((s) => ({
+      value: String(s.id),
+      label: s.name || 'Sem nome',
+      description: s.price != null
+        ? `R$ ${Number(s.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        : undefined,
+    }));
+
+    // Garante que o serviço já vinculado (edição) apareça mesmo fora dos resultados da busca.
+    if (serviceId && serviceId !== '0' && !opts.some((o) => o.value === serviceId)) {
+      opts.unshift({ value: serviceId, label: serviceName || `Serviço #${serviceId}`, description: '' });
+    }
+
+    return [
+      { value: '__add_service', label: 'Adicionar serviço' },
+      { value: '0', label: 'Sem serviço' },
+      ...opts,
+    ];
+  }, [servicesSearch.data, serviceId, serviceName]);
 
   const [quickForm, setQuickForm] = useState<'service' | 'user' | null>(null);
   const [editForm, setEditForm] = useState<{ type: 'service' | 'user' | 'client'; id: string } | null>(null);
@@ -438,6 +499,7 @@ function AppointmentDialog({
     setTitle(editing?.title ?? '');
     setClientId(editing?.clientId ? String(editing.clientId) : '');
     setServiceId(editing?.serviceId ? String(editing.serviceId) : '');
+    setServiceName(editing?.serviceName ?? '');
     setAssignedTo(editing?.assignedTo ?? defaultAssignedTo ?? '');
     setClientName(editing?.clientName ?? '');
     setClientPhone(editing?.clientPhone ?? '');
@@ -479,6 +541,18 @@ function AppointmentDialog({
   const handleServiceChange = (value: string) => {
     if (value === '__add_service') { setQuickForm('service'); return; }
     setServiceId(value);
+    const found = servicesSearch.data?.find((s) => String(s.id) === value);
+    setServiceName(value === '0' ? '' : (found?.name ?? serviceName));
+    if (value && value !== '0') {
+      servicesService
+        .getService(value)
+        .then((res: Service) => {
+          if (res?.estimatedDuration) {
+            setDuration(String(res.estimatedDuration));
+          }
+        })
+        .catch(() => {});
+    }
   };
 
   const handleUserChange = (value: string) => {
@@ -535,16 +609,16 @@ function AppointmentDialog({
   };
 
   const openEditService = () => {
-    const svc = services.data?.find((s: any) => String(s.id) === serviceId);
+    const svc = servicesSearch.data?.find((s) => String(s.id) === serviceId);
     setQsName(svc?.name ?? '');
-    setQsPrice(svc?.price != null ? String(svc.price) : '');
-    setQsDuration(svc?.estimatedDuration ? String(svc.estimatedDuration) : '30');
+    setQsPrice(svc?.price != null ? currencyApplyMask(String(Math.round(Number(svc.price) * 100)), 'pt-BR', 'BRL') : '');
+    setQsDuration('30');
     servicesService
       .getService(String(serviceId))
       .then((res: any) => {
         const rec = res?.data ?? res;
         setQsName(rec?.name ?? qsName);
-        setQsPrice(rec?.price != null ? String(rec.price) : qsPrice);
+        setQsPrice(rec?.price != null ? currencyApplyMask(String(Math.round(Number(rec.price) * 100)), 'pt-BR', 'BRL') : qsPrice);
         setQsDuration(rec?.estimatedDuration ? String(rec.estimatedDuration) : qsDuration);
         setQsActive(rec?.active ?? true);
       })
@@ -637,7 +711,7 @@ function AppointmentDialog({
       name: qsName.trim(),
       description: '',
       category: '',
-      price: qsPrice ? Number(qsPrice) : 0,
+      price: qsPrice ? currencyRemoveMaskToNumber(qsPrice) : 0,
       estimatedDuration: Number(qsDuration) || 30,
       unit: 'minutes',
       active: qsActive,
@@ -791,22 +865,17 @@ function AppointmentDialog({
                   </Button>
                 )}
               </div>
-              <Select value={serviceId} onValueChange={handleServiceChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__add_service">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Wrench className="h-3.5 w-3.5" /> Adicionar serviço
-                    </span>
-                  </SelectItem>
-                  <SelectItem value="0">Sem serviço</SelectItem>
-                  {services.map((s: any) => (
-                    <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                options={serviceOptions}
+                value={serviceId}
+                onValueChange={handleServiceChange}
+                placeholder="Selecione um serviço"
+                searchPlaceholder="Buscar serviço..."
+                emptyText="Nenhum serviço encontrado."
+                loading={servicesSearch.isLoading}
+                onSearch={servicesSearch.search}
+                searchTerm={servicesSearch.searchTerm}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -834,16 +903,18 @@ function AppointmentDialog({
                 </Button>
               )}
             </div>
-            <Select value={assignedTo} onValueChange={handleUserChange}>
+            <Select value={assignedTo} onValueChange={handleUserChange} disabled={restrictToSelf}>
               <SelectTrigger>
                 <SelectValue placeholder="Sem profissional" />
               </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__add_user">
-                    <span className="inline-flex items-center gap-1.5">
-                      <UserPlus className="h-3.5 w-3.5" /> Adicionar profissional
-                    </span>
-                  </SelectItem>
+                  {canAddProfessional && (
+                    <SelectItem value="__add_user">
+                      <span className="inline-flex items-center gap-1.5">
+                        <UserPlus className="h-3.5 w-3.5" /> Adicionar profissional
+                      </span>
+                    </SelectItem>
+                  )}
                   <SelectItem value="none">Sem profissional</SelectItem>
                   {users.map((u: any) => (
                     <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
@@ -899,7 +970,12 @@ function AppointmentDialog({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Preço (R$)</Label>
-                <Input type="number" min={0} step="0.01" value={qsPrice} onChange={(e) => setQsPrice(e.target.value)} placeholder="0,00" />
+                <Input
+                  inputMode="decimal"
+                  value={qsPrice}
+                  onChange={(e) => setQsPrice(currencyApplyMask(e.target.value, 'pt-BR', 'BRL'))}
+                  placeholder="R$ 0,00"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Duração (min)</Label>
@@ -1039,6 +1115,115 @@ function AppointmentDialog({
           </div>
         </DialogContent>
       </Dialog>
+    </Dialog>
+  );
+}
+
+function ShareAgendaDialog({
+  open,
+  onOpenChange,
+  restricted = false,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  restricted?: boolean;
+}) {
+  const { data: users = [] } = useServiceOrderUsers();
+  const { user } = useAuth();
+
+  // pt-BR: Perfis restritos só compartilham a própria agenda; admins veem todos.
+  const list = useMemo(() => {
+    if (!restricted) return users;
+    return users.filter((p) => String(p.id) === String(user?.id ?? ''));
+  }, [restricted, users, user?.id]);
+
+  const baseUrl = `${window.location.origin}/agendar`;
+
+  const copyLink = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copiado.');
+    } catch {
+      toast.error('Não foi possível copiar o link.');
+    }
+  };
+
+  const shareWhatsApp = (url: string, text: string) => {
+    const message = encodeURIComponent(`${text}\n${url}`);
+    window.open(`https://api.whatsapp.com/send?text=${message}`, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5" />
+            Compartilhar agenda
+          </DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-3">
+          <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium">Link geral de agendamento</div>
+              <div className="break-all text-xs text-muted-foreground">{baseUrl}</div>
+            </div>
+            <div className="flex shrink-0 gap-1">
+              <Button size="icon" variant="ghost" onClick={() => copyLink(baseUrl)} aria-label="Copiar link geral">
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => shareWhatsApp(baseUrl, 'Olá! Agende seu horário pelo link:')}
+                aria-label="Compartilhar link geral via WhatsApp"
+              >
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {list.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Nenhum profissional disponível para compartilhar.
+            </p>
+          )}
+
+          {list.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                {list.length} {list.length === 1 ? 'profissional' : 'profissionais'}
+              </p>
+              <div className="max-h-[50vh] space-y-3 overflow-y-auto pr-1">
+                {list.map((p) => {
+                  const url = `${baseUrl}?profissional=${encodeURIComponent(p.id)}`;
+                  return (
+                    <div key={p.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium">{p.name}</div>
+                        <div className="break-all text-xs text-muted-foreground">{url}</div>
+                      </div>
+                      <div className="flex shrink-0 gap-1">
+                        <Button size="icon" variant="ghost" onClick={() => copyLink(url)} aria-label={`Copiar link de ${p.name}`}>
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => shareWhatsApp(url, `Olá! Agende seu horário com ${p.name} pelo link:`)}
+                          aria-label={`Compartilhar agenda de ${p.name} via WhatsApp`}
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </DialogContent>
     </Dialog>
   );
 }

@@ -33,6 +33,7 @@ const serviceSchema = z.object({
   unit: z.string().min(1, "Unidade é obrigatória"),
   active: z.boolean(),
   requiresMaterials: z.boolean(),
+  agendaPublica: z.boolean(),
   skillLevel: z.enum(["basic", "intermediate", "advanced", "expert"], {
     required_error: "Nível de habilidade é obrigatório"
   }),
@@ -304,6 +305,28 @@ export default function ServiceForm({
 
       {/* Switches */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <FormField
+          control={form.control}
+          name="agendaPublica"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">Agenda Pública (Salão)</FormLabel>
+                <div className="text-sm text-muted-foreground">
+                  Disponível para agendamento na página pública /agendar
+                </div>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={isSubmitting}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="requiresMaterials"

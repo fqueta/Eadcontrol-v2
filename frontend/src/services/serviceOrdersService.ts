@@ -18,6 +18,15 @@ export interface ServiceOrderListParams extends ServiceOrderFilters {
   order?: 'asc' | 'desc';
 }
 
+/** Config de usuário retornada pela API (celular, agenda pública, etc.) */
+export interface UserConfig {
+  celular?: string;
+  telefone_residencial?: string;
+  telefone_comercial?: string;
+  agenda_publica?: string;
+  [key: string]: unknown;
+}
+
 /**
  * Serviço para gerenciar ordens de serviço
  * Estende BaseApiService para reutilizar funcionalidades comuns
@@ -103,8 +112,8 @@ class ServiceOrdersService extends BaseApiService {
   /**
    * Obtém lista de usuários para atribuição
    */
-  async getUsers(): Promise<{ id: string; name: string }[]> {
-    const response = await this.get<ApiResponse<{ id: string; name: string }[]>>('/users', { per_page: 100 });
+  async getUsers(): Promise<{ id: string; name: string; config?: UserConfig }[]> {
+    const response = await this.get<ApiResponse<{ id: string; name: string; config?: UserConfig }[]>>('/users', { per_page: 100 });
     return response.data;
   }
 
@@ -112,9 +121,9 @@ class ServiceOrdersService extends BaseApiService {
    * Busca usuários dinamicamente por termo de pesquisa
    * @param search - Termo de pesquisa
    */
-  async searchUsers(search?: string): Promise<{ id: string; name: string }[]> {
+  async searchUsers(search?: string): Promise<{ id: string; name: string; config?: UserConfig }[]> {
     const params = search ? { search } : {};
-    const response = await this.get<ApiResponse<{ id: string; name: string }[]>>('/users', params);
+    const response = await this.get<ApiResponse<{ id: string; name: string; config?: UserConfig }[]>>('/users', params);
     return response.data;
   }
 

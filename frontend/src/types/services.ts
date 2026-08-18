@@ -17,6 +17,8 @@ export interface Service {
   active: boolean;
   requiresMaterials: boolean;
   skillLevel: 'basic' | 'intermediate' | 'advanced' | 'expert';
+  /** pt-BR: Serviço liberado para o agendamento público do salão (/agendar). */
+  agendaPublica?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -34,6 +36,7 @@ export interface CreateServiceInput {
   active: boolean;
   requiresMaterials: boolean;
   skillLevel: 'basic' | 'intermediate' | 'advanced' | 'expert';
+  agendaPublica?: boolean;
 }
 
 /**
@@ -49,6 +52,7 @@ export interface UpdateServiceInput {
   active?: boolean;
   requiresMaterials?: boolean;
   skillLevel?: 'basic' | 'intermediate' | 'advanced' | 'expert';
+  agendaPublica?: boolean;
 }
 
 /**
@@ -64,6 +68,7 @@ export interface ServiceFormData {
   active: boolean;
   requiresMaterials: boolean;
   skillLevel: 'basic' | 'intermediate' | 'advanced' | 'expert';
+  agendaPublica: boolean;
 }
 
 /**

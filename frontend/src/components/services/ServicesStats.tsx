@@ -15,14 +15,15 @@ export function ServicesStats({ services }: ServicesStatsProps) {
   const activeServices = services.filter(s => s.active).length;
   
   // Calcula o preço médio dos serviços
-  const averagePrice = services.length > 0 
-    ? services.reduce((sum, service) => sum + service.price, 0) / services.length
+  // pt-BR: price vem do backend como string (decimal:2); coerção evita NaN/concatenação.
+  const averagePrice = services.length > 0
+    ? services.reduce((sum, service) => sum + (Number(service.price) || 0), 0) / services.length
     : 0;
-  
+
   // Calcula a duração média dos serviços (convertendo tudo para minutos)
-  const averageDuration = services.length > 0 
+  const averageDuration = services.length > 0
     ? services.reduce((sum, service) => {
-        let durationInMinutes = service.estimatedDuration;
+        let durationInMinutes = Number(service.estimatedDuration) || 0;
         
         // Converte para minutos baseado na unidade
         switch (service.unit) {
@@ -71,6 +72,17 @@ export function ServicesStats({ services }: ServicesStatsProps) {
     }
   };
 
+  /**
+   * Formata um valor em reais (pt-BR) de forma determinística.
+   * Ex.: 74444.5 -> R$ 74.444,50
+   */
+  const formatPrice = (value: number): string => {
+    const safe = Number.isFinite(value) ? value : 0;
+    const [int, dec] = safe.toFixed(2).split('.');
+    const intFormatted = int.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return `R$ ${intFormatted},${dec}`;
+  };
+
   return (
     <div className="grid gap-4 md:grid-cols-4">
       <Card>
@@ -93,7 +105,7 @@ export function ServicesStats({ services }: ServicesStatsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            R$ {averagePrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            {formatPrice(averagePrice)}
           </div>
           <p className="text-xs text-muted-foreground">
             Por serviço

@@ -85,6 +85,8 @@ export interface PublicServiceItem {
 export interface PublicProfessional {
   id: string;
   name: string;
+  /** pt-BR: true se a agenda está liberada para o agendamento público genérico. */
+  public?: boolean;
 }
 
 /** Payload público de agendamento do cliente */

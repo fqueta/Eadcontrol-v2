@@ -122,7 +122,7 @@ export function usePublicServices() {
   return useQuery<PublicServiceItem[]>({
     queryKey: ['public-booking-services'],
     queryFn: () => appointmentsService.publicServices(),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
   });
 }
 
@@ -131,7 +131,7 @@ export function usePublicProfessionals() {
   return useQuery<PublicProfessional[]>({
     queryKey: ['public-booking-professionals'],
     queryFn: () => appointmentsService.publicProfessionals(),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
   });
 }
 

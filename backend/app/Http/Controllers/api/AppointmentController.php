@@ -42,6 +42,10 @@ class AppointmentController extends Controller
 
         $query = Appointment::query()->with(['client', 'assignedUser', 'service']);
 
+        // pt-BR: Perfis acima de "Auxiliar Administrativo" (id > 3) enxergam apenas a própria agenda.
+        // en-US: Profiles above "Auxiliar Administrativo" (id > 3) only see their own agenda.
+        $this->applyOwnAgendaScope($query);
+
         if ($request->has('from') && $request->from) {
             $query->where('start_at', '>=', Carbon::parse($request->from)->startOfDay());
         }
@@ -93,6 +97,8 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'Agendamento não encontrado'], 404);
         }
 
+        $this->assertOwnAgenda($appointment);
+
         $appointment->load(['client', 'assignedUser', 'service']);
 
         return response()->json([
@@ -119,6 +125,12 @@ class AppointmentController extends Controller
 
         $data = $this->normalize($validator->validated());
         $generateOs = (bool) ($request->boolean('generateServiceOrder') || $request->boolean('generate_service_order'));
+
+        // pt-BR: Perfis restritos só agendam para si mesmos.
+        $user = $request->user();
+        if ($user && (int) $user->permission_id > 3) {
+            $data['assigned_to'] = $user->id;
+        }
 
         $conflicts = $this->appointmentService->findConflicts($data);
         if ($conflicts->isNotEmpty()) {
@@ -174,6 +186,8 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'Agendamento não encontrado'], 404);
         }
 
+        $this->assertOwnAgenda($appointment);
+
         $validator = Validator::make($request->all(), $this->rules(true));
         if ($validator->fails()) {
             return response()->json([
@@ -184,6 +198,12 @@ class AppointmentController extends Controller
 
         $data = $this->normalize($validator->validated(), $appointment);
         $generateOs = (bool) ($request->boolean('generateServiceOrder') || $request->boolean('generate_service_order'));
+
+        // pt-BR: Perfis restritos não podem transferir agendamento para outro profissional.
+        $user = $request->user();
+        if ($user && (int) $user->permission_id > 3) {
+            $data['assigned_to'] = $user->id;
+        }
 
         $conflicts = $this->appointmentService->findConflicts($data, $appointment->id);
         if ($conflicts->isNotEmpty()) {
@@ -247,6 +267,8 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'Agendamento não encontrado'], 404);
         }
 
+        $this->assertOwnAgenda($appointment);
+
         try {
             AppointmentStateMachine::assertTransition($appointment, $request->status);
 
@@ -284,6 +306,8 @@ class AppointmentController extends Controller
             return response()->json(['message' => 'Agendamento não encontrado'], 404);
         }
 
+        $this->assertOwnAgenda($appointment);
+
         $appointment->delete();
 
         return response()->json(['message' => 'Agendamento excluído com sucesso']);
@@ -311,8 +335,9 @@ class AppointmentController extends Controller
 
     /**
      * Profissionais disponíveis para agendamento público.
-     * pt-BR: Apenas profissionais com a agenda liberada para o público
-     * (config.agenda_publica === 's') aparecem nesta listagem.
+     * pt-BR: Retorna todos os profissionais (não-clientes). O campo `public`
+     * indica se a agenda está liberada para o agendamento público genérico
+     * (config.agenda_publica === 's'); links personalizados funcionam para todos.
      */
     public function publicProfessionals(Request $request)
     {
@@ -328,26 +353,34 @@ class AppointmentController extends Controller
             })
             ->orderBy('name')
             ->get(['id', 'name', 'config'])
-            ->filter(function (\App\Models\User $u) {
-                $config = is_array($u->config) ? $u->config : [];
-                return ($config['agenda_publica'] ?? null) === 's';
-            })
             ->values();
 
         return response()->json([
-            'data' => $users->map(fn ($u) => [
-                'id' => $u->id,
-                'name' => $u->name,
-            ]),
+            'data' => $users->map(function (\App\Models\User $u) {
+                $config = is_array($u->config) ? $u->config : [];
+                return [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'public' => ($config['agenda_publica'] ?? null) === 's',
+                ];
+            }),
         ]);
     }
 
     /**
      * Serviços disponíveis para agendamento público.
+     * pt-BR: Retorna apenas serviços com agenda pública liberada
+     * (config->agendaPublica === 's'); serviços antigos sem a flag continuam públicos.
      */
     public function publicServices(Request $request)
     {
-        $services = Service::where('post_status', 'publish')->get();
+        $services = Service::where('post_status', 'publish')
+            ->orderBy('post_title', 'asc')
+            ->get()
+            ->filter(function (Service $service) {
+                return ($service->config['agendaPublica'] ?? 's') === 's';
+            })
+            ->values();
 
         return response()->json([
             'data' => $services->map(function (Service $service) {
@@ -399,6 +432,38 @@ class AppointmentController extends Controller
             ], 201);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Erro ao enviar agendamento: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * pt-BR: Restringe a query aos agendamentos do próprio usuário quando o perfil
+     * é maior que "Auxiliar Administrativo" (permission_id > 3).
+     * en-US: Restricts the query to the user's own appointments when the profile
+     * is above "Auxiliar Administrativo" (permission_id > 3).
+     */
+    protected function applyOwnAgendaScope($query, ?\App\Models\User $user = null): void
+    {
+        $user = $user ?? request()->user();
+        if ($user && (int) $user->permission_id > 3) {
+            $query->where('assigned_to', $user->id);
+        }
+    }
+
+    /**
+     * pt-BR: Impede perfis restritos (permission_id > 3) de acessar agendamentos
+     * que não sejam os seus. Lança 403 em caso de acesso a registro alheio.
+     * en-US: Prevents restricted profiles (permission_id > 3) from accessing
+     * appointments that are not their own. Throws 403 otherwise.
+     */
+    protected function assertOwnAgenda(?Appointment $appointment): void
+    {
+        $user = request()->user();
+        if (!$user || (int) $user->permission_id <= 3) {
+            return;
+        }
+
+        if (!$appointment || (string) $appointment->assigned_to !== (string) $user->id) {
+            abort(403, 'Acesso negado');
         }
     }
 

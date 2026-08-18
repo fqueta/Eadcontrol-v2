@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -8,16 +9,27 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { InputMask, format as formatMask } from '@react-input/mask';
-import { CalendarDays, CheckCircle2, Loader2 } from 'lucide-react';
+import { Search, CheckCircle2, Loader2 } from 'lucide-react';
 import { usePublicBooking, usePublicProfessionals, usePublicServices, usePublicSlots } from '@/hooks/appointments';
+import BrandLogo from '@/components/branding/BrandLogo';
+import {
+  getInstitutionName,
+  getInstitutionNameAsync,
+  getInstitutionSlogan,
+  hydrateBrandingFromPublicApi,
+} from '@/lib/branding';
 
 /**
  * PublicBooking — Página pública de agendamento do salão.
  * pt-BR: Cliente escolhe serviço, data e horário livre e envia a solicitação.
  */
 export default function PublicBooking() {
+  const [searchParams] = useSearchParams();
+  const lockedProfessional = searchParams.get('profissional') || '';
+
   const [serviceId, setServiceId] = useState('');
-  const [professionalId, setProfessionalId] = useState('');
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [professionalId, setProfessionalId] = useState(lockedProfessional);
   const [date, setDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [slot, setSlot] = useState<string>('');
   const [clientName, setClientName] = useState('');
@@ -28,13 +40,71 @@ export default function PublicBooking() {
 
   const { data: services = [] } = usePublicServices();
   const { data: professionals = [] } = usePublicProfessionals();
+
+  // pt-BR: Nome e slogan da instituição obtidos via endpoint público de branding.
+  // en-US: Institution name and slogan resolved via the public branding endpoint.
+  const [institutionName, setInstitutionName] = useState<string>(() => getInstitutionName());
+  const [institutionSlogan, setInstitutionSlogan] = useState<string>(() => getInstitutionSlogan());
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { name } = await hydrateBrandingFromPublicApi({ persist: true });
+        const finalName = name || (await getInstitutionNameAsync());
+        if (!cancelled) {
+          setInstitutionName(finalName);
+          setInstitutionSlogan(getInstitutionSlogan());
+        }
+      } catch {
+        if (!cancelled) {
+          setInstitutionName(getInstitutionName());
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // pt-BR: Quando o link personalizado (?profissional=X) aponta para um profissional
+  // válido, o seletor fica travado nele; caso contrário o link é ignorado.
+  // en-US: When a personalized link (?profissional=X) points to a valid
+  // professional, the selector is locked on it; otherwise the link is ignored.
+  const lockedProfessionalLower = lockedProfessional.toLowerCase();
+  const lockProfessional = Boolean(
+    lockedProfessional &&
+    professionals.some((p) => String(p.id).toLowerCase() === lockedProfessionalLower)
+  );
+  const lockedPro = professionals.find((p) => String(p.id).toLowerCase() === lockedProfessionalLower);
+
+  // pt-BR: O seletor genérico só lista profissionais com agenda pública ativa.
+  const selectableProfessionals = professionals.filter((p) => p.public);
+
+  // pt-BR: Filtro de serviços por nome (busca).
+  const filteredServices = useMemo(
+    () => services.filter((s) => s.name.toLowerCase().includes(serviceSearch.trim().toLowerCase())),
+    [services, serviceSearch]
+  );
+
   const selectedService = services.find((s) => String(s.id) === serviceId);
   const duration = selectedService?.duration ?? 30;
+
+  // pt-BR: Profissional efetivo: quando o link trava, usa o id do lock;
+  // caso contrário, usa a seleção do usuário (nunca um id inválido da URL).
+  const effectiveProfessionalId = lockProfessional ? lockedProfessional : professionalId;
+
+  // pt-BR: Se o link traz um profissional inválido, descarta o valor inicial.
+  useEffect(() => {
+    if (!lockProfessional && lockedProfessional && professionalId === lockedProfessional) {
+      setProfessionalId('');
+    }
+  }, [lockProfessional, lockedProfessional, professionalId]);
 
   const { data: slotsData } = usePublicSlots({
     date,
     serviceId: selectedService?.id,
-    assignedTo: professionalId || undefined,
+    assignedTo: effectiveProfessionalId || undefined,
     duration,
   });
   const slots = useMemo(() => (slotsData?.data ?? []).map((s) =>
@@ -70,7 +140,7 @@ export default function PublicBooking() {
       start: new Date(`${date}T${slot}:00`).toISOString(),
       duration,
       serviceId: selectedService?.id ?? null,
-      assignedTo: professionalId || null,
+      assignedTo: effectiveProfessionalId || null,
       clientName: clientName.trim(),
       clientPhone: clientPhone.trim(),
       clientEmail: clientEmail.trim() || null,
@@ -96,48 +166,82 @@ export default function PublicBooking() {
     <div className="min-h-screen bg-muted/40 px-4 py-10">
       <div className="mx-auto max-w-lg space-y-6">
         <div className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <CalendarDays className="h-6 w-6 text-primary" />
+          <div className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-primary/10">
+            <BrandLogo
+              alt={institutionName}
+              fallbackSrc="/logo.png"
+              className="h-10 w-10 object-contain"
+            />
           </div>
-          <h1 className="mt-3 text-2xl font-bold tracking-tight">Agende seu horário</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Escolha o serviço e o melhor momento.</p>
+          <h1 className="mt-3 text-2xl font-bold tracking-tight">{institutionName}</h1>
+          {institutionSlogan && (
+            <p className="mt-1 text-sm text-muted-foreground">{institutionSlogan}</p>
+          )}
+          <p className="mt-2 text-sm text-muted-foreground">Escolha o serviço e o melhor momento.</p>
         </div>
 
         <div className="space-y-6 rounded-xl border bg-card p-6 shadow-sm">
-          <div className="space-y-2">
-            <Label>Profissional</Label>
-            <select
-              value={professionalId}
-              onChange={(e) => { setProfessionalId(e.target.value); setSlot(''); }}
-              className="w-full rounded-md border bg-white px-3 py-2 text-sm shadow-sm focus:outline-none"
-            >
-              <option value="">Qualquer profissional</option>
-              {professionals.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
+          {lockProfessional ? (
+            <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-2">
+              <span className="text-sm text-muted-foreground">Profissional</span>
+              <span className="text-sm font-medium">
+                {lockedPro?.name || 'Profissional'}
+              </span>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>Profissional</Label>
+              <select
+                value={professionalId}
+                onChange={(e) => { setProfessionalId(e.target.value); setSlot(''); }}
+                className="w-full rounded-md border bg-white px-3 py-2 text-sm shadow-sm focus:outline-none"
+              >
+                <option value="">Qualquer profissional</option>
+                {selectableProfessionals.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Serviço</Label>
-            <RadioGroup value={serviceId} onValueChange={(v) => { setServiceId(v); setSlot(''); }}>
-              {services.length === 0 && (
-                <p className="text-sm text-muted-foreground">Nenhum serviço disponível no momento.</p>
-              )}
-              {services.map((s: any) => (
-                <div key={s.id} className="flex items-center justify-between rounded-lg border p-3" style={{ cursor: 'pointer' }}>
-                  <label htmlFor={`svc-${s.id}`} className="flex flex-1 items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <RadioGroupItem id={`svc-${s.id}`} value={String(s.id)} />
-                      <span className="text-sm font-medium">{s.name}</span>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={serviceSearch}
+                onChange={(e) => setServiceSearch(e.target.value)}
+                placeholder="Buscar serviço..."
+                className="pl-8"
+              />
+            </div>
+            {services.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum serviço disponível no momento.</p>
+            ) : (
+              <RadioGroup value={serviceId} onValueChange={(v) => { setServiceId(v); setSlot(''); }} className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  {filteredServices.length} {filteredServices.length === 1 ? 'serviço' : 'serviços'}
+                </p>
+                {filteredServices.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Nenhum serviço encontrado para a busca.</p>
+                )}
+                <div className="max-h-[45vh] space-y-2 overflow-y-auto pr-1">
+                  {filteredServices.map((s) => (
+                    <div key={s.id} className="flex items-center justify-between rounded-lg border p-3" style={{ cursor: 'pointer' }}>
+                      <label htmlFor={`svc-${s.id}`} className="flex flex-1 items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem id={`svc-${s.id}`} value={String(s.id)} />
+                          <span className="text-sm font-medium">{s.name}</span>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {durationLabel(s.duration)} · {s.price ? `R$ ${Number(s.price).toFixed(2).replace('.', ',')}` : 'Grátis'}
+                        </span>
+                      </label>
                     </div>
-                    <span className="text-sm text-muted-foreground">
-                      {durationLabel(s.duration)} · {s.price ? `R$ ${Number(s.price).toFixed(2).replace(',', '.')}` : 'Grátis'}
-                    </span>
-                  </label>
+                  ))}
                 </div>
-              ))}
-            </RadioGroup>
+              </RadioGroup>
+            )}
           </div>
 
           <div className="space-y-2">
