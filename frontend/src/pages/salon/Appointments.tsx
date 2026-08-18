@@ -444,6 +444,7 @@ function AppointmentDialog({
       queryClient.invalidateQueries({ queryKey: ['available-services'] });
       queryClient.invalidateQueries({ queryKey: ['services'] });
       setServiceId(String(created.id));
+      setServiceName(created.name || qsName.trim());
       setQuickForm(null);
       toast.success('Serviço criado.');
     },
