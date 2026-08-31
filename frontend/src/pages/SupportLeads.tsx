@@ -168,7 +168,7 @@ export default function SupportLeads() {
   const [dense, setDense] = useState<boolean>(false);
 
   const { data: enrollmentsData } = useEnrollmentsList(
-    { page: 1, per_page: 200, situacao: 'mat' },
+    { page: 1, per_page: 200, situacao: 'mat', funnel_id: selectedFunnelId ? Number(selectedFunnelId) : undefined } as any,
     { enabled: !!selectedFunnelId }
   );
   const allEnrollments = useMemo<EnrollmentRecord[]>(() => (

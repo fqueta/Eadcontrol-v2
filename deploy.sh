@@ -47,11 +47,20 @@ echo "🧹 Limpando caches do Laravel..."
 docker exec octane_app php artisan optimize:clear
 docker exec octane_app php artisan route:clear
 
+echo "🏗️ Rodando Migrations (Central)..."
+docker exec octane_app php artisan migrate --force
+
 echo "🏗️ Rodando Migrations dos Tenants..."
 docker exec octane_app php artisan tenants:migrate --force
 
 echo "🌱 Rodando Database Seeds (MenuSeeder)..."
 docker exec octane_app php artisan tenants:seed --class=MenuSeeder --force
+
+echo "🌱 Rodando Database Seeds (CursoCategoriaSeeder)..."
+docker exec octane_app php artisan tenants:seed --class=CursoCategoriaSeeder --force
+
+echo "🔄 Reiniciando Queue Worker (nova imagem)..."
+docker compose -f docker-compose.production.yml up -d --no-deps --force-recreate queue
 
 echo "🔄 Atualizando config do Nginx..."
 cp backend/deployment/nginx/eadcontrol.conf /home/servidor/nginx/conf.d/eadcontrol.conf
