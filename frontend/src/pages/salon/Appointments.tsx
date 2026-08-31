@@ -34,6 +34,20 @@ import type { AppointmentRecord } from '@/types/appointments';
 import { APPOINTMENT_STATUS_COLORS, APPOINTMENT_STATUS_LABELS } from '@/types/appointments';
 import type { Service } from '@/types/services';
 
+type ClientRecord = {
+  id?: number | string;
+  name?: string;
+  email?: string;
+  celular?: string;
+  config?: {
+    celular?: string;
+    telefone_residencial?: string;
+    telefone_comercial?: string;
+    [key: string]: any;
+  };
+  [key: string]: any;
+};
+
 const OPEN_HOUR = 9;
 const CLOSE_HOUR = 18;
 const HOUR_HEIGHT = 72;
@@ -125,6 +139,14 @@ export default function Appointments() {
     onError: (e: any) => toast.error(e?.message || 'Erro ao remover agendamento.'),
   });
 
+  // pt-BR: Estado do dia selecionado na visualização mobile (0 a 6).
+  const [mobileDayIndex, setMobileDayIndex] = useState<number>(0);
+
+  useEffect(() => {
+    const idx = days.findIndex((d) => isSameDay(d, new Date()));
+    setMobileDayIndex(idx >= 0 ? idx : 0);
+  }, [weekStart]);
+
   const openCreate = (date: string, time = '09:00') => {
     setEditing(null);
     setPrefillDate(`${date}T${time}`);
@@ -150,7 +172,7 @@ export default function Appointments() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Agenda do Salão</h1>
@@ -159,7 +181,7 @@ export default function Appointments() {
             {format(days[6], "dd 'de' MMMM", { locale: ptBR })}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {!isRestrictedAgenda && (
             <select
               value={filterProfessional}
@@ -172,28 +194,183 @@ export default function Appointments() {
               ))}
             </select>
           )}
-          <Button variant="outline" onClick={() => setShareOpen(true)} aria-label="Compartilhar agenda">
+          <Button variant="outline" size="sm" onClick={() => setShareOpen(true)} aria-label="Compartilhar agenda">
             <MessageCircle className="h-4 w-4" />
-            <span className="ml-2 hidden sm:inline">Compartilhar</span>
+            <span className="ml-1.5 hidden sm:inline">Compartilhar</span>
           </Button>
-          <Button variant="outline" size="icon" onClick={() => setWeekStart((w) => subWeeks(w, 1))}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}>
-            Hoje
-          </Button>
-          <Button variant="outline" size="icon" onClick={() => setWeekStart((w) => addWeeks(w, 1))}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button size="icon" onClick={() => openCreate(format(new Date(), 'yyyy-MM-dd'))} aria-label="Agendar">
-            <Plus className="h-4 w-4" />
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setWeekStart((w) => subWeeks(w, 1))}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" className="h-9" onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}>
+              Hoje
+            </Button>
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setWeekStart((w) => addWeeks(w, 1))}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button size="sm" className="h-9" onClick={() => openCreate(format(days[mobileDayIndex] || new Date(), 'yyyy-MM-dd'))} aria-label="Agendar">
+            <Plus className="h-4 w-4 mr-1" />
+            <span>Novo</span>
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 overflow-hidden rounded-xl border bg-card md:grid-cols-8">
-        {/* Régua de horas */}
-        <div className="hidden min-w-0 border-r border-border/60 md:block">
+      {/* Tabs de Dias para Mobile (< md) */}
+      <div className="block md:hidden space-y-3">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none snap-x">
+          {days.map((day, idx) => {
+            const dayStr = format(day, 'yyyy-MM-dd');
+            const count = appointments.filter((a) => format(new Date(a.start), 'yyyy-MM-dd') === dayStr).length;
+            const isToday = isSameDay(day, new Date());
+            const isSelected = idx === mobileDayIndex;
+
+            return (
+              <button
+                key={dayStr}
+                type="button"
+                onClick={() => setMobileDayIndex(idx)}
+                className={`flex flex-1 min-w-[48px] flex-col items-center justify-center rounded-xl p-2 text-center transition-all snap-start border ${
+                  isSelected
+                    ? 'border-primary bg-primary text-primary-foreground font-bold shadow-sm'
+                    : isToday
+                    ? 'border-primary/50 bg-primary/10 text-primary font-semibold'
+                    : 'bg-card text-foreground hover:bg-accent'
+                }`}
+              >
+                <span className="text-[10px] uppercase font-medium">{format(day, 'EEE', { locale: ptBR }).replace('.', '')}</span>
+                <span className="text-sm font-extrabold">{format(day, 'dd')}</span>
+                {count > 0 && (
+                  <span
+                    className={`mt-0.5 rounded-full px-1.5 py-0.2 text-[9px] font-bold ${
+                      isSelected
+                        ? 'bg-white/20 text-white'
+                        : 'bg-primary/20 text-primary'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Layout Mobile: Régua + Dia Único Selecionado */}
+        <div className="grid grid-cols-[50px_1fr] overflow-hidden rounded-xl border bg-card shadow-sm">
+          {/* Régua de Horas Mobile */}
+          <div className="border-r border-border/60 bg-muted/20">
+            <div className="flex h-[36px] items-center justify-center border-b text-[10px] font-medium text-muted-foreground">
+              Hora
+            </div>
+            <div className="relative" style={{ height: (TOTAL_MINUTES / 60) * HOUR_HEIGHT }}>
+              {HOUR_LABELS.map((h) => (
+                <div
+                  key={h}
+                  className="absolute right-2 text-[10px] leading-none text-muted-foreground"
+                  style={{ top: (h - OPEN_HOUR) * HOUR_HEIGHT }}
+                >
+                  {`${String(h).padStart(2, '0')}:00`}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Coluna do Dia Selecionado no Mobile */}
+          {(() => {
+            const activeDay = days[mobileDayIndex] || days[0];
+            const dayStr = format(activeDay, 'yyyy-MM-dd');
+            const dayAppointments = appointments.filter((a) => format(new Date(a.start), 'yyyy-MM-dd') === dayStr);
+            const isToday = isSameDay(activeDay, new Date());
+
+            return (
+              <div className="min-w-0">
+                <button
+                  onClick={() => openCreate(dayStr)}
+                  className={`flex w-full items-center justify-between border-b px-3 py-2 text-left hover:bg-accent ${
+                    isToday ? 'bg-primary/10' : ''
+                  }`}
+                >
+                  <span className="text-xs font-semibold text-foreground">
+                    {format(activeDay, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                  </span>
+                  <Badge variant="outline" className="text-[10px]">
+                    {dayAppointments.length} {dayAppointments.length === 1 ? 'agendamento' : 'agendamentos'}
+                  </Badge>
+                </button>
+
+                <div
+                  className="relative cursor-pointer"
+                  style={{ height: (TOTAL_MINUTES / 60) * HOUR_HEIGHT }}
+                  onClick={(e) => openCreateAt(dayStr, e)}
+                >
+                  {HOURS.map((h) => (
+                    <div
+                      key={h}
+                      className="pointer-events-none absolute inset-x-0 border-t border-border/60"
+                      style={{ top: (h - OPEN_HOUR) * HOUR_HEIGHT }}
+                    />
+                  ))}
+                  {isToday && (
+                    <div
+                      className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-primary"
+                      style={{ top: toTop(new Date().toISOString()) }}
+                    >
+                      <span className="absolute -top-[3px] left-0 h-2 w-2 rounded-full bg-primary" />
+                    </div>
+                  )}
+                  {dayAppointments.map((a) => {
+                    const top = toTop(a.start);
+                    const height = toHeight(a.duration);
+                    const color = a.assignedName
+                      ? professionalColor(a.assignedTo)
+                      : (a.color || APPOINTMENT_STATUS_COLORS[a.status]);
+                    const timeText = `${format(new Date(a.start), 'HH:mm')} · ${APPOINTMENT_STATUS_LABELS[a.status]}`;
+                    const nameText = a.clientName || a.title || 'Cliente';
+                    const profText = a.assignedName ? ` · ${a.assignedName}` : '';
+
+                    return (
+                      <button
+                        key={a.id}
+                        onClick={(e) => { e.stopPropagation(); openEdit(a); }}
+                        title={`${nameText}${profText} — ${timeText}`}
+                        className="absolute left-1 right-1 overflow-hidden rounded-md border px-2 py-1 text-left text-xs leading-tight shadow-sm transition-transform hover:z-10 hover:scale-[1.01]"
+                        style={{
+                          top,
+                          height,
+                          borderColor: color,
+                          backgroundColor: `${color}1a`,
+                          color: '#1e293b',
+                        }}
+                      >
+                        <span className="block truncate font-bold text-slate-900 dark:text-slate-100">
+                          {nameText}
+                          {a.serviceOrderId && (
+                            <span
+                              className="ml-1 inline-block rounded px-1 text-[9px] font-bold text-white"
+                              style={{ backgroundColor: color }}
+                            >
+                              OS
+                            </span>
+                          )}
+                        </span>
+                        <span className="block truncate text-[11px] text-slate-700 dark:text-slate-300 font-medium">
+                          {timeText}{profText}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+
+      {/* Grade Semanal Completa para Desktop (md:grid) */}
+      <div className="hidden md:grid md:grid-cols-8 overflow-hidden rounded-xl border bg-card">
+        {/* Régua de horas Desktop */}
+        <div className="min-w-0 border-r border-border/60">
           <div className="flex h-[36px] items-center justify-between px-3" aria-hidden />
           <div className="relative" style={{ height: TOTAL_MINUTES / 60 * HOUR_HEIGHT }}>
             {HOUR_LABELS.map((h) => (
@@ -784,24 +961,58 @@ function AppointmentDialog({
 
         <div className="grid gap-4">
           {editing && (
-            <div className="flex flex-wrap items-center gap-2">
-              {Object.entries(APPOINTMENT_STATUS_LABELS).map(([value, label]) => (
-                <Badge
-                  key={value}
-                  variant="outline"
-                  className={`cursor-pointer ${status === value ? 'ring-2 ring-primary' : ''}`}
-                  style={{ color: APPOINTMENT_STATUS_COLORS[value as keyof typeof APPOINTMENT_STATUS_COLORS] }}
-                  onClick={() => statusMutation({ id: editing.id, status: value })}
-                >
-                  {label}
-                </Badge>
-              ))}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border bg-muted/30 p-3">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {Object.entries(APPOINTMENT_STATUS_LABELS).map(([value, label]) => (
+                  <Badge
+                    key={value}
+                    variant="outline"
+                    className={`cursor-pointer text-xs font-semibold py-1 px-2.5 transition-all ${
+                      status === value ? 'ring-2 ring-primary font-bold shadow-sm' : 'opacity-80 hover:opacity-100'
+                    }`}
+                    style={{ color: APPOINTMENT_STATUS_COLORS[value as keyof typeof APPOINTMENT_STATUS_COLORS] }}
+                    onClick={() => statusMutation({ id: editing.id, status: value })}
+                  >
+                    {label}
+                  </Badge>
+                ))}
+              </div>
+
+              {/* Ações Rápidas do Administrador */}
+              <div className="flex flex-wrap items-center gap-2">
+                {clientPhone && (
+                  <a
+                    href={`https://wa.me/55${clientPhone.replace(/\D/g, '')}?text=${encodeURIComponent(
+                      `Olá ${clientName || 'cliente'}! Confirmando seu agendamento no salão para ${
+                        editing.start ? format(new Date(editing.start), "dd/MM 'às' HH:mm", { locale: ptBR }) : ''
+                      }.`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition-colors shadow-sm"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    WhatsApp
+                  </a>
+                )}
+                {editing.serviceOrderId && (
+                  <a
+                    href={`/admin/service-orders/${editing.serviceOrderId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition-colors shadow-sm"
+                  >
+                    <Wrench className="h-3.5 w-3.5" />
+                    OS #{editing.serviceOrderId}
+                  </a>
+                )}
+              </div>
             </div>
           )}
 
           {editing?.serviceOrderId && (
-            <div className="rounded-md border bg-green-50 px-3 py-2 text-sm text-green-800">
-              Ordem de Serviço #{editing.serviceOrderId} gerada a partir deste agendamento.
+            <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-3 text-xs text-blue-900 dark:bg-blue-950/40 dark:text-blue-200 dark:border-blue-800 flex items-center justify-between">
+              <span>Ordem de Serviço <strong>#{editing.serviceOrderId}</strong> vinculada a este agendamento.</span>
             </div>
           )}
 
@@ -839,10 +1050,12 @@ function AppointmentDialog({
               />
             )}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Telefone</Label>
+              <Label>Telefone / WhatsApp</Label>
               <InputMask
+                component="input"
                 mask="(__) _____-____"
                 replacement={{ _: /\d/ }}
                 value={clientPhone ? formatMask(clientPhone, { mask: '(__) _____-____', replacement: { _: /\d/ } }) : ''}
@@ -879,7 +1092,8 @@ function AppointmentDialog({
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Data e hora</Label>
               <Input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} />
@@ -1027,6 +1241,7 @@ function AppointmentDialog({
               <div className="space-y-2">
                 <Label>Telefone</Label>
                 <InputMask
+                  component="input"
                   mask="(__) _____-____"
                   replacement={{ _: /\d/ }}
                   value={quPhone ? formatMask(quPhone, { mask: '(__) _____-____', replacement: { _: /\d/ } }) : ''}
@@ -1098,6 +1313,7 @@ function AppointmentDialog({
             <div className="space-y-2">
               <Label>Telefone</Label>
               <InputMask
+                component="input"
                 mask="(__) _____-____"
                 replacement={{ _: /\d/ }}
                 value={ncPhone ? formatMask(ncPhone, { mask: '(__) _____-____', replacement: { _: /\d/ } }) : ''}
