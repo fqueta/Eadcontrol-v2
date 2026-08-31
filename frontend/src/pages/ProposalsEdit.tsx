@@ -279,7 +279,7 @@ export default function ProposalsEdit() {
   const situationsData = situationsQuery.data;
   const isLoadingSituations = situationsQuery.isPending;
 
-  const { data: funnelsData, isLoading: isLoadingFunnels } = useFunnelsList({ per_page: 200, place: 'vendas' });
+  const { data: funnelsData, isLoading: isLoadingFunnels } = useFunnelsList({ per_page: 200 });
   const funnels = useMemo(() => (funnelsData as any)?.data || [], [funnelsData]);
 
   const selectedFunnelId = form.watch('funnel_id');
