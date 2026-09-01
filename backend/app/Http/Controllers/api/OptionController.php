@@ -550,6 +550,44 @@ class OptionController extends Controller
         $parsedUrl = parse_url($rawUrl);
         $path = $parsedUrl['path'] ?? '/';
 
+        // Fallback tenancy: se middleware não identificou tenant correto (Host 127.0.0.1 em dev proxy),
+        // inicializa via host da URL original (?url=) para que view-source dev seja dinâmico por tenant
+        try {
+            $urlHost = $parsedUrl['host'] ?? null;
+            if ($urlHost) {
+                $urlHost = explode(':', $urlHost)[0];
+                $urlHost = trim($urlHost);
+                // Tenta resolver tenant via Domain (inclui hair.localhost, api-hair.localhost, custom)
+                $domainModel = \Stancl\Tenancy\Database\Models\Domain::where('domain', $urlHost)->first();
+                // Fallback: tenta tenant id direto (ex: hair -> api-hair)
+                if (!$domainModel) {
+                    $tenantId = $urlHost;
+                    // se host é hair.localhost, tenta api-hair
+                    if (!str_starts_with($tenantId, 'api-')) {
+                        $sub = explode('.', $urlHost)[0];
+                        $tryId = 'api-' . $sub;
+                        $domainModel = \Stancl\Tenancy\Database\Models\Domain::where('domain', $tryId . '.localhost')->first();
+                        if (!$domainModel) {
+                            $domainModel = \Stancl\Tenancy\Database\Models\Domain::where('tenant_id', $tryId)->first();
+                        }
+                    }
+                }
+                if ($domainModel) {
+                    $currentTenantId = function_exists('tenant') && tenant() ? tenant('id') : null;
+                    if ($currentTenantId !== $domainModel->tenant_id) {
+                        // Finaliza tenancy anterior se houver
+                        try { tenancy()->end(); } catch (\Throwable $e) {}
+                        $tenant = \App\Models\Tenant::find($domainModel->tenant_id) ?? $domainModel->tenant;
+                        if ($tenant) {
+                            tenancy()->initialize($tenant);
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // ignora, segue com tenant atual ou central
+        }
+
         // 2. Buscar o template HTML do frontend (com cache se o driver suportar)
         $templateHtml = null;
         try {
@@ -604,10 +642,18 @@ class OptionController extends Controller
             'siteName' => 'Ead Control',
         ];
 
-        // Canonical base from original URL (tenant-aware: preserve host)
+        // Canonical base from original URL (tenant-aware: preserve host + port for dev :4000)
         $scheme = $parsedUrl['scheme'] ?? (request()->isSecure() ? 'https' : 'https');
         $host = $parsedUrl['host'] ?? request()->getHost();
-        $canonicalBase = $scheme . '://' . $host;
+        $port = $parsedUrl['port'] ?? null;
+        // In dev, port 4000 must be preserved for sitemap links; strip only 80/443
+        $portPart = '';
+        if ($port && !in_array((int)$port, [80, 443])) {
+            $portPart = ':' . $port;
+        } elseif (isset($parsedUrl['port']) && $parsedUrl['port']) {
+            // explicit port 80/443 already stripped
+        }
+        $canonicalBase = $scheme . '://' . $host . $portPart;
         // Normalize path for canonical (keep trailing / for home, otherwise trim? keep as is)
         $canonicalUrl = $canonicalBase . $path;
         // Strip query/hash for canonical

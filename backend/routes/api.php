@@ -481,6 +481,11 @@ Route::prefix('v1/saas')->middleware(['api', 'auth:sanctum', 'saas.admin'])->gro
         ->name('saas.tenants.update');
 });
 
+// Central crawler preview for dev proxy (Host 127.0.0.1) - tenant via ?url host
+Route::get('central/crawler-preview', [\App\Http\Controllers\api\OptionController::class, 'crawlerPreview'])
+    ->middleware('api')
+    ->name('central.crawler-preview');
+
 // SaaS Webhook (público, sem auth)
 Route::post('v1/saas/webhook/{provider}', [\App\Http\Controllers\api\SaasWebhookController::class, 'handle'])
     ->name('saas.webhook');

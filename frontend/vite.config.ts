@@ -5,6 +5,55 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 import viteCompression from "vite-plugin-compression";
 
+// Tenant-aware HTML injection for view-source (dev)
+// Faz view-source em http://hair.localhost:4000/cursos ser dinâmico por tenant,
+// igual sitemap/robots. Em prod o frontend/nginx.conf faz o mesmo via proxy.
+function tenantHtmlInject() {
+  return {
+    name: 'tenant-html-inject',
+    enforce: 'pre',
+    configureServer(server) {
+      const handler = async (req, res, next) => {
+        const url = (req.url || '').split('?')[0];
+        const accept = (req.headers.accept as string) || '';
+        // só HTML, não assets/vite/api/websocket
+        if (!accept.includes('text/html')) return next();
+        if (url.startsWith('/@vite') || url.startsWith('/@react-refresh') || url.startsWith('/src/') || url.startsWith('/node_modules') || url.startsWith('/__vite')) return next();
+        if (/\.(js|css|ts|tsx|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|json|map|mp4|webm)$/.test(url)) return next();
+        if (url.startsWith('/api/')) return next();
+        if (url === '/sitemap.xml' || url === '/robots.txt') return next();
+        if (req.headers['sec-websocket-key']) return next();
+        const host = (req.headers.host as string) || 'localhost';
+        const fullUrl = `http://${host}${req.url || '/'}`;
+        try {
+          // Em dev o Host 127.0.0.1 é central e seria bloqueado por PreventAccessFromCentralDomains,
+          // então usa rota central que resolve tenant via ?url host (fallback em OptionController)
+          const backend = `http://127.0.0.1:8002/api/central/crawler-preview?url=${encodeURIComponent(fullUrl)}`;
+          const r = await fetch(backend);
+          if (r.ok) {
+            const html = await r.text();
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            res.end(html);
+            return;
+          } else {
+            console.warn(`[tenant-html] backend ${r.status} for ${fullUrl}`);
+          }
+        } catch (e) {
+          console.warn('[tenant-html] fetch failed', e);
+        }
+        return next();
+      };
+      // Inserir no topo da pilha para interceptar antes do fallback SPA do Vite
+      // @ts-ignore - stack é interno do connect
+      if (server.middlewares && (server.middlewares as any).stack) {
+        (server.middlewares as any).stack.unshift({ route: '', handle: handler });
+      } else {
+        server.middlewares.use(handler);
+      }
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
@@ -44,6 +93,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [
+    tenantHtmlInject(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
