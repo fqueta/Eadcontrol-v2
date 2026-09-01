@@ -51,6 +51,10 @@ class Stage extends Model
             'notifyOnExit' => false,
             'requireApproval' => false,
             'timeLimit' => null, // in days; null means no limit
+            'actions' => [
+                'onEnter' => [],
+                'onExit' => [],
+            ],
         ];
     }
 

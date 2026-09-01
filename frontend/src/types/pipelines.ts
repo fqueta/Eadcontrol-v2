@@ -36,6 +36,30 @@ export interface FunnelRecord {
   updated_at?: string;
 }
 
+// Ação configurável de etapa (automação ao mover card)
+export interface StageAction {
+  id: string;
+  type: 'set_situacao';
+  situacao_id: number;
+  enabled?: boolean;
+  order?: number;
+}
+
+export interface StageActionsSettings {
+  onEnter?: StageAction[];
+  onExit?: StageAction[];
+}
+
+export interface StageSettings {
+  autoAdvance?: boolean;
+  maxItems?: number | null;
+  notifyOnEntry?: boolean;
+  notifyOnExit?: boolean;
+  requireApproval?: boolean;
+  timeLimit?: number | null;
+  actions?: StageActionsSettings;
+}
+
 // Etapa dentro de um Funil
 export interface StageRecord {
   id: string;
@@ -50,6 +74,7 @@ export interface StageRecord {
    */
   color?: string;
   active?: boolean;
+  settings?: StageSettings | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -114,6 +139,7 @@ export interface CreateStageInput {
    * en-US: Funnel ID the stage belongs to (required for flat create endpoint).
    */
   funnel_id?: string;
+  settings?: StageSettings | null;
 }
 
 export interface UpdateStageInput {
@@ -129,6 +155,7 @@ export interface UpdateStageInput {
    * en-US: Funnel ID the stage belongs to (required for new flat endpoint).
    */
   funnel_id?: string;
+  settings?: StageSettings | null;
 }
 
 // List params

@@ -732,6 +732,17 @@ class MatriculaController extends Controller
             ->get()
             ->toArray();
 
+        // Logs de automação de etapas
+        try {
+            $data['stage_logs'] = \App\Models\MatriculaStageLog::where('matricula_id', $matricula->id)
+                ->orderByDesc('created_at')
+                ->limit(20)
+                ->get()
+                ->toArray();
+        } catch (\Throwable $e) {
+            $data['stage_logs'] = [];
+        }
+
         return response()->json($data);
     }
 
@@ -766,27 +777,58 @@ class MatriculaController extends Controller
         $validated = $validator->validated();
 
         // Pós-validação removida: validação via regra exists já garante integridade
+        $originalStageId = $matricula->stage_id;
         $matricula->fill($validated);
 
-        // Quando o card é movido para o funil "Matriculado", auto-define situacao_id como "Matriculado"
-        if ($matricula->isDirty('stage_id') && !empty($matricula->stage_id)) {
-            $stage = \App\Models\Stage::with('funnel')->find($matricula->stage_id);
-            if ($stage && $stage->funnel && strtolower($stage->funnel->name) === 'matriculado') {
-                $matriculadoSit = DB::table('posts')
-                    ->where('post_type', 'situacao_matricula')
-                    ->where('post_name', 'like', 'mat%')
-                    ->first();
-                if ($matriculadoSit && $matricula->situacao_id != $matriculadoSit->ID) {
-                    $matricula->situacao_id = (int) $matriculadoSit->ID;
+        $executedActions = [];
+        $isStageChange = $matricula->isDirty('stage_id') && !empty($matricula->stage_id);
+        if ($isStageChange) {
+            $newStageId = (int)$matricula->stage_id;
+            $oldStageId = $originalStageId ? (int)$originalStageId : null;
+            try {
+                $service = app(\App\Services\Enrollment\StageActionService::class);
+                $executedActions = $service->handle($matricula, $oldStageId, $newStageId, $user->id ?? null);
+            } catch (\Throwable $e) {
+                // fallback: log but do not block save
+                \Illuminate\Support\Facades\Log::warning('StageActionService failed', ['err'=>$e->getMessage()]);
+            }
+            // Fallback legado: se nenhuma ação configurada e funil for Matriculado, mantém comportamento antigo
+            if (empty($executedActions) && empty($matricula->isDirty('situacao_id'))) {
+                $stage = \App\Models\Stage::with('funnel')->find($matricula->stage_id);
+                if ($stage && $stage->funnel && strtolower($stage->funnel->name) === 'matriculado') {
+                    $matriculadoSit = DB::table('posts')
+                        ->where('post_type', 'situacao_matricula')
+                        ->where('post_name', 'like', 'mat%')
+                        ->first();
+                    if ($matriculadoSit && $matricula->situacao_id != $matriculadoSit->ID) {
+                        $fromId = $matricula->getOriginal('situacao_id');
+                        $matricula->situacao_id = (int) $matriculadoSit->ID;
+                        // log legado
+                        try {
+                            \App\Models\MatriculaStageLog::create([
+                                'matricula_id' => $matricula->id,
+                                'from_stage_id' => $oldStageId,
+                                'to_stage_id' => $newStageId,
+                                'funnel_id' => $stage->funnel_id,
+                                'stage_id' => $stage->id,
+                                'trigger' => 'enter',
+                                'from_situacao_id' => $fromId,
+                                'to_situacao_id' => $matriculadoSit->ID,
+                                'from_situacao_name' => $fromId ? DB::table('posts')->where('ID',$fromId)->value('post_title') : null,
+                                'to_situacao_name' => $matriculadoSit->post_title,
+                                'actor_id' => $user->id ?? null,
+                                'meta' => ['legacy'=>true, 'stage_name'=>$stage->name],
+                            ]);
+                        } catch (\Throwable $e) {}
+                    }
                 }
             }
         }
 
-        // Verifica mudança de situação para "Matriculado" (post_name inicia com 'mat') e grava data de início da matrícula
+        // Verifica mudança de situação para "Matriculado" (post_name inicia com 'mat') e grava data de início da matrícula (se ainda não veio de ação)
         if ($matricula->isDirty('situacao_id') && !empty($matricula->situacao_id)) {
             $newSituacaoName = DB::table('posts')->where('ID', $matricula->situacao_id)->value('post_name');
             if ($newSituacaoName && \Illuminate\Support\Str::startsWith(strtolower($newSituacaoName), 'mat')) {
-                // Grava ou atualiza a data de início da matrícula
                 Qlib::update_matriculameta($matricula->id, 'dt_inicio_matricula', now()->format('Y-m-d H:i:s'));
             }
         }
@@ -816,7 +858,12 @@ class MatriculaController extends Controller
             $this->autoGenerateInvoicesFromMeta($matricula, $requestMeta, $validated);
         }
 
-        return response()->json($matricula);
+        // retornar com logs recentes e ações executadas
+        $matricula->loadMissing([]);
+        $response = $matricula->toArray();
+        $response['executed_actions'] = $executedActions ?? [];
+        $response['stage_logs'] = \App\Models\MatriculaStageLog::where('matricula_id', $matricula->id)->orderByDesc('created_at')->limit(20)->get()->toArray();
+        return response()->json($response);
     }
 
     /**
@@ -1262,5 +1309,25 @@ class MatriculaController extends Controller
             'message' => 'Cobrança da taxa de matrícula gerada com sucesso nas Faturas Locais.',
             'account' => $account
         ], 201);
+    }
+
+    /**
+     * Lista logs de automação de etapa para uma matrícula
+     */
+    public function stageLogs(Request $request, string $id)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+        if (!$this->permissionService->isHasPermission('view')) {
+            return response()->json(['error' => 'Acesso negado'], 403);
+        }
+        $matricula = Matricula::findOrFail($id);
+        $perPage = (int) $request->input('per_page', 20);
+        $logs = \App\Models\MatriculaStageLog::where('matricula_id', $matricula->id)
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
+        return response()->json($logs);
     }
 }

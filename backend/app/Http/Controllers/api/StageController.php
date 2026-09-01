@@ -7,6 +7,7 @@ use App\Models\Stage;
 use App\Models\Funnel;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -105,7 +106,20 @@ class StageController extends Controller
                 'settings.notifyOnEntry' => 'nullable|boolean',
                 'settings.notifyOnExit' => 'nullable|boolean',
                 'settings.requireApproval' => 'nullable|boolean',
-                'settings.timeLimit' => 'nullable|integer|min:1'
+                'settings.timeLimit' => 'nullable|integer|min:1',
+                'settings.actions' => 'nullable|array',
+                'settings.actions.onEnter' => 'nullable|array',
+                'settings.actions.onEnter.*.id' => 'nullable|string|max:100',
+                'settings.actions.onEnter.*.type' => ['required','string', Rule::in(['set_situacao'])],
+                'settings.actions.onEnter.*.situacao_id' => ['required','integer', Rule::exists('posts','ID')->where(fn($q)=>$q->where('post_type','situacao_matricula'))],
+                'settings.actions.onEnter.*.enabled' => 'nullable|boolean',
+                'settings.actions.onEnter.*.order' => 'nullable|integer|min:0',
+                'settings.actions.onExit' => 'nullable|array',
+                'settings.actions.onExit.*.id' => 'nullable|string|max:100',
+                'settings.actions.onExit.*.type' => ['required','string', Rule::in(['set_situacao'])],
+                'settings.actions.onExit.*.situacao_id' => ['required','integer', Rule::exists('posts','ID')->where(fn($q)=>$q->where('post_type','situacao_matricula'))],
+                'settings.actions.onExit.*.enabled' => 'nullable|boolean',
+                'settings.actions.onExit.*.order' => 'nullable|integer|min:0',
             ], [
                 'name.required' => 'O nome da etapa é obrigatório',
                 'name.max' => 'O nome da etapa não pode ter mais de 255 caracteres',
@@ -131,10 +145,15 @@ class StageController extends Controller
             $validated['color'] = $validated['color'] ?? '#3b82f6';
             $validated['isActive'] = $validated['isActive'] ?? true;
 
-            // Mesclar configurações com padrões
+            // Mesclar configurações com padrões (merge profundo para actions)
             if (isset($validated['settings'])) {
                 $defaultSettings = Stage::getDefaultSettings();
-                $validated['settings'] = array_merge($defaultSettings, $validated['settings']);
+                $merged = array_merge($defaultSettings, $validated['settings']);
+                // Preservar actions se vier do payload, senão manter default
+                if (isset($validated['settings']['actions'])) {
+                    $merged['actions'] = $this->normalizeActions($validated['settings']['actions']);
+                }
+                $validated['settings'] = $merged;
             }
 
             $stage = Stage::create($validated);
@@ -238,7 +257,20 @@ class StageController extends Controller
                 'settings.notifyOnEntry' => 'nullable|boolean',
                 'settings.notifyOnExit' => 'nullable|boolean',
                 'settings.requireApproval' => 'nullable|boolean',
-                'settings.timeLimit' => 'nullable|integer|min:1'
+                'settings.timeLimit' => 'nullable|integer|min:1',
+                'settings.actions' => 'nullable|array',
+                'settings.actions.onEnter' => 'nullable|array',
+                'settings.actions.onEnter.*.id' => 'nullable|string|max:100',
+                'settings.actions.onEnter.*.type' => ['required','string', Rule::in(['set_situacao'])],
+                'settings.actions.onEnter.*.situacao_id' => ['required','integer', Rule::exists('posts','ID')->where(fn($q)=>$q->where('post_type','situacao_matricula'))],
+                'settings.actions.onEnter.*.enabled' => 'nullable|boolean',
+                'settings.actions.onEnter.*.order' => 'nullable|integer|min:0',
+                'settings.actions.onExit' => 'nullable|array',
+                'settings.actions.onExit.*.id' => 'nullable|string|max:100',
+                'settings.actions.onExit.*.type' => ['required','string', Rule::in(['set_situacao'])],
+                'settings.actions.onExit.*.situacao_id' => ['required','integer', Rule::exists('posts','ID')->where(fn($q)=>$q->where('post_type','situacao_matricula'))],
+                'settings.actions.onExit.*.enabled' => 'nullable|boolean',
+                'settings.actions.onExit.*.order' => 'nullable|integer|min:0',
             ], [
                 'name.required' => 'O nome da etapa é obrigatório',
                 'name.max' => 'O nome da etapa não pode ter mais de 255 caracteres',
@@ -253,10 +285,17 @@ class StageController extends Controller
             // Aplicar mapeamento de campos
             $validated = $this->map_campos($validated);
 
-            // Mesclar configurações existentes com as novas
+            // Mesclar configurações existentes com as novas (merge profundo para actions)
             if (isset($validated['settings'])) {
                 $currentSettings = $stage->getSettingsWithDefaults();
-                $validated['settings'] = array_merge($currentSettings, $validated['settings']);
+                $merged = array_merge($currentSettings, $validated['settings']);
+                if (array_key_exists('actions', $validated['settings'])) {
+                    $merged['actions'] = $this->normalizeActions($validated['settings']['actions']);
+                } else {
+                    // preservar actions existentes se não vieram no payload
+                    $merged['actions'] = $currentSettings['actions'] ?? ['onEnter'=>[],'onExit'=>[]];
+                }
+                $validated['settings'] = $merged;
             }
 
             $stage->update($validated);
@@ -450,5 +489,33 @@ class StageController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Normaliza actions para garantir estrutura consistente
+     */
+    private function normalizeActions($actions): array
+    {
+        $out = ['onEnter' => [], 'onExit' => []];
+        if (!is_array($actions)) return $out;
+        foreach (['onEnter','onExit'] as $trigger) {
+            $list = $actions[$trigger] ?? [];
+            if (!is_array($list)) continue;
+            $norm = [];
+            foreach ($list as $idx => $act) {
+                if (!is_array($act)) continue;
+                $norm[] = [
+                    'id' => $act['id'] ?? (string) \Illuminate\Support\Str::uuid(),
+                    'type' => $act['type'] ?? 'set_situacao',
+                    'situacao_id' => isset($act['situacao_id']) ? (int)$act['situacao_id'] : null,
+                    'enabled' => array_key_exists('enabled', $act) ? (bool)$act['enabled'] : true,
+                    'order' => isset($act['order']) ? (int)$act['order'] : $idx,
+                ];
+            }
+            // ordenar por order e reindexar
+            usort($norm, fn($a,$b)=> ($a['order'] <=> $b['order']));
+            $out[$trigger] = array_values($norm);
+        }
+        return $out;
     }
 }

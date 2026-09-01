@@ -71,6 +71,9 @@ Route::middleware([
     InitializeTenancyByDomain::class,
     PreventAccessFromCentralDomains::class,
 ])->group(function () {
+    // SEO tenant-aware
+    Route::get('/robots.txt', [\App\Http\Controllers\api\SeoController::class, 'robots'])->name('seo.robots');
+    Route::get('/sitemap.xml', [\App\Http\Controllers\api\SeoController::class, 'sitemap'])->name('seo.sitemap');
     // Route::get('/', function () {
     //     return Inertia::render('welcome');
     // })->name('home');
@@ -162,6 +165,9 @@ Route::name('api.')->prefix('api/v1')->middleware([
         // Dynamic metadata crawler preview for social sharing crawlers/bots
         Route::get('crawler-preview', [OptionController::class, 'crawlerPreview'])
             ->name('public.crawler-preview');
+        // SEO tenant-aware (also reachable via /api/v1/public/...)
+        Route::get('robots.txt', [\App\Http\Controllers\api\SeoController::class, 'robots'])->name('public.robots');
+        Route::get('sitemap.xml', [\App\Http\Controllers\api\SeoController::class, 'sitemap'])->name('public.sitemap');
         // Endpoint público: banner rotativo da landing page
         Route::get('posts/banners', [PostController::class, 'publicBanners'])
             ->name('posts.public.banners')

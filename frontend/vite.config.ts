@@ -11,6 +11,18 @@ export default defineConfig(({ mode }) => ({
     host: true,
     port: 4000,
     strictPort: true,
+    proxy: {
+      '/sitemap.xml': {
+        target: 'http://127.0.0.1:8002',
+        changeOrigin: false,
+        secure: false,
+      },
+      '/robots.txt': {
+        target: 'http://127.0.0.1:8002',
+        changeOrigin: false,
+        secure: false,
+      },
+    },
   },
   build: {
     chunkSizeWarningLimit: 1000,
@@ -73,6 +85,20 @@ export default defineConfig(({ mode }) => ({
               expiration: {
                 maxEntries: 10,
                 maxAgeSeconds: 60 * 60 * 24 * 365
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /\/api\/v1\/public\/options\/branding/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'branding-cache',
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 * 5
               },
               cacheableResponse: {
                 statuses: [0, 200]

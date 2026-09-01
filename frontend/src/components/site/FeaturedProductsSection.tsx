@@ -200,6 +200,10 @@ export function FeaturedProductsSection() {
                         <img 
                           src={coverUrl} 
                           alt={productTitle}
+                          loading="lazy"
+                          decoding="async"
+                          width={800}
+                          height={450}
                           className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110"
                         />
                       ) : (

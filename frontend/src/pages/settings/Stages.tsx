@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Plus, Search, Pencil, Trash2, Layers, ListOrdered, GripVertical, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Layers, ListOrdered, GripVertical, ChevronDown, ChevronRight, Settings2, LogOut, LogIn } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -16,10 +16,14 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { FormActionBar } from '@/components/common/FormActionBar';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 
-import { FunnelRecord, StageRecord, CreateFunnelInput, UpdateFunnelInput, CreateStageInput, UpdateStageInput, FunnelSettings } from '@/types/pipelines';
+import { FunnelRecord, StageRecord, CreateFunnelInput, UpdateFunnelInput, CreateStageInput, UpdateStageInput, FunnelSettings, StageAction } from '@/types/pipelines';
 import { useFunnelsList, useCreateFunnel, useUpdateFunnel, useDeleteFunnel, useStagesList, useCreateStage, useUpdateStage, useDeleteStage } from '@/hooks/funnels';
 import { funnelsService } from '@/services/funnelsService';
+import { enrollmentSituationsService } from '@/services/enrollmentSituationsService';
+import { EnrollmentSituation } from '@/types/enrollmentSituation';
 import { useDebounce } from '@/hooks/useDebounce';
 import { toast } from '@/hooks/use-toast';
 
@@ -203,6 +207,11 @@ export default function Stages() {
   // Diálogo de Etapa
   const [isStageModalOpen, setIsStageModalOpen] = useState(false);
   const [editingStage, setEditingStage] = useState<StageRecord | null>(null);
+  const [stageActionsTab, setStageActionsTab] = useState<'onEnter'|'onExit'>('onEnter');
+  const [stageActionsOnEnter, setStageActionsOnEnter] = useState<StageAction[]>([]);
+  const [stageActionsOnExit, setStageActionsOnExit] = useState<StageAction[]>([]);
+  const [situacoesList, setSituacoesList] = useState<EnrollmentSituation[]>([]);
+  const [isLoadingSituacoes, setIsLoadingSituacoes] = useState(false);
 
   const stageSchema = z.object({
     name: z.string().min(1, 'Nome é obrigatório'),
@@ -220,6 +229,40 @@ export default function Stages() {
     resolver: zodResolver(stageSchema),
     defaultValues: { name: '', description: '', order: 0, color: '#3b82f6', active: true }
   });
+
+  const fetchSituacoes = async () => {
+    if (situacoesList.length > 0 || isLoadingSituacoes) return;
+    setIsLoadingSituacoes(true);
+    try {
+      const res = await enrollmentSituationsService.listSituations({ page: 1, per_page: 100 });
+      const data = (res as any)?.data ?? (Array.isArray(res) ? res : []);
+      setSituacoesList(Array.isArray(data) ? data : []);
+    } catch (e) {
+      // silent
+    } finally {
+      setIsLoadingSituacoes(false);
+    }
+  };
+
+  const addStageAction = (trigger: 'onEnter'|'onExit') => {
+    const newAction: StageAction = {
+      id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2,6),
+      type: 'set_situacao',
+      situacao_id: (situacoesList[0]?.id as number) || 0,
+      enabled: true,
+      order: trigger === 'onEnter' ? stageActionsOnEnter.length : stageActionsOnExit.length,
+    };
+    if (trigger === 'onEnter') setStageActionsOnEnter(prev => [...prev, newAction]);
+    else setStageActionsOnExit(prev => [...prev, newAction]);
+  };
+  const removeStageAction = (trigger: 'onEnter'|'onExit', id: string) => {
+    if (trigger === 'onEnter') setStageActionsOnEnter(prev => prev.filter(a=>a.id!==id));
+    else setStageActionsOnExit(prev => prev.filter(a=>a.id!==id));
+  };
+  const updateStageAction = (trigger: 'onEnter'|'onExit', id: string, patch: Partial<StageAction>) => {
+    if (trigger === 'onEnter') setStageActionsOnEnter(prev => prev.map(a=> a.id===id ? {...a, ...patch} as StageAction : a));
+    else setStageActionsOnExit(prev => prev.map(a=> a.id===id ? {...a, ...patch} as StageAction : a));
+  };
 
   // Handlers — Funis
   /**
@@ -312,7 +355,7 @@ export default function Stages() {
     }
     // Garanta que o funil selecionado seja definido quando fornecido diretamente
     if (funnelArg) setSelectedFunnel(funnelArg);
-
+    fetchSituacoes();
     if (stage) {
       setEditingStage(stage);
       stageForm.reset({
@@ -322,10 +365,17 @@ export default function Stages() {
         color: stage.color || currentFunnel.color || '#3b82f6',
         active: !!stage.active,
       });
+      const acts = (stage as any).settings?.actions || (stage as any).config?.actions || { onEnter: [], onExit: [] };
+      // normalizar caso venha como object sem arrays
+      setStageActionsOnEnter(Array.isArray(acts.onEnter) ? acts.onEnter : []);
+      setStageActionsOnExit(Array.isArray(acts.onExit) ? acts.onExit : []);
     } else {
       setEditingStage(null);
       stageForm.reset({ name: '', description: '', order: (stages.length || 0) + 1, color: currentFunnel.color || '#3b82f6', active: true });
+      setStageActionsOnEnter([]);
+      setStageActionsOnExit([]);
     }
+    setStageActionsTab('onEnter');
     setIsStageModalOpen(true);
   };
 
@@ -333,6 +383,8 @@ export default function Stages() {
     setIsStageModalOpen(false);
     setEditingStage(null);
     stageForm.reset();
+    setStageActionsOnEnter([]);
+    setStageActionsOnExit([]);
   };
 
   /**
@@ -353,29 +405,47 @@ export default function Stages() {
    */
   const onSubmitStage = async (data: StageFormData) => {
     if (!selectedFunnel) return;
+    // validar ações: filtrar vazias
+    const cleanOnEnter = stageActionsOnEnter.filter(a=> a.situacao_id && Number(a.situacao_id) > 0).map((a,i)=> ({...a, order:i, enabled: a.enabled ?? true }));
+    const cleanOnExit = stageActionsOnExit.filter(a=> a.situacao_id && Number(a.situacao_id) > 0).map((a,i)=> ({...a, order:i, enabled: a.enabled ?? true }));
+    const hasActions = cleanOnEnter.length > 0 || cleanOnExit.length > 0;
     try {
+      const settingsPayload: any = hasActions ? { actions: { onEnter: cleanOnEnter, onExit: cleanOnExit } } : undefined;
+      // quando editando, mesclar com settings existentes para não perder outros campos
+      let finalSettings: any = settingsPayload;
+      if (editingStage) {
+        const existing = (editingStage as any).settings || {};
+        if (settingsPayload) finalSettings = { ...existing, ...settingsPayload };
+        else {
+          // se não tem ações novas e estágio tinha actions, preservar ou limpar conforme estado
+          // se usuário removeu todas, enviar actions vazias
+          if (stageActionsOnEnter.length===0 && stageActionsOnExit.length===0 && existing.actions) {
+            finalSettings = { ...existing, actions: { onEnter: [], onExit: [] } };
+          } else {
+            finalSettings = existing;
+          }
+        }
+      } else if (settingsPayload) {
+        finalSettings = settingsPayload;
+      }
       const payload: CreateStageInput | UpdateStageInput = {
         name: data.name,
         description: data.description || '',
         order: data.order ?? 0,
         color: data.color || selectedFunnel.color || '#3b82f6',
         active: data.active ?? true,
-      };
+        ...(finalSettings ? { settings: finalSettings } : {}),
+      } as any;
       if (editingStage) {
-        // pt-BR: Envia o ID do funil para o novo endpoint plano de etapas
-        // en-US: Send funnel ID for the new flat stages endpoint
         (payload as UpdateStageInput).funnel_id = selectedFunnel.id;
         await updateStageMutation.mutateAsync({ stageId: editingStage.id, data: payload as UpdateStageInput });
       } else {
-        // pt-BR: Incluir `funnel_id` para criação via endpoint plano `/stages`
-        // en-US: Include `funnel_id` for creation via flat endpoint `/stages`
         (payload as CreateStageInput).funnel_id = selectedFunnel.id;
         await createStageMutation.mutateAsync(payload as CreateStageInput);
       }
       closeStageModal();
     } catch (err: any) {
       // pt-BR: Erros já são tratados pelos hooks de etapas com toast.
-      // en-US: Errors are already handled by stage hooks with a toast.
     }
   };
 
@@ -768,8 +838,9 @@ export default function Stages() {
               <TableRow>
                 <TableHead className="w-10">&nbsp;</TableHead>
                 <TableHead>Nome</TableHead>
-                <TableHead className="w-24">Ordem</TableHead>
-                <TableHead className="w-32">Cor</TableHead>
+                <TableHead className="w-16">Ordem</TableHead>
+                <TableHead className="w-20">Cor</TableHead>
+                <TableHead className="w-28">Automações</TableHead>
                 <TableHead className="w-24">Status</TableHead>
                 <TableHead className="text-right w-40">Ações</TableHead>
               </TableRow>
@@ -777,15 +848,20 @@ export default function Stages() {
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-sm text-muted-foreground">Carregando etapas...</TableCell>
+                  <TableCell colSpan={6} className="text-sm text-muted-foreground">Carregando etapas...</TableCell>
                 </TableRow>
               )}
               {!isLoading && localStages.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-sm text-muted-foreground">Nenhuma etapa cadastrada</TableCell>
+                  <TableCell colSpan={6} className="text-sm text-muted-foreground">Nenhuma etapa cadastrada</TableCell>
                 </TableRow>
               )}
-              {!isLoading && localStages.map((stage, idx) => (
+              {!isLoading && localStages.map((stage, idx) => {
+                const acts = (stage as any).settings?.actions || { onEnter: [], onExit: [] };
+                const cEnter = Array.isArray(acts.onEnter) ? acts.onEnter.filter((a:any)=> a.enabled!==false).length : 0;
+                const cExit = Array.isArray(acts.onExit) ? acts.onExit.filter((a:any)=> a.enabled!==false).length : 0;
+                const totalActs = cEnter + cExit;
+                return (
                 <TableRow
                   key={stage.id}
                   draggable={true}
@@ -805,6 +881,16 @@ export default function Stages() {
                   <TableCell>{Number(stage.order ?? idx + 1)}</TableCell>
                   <TableCell>{renderStageColor(stage.color)}</TableCell>
                   <TableCell>
+                    {totalActs > 0 ? (
+                      <span className="flex gap-1">
+                        {cEnter>0 && <Badge variant="outline" className="text-xs"><LogIn className="h-3 w-3 mr-1" />{cEnter}</Badge>}
+                        {cExit>0 && <Badge variant="outline" className="text-xs"><LogOut className="h-3 w-3 mr-1" />{cExit}</Badge>}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     {(stage.active ?? true) ? (
                       <Badge variant="default">Ativo</Badge>
                     ) : (
@@ -820,7 +906,8 @@ export default function Stages() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
@@ -1068,10 +1155,10 @@ export default function Stages() {
 
       {/* Modal de Etapa */}
       <Dialog open={isStageModalOpen} onOpenChange={setIsStageModalOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingStage ? 'Editar Etapa' : 'Nova Etapa'}</DialogTitle>
-            <DialogDescription>Configure nome, ordem e cor.</DialogDescription>
+            <DialogDescription>Configure nome, ordem, cor e automações de situação.</DialogDescription>
           </DialogHeader>
           {/* Feedback visual do funil selecionado */}
           <SelectedFunnelBanner funnel={selectedFunnel} />
@@ -1124,6 +1211,69 @@ export default function Stages() {
                   <FormMessage />
                 </FormItem>
               )} />
+
+              <Separator className="my-2" />
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Settings2 className="h-4 w-4" />
+                  <h4 className="font-medium text-sm">Automações de Situação (Matrículas)</h4>
+                </div>
+                <p className="text-xs text-muted-foreground">Ao arrastar o card para esta etapa, o sistema pode alterar a situação da matrícula. Configure ações para entrada e saída. Deixe vazio para não alterar nada.</p>
+                <Tabs value={stageActionsTab} onValueChange={(v)=> setStageActionsTab(v as any)} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="onEnter" className="flex items-center gap-1"><LogIn className="h-3 w-3" /> Ao entrar ({stageActionsOnEnter.length})</TabsTrigger>
+                    <TabsTrigger value="onExit" className="flex items-center gap-1"><LogOut className="h-3 w-3" /> Ao sair ({stageActionsOnExit.length})</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="onEnter" className="space-y-3 mt-3">
+                    {stageActionsOnEnter.length===0 && <p className="text-xs text-muted-foreground border border-dashed rounded p-3 text-center">Nenhuma automação ao entrar. Clique em + para adicionar.</p>}
+                    {stageActionsOnEnter.map((act)=> (
+                      <div key={act.id} className="flex items-end gap-2 border rounded p-3 bg-muted/30">
+                        <div className="flex-1">
+                          <label className="text-xs font-medium">Situação destino</label>
+                          <Select value={String(act.situacao_id)} onValueChange={(v)=> updateStageAction('onEnter', act.id, { situacao_id: Number(v) })}>
+                            <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                            <SelectContent>
+                              {isLoadingSituacoes && <SelectItem value="0" disabled>Carregando...</SelectItem>}
+                              {!isLoadingSituacoes && situacoesList.length===0 && <SelectItem value="0" disabled>Nenhuma situação</SelectItem>}
+                              {situacoesList.map(s=> <SelectItem key={String(s.id)} value={String(s.id)}>{s.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-1 pb-1">
+                          <Switch checked={!!act.enabled} onCheckedChange={(v)=> updateStageAction('onEnter', act.id, { enabled: v })} />
+                          <span className="text-xs">{act.enabled===false ? 'Desat.' : 'Ativa'}</span>
+                        </div>
+                        <Button type="button" variant="ghost" size="sm" onClick={()=> removeStageAction('onEnter', act.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" size="sm" onClick={()=> addStageAction('onEnter')} className="w-full"><Plus className="h-4 w-4 mr-1" /> Adicionar ação ao entrar</Button>
+                  </TabsContent>
+                  <TabsContent value="onExit" className="space-y-3 mt-3">
+                    {stageActionsOnExit.length===0 && <p className="text-xs text-muted-foreground border border-dashed rounded p-3 text-center">Nenhuma automação ao sair.</p>}
+                    {stageActionsOnExit.map((act)=> (
+                      <div key={act.id} className="flex items-end gap-2 border rounded p-3 bg-muted/30">
+                        <div className="flex-1">
+                          <label className="text-xs font-medium">Situação destino</label>
+                          <Select value={String(act.situacao_id)} onValueChange={(v)=> updateStageAction('onExit', act.id, { situacao_id: Number(v) })}>
+                            <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                            <SelectContent>
+                              {isLoadingSituacoes && <SelectItem value="0" disabled>Carregando...</SelectItem>}
+                              {!isLoadingSituacoes && situacoesList.length===0 && <SelectItem value="0" disabled>Nenhuma situação</SelectItem>}
+                              {situacoesList.map(s=> <SelectItem key={String(s.id)} value={String(s.id)}>{s.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-1 pb-1">
+                          <Switch checked={!!act.enabled} onCheckedChange={(v)=> updateStageAction('onExit', act.id, { enabled: v })} />
+                          <span className="text-xs">{act.enabled===false ? 'Desat.' : 'Ativa'}</span>
+                        </div>
+                        <Button type="button" variant="ghost" size="sm" onClick={()=> removeStageAction('onExit', act.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" size="sm" onClick={()=> addStageAction('onExit')} className="w-full"><Plus className="h-4 w-4 mr-1" /> Adicionar ação ao sair</Button>
+                  </TabsContent>
+                </Tabs>
+              </div>
 
               <FormActionBar 
                 mode="edit" 

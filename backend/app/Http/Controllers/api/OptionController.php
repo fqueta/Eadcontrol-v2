@@ -91,6 +91,13 @@ class OptionController extends Controller
             'cta_config',
             'footer_config',
             'app_footer_logo_url',
+            // SEO home overrides (tenant-specific)
+            'seo_home_title',
+            'seo_home_description',
+            'seo_home_keywords',
+            'seo_og_image_url',
+            'seo_canonical_domain',
+            'seo_robots',
         ];
 
         // Fetch options for allowed keys only
@@ -590,16 +597,37 @@ class OptionController extends Controller
         $branding = [
             'title' => 'Incluireeducar - Controle de EAD',
             'description' => 'Plataforma de controle de ead',
-            'image' => 'https://api-educar.eadcontrol.com.br/tenancy/assets/file-storage/ExO8vhdToezIjc9ImVHx7tJyAYI65BZ5V6sVW2Mu.png'
+            'image' => 'https://api-educar.eadcontrol.com.br/tenancy/assets/file-storage/ExO8vhdToezIjc9ImVHx7tJyAYI65BZ5V6sVW2Mu.png',
+            'keywords' => '',
+            'robots' => 'index, follow',
+            'canonical' => '',
+            'siteName' => 'Ead Control',
         ];
 
-        // Carregar opções do tenant
+        // Canonical base from original URL (tenant-aware: preserve host)
+        $scheme = $parsedUrl['scheme'] ?? (request()->isSecure() ? 'https' : 'https');
+        $host = $parsedUrl['host'] ?? request()->getHost();
+        $canonicalBase = $scheme . '://' . $host;
+        // Normalize path for canonical (keep trailing / for home, otherwise trim? keep as is)
+        $canonicalUrl = $canonicalBase . $path;
+        // Strip query/hash for canonical
+        $canonicalUrl = strtok($canonicalUrl, '?');
+        $canonicalUrl = strtok($canonicalUrl, '#');
+
+        // Carregar opções do tenant (inclui seo_* overrides)
         $allowedKeys = [
             'app_institution_name',
             'app_institution_slogan',
             'app_institution_description',
             'app_social_image_url',
-            'app_logo_url'
+            'app_logo_url',
+            'app_favicon_url',
+            'seo_home_title',
+            'seo_home_description',
+            'seo_home_keywords',
+            'seo_og_image_url',
+            'seo_canonical_domain',
+            'seo_robots',
         ];
 
         $options = Option::query()
@@ -616,22 +644,54 @@ class OptionController extends Controller
 
         $instName = $options['app_institution_name'] ?? config('app.name');
         $slogan = $options['app_institution_slogan'] ?? null;
-        
-        if ($instName) {
-            $branding['title'] = $slogan ? "{$instName} — {$slogan}" : $instName;
-        }
-        if (!empty($options['app_institution_description'])) {
-            $branding['description'] = $options['app_institution_description'];
-        }
-        if (!empty($options['app_social_image_url'])) {
-            $branding['image'] = $options['app_social_image_url'];
-        } elseif (!empty($options['app_logo_url'])) {
-            $branding['image'] = $options['app_logo_url'];
+
+        // seo overrides have priority for home
+        $seoTitle = trim($options['seo_home_title'] ?? '');
+        $seoDesc = trim($options['seo_home_description'] ?? '');
+        $seoKeywords = trim($options['seo_home_keywords'] ?? '');
+        $seoOgImage = trim($options['seo_og_image_url'] ?? '');
+        $seoCanonicalDomain = trim($options['seo_canonical_domain'] ?? '');
+        $seoRobots = trim($options['seo_robots'] ?? '');
+
+        if ($seoCanonicalDomain) {
+            $cleanDomain = preg_replace('/^https?:\/\//i', '', $seoCanonicalDomain);
+            $cleanDomain = rtrim($cleanDomain, '/');
+            $canonicalUrl = $scheme . '://' . $cleanDomain . $path;
+            $canonicalUrl = strtok($canonicalUrl, '?');
         }
 
-        // 3. Verificar se o caminho aponta para a página de detalhes de um curso
+        $branding['siteName'] = $instName ?: 'Ead Control';
+        $branding['canonical'] = $canonicalUrl;
+        $branding['keywords'] = $seoKeywords;
+        $branding['robots'] = $seoRobots ?: 'index, follow';
+        // og image priority: seoOgImage > social > logo
+        if (!empty($seoOgImage)) {
+            $branding['image'] = $seoOgImage;
+        }
+
+        if ($seoTitle) {
+            $branding['title'] = $seoTitle;
+        } elseif ($instName) {
+            $branding['title'] = $slogan ? "{$instName} — {$slogan}" : $instName;
+        }
+        if ($seoDesc) {
+            $branding['description'] = $seoDesc;
+        } elseif (!empty($options['app_institution_description'])) {
+            $branding['description'] = $options['app_institution_description'];
+        }
+        if (empty($seoOgImage)) {
+            if (!empty($options['app_social_image_url'])) {
+                $branding['image'] = $options['app_social_image_url'];
+            } elseif (!empty($options['app_logo_url'])) {
+                $branding['image'] = $options['app_logo_url'];
+            }
+        }
+
+        // 3. Verificar rotas específicas (curso, produto, página)
         $normalizedPath = trim($path, '/');
         $course = null;
+        $product = null;
+        $pageData = null;
 
         if (preg_match('/^(?:cursos|courses)(?:\/by-slug)?\/([^\/]+)$/i', $normalizedPath, $matches)) {
             $slugOrId = $matches[1];
@@ -641,6 +701,19 @@ class OptionController extends Controller
                 $course = \App\Models\Curso::where('slug', $slugOrId)
                     ->orWhere('campo_bus', $slugOrId)
                     ->first();
+            }
+        } elseif (preg_match('/^(?:produtos|products)(?:\/by-slug)?\/([^\/]+)$/i', $normalizedPath, $matches)) {
+            $slugOrId = $matches[1];
+            if (is_numeric($slugOrId)) {
+                $product = \App\Models\Product::withoutGlobalScope('productsOnly')->where('ID', $slugOrId)->first();
+            } else {
+                $product = \App\Models\Product::where('post_name', $slugOrId)->first();
+            }
+        } elseif (preg_match('/^pagina\/([^\/]+)$/i', $normalizedPath, $matches)) {
+            $slug = $matches[1];
+            $pageData = \App\Models\Page::where('slug', $slug)->first();
+            if (!$pageData && isset($matches[1])) {
+                // fallback: try Option page?
             }
         }
 
@@ -652,6 +725,20 @@ class OptionController extends Controller
             if (isset($course->config['cover']['url'])) {
                 $branding['image'] = $course->config['cover']['url'];
             }
+        } elseif ($product) {
+            $pTitle = $product->post_title ?: $product->name ?: 'Produto';
+            $branding['title'] = $pTitle . " | " . ($options['app_institution_name'] ?? config('app.name'));
+            if ($product->post_content) {
+                $branding['description'] = \Illuminate\Support\Str::limit(strip_tags($product->post_content), 200);
+            }
+            $img = $product->config['image_url'] ?? $product->config['cover']['url'] ?? null;
+            if ($img) $branding['image'] = $img;
+        } elseif ($pageData) {
+            $cfg = is_string($pageData->config) ? json_decode($pageData->config, true) : ($pageData->config ?? []);
+            $metaTitle = $cfg['metaTitle'] ?? $pageData->title ?? null;
+            $metaDesc = $cfg['metaDescription'] ?? null;
+            if ($metaTitle) $branding['title'] = $metaTitle . " | " . ($options['app_institution_name'] ?? config('app.name'));
+            if ($metaDesc) $branding['description'] = \Illuminate\Support\Str::limit(strip_tags($metaDesc), 200);
         }
 
         // 4. Injetar metadados no HTML
@@ -659,12 +746,140 @@ class OptionController extends Controller
         $html = preg_replace('/<meta id="app-description" name="description" content="[^"]*"/is', '<meta id="app-description" name="description" content="' . e($branding['description']) . '"', $html);
         $html = preg_replace('/<meta property="og:title" content="[^"]*"/is', '<meta property="og:title" content="' . e($branding['title']) . '"', $html);
         $html = preg_replace('/<meta property="og:description" content="[^"]*"/is', '<meta property="og:description" content="' . e($branding['description']) . '"', $html);
-        
+
+        // twitter:title / description
+        if (strpos($html, 'name="twitter:title"') !== false) {
+            $html = preg_replace('/<meta name="twitter:title" content="[^"]*"/is', '<meta name="twitter:title" content="' . e($branding['title']) . '"', $html);
+        } else {
+            $html = preg_replace('/<\/head>/i', '<meta name="twitter:title" content="' . e($branding['title']) . '" />' . "\n</head>", $html, 1);
+        }
+        if (strpos($html, 'name="twitter:description"') !== false) {
+            $html = preg_replace('/<meta name="twitter:description" content="[^"]*"/is', '<meta name="twitter:description" content="' . e($branding['description']) . '"', $html);
+        } else {
+            $html = preg_replace('/<\/head>/i', '<meta name="twitter:description" content="' . e($branding['description']) . '" />' . "\n</head>", $html, 1);
+        }
+        // og:url + canonical
+        if (strpos($html, 'id="app-og-url"') !== false) {
+            $html = preg_replace('/<meta id="app-og-url" property="og:url" content="[^"]*"/is', '<meta id="app-og-url" property="og:url" content="' . e($branding['canonical']) . '"', $html);
+        } elseif (strpos($html, 'property="og:url"') !== false) {
+            $html = preg_replace('/<meta property="og:url" content="[^"]*"/is', '<meta property="og:url" content="' . e($branding['canonical']) . '"', $html);
+        } else {
+            $html = preg_replace('/<\/head>/i', '<meta id="app-og-url" property="og:url" content="' . e($branding['canonical']) . '" />' . "\n</head>", $html, 1);
+        }
+        if (strpos($html, 'id="app-canonical"') !== false) {
+            $html = preg_replace('/<link id="app-canonical" rel="canonical" href="[^"]*"/is', '<link id="app-canonical" rel="canonical" href="' . e($branding['canonical']) . '"', $html);
+        } elseif (strpos($html, 'rel="canonical"') !== false) {
+            $html = preg_replace('/<link rel="canonical" href="[^"]*"/is', '<link rel="canonical" href="' . e($branding['canonical']) . '"', $html);
+        } else {
+            $html = preg_replace('/<\/head>/i', '<link id="app-canonical" rel="canonical" href="' . e($branding['canonical']) . '" />' . "\n</head>", $html, 1);
+        }
+        // og:site_name + locale
+        if (strpos($html, 'property="og:site_name"') !== false) {
+            $html = preg_replace('/<meta property="og:site_name" content="[^"]*"/is', '<meta property="og:site_name" content="' . e($branding['siteName']) . '"', $html);
+        } else {
+            $html = preg_replace('/<\/head>/i', '<meta property="og:site_name" content="' . e($branding['siteName']) . '" />' . "\n</head>", $html, 1);
+        }
+        if (strpos($html, 'property="og:locale"') === false) {
+            $html = preg_replace('/<\/head>/i', '<meta property="og:locale" content="pt_BR" />' . "\n</head>", $html, 1);
+        }
+        // robots + keywords
+        if (strpos($html, 'name="robots"') !== false) {
+            $html = preg_replace('/<meta name="robots" content="[^"]*"/is', '<meta name="robots" content="' . e($branding['robots']) . '"', $html);
+        } else {
+            $html = preg_replace('/<\/head>/i', '<meta name="robots" content="' . e($branding['robots']) . '" />' . "\n</head>", $html, 1);
+        }
+        if (!empty($branding['keywords'])) {
+            if (strpos($html, 'name="keywords"') !== false) {
+                $html = preg_replace('/<meta name="keywords" content="[^"]*"/is', '<meta name="keywords" content="' . e($branding['keywords']) . '"', $html);
+            } else {
+                $html = preg_replace('/<\/head>/i', '<meta name="keywords" content="' . e($branding['keywords']) . '" />' . "\n</head>", $html, 1);
+            }
+        }
+
         if (strpos($html, 'id="app-og-image"') !== false) {
             $html = preg_replace('/<meta id="app-og-image" property="og:image" content="[^"]*"/is', '<meta id="app-og-image" property="og:image" content="' . e($branding['image']) . '"', $html);
         }
         if (strpos($html, 'id="app-twitter-image"') !== false) {
             $html = preg_replace('/<meta id="app-twitter-image" name="twitter:image" content="[^"]*"/is', '<meta id="app-twitter-image" name="twitter:image" content="' . e($branding['image']) . '"', $html);
+        }
+        // Ensure og:image:width/height present
+        if (strpos($html, 'og:image:width') === false) {
+            $html = preg_replace('/<\/head>/i', '<meta property="og:image:width" content="1200" />' . "\n<meta property=\"og:image:height\" content=\"630\" />\n</head>", $html, 1);
+        }
+
+        // 5. Injetar conteúdo SEO no body para home (/) — visível para bots mas hidden via css
+        if ($normalizedPath === '' || $normalizedPath === 'home') {
+            $seoBody = '';
+            // Build minimal accessible content: h1 + description + featured courses/products
+            $seoBody .= '<div id="seo-content" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">';
+            $seoBody .= '<h1>' . e($branding['title']) . '</h1>';
+            $seoBody .= '<p>' . e($branding['description']) . '</p>';
+            // Featured courses (ativos, publicados e destaque)
+            try {
+                $featuredCourses = \App\Models\Curso::where('destaque', 's')->where('ativo', 's')->where('publicar', 's')->limit(6)->get(['titulo','nome','slug','descricao','config']);
+                if ($featuredCourses->count() > 0) {
+                    $seoBody .= '<h2>Cursos em Destaque</h2><ul>';
+                    foreach ($featuredCourses as $fc) {
+                        $ctitle = $fc->titulo ?: $fc->nome;
+                        $cslug = $fc->slug ?: $fc->id;
+                        $seoBody .= '<li><a href="' . e($canonicalBase . '/cursos/' . $cslug) . '">' . e($ctitle) . '</a>';
+                        if ($fc->descricao) $seoBody .= ' - ' . e(\Illuminate\Support\Str::limit(strip_tags($fc->descricao), 120));
+                        $seoBody .= '</li>';
+                    }
+                    $seoBody .= '</ul>';
+                }
+            } catch (\Throwable $e) {}
+            try {
+                $featuredProducts = \App\Models\Product::where('post_status', 'publish')->limit(6)->get(['post_title','post_name','post_content']);
+                if ($featuredProducts->count() > 0) {
+                    $seoBody .= '<h2>Produtos em Destaque</h2><ul>';
+                    foreach ($featuredProducts as $fp) {
+                        $ptitle = $fp->post_title ?: 'Produto';
+                        $pslug = $fp->post_name ?: $fp->ID;
+                        $seoBody .= '<li><a href="' . e($canonicalBase . '/produtos/' . $pslug) . '">' . e($ptitle) . '</a></li>';
+                    }
+                    $seoBody .= '</ul>';
+                }
+            } catch (\Throwable $e) {}
+            // JSON-LD for home
+            $origin = $canonicalBase;
+            $logo = $options['app_logo_url'] ?? '';
+            $jsonLd = [
+                [
+                    "@context" => "https://schema.org",
+                    "@type" => "Organization",
+                    "name" => $branding['siteName'],
+                    "url" => $origin,
+                    "logo" => $logo,
+                    "description" => $branding['description'],
+                ],
+                [
+                    "@context" => "https://schema.org",
+                    "@type" => "WebSite",
+                    "name" => $branding['siteName'],
+                    "url" => $origin,
+                    "inLanguage" => "pt-BR",
+                    "description" => $branding['description'],
+                    "potentialAction" => [
+                        "@type" => "SearchAction",
+                        "target" => $origin . "/cursos?q={search_term_string}",
+                        "query-input" => "required name=search_term_string"
+                    ]
+                ],
+                [
+                    "@context" => "https://schema.org",
+                    "@type" => "BreadcrumbList",
+                    "itemListElement" => [
+                        ["@type"=>"ListItem","position"=>1,"name"=>"Início","item"=>$origin."/"],
+                        ["@type"=>"ListItem","position"=>2,"name"=>"Cursos","item"=>$origin."/cursos"],
+                        ["@type"=>"ListItem","position"=>3,"name"=>"Produtos","item"=>$origin."/produtos"],
+                    ]
+                ]
+            ];
+            $seoBody .= '<script type="application/ld+json">' . json_encode($jsonLd, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) . '</script>';
+            $seoBody .= '</div>';
+            // Inject after <body> tag
+            $html = preg_replace('/<body([^>]*)>/i', '<body$1>' . $seoBody, $html, 1);
         }
 
         return response($html)->header('Content-Type', 'text/html');

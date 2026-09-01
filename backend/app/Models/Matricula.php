@@ -114,10 +114,30 @@ class Matricula extends Model
     }
 
     /**
-     * Relationship: Course (Curso)
-     */
+      * Relationship: Course (Curso)
+      */
     public function course()
     {
         return $this->belongsTo(Curso::class, 'id_curso');
+    }
+
+    public function funnel()
+    {
+        return $this->belongsTo(Funnel::class, 'funnel_id');
+    }
+
+    public function stage()
+    {
+        return $this->belongsTo(Stage::class, 'stage_id');
+    }
+
+    public function situacao()
+    {
+        return $this->belongsTo(\App\Models\EnrollmentSituation::class, 'situacao_id', 'ID');
+    }
+
+    public function stageLogs()
+    {
+        return $this->hasMany(MatriculaStageLog::class, 'matricula_id');
     }
 }

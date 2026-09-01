@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import BrandLogo from '@/components/branding/BrandLogo';
 import { bannerService, BannerSlide } from '@/services/bannerService';
 import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription } from '@/lib/branding';
-import HeroImageEditor from './HeroImageEditor';
+import { lazy, Suspense } from 'react';
+const HeroImageEditor = lazy(() => import('./HeroImageEditor'));
 import { EditableOptionText } from '@/components/common/EditableOptionText';
 
 function useIsMobile() {
@@ -166,12 +167,21 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
                       <span className="uppercase tracking-widest">{name}</span>
                     </div>
                     
-                    <h2 
-                      className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-3 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg"
-                      style={slide.config?.titleSize ? { fontSize: isMobile ? `${Math.min(slide.config.titleSize, 32)}px` : `${slide.config.titleSize}px`, lineHeight: '1.2' } : {}}
-                    >
-                      {slide.title || slogan}
-                    </h2>
+                    {index === 0 ? (
+                      <h1 
+                        className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-3 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg"
+                        style={slide.config?.titleSize ? { fontSize: isMobile ? `${Math.min(slide.config.titleSize, 32)}px` : `${slide.config.titleSize}px`, lineHeight: '1.2' } : {}}
+                      >
+                        {slide.title || slogan}
+                      </h1>
+                    ) : (
+                      <h2 
+                        className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-3 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg"
+                        style={slide.config?.titleSize ? { fontSize: isMobile ? `${Math.min(slide.config.titleSize, 32)}px` : `${slide.config.titleSize}px`, lineHeight: '1.2' } : {}}
+                      >
+                        {slide.title || slogan}
+                      </h2>
+                    )}
                     
                     <p className="text-sm sm:text-lg md:text-xl text-slate-300 mb-5 md:mb-10 max-w-xl leading-relaxed font-medium drop-shadow">
                       {slide.subtitle || description}
@@ -229,10 +239,12 @@ export function HeroBanner({ institutionName, institutionSlogan, institutionDesc
         </>
       )}
 
-      {/* Editor do Banner fora do loop para não quebrar layout */}
-      <HeroImageEditor 
-        className="absolute bottom-4 left-4 z-40 pointer-events-auto"
-      />
+      {/* Editor do Banner — lazy, apenas para admin (permission_id<3) */}
+      <Suspense fallback={null}>
+        <HeroImageEditor 
+          className="absolute bottom-4 left-4 z-40 pointer-events-auto"
+        />
+      </Suspense>
     </section>
   );
 }
@@ -339,18 +351,33 @@ function StaticCarousel({ name, slogan, description }: { name: string; slogan: s
                       </div>
                     )}
                     
-                    <h2 
-                      className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-3 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg"
-                      style={img.titleSize ? { fontSize: isMobile ? `${Math.min(img.titleSize, 32)}px` : `${img.titleSize}px`, lineHeight: '1.2' } : {}}
-                    >
-                      {img.title ? img.title : (
-                        <EditableOptionText 
-                          optionKey="home_hero_title" 
-                          defaultValue={slogan || 'Sua plataforma de ensino inclusiva.'} 
-                          multiline={false}
-                        />
-                      )}
-                    </h2>
+                    {index === 0 ? (
+                      <h1 
+                        className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-3 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg"
+                        style={img.titleSize ? { fontSize: isMobile ? `${Math.min(img.titleSize, 32)}px` : `${img.titleSize}px`, lineHeight: '1.2' } : {}}
+                      >
+                        {img.title ? img.title : (
+                          <EditableOptionText 
+                            optionKey="home_hero_title" 
+                            defaultValue={slogan || 'Sua plataforma de ensino inclusiva.'} 
+                            multiline={false}
+                          />
+                        )}
+                      </h1>
+                    ) : (
+                      <h2 
+                        className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-3 md:mb-6 leading-[1.1] tracking-tighter drop-shadow-lg"
+                        style={img.titleSize ? { fontSize: isMobile ? `${Math.min(img.titleSize, 32)}px` : `${img.titleSize}px`, lineHeight: '1.2' } : {}}
+                      >
+                        {img.title ? img.title : (
+                          <EditableOptionText 
+                            optionKey="home_hero_title" 
+                            defaultValue={slogan || 'Sua plataforma de ensino inclusiva.'} 
+                            multiline={false}
+                          />
+                        )}
+                      </h2>
+                    )}
                     
                     <p className="text-sm sm:text-lg md:text-xl text-slate-300 mb-5 md:mb-10 max-w-xl leading-relaxed font-medium drop-shadow">
                       {img.subtitle ? img.subtitle : (
@@ -396,10 +423,12 @@ function StaticCarousel({ name, slogan, description }: { name: string; slogan: s
         </div>
       )}
 
-      {/* Editor do Banner fora do loop para não quebrar layout */}
-      <HeroImageEditor 
-        className="absolute bottom-4 left-4 z-40 pointer-events-auto"
-      />
+      {/* Editor do Banner — lazy */}
+      <Suspense fallback={null}>
+        <HeroImageEditor 
+          className="absolute bottom-4 left-4 z-40 pointer-events-auto"
+        />
+      </Suspense>
     </section>
   );
 }

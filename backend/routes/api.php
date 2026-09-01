@@ -288,6 +288,7 @@ Route::name('api.')->prefix('v1')->middleware([
         Route::put('matriculas/{id}/restore', [\App\Http\Controllers\api\MatriculaController::class, 'restore'])->name('matriculas.restore');
         Route::delete('matriculas/{id}/force', [\App\Http\Controllers\api\MatriculaController::class, 'forceDelete'])->name('matriculas.forceDelete');
         Route::post('matriculas/{id}/gerar-cobranca-matricula', [\App\Http\Controllers\api\MatriculaController::class, 'gerarCobrancaMatricula']);
+        Route::get('matriculas/{id}/stage-logs', [\App\Http\Controllers\api\MatriculaController::class, 'stageLogs'])->name('matriculas.stageLogs');
 
         // Rotas para sessões ao vivo (agenda de aulas)
         // EN: Live session scheduling routes (class calendar)

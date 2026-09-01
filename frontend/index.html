@@ -1,8 +1,18 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="index, follow" />
+    <link id="app-canonical" rel="canonical" href="" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:site_name" content="Ead Control" />
+    <meta id="app-og-url" property="og:url" content="" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Ead Control - Plataforma de ensino" />
+    <meta name="twitter:title" content="Incluireeducar - Controle de EAD" />
+    <meta name="twitter:description" content="Plataforma de controle de ead" />
     <!--
       pt-BR: Preconnect para provedores de vídeo (YouTube/Vimeo) para acelerar requisições iniciais.
       en-US: Preconnect to video providers (YouTube/Vimeo) to speed up initial requests.
@@ -147,19 +157,68 @@
           }
 
           // Title & Description (SEO / Metatags)
-          var resolvedTitle = instName ? (slogan ? (instName + ' — ' + slogan) : instName) : null;
-          if (resolvedTitle) {
-            document.title = resolvedTitle;
+          // seo_* overrides (AppSEO tenant-specific)
+          var seoTitle = (localStorage.getItem('seo_home_title') || '').trim();
+          var seoDesc = (localStorage.getItem('seo_home_description') || '').trim();
+          var seoKeywords = (localStorage.getItem('seo_home_keywords') || '').trim();
+          var seoRobots = (localStorage.getItem('seo_robots') || '').trim();
+          // Fallback globals
+          if (!seoTitle && typeof win.__SEO_HOME_TITLE__ === 'string') seoTitle = win.__SEO_HOME_TITLE__.trim();
+          if (!seoDesc && typeof win.__SEO_HOME_DESCRIPTION__ === 'string') seoDesc = win.__SEO_HOME_DESCRIPTION__.trim();
+
+          var effectiveTitle = seoTitle || (instName ? (slogan ? (instName + ' — ' + slogan) : instName) : null);
+          var effectiveDesc = seoDesc || descr || '';
+          if (effectiveTitle) {
+            document.title = effectiveTitle;
             var titleEl = document.getElementById('app-title');
-            if (titleEl) titleEl.textContent = resolvedTitle;
+            if (titleEl) titleEl.textContent = effectiveTitle;
             var ogTitle = document.querySelector('meta[property="og:title"]');
-            if (ogTitle) ogTitle.setAttribute('content', resolvedTitle);
+            if (ogTitle) ogTitle.setAttribute('content', effectiveTitle);
+            var twTitle = document.querySelector('meta[name="twitter:title"]');
+            if (twTitle) twTitle.setAttribute('content', effectiveTitle);
+            var siteNameEl = document.querySelector('meta[property="og:site_name"]');
+            if (siteNameEl && instName) siteNameEl.setAttribute('content', instName);
           }
-          if (descr) {
+          if (effectiveDesc) {
             var descEl = document.getElementById('app-description') || document.querySelector('meta[name="description"]');
-            if (descEl) descEl.setAttribute('content', descr);
+            if (descEl) descEl.setAttribute('content', effectiveDesc);
             var ogDesc = document.querySelector('meta[property="og:description"]');
-            if (ogDesc) ogDesc.setAttribute('content', descr);
+            if (ogDesc) ogDesc.setAttribute('content', effectiveDesc);
+            var twDesc = document.querySelector('meta[name="twitter:description"]');
+            if (twDesc) twDesc.setAttribute('content', effectiveDesc);
+          }
+          // Canonical & og:url — tenant-aware: use current origin + pathname (preserves custom domain/subdomain)
+          try {
+            var seoCanonicalDomain = (localStorage.getItem('seo_canonical_domain') || '').trim();
+            var canonicalHref = '';
+            if (seoCanonicalDomain) {
+              var cleanDomain = seoCanonicalDomain.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+              canonicalHref = window.location.protocol + '//' + cleanDomain + window.location.pathname;
+            } else {
+              canonicalHref = window.location.origin + window.location.pathname;
+              // Strip trailing /? query+hash for home keep /
+              if (canonicalHref.length > window.location.origin.length + 1 && canonicalHref.endsWith('/')) {
+                // keep as is for folder-like urls, but avoid double //
+              }
+            }
+            if (canonicalHref) {
+              var canEl = document.getElementById('app-canonical');
+              if (canEl) canEl.setAttribute('href', canonicalHref);
+              var ogUrlEl = document.getElementById('app-og-url') || document.querySelector('meta[property="og:url"]');
+              if (ogUrlEl) ogUrlEl.setAttribute('content', canonicalHref);
+            }
+          } catch(e) {}
+          // robots
+          var robotsEl = document.querySelector('meta[name="robots"]');
+          if (robotsEl) {
+            if (seoRobots) robotsEl.setAttribute('content', seoRobots);
+            else robotsEl.setAttribute('content', 'index, follow');
+          }
+          // keywords
+          if (seoKeywords) {
+            var kwEl = document.querySelector('meta[name="keywords"]');
+            if (!kwEl) { kwEl = document.createElement('meta'); kwEl.setAttribute('name','keywords'); document.head.appendChild(kwEl); }
+            kwEl.setAttribute('content', seoKeywords);
           }
 
           // Dynamic PWA manifest & browser theme-color
@@ -318,7 +377,13 @@
                 app_theme: 'app_theme',
                 app_font_family: 'app_font_family',
                 home_hero_title: 'home_hero_title',
-                home_hero_image_url: 'home_hero_image_url'
+                home_hero_image_url: 'home_hero_image_url',
+                seo_home_title: 'seo_home_title',
+                seo_home_description: 'seo_home_description',
+                seo_home_keywords: 'seo_home_keywords',
+                seo_og_image_url: 'seo_og_image_url',
+                seo_canonical_domain: 'seo_canonical_domain',
+                seo_robots: 'seo_robots'
               };
               for (var k in keysMap) {
                 if (dataObj[k] !== undefined) {

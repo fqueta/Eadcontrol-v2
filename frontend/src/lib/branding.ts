@@ -251,6 +251,12 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
       const hf3d = String(dataObj['home_feature_3_desc'] || '').trim();
       const hf4t = String(dataObj['home_feature_4_title'] || '').trim();
       const hf4d = String(dataObj['home_feature_4_desc'] || '').trim();
+      const seoTitle = String(dataObj['seo_home_title'] || '').trim();
+      const seoDesc = String(dataObj['seo_home_description'] || '').trim();
+      const seoKeywords = String(dataObj['seo_home_keywords'] || '').trim();
+      const seoOgImage = String(dataObj['seo_og_image_url'] || '').trim();
+      const seoCanonical = String(dataObj['seo_canonical_domain'] || '').trim();
+      const seoRobots = String(dataObj['seo_robots'] || '').trim();
       const notify = () => {
         try {
           window.dispatchEvent(new Event('branding:updated'));
@@ -279,6 +285,12 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
         if (showLogo) setVal('home_hero_show_logo', showLogo, '__HOME_HERO_SHOW_LOGO__');
         if (showButton) setVal('home_hero_show_button', showButton, '__HOME_HERO_SHOW_BUTTON__');
         if (autoplayInterval) setVal('home_hero_autoplay_interval', autoplayInterval, '__HOME_HERO_AUTOPLAY_INTERVAL__');
+        setVal('seo_home_title', seoTitle, '__SEO_HOME_TITLE__');
+        setVal('seo_home_description', seoDesc, '__SEO_HOME_DESCRIPTION__');
+        setVal('seo_home_keywords', seoKeywords, '__SEO_HOME_KEYWORDS__');
+        setVal('seo_og_image_url', seoOgImage, '__SEO_OG_IMAGE_URL__');
+        setVal('seo_canonical_domain', seoCanonical, '__SEO_CANONICAL_DOMAIN__');
+        setVal('seo_robots', seoRobots, '__SEO_ROBOTS__');
         
         notify();
  
@@ -391,13 +403,73 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
 }
 
 /**
+ * getSeoHomeTitle / getSeoHomeDescription etc.
+ * pt-BR: Acessa overrides SEO da home persistidos em localStorage.
+ */
+export function getSeoHomeTitle(): string {
+  try { const v = localStorage.getItem('seo_home_title'); if (v && v.trim() !== '') return v.trim(); } catch {}
+  const w = (window as any)?.__SEO_HOME_TITLE__;
+  if (typeof w === 'string' && w.trim() !== '') return w.trim();
+  return '';
+}
+export function getSeoHomeDescription(): string {
+  try { const v = localStorage.getItem('seo_home_description'); if (v && v.trim() !== '') return v.trim(); } catch {}
+  const w = (window as any)?.__SEO_HOME_DESCRIPTION__;
+  if (typeof w === 'string' && w.trim() !== '') return w.trim();
+  return '';
+}
+export function getSeoHomeKeywords(): string {
+  try { const v = localStorage.getItem('seo_home_keywords'); if (v && v.trim() !== '') return v.trim(); } catch {}
+  return '';
+}
+export function getSeoRobots(): string {
+  try { const v = localStorage.getItem('seo_robots'); if (v && v.trim() !== '') return v.trim(); } catch {}
+  return '';
+}
+export function getSeoCanonicalDomain(): string {
+  try { const v = localStorage.getItem('seo_canonical_domain'); if (v && v.trim() !== '') return v.trim(); } catch {}
+  return '';
+}
+export function getSeoOgImage(): string {
+  try { const v = localStorage.getItem('seo_og_image_url'); if (v && v.trim() !== '') return v.trim(); } catch {}
+  return '';
+}
+
+/**
+ * resolveCanonicalUrl
+ * pt-BR: Resolve URL canônica tenant-aware: usa seo_canonical_domain se definido,
+ *        senão origin atual + pathname. Remove query/hash.
+ */
+export function resolveCanonicalUrl(pathname?: string): string {
+  try {
+    const path = pathname ?? window.location.pathname;
+    const seoDomain = getSeoCanonicalDomain();
+    if (seoDomain) {
+      const clean = seoDomain.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+      return window.location.protocol + '//' + clean + path;
+    }
+    return window.location.origin + path;
+  } catch {
+    return typeof window !== 'undefined' ? window.location.href.split('?')[0].split('#')[0] : '/';
+  }
+}
+
+/**
  * syncBrandingToMetaTags
  * pt-BR: Sincroniza o título da página e metatags (OG/Twitter) de forma consistente.
  * en-US: Synchronizes page title and metatags (OG/Twitter) consistently.
  */
-export function syncBrandingToMetaTags(data: { name?: string; slogan?: string; description?: string; social?: string }): void {
-  const { name, slogan, description, social } = data;
-  const resolvedTitle = name ? (slogan ? `${name} — ${slogan}` : name) : null;
+export function syncBrandingToMetaTags(data: { name?: string; slogan?: string; description?: string; social?: string; canonical?: string; keywords?: string; robots?: string; ogType?: string }): void {
+  const { name, slogan, description, social, canonical, keywords, robots, ogType } = data as any;
+  // seo overrides have priority if caller didn't pass explicit title/desc
+  const seoTitle = getSeoHomeTitle();
+  const seoDesc = getSeoHomeDescription();
+  const effectiveName = seoTitle ? seoTitle : name;
+  const effectiveSlogan = seoTitle ? '' : (slogan || '');
+  const effectiveDesc = seoDesc ? seoDesc : description;
+  const effectiveSocial = getSeoOgImage() || social;
+
+  const resolvedTitle = effectiveName ? (effectiveSlogan ? `${effectiveName} — ${effectiveSlogan}` : effectiveName) : null;
 
   if (resolvedTitle) {
     document.title = resolvedTitle;
@@ -405,20 +477,65 @@ export function syncBrandingToMetaTags(data: { name?: string; slogan?: string; d
     if (titleEl) titleEl.textContent = resolvedTitle;
     const ogTitle = document.querySelector('meta[property="og:title"]');
     if (ogTitle) ogTitle.setAttribute('content', resolvedTitle);
+    const twTitle = document.querySelector('meta[name="twitter:title"]');
+    if (twTitle) twTitle.setAttribute('content', resolvedTitle);
+    // og:site_name
+    const siteName = document.querySelector('meta[property="og:site_name"]');
+    if (siteName && effectiveName) siteName.setAttribute('content', effectiveName);
   }
 
-  if (description) {
+  if (effectiveDesc) {
     const descEl = document.getElementById('app-description') || document.querySelector('meta[name="description"]');
-    if (descEl) descEl.setAttribute('content', description);
+    if (descEl) descEl.setAttribute('content', effectiveDesc);
     const ogDesc = document.querySelector('meta[property="og:description"]');
-    if (ogDesc) ogDesc.setAttribute('content', description);
+    if (ogDesc) ogDesc.setAttribute('content', effectiveDesc);
+    const twDesc = document.querySelector('meta[name="twitter:description"]');
+    if (twDesc) twDesc.setAttribute('content', effectiveDesc);
   }
 
-  if (social) {
+  if (effectiveSocial) {
     const ogImage = document.getElementById('app-og-image') || document.querySelector('meta[property="og:image"]');
-    if (ogImage) ogImage.setAttribute('content', social);
+    if (ogImage) ogImage.setAttribute('content', effectiveSocial);
     const twitterImage = document.getElementById('app-twitter-image') || document.querySelector('meta[name="twitter:image"]');
-    if (twitterImage) twitterImage.setAttribute('content', social);
+    if (twitterImage) twitterImage.setAttribute('content', effectiveSocial);
+  }
+
+  // canonical & og:url
+  const canonicalUrl = canonical || resolveCanonicalUrl();
+  if (canonicalUrl) {
+    const canEl = document.getElementById('app-canonical') as HTMLLinkElement | null;
+    if (canEl) canEl.setAttribute('href', canonicalUrl);
+    else {
+      let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+      if (!link) { link = document.createElement('link'); link.setAttribute('rel', 'canonical'); document.head.appendChild(link); }
+      link.setAttribute('href', canonicalUrl);
+    }
+    const ogUrl = document.getElementById('app-og-url') || document.querySelector('meta[property="og:url"]');
+    if (ogUrl) ogUrl.setAttribute('content', canonicalUrl);
+    else {
+      const m = document.createElement('meta'); m.setAttribute('property', 'og:url'); m.setAttribute('content', canonicalUrl); document.head.appendChild(m);
+    }
+  }
+
+  // keywords
+  const kwVal = keywords || getSeoHomeKeywords();
+  if (kwVal) {
+    let kw = document.querySelector('meta[name="keywords"]') as HTMLMetaElement | null;
+    if (!kw) { kw = document.createElement('meta'); kw.setAttribute('name','keywords'); document.head.appendChild(kw); }
+    kw.setAttribute('content', kwVal);
+  }
+
+  // robots
+  const robotsVal = robots || getSeoRobots() || 'index, follow';
+  let robotsEl = document.querySelector('meta[name="robots"]') as HTMLMetaElement | null;
+  if (!robotsEl) { robotsEl = document.createElement('meta'); robotsEl.setAttribute('name','robots'); document.head.appendChild(robotsEl); }
+  robotsEl.setAttribute('content', robotsVal);
+
+  // og:type
+  if (ogType) {
+    let ogTypeEl = document.querySelector('meta[property="og:type"]') as HTMLMetaElement | null;
+    if (!ogTypeEl) { ogTypeEl = document.createElement('meta'); ogTypeEl.setAttribute('property','og:type'); document.head.appendChild(ogTypeEl); }
+    ogTypeEl.setAttribute('content', ogType);
   }
 }
 

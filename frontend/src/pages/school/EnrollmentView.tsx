@@ -831,15 +831,21 @@ export default function EnrollmentView() {
       </div>
 
       <Tabs defaultValue="geral" className="w-full">
-        <TabsList className="bg-muted/50 p-1 rounded-xl mb-6">
-          <TabsTrigger value="geral" className="rounded-lg px-6 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <BookOpen className="h-4 w-4 mr-2" /> Trilha Acadêmica
+        <TabsList className="bg-muted/50 p-1 rounded-xl mb-6 flex flex-wrap">
+          <TabsTrigger value="geral" className="rounded-lg px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm">
+            <BookOpen className="h-4 w-4 mr-1 md:mr-2" /> Trilha Acadêmica
           </TabsTrigger>
-          <TabsTrigger value="financeiro" className="rounded-lg px-6 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <CreditCard className="h-4 w-4 mr-2" /> Financeiro
+          <TabsTrigger value="financeiro" className="rounded-lg px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm">
+            <CreditCard className="h-4 w-4 mr-1 md:mr-2" /> Financeiro
           </TabsTrigger>
-          <TabsTrigger value="logs" className="rounded-lg px-6 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <History className="h-4 w-4 mr-2" /> Logs de Acesso
+          <TabsTrigger value="automacoes" className="rounded-lg px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm">
+            <Settings className="h-4 w-4 mr-1 md:mr-2" /> Automações
+            {(Array.isArray((enrollment as any)?.stage_logs) && (enrollment as any)?.stage_logs.length > 0) && (
+              <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0">{(enrollment as any).stage_logs.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="logs" className="rounded-lg px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm">
+            <History className="h-4 w-4 mr-1 md:mr-2" /> Logs de Acesso
           </TabsTrigger>
         </TabsList>
 
@@ -1069,6 +1075,65 @@ export default function EnrollmentView() {
           </div>
         </TabsContent>
 
+        <TabsContent value="automacoes" className="animate-in fade-in duration-300 outline-none space-y-6">
+          {(() => {
+            const logs = (enrollment as any)?.stage_logs as any[] | undefined;
+            if (!logs || logs.length===0) {
+              return (
+                <Card className="border-dashed bg-muted/20">
+                  <CardContent className="py-12 flex flex-col items-center justify-center text-muted-foreground">
+                    <Settings className="h-12 w-12 mb-4 opacity-20" />
+                    <p className="font-medium text-lg">Nenhuma automação registrada</p>
+                    <p className="text-sm text-center max-w-md">Quando esta matrícula for movida entre etapas com automação configurada em <span className="font-mono text-xs bg-muted px-1 rounded">/admin/settings/stages</span>, o histórico aparecerá aqui.</p>
+                  </CardContent>
+                </Card>
+              );
+            }
+            return (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold flex items-center gap-2"><Settings className="h-5 w-5 text-primary" /> Histórico de Automações por Etapa</h3>
+                  <Badge variant="secondary">{logs.length} eventos</Badge>
+                </div>
+                <div className="relative pl-8 space-y-4 before:absolute before:inset-0 before:left-[15px] before:w-0.5 before:bg-gradient-to-b before:from-primary/40 before:via-muted before:to-transparent">
+                  {logs.map((l:any, idx:number)=> {
+                    const d = new Date(l.created_at);
+                    const date = d.toLocaleDateString('pt-BR');
+                    const time = d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+                    const isEnter = l.trigger==='enter';
+                    const skipped = l.meta?.skipped;
+                    return (
+                      <div key={l.id || idx} className="relative group">
+                        <div className={`absolute -left-8 top-1.5 h-4 w-4 rounded-full border-2 border-background shadow-sm z-10 ${skipped ? 'bg-amber-400' : 'bg-emerald-500'}`} />
+                        <div className="bg-white dark:bg-slate-900 rounded-xl border p-4 shadow-sm group-hover:shadow-md transition-all">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-2">
+                              <Badge variant={isEnter ? 'default' : 'secondary'} className="text-[11px]">{isEnter ? 'Ao entrar' : 'Ao sair'}</Badge>
+                              <span className="text-sm font-bold">{l.meta?.stage_name || `Etapa #${l.stage_id}`}</span>
+                              {skipped && <Badge variant="outline" className="text-amber-600 border-amber-200">já na situação</Badge>}
+                            </div>
+                            <span className="text-[11px] text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> {date} às {time}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm flex-wrap">
+                            <span className="text-muted-foreground text-xs">Situação:</span>
+                            <Badge variant="outline" className="bg-muted/30">{l.from_situacao_name || `#${l.from_situacao_id || '—'}`}</Badge>
+                            <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                            <Badge className="bg-primary text-white">{l.to_situacao_name || `#${l.to_situacao_id}`}</Badge>
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-2 flex gap-2 flex-wrap">
+                            {l.funnel_id && <span>Funil: #{l.funnel_id}</span>}
+                            <span>De etapa #{l.from_stage_id || '—'} → Para #{l.to_stage_id}</span>
+                            {l.actor_id && <span>por {l.actor_id.slice(0,8)}…</span>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+        </TabsContent>
         <TabsContent value="logs" className="animate-in fade-in slide-in-from-top-2 duration-500">
            <ActivityTimeline />
         </TabsContent>
