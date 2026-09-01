@@ -59,6 +59,9 @@ docker exec octane_app php artisan tenants:seed --class=MenuSeeder --force
 echo "🌱 Rodando Database Seeds (CursoCategoriaSeeder)..."
 docker exec octane_app php artisan tenants:seed --class=CursoCategoriaSeeder --force
 
+echo "🌐 Sincronizando domínios dos Tenants (tenancy:sync-domains)..."
+docker exec octane_app php artisan tenancy:sync-domains
+
 echo "🔄 Reiniciando Queue Worker (nova imagem)..."
 docker compose -f docker-compose.production.yml up -d --no-deps --force-recreate queue
 
