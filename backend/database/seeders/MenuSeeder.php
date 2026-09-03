@@ -46,7 +46,7 @@ class MenuSeeder extends Seeder
         DB::table('permissions')->insert([
                 // MASTER → acesso a tudo
                 [
-                    'name' => 'Master',
+                    'name' => 'Dev',
                     'description' => 'Desenvolvedores',
                     'redirect_login' => '/home',
                     'active' => 's',
@@ -54,7 +54,7 @@ class MenuSeeder extends Seeder
 
                 // ADMINISTRADOR → tudo, mas em configurações só "Usuários" e "Perfis"
                 [
-                    'name' => 'Administrador',
+                    'name' => 'Master',
                     'description' => 'Administradores do sistema',
                     'redirect_login' => '/home',
                     'active' => 's'
@@ -62,7 +62,7 @@ class MenuSeeder extends Seeder
 
                 // GERENTE → todos os menus exceto configurações
                 [
-                    'name' => 'Auxiliar Adminstrativo',
+                    'name' => 'Administrador',
                     'description' => 'Gerente do sistema (sem acesso a configurações)',
                     'redirect_login' => '/home',
                     'active' => 's'
@@ -70,14 +70,14 @@ class MenuSeeder extends Seeder
 
                 // ESCRITÓRIO → somente dois primeiros menus
                 [
-                    'name' => 'Escritório',
+                    'name' => 'Gerente',
                     'description' => 'Acesso limitado a Dashboard e Clientes',
                     'redirect_login' => '/home',
                     'active' => 's'
                 ],
                 // CONSULTOR → somente dois primeiros menus
                 [
-                    'name' => 'Consultor',
+                    'name' => 'Escritorio',
                     'description' => 'Consultores do sistema',
                     'redirect_login' => '/home',
                     'active' => 's'
