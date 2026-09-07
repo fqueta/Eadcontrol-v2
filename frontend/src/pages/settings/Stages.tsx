@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Plus, Search, Pencil, Trash2, Layers, ListOrdered, GripVertical, ChevronDown, ChevronRight, Settings2, LogOut, LogIn } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Layers, ListOrdered, GripVertical, ChevronDown, ChevronRight, Settings2, LogOut, LogIn, Kanban, CheckSquare } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -9,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -26,6 +28,7 @@ import { enrollmentSituationsService } from '@/services/enrollmentSituationsServ
 import { EnrollmentSituation } from '@/types/enrollmentSituation';
 import { useDebounce } from '@/hooks/useDebounce';
 import { toast } from '@/hooks/use-toast';
+import { FunnelStrategyFactory, FunnelEntityType } from '@/lib/funnelStrategies';
 
 /**
  * Stages — Configuração de Funis e Etapas
@@ -33,6 +36,8 @@ import { toast } from '@/hooks/use-toast';
  * en-US: Page to manage funnels (pipelines) and their stages.
  */
 export default function Stages() {
+  const navigate = useNavigate();
+
   // Listagem e estado
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -127,16 +132,19 @@ export default function Stages() {
     setExpandedFunnelIds(new Set());
   };
 
-  // Filtragem client-side
+  // Filtragem client-side usando Strategy Pattern
   /**
    * filteredFunnels
-   * pt-BR: Filtra funis pelo termo com debounce, melhorando UX em digitação rápida.
-   * en-US: Filters funnels by the debounced term, improving UX on rapid typing.
+   * pt-BR: Filtra funis pelo termo e estratégia de entidade selecionada.
+   * en-US: Filters funnels by search term and selected entity strategy.
    */
   const filteredFunnels = useMemo(() => {
     let result = orderedFunnels;
     if (placeFilter !== 'all') {
-      result = result.filter(f => (f.settings?.place || 'vendas') === placeFilter);
+      result = result.filter(f => {
+        const strat = FunnelStrategyFactory.getStrategy(f);
+        return strat.entityType === placeFilter || strat.placeValue === placeFilter;
+      });
     }
     if (!debouncedSearch.trim()) return result;
     const s = debouncedSearch.toLowerCase();
@@ -161,7 +169,9 @@ export default function Stages() {
     autoAdvance: z.boolean().optional(),
     requiresApproval: z.boolean().optional(),
     notificationEnabled: z.boolean().optional(),
-    place: z.enum(['vendas', 'atendimento']),
+    entity_type: z.enum(['clientes', 'matriculas']),
+    managed_situations: z.array(z.union([z.number(), z.string()])).optional(),
+    place: z.enum(['vendas', 'atendimento']).optional(),
   });
   type FunnelFormData = z.infer<typeof funnelSchema>;
   const funnelForm = useForm<FunnelFormData>({
@@ -174,6 +184,8 @@ export default function Stages() {
       autoAdvance: true,
       requiresApproval: false,
       notificationEnabled: true,
+      entity_type: 'clientes',
+      managed_situations: [],
       place: 'vendas',
     }
   });
@@ -192,7 +204,7 @@ export default function Stages() {
     { refetchOnWindowFocus: false, refetchOnReconnect: false }
   );
   // Evita loops de renderização: memoiza o fallback [] para não criar nova referência a cada render
-  const stages = useMemo(() => stagesData?.data ?? [], [stagesData?.data]);
+  const stages = useMemo(() => (stagesData as any)?.data ?? [], [stagesData]);
 
   // Estado local para reordenação de etapas
   const [orderedStages, setOrderedStages] = useState<StageRecord[]>([]);
@@ -212,6 +224,24 @@ export default function Stages() {
   const [stageActionsOnExit, setStageActionsOnExit] = useState<StageAction[]>([]);
   const [situacoesList, setSituacoesList] = useState<EnrollmentSituation[]>([]);
   const [isLoadingSituacoes, setIsLoadingSituacoes] = useState(false);
+
+  const selectedFunnelStrategy = useMemo(() => {
+    return selectedFunnel ? FunnelStrategyFactory.getStrategy(selectedFunnel) : null;
+  }, [selectedFunnel]);
+
+  const selectedFunnelManagedSituations = useMemo(() => {
+    return selectedFunnel?.settings?.managed_situations || [];
+  }, [selectedFunnel]);
+
+  const managedSituationsListModal = useMemo(() => {
+    if (!selectedFunnelManagedSituations || selectedFunnelManagedSituations.length === 0) return [];
+    return situacoesList.filter((s) => selectedFunnelManagedSituations.includes(s.id));
+  }, [situacoesList, selectedFunnelManagedSituations]);
+
+  const otherSituationsListModal = useMemo(() => {
+    if (!selectedFunnelManagedSituations || selectedFunnelManagedSituations.length === 0) return situacoesList;
+    return situacoesList.filter((s) => !selectedFunnelManagedSituations.includes(s.id));
+  }, [situacoesList, selectedFunnelManagedSituations]);
 
   const stageSchema = z.object({
     name: z.string().min(1, 'Nome é obrigatório'),
@@ -271,8 +301,10 @@ export default function Stages() {
    * en-US: Opens funnel modal with default values or the edited funnel.
    */
   const openFunnelModal = (funnel?: FunnelRecord) => {
+    fetchSituacoes();
     if (funnel) {
       setEditingFunnel(funnel);
+      const strategy = FunnelStrategyFactory.getStrategy(funnel);
       funnelForm.reset({
         name: funnel.name,
         description: funnel.description || '',
@@ -281,7 +313,9 @@ export default function Stages() {
         autoAdvance: funnel.settings?.autoAdvance ?? true,
         requiresApproval: funnel.settings?.requiresApproval ?? false,
         notificationEnabled: funnel.settings?.notificationEnabled ?? true,
-        place: funnel.settings?.place ?? 'vendas',
+        entity_type: strategy.entityType,
+        managed_situations: funnel.settings?.managed_situations || [],
+        place: strategy.placeValue,
       });
     } else {
       setEditingFunnel(null);
@@ -293,6 +327,8 @@ export default function Stages() {
         autoAdvance: true,
         requiresApproval: false,
         notificationEnabled: true,
+        entity_type: 'clientes',
+        managed_situations: [],
         place: 'vendas',
       });
     }
@@ -307,17 +343,19 @@ export default function Stages() {
 
   /**
    * onSubmitFunnel
-   * pt-BR: Cria/atualiza funil usando campos name, description, color, isActive e settings.
-   * en-US: Creates/updates funnel using fields name, description, color, isActive and settings.
+   * pt-BR: Cria/atualiza funil usando a estratégia correspondente.
+   * en-US: Creates/updates funnel using the corresponding strategy.
    */
   const onSubmitFunnel = async (data: FunnelFormData) => {
     try {
-      // Monta objeto de configurações estruturado
+      const strategy = FunnelStrategyFactory.getStrategyByType(data.entity_type);
       const settingsObj: FunnelSettings = {
         autoAdvance: data.autoAdvance ?? true,
         requiresApproval: data.requiresApproval ?? false,
         notificationEnabled: data.notificationEnabled ?? true,
-        place: data.place,
+        entity_type: data.entity_type,
+        place: strategy.placeValue,
+        managed_situations: data.entity_type === 'matriculas' ? (data.managed_situations || []) : [],
       };
       const payload: CreateFunnelInput | UpdateFunnelInput = {
         name: data.name,
@@ -327,17 +365,13 @@ export default function Stages() {
         settings: settingsObj,
       };
       if (editingFunnel) {
-        // Atualiza funil com corpo corretamente estruturado
-        // pt-BR: O hook genérico de update exige { id, data }. Antes não enviava 'data', causando ausência de body.
-        // en-US: The generic update hook requires { id, data }. Previously 'data' was missing, causing an empty body.
         await updateFunnelMutation.mutateAsync({ id: editingFunnel.id, data: payload as UpdateFunnelInput });
       } else {
         await createFunnelMutation.mutateAsync(payload as CreateFunnelInput);
       }
       closeFunnelModal();
     } catch (err: any) {
-      // pt-BR: Erros já são tratados pelo hook genérico (useGenericApi) com toast.
-      // en-US: Errors are already handled by the generic hook with a toast.
+      // pt-BR: Erros já são tratados pelo hook genérico com toast.
     }
   };
 
@@ -679,12 +713,19 @@ export default function Stages() {
    * en-US: Renders a badge indicating the funnel area (Sales/Support).
    */
   const renderFunnelAreaBadge = (funnel: FunnelRecord) => {
-    const place = funnel.settings?.place === 'atendimento' ? 'Atendimento' : 'Vendas';
-    const variant = funnel.settings?.place === 'atendimento' ? 'secondary' : 'default';
+    const strategy = FunnelStrategyFactory.getStrategy(funnel);
+    const managedCount = funnel.settings?.managed_situations?.length || 0;
     return (
-      <Badge variant={variant} className="text-xs">
-        {place}
-      </Badge>
+      <div className="flex items-center gap-1">
+        <Badge variant={strategy.badgeVariant} className="text-xs">
+          {strategy.badgeLabel}
+        </Badge>
+        {strategy.supportsSituations && managedCount > 0 && (
+          <Badge variant="outline" className="text-[10px] text-muted-foreground">
+            {managedCount} situação(ões)
+          </Badge>
+        )}
+      </div>
     );
   };
 
@@ -728,7 +769,7 @@ export default function Stages() {
       sectionParams,
       { enabled: isExpanded, refetchOnWindowFocus: false, refetchOnReconnect: false }
     );
-    const stages = useMemo(() => stagesData?.data ?? [], [stagesData?.data]);
+    const stages = useMemo(() => (stagesData as any)?.data ?? [], [stagesData]);
     const safeStages = useMemo(() => (stages || []).filter((s): s is StageRecord => !!s && (s as any).id !== undefined), [stages]);
 
     // Estado local para DnD
@@ -932,16 +973,16 @@ export default function Stages() {
               <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar funis..." className="pl-8" />
             </div>
             <Select value={placeFilter} onValueChange={setPlaceFilter}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-48">
                 <SelectValue placeholder="Todos os funis" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="vendas">Vendas</SelectItem>
-                <SelectItem value="atendimento">Atendimento</SelectItem>
+                <SelectItem value="all">Todos os funis</SelectItem>
+                <SelectItem value="clientes">Clientes / Leads</SelectItem>
+                <SelectItem value="matriculas">Matrículas / Alunos</SelectItem>
               </SelectContent>
             </Select>
-            <Button onClick={() => openFunnelModal()} className="flex items-center gap-2">
+            <Button onClick={() => navigate('/admin/settings/stages/create')} className="flex items-center gap-2">
               <Plus className="h-4 w-4" /> Novo Funil
             </Button>
           </div>
@@ -982,13 +1023,28 @@ export default function Stages() {
                     {(funnel.isActive ?? funnel.active) ? <Badge variant="default">Ativo</Badge> : <Badge variant="secondary">Inativo</Badge>}
                   </TableCell>
                   <TableCell className="text-right space-x-2">
+                    {(() => {
+                      const strategy = FunnelStrategyFactory.getStrategy(funnel);
+                      return (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(strategy.targetRoute(funnel.id))}
+                          title={`Gerenciar no Kanban (${strategy.label})`}
+                          className="gap-1"
+                        >
+                          <Kanban className="h-4 w-4" />
+                          <span className="hidden sm:inline">Kanban</span>
+                        </Button>
+                      );
+                    })()}
                     <Button variant="ghost" size="sm" onClick={() => setSelectedFunnel(funnel)} title="Ver etapas deste funil">
                       <ListOrdered className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => openStageForFunnel(funnel)} title="Adicionar etapa neste funil">
                       <Plus className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => openFunnelModal(funnel)} title="Editar funil">
+                    <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/settings/stages/edit/${funnel.id}`)} title="Editar funil">
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => setDeletingFunnel(funnel)} title="Excluir funil">
@@ -1086,6 +1142,108 @@ export default function Stages() {
                   <FormMessage />
                 </FormItem>
               )} />
+              <FormField name="entity_type" control={funnelForm.control} render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Entidade Organizada</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || 'clientes'}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a entidade" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {FunnelStrategyFactory.getAllStrategies().map((strat) => (
+                        <SelectItem key={strat.entityType} value={strat.entityType}>
+                          <div className="flex flex-col py-0.5">
+                            <span className="font-medium">{strat.label}</span>
+                            <span className="text-xs text-muted-foreground">{strat.description}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              {funnelForm.watch('entity_type') === 'matriculas' && (
+                <div className="space-y-2 border rounded-md p-3 bg-muted/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 font-medium text-sm">
+                      <CheckSquare className="h-4 w-4 text-primary" />
+                      <span>Situações de Matrícula Gerenciadas (Select Múltiplo)</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs px-2"
+                        onClick={() => {
+                          const allIds = situacoesList.map(s => s.id);
+                          funnelForm.setValue('managed_situations', allIds);
+                        }}
+                      >
+                        Todas
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs px-2"
+                        onClick={() => {
+                          funnelForm.setValue('managed_situations', []);
+                        }}
+                      >
+                        Limpar
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Selecione quais situações de matrícula este funil irá exibir e organizar no Kanban de Suporte.
+                  </p>
+
+                  {isLoadingSituacoes && (
+                    <div className="text-xs text-muted-foreground py-2">Carregando situações...</div>
+                  )}
+
+                  {!isLoadingSituacoes && situacoesList.length === 0 && (
+                    <div className="text-xs text-muted-foreground py-2">Nenhuma situação encontrada no sistema.</div>
+                  )}
+
+                  {!isLoadingSituacoes && situacoesList.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 max-h-48 overflow-y-auto pr-1">
+                      {situacoesList.map((sit) => {
+                        const selectedList = (funnelForm.watch('managed_situations') || []) as (string | number)[];
+                        const isChecked = selectedList.some(id => String(id) === String(sit.id));
+                        return (
+                          <label
+                            key={String(sit.id)}
+                            className="flex items-center gap-2 text-xs border rounded p-2 cursor-pointer hover:bg-accent/40 transition-colors"
+                          >
+                            <Checkbox
+                              checked={isChecked}
+                              onCheckedChange={(checked) => {
+                                const current = (funnelForm.getValues('managed_situations') || []) as (string | number)[];
+                                if (checked) {
+                                  funnelForm.setValue('managed_situations', [...current, sit.id]);
+                                } else {
+                                  funnelForm.setValue(
+                                    'managed_situations',
+                                    current.filter(id => String(id) !== String(sit.id))
+                                  );
+                                }
+                              }}
+                            />
+                            <span className="font-medium text-foreground">{sit.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Settings estruturados em switches */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField name="autoAdvance" control={funnelForm.control} render={({ field }) => (
@@ -1112,21 +1270,6 @@ export default function Stages() {
                     <FormControl>
                       <Switch checked={!!field.value} onCheckedChange={field.onChange} />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField name="place" control={funnelForm.control} render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Área do funil</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a área" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="vendas">Vendas</SelectItem>
-                        <SelectItem value="atendimento">Atendimento</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -1214,65 +1357,133 @@ export default function Stages() {
 
               <Separator className="my-2" />
               <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Settings2 className="h-4 w-4" />
-                  <h4 className="font-medium text-sm">Automações de Situação (Matrículas)</h4>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Settings2 className="h-4 w-4 text-primary" />
+                    <h4 className="font-semibold text-sm">Automações de Situação (Matrículas)</h4>
+                  </div>
+                  {selectedFunnelStrategy?.entityType === 'clientes' && (
+                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">
+                      Funil de Clientes
+                    </Badge>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground">Ao arrastar o card para esta etapa, o sistema pode alterar a situação da matrícula. Configure ações para entrada e saída. Deixe vazio para não alterar nada.</p>
-                <Tabs value={stageActionsTab} onValueChange={(v)=> setStageActionsTab(v as any)} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="onEnter" className="flex items-center gap-1"><LogIn className="h-3 w-3" /> Ao entrar ({stageActionsOnEnter.length})</TabsTrigger>
-                    <TabsTrigger value="onExit" className="flex items-center gap-1"><LogOut className="h-3 w-3" /> Ao sair ({stageActionsOnExit.length})</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="onEnter" className="space-y-3 mt-3">
-                    {stageActionsOnEnter.length===0 && <p className="text-xs text-muted-foreground border border-dashed rounded p-3 text-center">Nenhuma automação ao entrar. Clique em + para adicionar.</p>}
-                    {stageActionsOnEnter.map((act)=> (
-                      <div key={act.id} className="flex items-end gap-2 border rounded p-3 bg-muted/30">
-                        <div className="flex-1">
-                          <label className="text-xs font-medium">Situação destino</label>
-                          <Select value={String(act.situacao_id)} onValueChange={(v)=> updateStageAction('onEnter', act.id, { situacao_id: Number(v) })}>
-                            <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                            <SelectContent>
-                              {isLoadingSituacoes && <SelectItem value="0" disabled>Carregando...</SelectItem>}
-                              {!isLoadingSituacoes && situacoesList.length===0 && <SelectItem value="0" disabled>Nenhuma situação</SelectItem>}
-                              {situacoesList.map(s=> <SelectItem key={String(s.id)} value={String(s.id)}>{s.name}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
+                <p className="text-xs text-muted-foreground">Ao arrastar o card para esta etapa, o sistema pode alterar a situação da matrícula. Configure ações para entrada e saída.</p>
+
+                {selectedFunnelStrategy?.entityType === 'clientes' ? (
+                  <div className="rounded-md bg-amber-50 dark:bg-amber-950/40 p-3 border border-amber-200 dark:border-amber-800/50 text-xs text-amber-800 dark:text-amber-300">
+                    Este funil organiza <strong>Clientes (Leads)</strong>. Automações de situação de matrícula são aplicáveis em funis de <strong>Matrículas</strong>.
+                  </div>
+                ) : (
+                  <Tabs value={stageActionsTab} onValueChange={(v)=> setStageActionsTab(v as any)} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="onEnter" className="flex items-center gap-1"><LogIn className="h-3 w-3" /> Ao entrar ({stageActionsOnEnter.length})</TabsTrigger>
+                      <TabsTrigger value="onExit" className="flex items-center gap-1"><LogOut className="h-3 w-3" /> Ao sair ({stageActionsOnExit.length})</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="onEnter" className="space-y-3 mt-3">
+                      {stageActionsOnEnter.length===0 && <p className="text-xs text-muted-foreground border border-dashed rounded p-3 text-center">Nenhuma automação ao entrar. Clique em + para adicionar.</p>}
+                      {stageActionsOnEnter.map((act)=> (
+                        <div key={act.id} className="flex items-end gap-2 border rounded p-3 bg-muted/30">
+                          <div className="flex-1">
+                            <label className="text-xs font-medium">Situação destino</label>
+                            <Select value={String(act.situacao_id)} onValueChange={(v)=> updateStageAction('onEnter', act.id, { situacao_id: Number(v) })}>
+                              <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                              <SelectContent>
+                                {isLoadingSituacoes && <SelectItem value="0" disabled>Carregando...</SelectItem>}
+                                {!isLoadingSituacoes && situacoesList.length===0 && <SelectItem value="0" disabled>Nenhuma situação</SelectItem>}
+                                {!isLoadingSituacoes && (
+                                  <>
+                                    {managedSituationsListModal.length > 0 && (
+                                      <SelectGroup>
+                                        <SelectLabel className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                          Situações Gerenciadas por este Funil
+                                        </SelectLabel>
+                                        {managedSituationsListModal.map((s) => (
+                                          <SelectItem key={String(s.id)} value={String(s.id)}>
+                                            ⭐ {s.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectGroup>
+                                    )}
+                                    {otherSituationsListModal.length > 0 && (
+                                      <SelectGroup>
+                                        <SelectLabel className="text-xs text-muted-foreground">
+                                          Outras Situações
+                                        </SelectLabel>
+                                        {otherSituationsListModal.map((s) => (
+                                          <SelectItem key={String(s.id)} value={String(s.id)}>
+                                            {s.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectGroup>
+                                    )}
+                                  </>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center gap-1 pb-1">
+                            <Switch checked={!!act.enabled} onCheckedChange={(v)=> updateStageAction('onEnter', act.id, { enabled: v })} />
+                            <span className="text-xs">{act.enabled===false ? 'Desat.' : 'Ativa'}</span>
+                          </div>
+                          <Button type="button" variant="ghost" size="sm" onClick={()=> removeStageAction('onEnter', act.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </div>
-                        <div className="flex items-center gap-1 pb-1">
-                          <Switch checked={!!act.enabled} onCheckedChange={(v)=> updateStageAction('onEnter', act.id, { enabled: v })} />
-                          <span className="text-xs">{act.enabled===false ? 'Desat.' : 'Ativa'}</span>
+                      ))}
+                      <Button type="button" variant="outline" size="sm" onClick={()=> addStageAction('onEnter')} className="w-full"><Plus className="h-4 w-4 mr-1" /> Adicionar ação ao entrar</Button>
+                    </TabsContent>
+                    <TabsContent value="onExit" className="space-y-3 mt-3">
+                      {stageActionsOnExit.length===0 && <p className="text-xs text-muted-foreground border border-dashed rounded p-3 text-center">Nenhuma automação ao sair.</p>}
+                      {stageActionsOnExit.map((act)=> (
+                        <div key={act.id} className="flex items-end gap-2 border rounded p-3 bg-muted/30">
+                          <div className="flex-1">
+                            <label className="text-xs font-medium">Situação destino</label>
+                            <Select value={String(act.situacao_id)} onValueChange={(v)=> updateStageAction('onExit', act.id, { situacao_id: Number(v) })}>
+                              <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                              <SelectContent>
+                                {isLoadingSituacoes && <SelectItem value="0" disabled>Carregando...</SelectItem>}
+                                {!isLoadingSituacoes && situacoesList.length===0 && <SelectItem value="0" disabled>Nenhuma situação</SelectItem>}
+                                {!isLoadingSituacoes && (
+                                  <>
+                                    {managedSituationsListModal.length > 0 && (
+                                      <SelectGroup>
+                                        <SelectLabel className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                          Situações Gerenciadas por este Funil
+                                        </SelectLabel>
+                                        {managedSituationsListModal.map((s) => (
+                                          <SelectItem key={String(s.id)} value={String(s.id)}>
+                                            ⭐ {s.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectGroup>
+                                    )}
+                                    {otherSituationsListModal.length > 0 && (
+                                      <SelectGroup>
+                                        <SelectLabel className="text-xs text-muted-foreground">
+                                          Outras Situações
+                                        </SelectLabel>
+                                        {otherSituationsListModal.map((s) => (
+                                          <SelectItem key={String(s.id)} value={String(s.id)}>
+                                            {s.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectGroup>
+                                    )}
+                                  </>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center gap-1 pb-1">
+                            <Switch checked={!!act.enabled} onCheckedChange={(v)=> updateStageAction('onExit', act.id, { enabled: v })} />
+                            <span className="text-xs">{act.enabled===false ? 'Desat.' : 'Ativa'}</span>
+                          </div>
+                          <Button type="button" variant="ghost" size="sm" onClick={()=> removeStageAction('onExit', act.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </div>
-                        <Button type="button" variant="ghost" size="sm" onClick={()=> removeStageAction('onEnter', act.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      </div>
-                    ))}
-                    <Button type="button" variant="outline" size="sm" onClick={()=> addStageAction('onEnter')} className="w-full"><Plus className="h-4 w-4 mr-1" /> Adicionar ação ao entrar</Button>
-                  </TabsContent>
-                  <TabsContent value="onExit" className="space-y-3 mt-3">
-                    {stageActionsOnExit.length===0 && <p className="text-xs text-muted-foreground border border-dashed rounded p-3 text-center">Nenhuma automação ao sair.</p>}
-                    {stageActionsOnExit.map((act)=> (
-                      <div key={act.id} className="flex items-end gap-2 border rounded p-3 bg-muted/30">
-                        <div className="flex-1">
-                          <label className="text-xs font-medium">Situação destino</label>
-                          <Select value={String(act.situacao_id)} onValueChange={(v)=> updateStageAction('onExit', act.id, { situacao_id: Number(v) })}>
-                            <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                            <SelectContent>
-                              {isLoadingSituacoes && <SelectItem value="0" disabled>Carregando...</SelectItem>}
-                              {!isLoadingSituacoes && situacoesList.length===0 && <SelectItem value="0" disabled>Nenhuma situação</SelectItem>}
-                              {situacoesList.map(s=> <SelectItem key={String(s.id)} value={String(s.id)}>{s.name}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex items-center gap-1 pb-1">
-                          <Switch checked={!!act.enabled} onCheckedChange={(v)=> updateStageAction('onExit', act.id, { enabled: v })} />
-                          <span className="text-xs">{act.enabled===false ? 'Desat.' : 'Ativa'}</span>
-                        </div>
-                        <Button type="button" variant="ghost" size="sm" onClick={()=> removeStageAction('onExit', act.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      </div>
-                    ))}
-                    <Button type="button" variant="outline" size="sm" onClick={()=> addStageAction('onExit')} className="w-full"><Plus className="h-4 w-4 mr-1" /> Adicionar ação ao sair</Button>
-                  </TabsContent>
-                </Tabs>
+                      ))}
+                      <Button type="button" variant="outline" size="sm" onClick={()=> addStageAction('onExit')} className="w-full"><Plus className="h-4 w-4 mr-1" /> Adicionar ação ao sair</Button>
+                    </TabsContent>
+                  </Tabs>
+                )}
               </div>
 
               <FormActionBar 

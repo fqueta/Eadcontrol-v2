@@ -23,6 +23,7 @@ import { clientsService } from '@/services/clientsService';
 import { CreateClientAttendanceInput } from '@/types/attendance';
 import { useToast } from '@/hooks/use-toast';
 import { phoneApplyMask, phoneRemoveMask } from '@/lib/masks/phone-apply-mask';
+import { FunnelStrategyFactory } from '@/lib/funnelStrategies';
 import * as attendanceLogsService from '@/services/attendanceLogsService';
 
 /**
@@ -145,11 +146,7 @@ const getEnrollmentAmountBRL = (enroll: EnrollmentRecord): number => {
  *        Defaults to filtering support-area funnels.
  */
 export default function CustomersLeads({ place = 'atendimento' }: { place?: 'vendas' | 'atendimento' }) {
-  /**
-   * useAuth
-   * pt-BR: Obtém o usuário atual para definir o consultor padrão no modal.
-   * en-US: Gets the current user to set the default consultant in the modal.
-   */
+  const navigate = useNavigate();
   const { user } = useAuth();
   /**
    * useToast
@@ -164,7 +161,10 @@ export default function CustomersLeads({ place = 'atendimento' }: { place?: 'ven
    */
   const { data: funnelsData, isLoading } = useFunnelsList({ page: 1, per_page: 50 });
   const funnels = useMemo(() => funnelsData?.data ?? [], [funnelsData?.data]);
-  const filteredFunnels = useMemo(() => funnels, [funnels]);
+  const filteredFunnels = useMemo(() => {
+    const clientFunnels = funnels.filter(f => FunnelStrategyFactory.getStrategy(f).entityType === 'clientes');
+    return clientFunnels.length > 0 ? clientFunnels : funnels;
+  }, [funnels]);
 
   /**
    * selectedFunnelId
@@ -220,7 +220,7 @@ export default function CustomersLeads({ place = 'atendimento' }: { place?: 'ven
     { page: 1, per_page: 100 },
     { enabled: !!selectedFunnelId }
   );
-  const stages = useMemo(() => stagesData?.data ?? [], [stagesData?.data]);
+  const stages = useMemo(() => (stagesData as any)?.data ?? [], [stagesData]);
 
   /**
    * selectedFunnelColor
@@ -1037,36 +1037,29 @@ export default function CustomersLeads({ place = 'atendimento' }: { place?: 'ven
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Controls: selecionar funil de atendimento */}
-          <div className="flex items-center gap-3 mb-4 w-full max-w-xs">
+          {/* Controls: selecionar funil de vendas */}
+          <div className="flex items-center gap-3 mb-4 w-full flex-wrap">
             <div className="w-full max-w-xs">
-              <label className="text-xs text-muted-foreground">{effectivePlace === 'vendas' ? 'Funil de Vendas' : 'Funil de Atendimento'}</label>
+              <label className="text-xs text-muted-foreground">Funil de Vendas / Clientes</label>
               <Select value={selectedFunnelId ?? undefined} onValueChange={setSelectedFunnelId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um funil" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Vendas</SelectLabel>
-                    {filteredFunnels.filter(f => f.settings?.place === 'vendas').map(f => (
-                      <SelectItem key={f.id} value={String(f.id)}>{f.name}</SelectItem>
-                    ))}
-                  </SelectGroup>
-                  <SelectGroup>
-                    <SelectLabel>Atendimento</SelectLabel>
-                    {filteredFunnels.filter(f => f.settings?.place === 'atendimento').map(f => (
-                      <SelectItem key={f.id} value={String(f.id)}>{f.name}</SelectItem>
-                    ))}
-                  </SelectGroup>
+                  {filteredFunnels.map(f => {
+                    const strat = FunnelStrategyFactory.getStrategy(f);
+                    return (
+                      <SelectItem key={f.id} value={String(f.id)}>
+                        <div className="flex items-center gap-2">
+                          <span>{f.name}</span>
+                          <span className="text-[10px] text-muted-foreground">({strat.badgeLabel})</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
-
-          {/* <div className="ml-auto">
-            <Button className="flex items-center gap-2" disabled>
-              <Plus className="h-4 w-4" /> Criar
-            </Button>
-          </div> */}
 
             {/* Toggle de densidade */}
             <div className="flex items-center gap-2 ml-4">
@@ -1076,6 +1069,22 @@ export default function CustomersLeads({ place = 'atendimento' }: { place?: 'ven
               </Label>
             </div>
           </div>
+
+          {selectedFunnel && FunnelStrategyFactory.getStrategy(selectedFunnel).entityType === 'matriculas' && (
+            <div className="mb-4 p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-md flex items-center justify-between gap-3 text-sm">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">Entidade Matrículas</Badge>
+                <span>O funil <strong>{selectedFunnel.name}</strong> é do tipo Matrículas de Alunos / Suporte.</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(FunnelStrategyFactory.getStrategy(selectedFunnel).targetRoute(selectedFunnel.id))}
+              >
+                Ir para Suporte e Checar Situação
+              </Button>
+            </div>
+          )}
 
           {/* Diagnóstico: contadores de exclusão */}
           {/**

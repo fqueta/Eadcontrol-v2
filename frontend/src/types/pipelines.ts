@@ -195,4 +195,14 @@ export interface FunnelSettings {
    * en-US: Funnel area (sales or support)
    */
   place?: 'vendas' | 'atendimento';
+  /**
+   * pt-BR: Tipo de entidade que o funil organiza (clientes ou matriculas)
+   * en-US: Entity type organized by the funnel (clients or enrollments)
+   */
+  entity_type?: 'clientes' | 'matriculas';
+  /**
+   * pt-BR: Lista de IDs das situações de matrícula gerenciadas por este funil (quando entity_type === 'matriculas')
+   * en-US: List of managed enrollment situation IDs for this funnel (when entity_type === 'matriculas')
+   */
+  managed_situations?: (number | string)[];
 }

@@ -11,9 +11,9 @@ import viteCompression from "vite-plugin-compression";
 function tenantHtmlInject() {
   return {
     name: 'tenant-html-inject',
-    enforce: 'pre',
-    configureServer(server) {
-      const handler = async (req, res, next) => {
+    enforce: 'pre' as const,
+    configureServer(server: any) {
+      const handler = async (req: any, res: any, next: any) => {
         const url = (req.url || '').split('?')[0];
         const accept = (req.headers.accept as string) || '';
         // só HTML, não assets/vite/api/websocket
@@ -31,7 +31,9 @@ function tenantHtmlInject() {
           const backend = `http://127.0.0.1:8002/api/central/crawler-preview?url=${encodeURIComponent(fullUrl)}`;
           const r = await fetch(backend);
           if (r.ok) {
-            const html = await r.text();
+            let html = await r.text();
+            // Transforma o HTML pelo Vite dev server para injetar o preamble do React SWC e scripts HMR
+            html = await server.transformIndexHtml(req.url || '/', html);
             res.setHeader('Content-Type', 'text/html; charset=utf-8');
             res.end(html);
             return;

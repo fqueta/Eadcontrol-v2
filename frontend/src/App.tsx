@@ -53,6 +53,8 @@ const UserProfiles = lazy(() => import("./pages/settings/UserProfiles"));
 const SystemSettings = lazy(() => import("./pages/settings/SystemSettings"));
 const IntegrationsList = lazy(() => import("./pages/settings/IntegrationsList"));
 const Stages = lazy(() => import("./pages/settings/Stages"));
+const FunnelCreate = lazy(() => import("./pages/settings/FunnelCreate"));
+const FunnelEdit = lazy(() => import("./pages/settings/FunnelEdit"));
 const TableInstallment = lazy(() => import("./pages/settings/TableInstallment"));
 const CupomDesconto = lazy(() => import("./pages/settings/CupomDesconto"));
 const CupomDescontoCreate = lazy(() => import("./pages/settings/CupomDescontoCreate"));
@@ -955,6 +957,20 @@ const App = () => {
                   <AppLayout>
                   {/* Sem PermissionGuard por enquanto para acesso rápido */}
                     <Stages />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/settings/stages/create" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <FunnelCreate />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/settings/stages/edit/:id" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <FunnelEdit />
                   </AppLayout>
                 </AdminProtectedRoute>
               } />

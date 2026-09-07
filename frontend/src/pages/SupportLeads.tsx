@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { FunnelRecord, StageRecord } from '@/types/pipelines';
 import { EnrollmentRecord } from '@/types/enrollments';
 import { useToast } from '@/hooks/use-toast';
+import { FunnelStrategyFactory } from '@/lib/funnelStrategies';
 
 const hexToRgba = (hex?: string, alpha: number = 1): string | undefined => {
   if (!hex) return undefined;
@@ -123,13 +124,35 @@ const extractEnrollmentStageId = (enroll: EnrollmentRecord): string | null => {
   return null;
 };
 
+const extractEnrollmentSituationId = (enroll: EnrollmentRecord): string | null => {
+  const p: any = (enroll as any).preferencias || {};
+  const cfg: any = (enroll as any).config || {};
+  const candidates = [
+    (enroll as any)?.situacao_id,
+    (enroll as any)?.situacaoId,
+    (enroll as any)?.situacao?.id,
+    cfg?.situacao_id,
+    p?.situacao_id,
+  ];
+  for (const v of candidates) {
+    if (v === undefined || v === null) continue;
+    const s = String(v).trim();
+    if (s.length > 0) return s;
+  }
+  return null;
+};
+
 export default function SupportLeads() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
 
   const { data: funnelsData, isLoading: funnelsLoading } = useFunnelsList({ page: 1, per_page: 50 });
   const funnels = useMemo(() => funnelsData?.data ?? [], [funnelsData?.data]);
-  const supportFunnels = useMemo(() => funnels, [funnels]);
+  const supportFunnels = useMemo(() => {
+    const matriculasFunnels = funnels.filter(f => FunnelStrategyFactory.getStrategy(f).entityType === 'matriculas');
+    return matriculasFunnels.length > 0 ? matriculasFunnels : funnels;
+  }, [funnels]);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const initialFunnelFromUrl = useMemo(() => searchParams.get('funnel') || null, [searchParams]);
@@ -158,7 +181,7 @@ export default function SupportLeads() {
     { page: 1, per_page: 100 },
     { enabled: !!selectedFunnelId }
   );
-  const stages = useMemo(() => stagesData?.data ?? [], [stagesData?.data]);
+  const stages = useMemo(() => (stagesData as any)?.data ?? [], [stagesData]);
 
   const selectedFunnel = useMemo(() => (
     funnels.find((f) => String(f.id) === String(selectedFunnelId || '')) ?? null
@@ -182,6 +205,10 @@ export default function SupportLeads() {
 
   const updateEnrollmentMutation = useUpdateEnrollment();
 
+  const managedSituations = selectedFunnel?.settings?.managed_situations || [];
+  const managedSet = useMemo(() => new Set(managedSituations.map((s) => String(s))), [managedSituations]);
+  const hasSituationFilter = managedSet.size > 0;
+
   const enrollmentsByStage = useMemo(() => {
     const allowedStageIds = new Set(stages.map((s) => String(s.id)));
     const map = new Map<string, EnrollmentRecord[]>();
@@ -190,6 +217,12 @@ export default function SupportLeads() {
       if (selectedFunnelId) {
         if (!fid || fid !== String(selectedFunnelId)) continue;
       }
+      if (hasSituationFilter) {
+        const sitId = extractEnrollmentSituationId(enroll);
+        if (sitId !== null && !managedSet.has(String(sitId))) {
+          continue;
+        }
+      }
       const sid = String(extractEnrollmentStageId(enroll) || '');
       if (!sid) continue;
       if (!allowedStageIds.has(sid)) continue;
@@ -197,7 +230,7 @@ export default function SupportLeads() {
       map.get(sid)!.push(enroll);
     }
     return map;
-  }, [localEnrollments, stages, selectedFunnelId]);
+  }, [localEnrollments, stages, selectedFunnelId, hasSituationFilter, managedSet]);
 
   const [draggingEnrollment, setDraggingEnrollment] = useState<{ enrollmentId: string | null; fromStageId: string | null }>({ enrollmentId: null, fromStageId: null });
   const [dropTargetStageId, setDropTargetStageId] = useState<string | null>(null);
@@ -359,24 +392,23 @@ export default function SupportLeads() {
         <CardContent>
           <div className="flex items-center gap-3 mb-4 flex-wrap">
             <div className="w-full max-w-xs">
-              <label className="text-xs text-muted-foreground">Funil de Atendimento</label>
+              <label className="text-xs text-muted-foreground">Funil de Atendimento / Matrículas</label>
               <Select value={selectedFunnelId ?? undefined} onValueChange={setSelectedFunnelId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um funil" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Vendas</SelectLabel>
-                    {supportFunnels.filter(f => f.settings?.place === 'vendas').map(f => (
-                      <SelectItem key={f.id} value={String(f.id)}>{f.name}</SelectItem>
-                    ))}
-                  </SelectGroup>
-                  <SelectGroup>
-                    <SelectLabel>Atendimento</SelectLabel>
-                    {supportFunnels.filter(f => f.settings?.place === 'atendimento').map(f => (
-                      <SelectItem key={f.id} value={String(f.id)}>{f.name}</SelectItem>
-                    ))}
-                  </SelectGroup>
+                  {supportFunnels.map(f => {
+                    const strat = FunnelStrategyFactory.getStrategy(f);
+                    return (
+                      <SelectItem key={f.id} value={String(f.id)}>
+                        <div className="flex items-center gap-2">
+                          <span>{f.name}</span>
+                          <span className="text-[10px] text-muted-foreground">({strat.badgeLabel})</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -388,9 +420,32 @@ export default function SupportLeads() {
             </div>
           </div>
 
+          {selectedFunnel && FunnelStrategyFactory.getStrategy(selectedFunnel).entityType === 'clientes' && (
+            <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-md flex items-center justify-between gap-3 text-sm">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">Entidade Clientes</Badge>
+                <span>O funil <strong>{selectedFunnel.name}</strong> organiza Leads e Clientes.</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(FunnelStrategyFactory.getStrategy(selectedFunnel).targetRoute(selectedFunnel.id))}
+              >
+                Gerenciar no Kanban de Vendas
+              </Button>
+            </div>
+          )}
+
+          {selectedFunnel && hasSituationFilter && (
+            <div className="mb-4 p-2.5 bg-muted/40 border rounded-md flex items-center gap-2 text-xs text-muted-foreground">
+              <Badge variant="secondary" className="text-[10px]">Filtro de Situações</Badge>
+              <span>Este funil gerencia <strong>{managedSituations.length}</strong> situação(ões) de matrícula selecionada(s).</span>
+            </div>
+          )}
+
           {funnelsLoading && <p className="text-sm text-muted-foreground">Carregando funis...</p>}
           {!funnelsLoading && supportFunnels.length === 0 && (
-            <p className="text-sm text-muted-foreground">Nenhum funil de atendimento encontrado. Crie um funil com a área "atendimento" nas configurações.</p>
+            <p className="text-sm text-muted-foreground">Nenhum funil de atendimento/matrículas encontrado. Crie um funil com a entidade "Matrículas" nas configurações.</p>
           )}
 
           {!!selectedFunnelId && (
