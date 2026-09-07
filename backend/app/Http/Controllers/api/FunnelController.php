@@ -63,8 +63,13 @@ class FunnelController extends Controller
                 'settings' => 'nullable|array',
                 'settings.autoAdvance' => 'nullable|boolean',
                 'settings.notifyOnStageChange' => 'nullable|boolean',
+                'settings.notificationEnabled' => 'nullable|boolean',
                 'settings.requireApproval' => 'nullable|boolean',
+                'settings.requiresApproval' => 'nullable|boolean',
                 'settings.place' => 'nullable|string',
+                'settings.entity_type' => 'nullable|string',
+                'settings.managed_situations' => 'nullable|array',
+                'settings.managed_situations.*' => 'nullable',
                 'order' => 'nullable|integer',
             ]);
 
@@ -129,8 +134,13 @@ class FunnelController extends Controller
                 'settings' => 'nullable|array',
                 'settings.autoAdvance' => 'nullable|boolean',
                 'settings.notifyOnStageChange' => 'nullable|boolean',
+                'settings.notificationEnabled' => 'nullable|boolean',
                 'settings.requireApproval' => 'nullable|boolean',
+                'settings.requiresApproval' => 'nullable|boolean',
                 'settings.place' => 'nullable|string',
+                'settings.entity_type' => 'nullable|string',
+                'settings.managed_situations' => 'nullable|array',
+                'settings.managed_situations.*' => 'nullable',
                 'order' => 'nullable|integer',
             ]);
 

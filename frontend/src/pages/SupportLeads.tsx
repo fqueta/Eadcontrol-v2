@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { Layers, Plus, MoreHorizontal, Eye, FileText, UserRoundX, Search, Phone } from 'lucide-react';
+import { Layers, Plus, MoreHorizontal, Eye, FileText, UserRoundX, Search, Phone, Pencil } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,8 @@ import { FunnelRecord, StageRecord } from '@/types/pipelines';
 import { EnrollmentRecord } from '@/types/enrollments';
 import { useToast } from '@/hooks/use-toast';
 import { FunnelStrategyFactory } from '@/lib/funnelStrategies';
+import { coursesService } from '@/services/coursesService';
+import { turmasService } from '@/services/turmasService';
 
 const hexToRgba = (hex?: string, alpha: number = 1): string | undefined => {
   if (!hex) return undefined;
@@ -189,9 +191,28 @@ export default function SupportLeads() {
   const selectedFunnelColor = selectedFunnel?.color;
 
   const [dense, setDense] = useState<boolean>(false);
+  const [coursesList, setCoursesList] = useState<any[]>([]);
+  const [turmasList, setTurmasList] = useState<any[]>([]);
+  const [selectedCourseFilter, setSelectedCourseFilter] = useState<string>('all');
+  const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
+
+  useEffect(() => {
+    coursesService.listCourses({ page: 1, per_page: 100 })
+      .then((res: any) => setCoursesList(res?.data ?? (Array.isArray(res) ? res : [])))
+      .catch(() => {});
+    turmasService.listTurmas({ page: 1, per_page: 100 })
+      .then((res: any) => setTurmasList(res?.data ?? (Array.isArray(res) ? res : [])))
+      .catch(() => {});
+  }, []);
 
   const { data: enrollmentsData } = useEnrollmentsList(
-    { page: 1, per_page: 200, situacao: 'mat', funnel_id: selectedFunnelId ? Number(selectedFunnelId) : undefined } as any,
+    {
+      page: 1,
+      per_page: 200,
+      funnel_id: selectedFunnelId ? Number(selectedFunnelId) : undefined,
+      course_id: selectedCourseFilter !== 'all' ? selectedCourseFilter : undefined,
+      turma_id: selectedClassFilter !== 'all' ? selectedClassFilter : undefined,
+    } as any,
     { enabled: !!selectedFunnelId }
   );
   const allEnrollments = useMemo<EnrollmentRecord[]>(() => (
@@ -217,6 +238,14 @@ export default function SupportLeads() {
       if (selectedFunnelId) {
         if (!fid || fid !== String(selectedFunnelId)) continue;
       }
+      if (selectedCourseFilter !== 'all') {
+        const cid = String(enroll.course_id || enroll.id_curso || enroll.curso_id || enroll.config?.course_id || enroll.config?.id_curso || '');
+        if (cid && cid !== String(selectedCourseFilter)) continue;
+      }
+      if (selectedClassFilter !== 'all') {
+        const tid = String(enroll.turma_id || enroll.id_turma || enroll.class_id || enroll.config?.turma_id || enroll.config?.id_turma || '');
+        if (tid && tid !== String(selectedClassFilter)) continue;
+      }
       if (hasSituationFilter) {
         const sitId = extractEnrollmentSituationId(enroll);
         if (sitId !== null && !managedSet.has(String(sitId))) {
@@ -230,7 +259,7 @@ export default function SupportLeads() {
       map.get(sid)!.push(enroll);
     }
     return map;
-  }, [localEnrollments, stages, selectedFunnelId, hasSituationFilter, managedSet]);
+  }, [localEnrollments, stages, selectedFunnelId, hasSituationFilter, managedSet, selectedCourseFilter, selectedClassFilter]);
 
   const [draggingEnrollment, setDraggingEnrollment] = useState<{ enrollmentId: string | null; fromStageId: string | null }>({ enrollmentId: null, fromStageId: null });
   const [dropTargetStageId, setDropTargetStageId] = useState<string | null>(null);
@@ -321,8 +350,20 @@ export default function SupportLeads() {
   const [addTargetStageId, setAddTargetStageId] = useState('');
   const [enrollmentSearchTerm, setEnrollmentSearchTerm] = useState('');
 
+  const searchSituacaoIdParam = useMemo(() => {
+    if (managedSituations && managedSituations.length > 0) {
+      return managedSituations.map((s) => String(s)).join(',');
+    }
+    return undefined;
+  }, [managedSituations]);
+
   const { data: searchEnrollmentsData } = useEnrollmentsList(
-    { page: 1, per_page: 50, situacao: 'mat', search: enrollmentSearchTerm || undefined },
+    {
+      page: 1,
+      per_page: 100,
+      situacao_id: searchSituacaoIdParam,
+      search: enrollmentSearchTerm || undefined,
+    } as any,
     { enabled: addDialogOpen }
   );
   const searchEnrollments = useMemo(() => (
@@ -340,13 +381,35 @@ export default function SupportLeads() {
   }, [localEnrollments, selectedFunnelId]);
 
   const addableEnrollments = useMemo(() => (
-    searchEnrollments.filter((e) => !enrollmentInFlowIds.has(String(e.id)))
-    .map(e => ({
-      ...e,
-      _label: `#${e.id} - ${(e as any)?.cliente_nome || (e as any)?.student_name || (e as any)?.name || 'Sem nome'}`,
-      _desc: (e as any)?.curso_nome || (e as any)?.course_name || '',
-    }))
-  ), [searchEnrollments, enrollmentInFlowIds]);
+    searchEnrollments
+      .filter((e) => {
+        if (enrollmentInFlowIds.has(String(e.id))) return false;
+        if (hasSituationFilter) {
+          const sitId = extractEnrollmentSituationId(e);
+          if (sitId !== null && !managedSet.has(String(sitId))) return false;
+        }
+        if (selectedCourseFilter !== 'all') {
+          const cid = String(e.course_id || (e as any).id_curso || (e as any).curso_id || e.config?.course_id || e.config?.id_curso || '');
+          if (cid && cid !== String(selectedCourseFilter)) return false;
+        }
+        if (selectedClassFilter !== 'all') {
+          const tid = String(e.turma_id || (e as any).id_turma || (e as any).class_id || e.config?.turma_id || e.config?.id_turma || '');
+          if (tid && tid !== String(selectedClassFilter)) return false;
+        }
+        return true;
+      })
+      .map((e) => {
+        const studentName = (e as any)?.cliente_nome || (e as any)?.student_name || (e as any)?.name || 'Sem nome';
+        const courseName = (e as any)?.curso_nome || (e as any)?.course_name || '';
+        const sitName = (e as any)?.situacao_nome || (e as any)?.status || '';
+        const descParts = [courseName, sitName].filter(Boolean).join(' • ');
+        return {
+          ...e,
+          _label: `#${e.id} - ${studentName}`,
+          _desc: descParts,
+        };
+      })
+  ), [searchEnrollments, enrollmentInFlowIds, hasSituationFilter, managedSet, selectedCourseFilter, selectedClassFilter]);
 
   const enrollmentComboboxOptions = useComboboxOptions(addableEnrollments as any[], 'id', '_label', undefined, (e: any) => e._desc || undefined);
 
@@ -390,29 +453,81 @@ export default function SupportLeads() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <div className="w-full max-w-xs">
-              <label className="text-xs text-muted-foreground">Funil de Atendimento / Matrículas</label>
-              <Select value={selectedFunnelId ?? undefined} onValueChange={setSelectedFunnelId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um funil" />
+          <div className="flex items-center gap-4 mb-4 flex-wrap">
+            {/* Funil + Botão de Edição (Caneta) */}
+            <div className="flex items-end gap-2 w-full sm:w-auto min-w-[240px]">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground font-medium">Funil de Atendimento / Matrículas</label>
+                <Select value={selectedFunnelId ?? undefined} onValueChange={setSelectedFunnelId}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Selecione um funil" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {supportFunnels.map(f => {
+                      const strat = FunnelStrategyFactory.getStrategy(f);
+                      return (
+                        <SelectItem key={f.id} value={String(f.id)}>
+                          <div className="flex items-center gap-2">
+                            <span>{f.name}</span>
+                            <span className="text-[10px] text-muted-foreground">({strat.badgeLabel})</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              {!!selectedFunnelId && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 shrink-0 text-muted-foreground hover:text-primary hover:border-primary"
+                  onClick={() => navigate(`/admin/settings/stages/edit/${selectedFunnelId}`)}
+                  title="Editar este funil nas configurações"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+
+            {/* Filtro por Curso */}
+            <div className="w-full sm:w-[200px]">
+              <label className="text-xs text-muted-foreground font-medium">Filtrar por Curso</label>
+              <Select value={selectedCourseFilter} onValueChange={setSelectedCourseFilter}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Todos os Cursos" />
                 </SelectTrigger>
                 <SelectContent>
-                  {supportFunnels.map(f => {
-                    const strat = FunnelStrategyFactory.getStrategy(f);
-                    return (
-                      <SelectItem key={f.id} value={String(f.id)}>
-                        <div className="flex items-center gap-2">
-                          <span>{f.name}</span>
-                          <span className="text-[10px] text-muted-foreground">({strat.badgeLabel})</span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
+                  <SelectItem value="all">Todos os Cursos</SelectItem>
+                  {coursesList.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name || c.nome || `Curso #${c.id}`}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2 ml-4">
+
+            {/* Filtro por Turma */}
+            <div className="w-full sm:w-[200px]">
+              <label className="text-xs text-muted-foreground font-medium">Filtrar por Turma</label>
+              <Select value={selectedClassFilter} onValueChange={setSelectedClassFilter}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Todas as Turmas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Turmas</SelectItem>
+                  {turmasList.map((t) => (
+                    <SelectItem key={t.id} value={String(t.id)}>
+                      {t.name || t.nome || t.code || `Turma #${t.id}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Alternar Densidade */}
+            <div className="flex items-center gap-2 ml-auto self-end pb-2">
               <Switch id="support-kanban-density" checked={dense} onCheckedChange={setDense} />
               <Label htmlFor="support-kanban-density" className="text-xs select-none">
                 {dense ? 'Compacto' : 'Confortável'}
@@ -490,40 +605,63 @@ export default function SupportLeads() {
           {addDialogOpen && (
             <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setAddDialogOpen(false)}>
               <div className="bg-background rounded-md border shadow-md w-[520px] max-w-full" onClick={(e) => e.stopPropagation()}>
-                <div className="p-4 border-b">
-                  <div className="font-medium">Adicionar matrícula ao flow</div>
-                  <div className="text-xs text-muted-foreground">
-                    {addTargetStageId && stages.find(s => String(s.id) === addTargetStageId)?.name
-                      ? `Etapa: ${stages.find(s => String(s.id) === addTargetStageId)?.name}`
-                      : 'Etapa: —'}
+                <div className="p-4 border-b space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-semibold text-base">Adicionar matrícula ao flow</div>
+                    {selectedFunnel && (
+                      <Badge
+                        variant="outline"
+                        className="gap-1.5 font-medium text-xs py-0.5 px-2"
+                        style={{ borderColor: selectedFunnelColor, color: selectedFunnelColor }}
+                      >
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: selectedFunnelColor || '#3b82f6' }} />
+                        {selectedFunnel.name}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-2">
+                    <span>Etapa inicial: <strong>{stages.find(s => String(s.id) === addTargetStageId)?.name || '—'}</strong></span>
+                    {hasSituationFilter && (
+                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                        • {managedSituations.length} situação(ões) gerenciada(s)
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="p-4 space-y-3">
                   <div>
-                    <label className="text-xs">Etapa de destino</label>
+                    <label className="text-xs font-medium">Etapa de destino ({selectedFunnel?.name || 'Funil'})</label>
                     <Select value={addTargetStageId} onValueChange={setAddTargetStageId}>
-                      <SelectTrigger>
+                      <SelectTrigger className="mt-1">
                         <SelectValue placeholder="Selecione a etapa" />
                       </SelectTrigger>
                       <SelectContent>
                         {stages.map(s => (
-                          <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                          <SelectItem key={s.id} value={String(s.id)}>
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color || selectedFunnelColor || '#3b82f6' }} />
+                              <span>{s.name}</span>
+                            </div>
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <label className="text-xs">Buscar matrícula</label>
+                    <label className="text-xs font-medium">Buscar matrícula elegível</label>
                     <Combobox
                       options={enrollmentComboboxOptions}
                       value={selectedEnrollmentToAdd}
                       onValueChange={setSelectedEnrollmentToAdd}
                       placeholder="Pesquise pelo nome do aluno ou curso..."
                       searchPlaceholder="Digite para buscar..."
-                      emptyText={enrollmentSearchTerm ? 'Nenhuma matrícula encontrada' : 'Digite para buscar matrículas'}
+                      emptyText={enrollmentSearchTerm ? 'Nenhuma matrícula encontrada para este funil/filtros' : 'Digite para buscar matrículas'}
                       onSearch={(term) => setEnrollmentSearchTerm(term)}
-                      className="text-sm"
+                      className="text-sm mt-1"
                     />
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Apenas matrículas não presentes neste funil e compatíveis com as situações/filtros ativos são exibidas.
+                    </p>
                   </div>
                 </div>
                 <div className="p-4 flex items-center justify-end gap-2 border-t">
@@ -744,7 +882,14 @@ function SupportEnrollmentCard({
           <Phone className="h-3 w-3 shrink-0" /> {formatPhone(phone)}
         </div>
       )}
-      <div className="text-xs text-muted-foreground mt-1">{amountBRL}</div>
+      <div className="flex items-center justify-between gap-2 mt-2 pt-1.5 border-t border-muted/50 text-xs">
+        <span className="font-semibold text-foreground/80">{amountBRL}</span>
+        {((enrollment as any)?.situacao_nome || (enrollment as any)?.situacao || (enrollment as any)?.status) && (
+          <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-medium border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:bg-emerald-950/40">
+            {String((enrollment as any)?.situacao_nome || (enrollment as any)?.situacao || (enrollment as any)?.status)}
+          </Badge>
+        )}
+      </div>
     </div>
   );
 }

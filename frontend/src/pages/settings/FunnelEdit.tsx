@@ -129,12 +129,12 @@ export default function FunnelEdit() {
 
   const managedSituationsList = useMemo(() => {
     if (!watchManagedSituations || watchManagedSituations.length === 0) return [];
-    return situacoesList.filter((s) => watchManagedSituations.includes(s.id));
+    return situacoesList.filter((s) => watchManagedSituations.some(id => String(id) === String(s.id)));
   }, [situacoesList, watchManagedSituations]);
 
   const otherSituationsList = useMemo(() => {
     if (!watchManagedSituations || watchManagedSituations.length === 0) return situacoesList;
-    return situacoesList.filter((s) => !watchManagedSituations.includes(s.id));
+    return situacoesList.filter((s) => !watchManagedSituations.some(id => String(id) === String(s.id)));
   }, [situacoesList, watchManagedSituations]);
 
   // Carrega situações de matrícula quando a entidade for "matriculas"
@@ -348,7 +348,7 @@ export default function FunnelEdit() {
   const currentStrategy = FunnelStrategyFactory.getStrategy(funnel);
 
   return (
-    <div className="container mx-auto space-y-6 pb-32 max-w-5xl">
+    <div className="container mx-auto space-y-6 pb-32">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
@@ -773,13 +773,29 @@ export default function FunnelEdit() {
                               <Badge variant="secondary" className="text-[10px]">Inativa</Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-right space-x-1">
-                            <Button type="button" variant="ghost" size="sm" onClick={() => openStageModal(stage)} title="Editar etapa">
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button type="button" variant="ghost" size="sm" onClick={() => setDeletingStage(stage)} title="Excluir etapa">
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                          <TableCell className="text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                onClick={() => openStageModal(stage)}
+                                title="Editar etapa"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => setDeletingStage(stage)}
+                                title="Excluir etapa"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );

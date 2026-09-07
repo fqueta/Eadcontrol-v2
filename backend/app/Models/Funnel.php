@@ -70,6 +70,8 @@ class Funnel extends Model
             'notifyOnStageChange' => false,
             'requireApproval' => false,
             'place' => 'Vendas',
+            'entity_type' => 'clientes',
+            'managed_situations' => [],
         ];
     }
 

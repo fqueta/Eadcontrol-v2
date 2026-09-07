@@ -29,7 +29,7 @@ class ClientController extends Controller
     public function __construct()
     {
         $this->cliente_permission_id = Qlib::qoption('permission_client_id');
-        $this->routeName = request()->route()->getName();
+        $this->routeName = request()->route()?->getName();
         $this->permissionService = new PermissionService();
         $this->sec = request()->segment(3);
     }

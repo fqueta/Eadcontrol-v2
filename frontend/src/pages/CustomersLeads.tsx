@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { Layers, Plus, NotebookPen, MoreHorizontal, Eye, MessageSquare, FileText } from 'lucide-react';
+import { Layers, Plus, NotebookPen, MoreHorizontal, Eye, MessageSquare, FileText, Pencil } from 'lucide-react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -1039,26 +1039,39 @@ export default function CustomersLeads({ place = 'atendimento' }: { place?: 'ven
         <CardContent>
           {/* Controls: selecionar funil de vendas */}
           <div className="flex items-center gap-3 mb-4 w-full flex-wrap">
-            <div className="w-full max-w-xs">
-              <label className="text-xs text-muted-foreground">Funil de Vendas / Clientes</label>
-              <Select value={selectedFunnelId ?? undefined} onValueChange={setSelectedFunnelId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um funil" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredFunnels.map(f => {
-                    const strat = FunnelStrategyFactory.getStrategy(f);
-                    return (
-                      <SelectItem key={f.id} value={String(f.id)}>
-                        <div className="flex items-center gap-2">
-                          <span>{f.name}</span>
-                          <span className="text-[10px] text-muted-foreground">({strat.badgeLabel})</span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+            <div className="flex items-end gap-2 w-full max-w-xs">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground font-medium">Funil de Vendas / Clientes</label>
+                <Select value={selectedFunnelId ?? undefined} onValueChange={setSelectedFunnelId}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Selecione um funil" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredFunnels.map(f => {
+                      const strat = FunnelStrategyFactory.getStrategy(f);
+                      return (
+                        <SelectItem key={f.id} value={String(f.id)}>
+                          <div className="flex items-center gap-2">
+                            <span>{f.name}</span>
+                            <span className="text-[10px] text-muted-foreground">({strat.badgeLabel})</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              {!!selectedFunnelId && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 shrink-0 text-muted-foreground hover:text-primary hover:border-primary"
+                  onClick={() => navigate(`/admin/settings/stages/edit/${selectedFunnelId}`)}
+                  title="Editar este funil nas configurações"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              )}
             </div>
 
             {/* Toggle de densidade */}

@@ -135,7 +135,7 @@ export default function FunnelCreate() {
   };
 
   return (
-    <div className="container mx-auto space-y-6 pb-32 max-w-5xl">
+    <div className="container mx-auto space-y-6 pb-32">
       {/* Header com navegação */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="sm" asChild>

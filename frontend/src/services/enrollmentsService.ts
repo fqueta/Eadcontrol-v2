@@ -21,8 +21,19 @@ class EnrollmentsService extends BaseApiService {
      * en-US: Ensures the listing endpoint includes `situacao=mat` by default,
      *        merging with any provided filters/pagination.
      */
-    // Default to 'mat' but allow callers to override with a provided `situacao`
-    const mergedParams = { situacao: 'mat', ...(params || {}) } as EnrollmentsListParams & { situacao?: string };
+    // Default to 'mat' only when no specific filter (situacao, situacao_id, funnel_id) is provided
+    const hasSpecificFilter = Boolean(
+      params && (
+        params.situacao !== undefined ||
+        (params as any).situacao_id !== undefined ||
+        (params as any).funnel_id !== undefined
+      )
+    );
+    const defaultParams = hasSpecificFilter ? {} : { situacao: 'mat' };
+    const mergedParams: any = { ...defaultParams, ...(params || {}) };
+    if (mergedParams.situacao === undefined || mergedParams.situacao === '') {
+      delete mergedParams.situacao;
+    }
     const response = await this.get<any>('/matriculas', mergedParams);
     return this.normalizePaginatedResponse<EnrollmentRecord>(response);
   }

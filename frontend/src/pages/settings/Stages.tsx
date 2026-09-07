@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Plus, Search, Pencil, Trash2, Layers, ListOrdered, GripVertical, ChevronDown, ChevronRight, Settings2, LogOut, LogIn, Kanban, CheckSquare } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Layers, ListOrdered, GripVertical, ChevronDown, ChevronRight, Settings2, LogOut, LogIn, Kanban, CheckSquare, MoreHorizontal, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,6 +17,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { FormActionBar } from '@/components/common/FormActionBar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
@@ -29,6 +30,99 @@ import { EnrollmentSituation } from '@/types/enrollmentSituation';
 import { useDebounce } from '@/hooks/useDebounce';
 import { toast } from '@/hooks/use-toast';
 import { FunnelStrategyFactory, FunnelEntityType } from '@/lib/funnelStrategies';
+
+interface InlineEditNameProps {
+  value: string;
+  onSave: (newValue: string) => Promise<void> | void;
+  className?: string;
+  inputClassName?: string;
+  placeholder?: string;
+}
+
+function InlineEditName({
+  value,
+  onSave,
+  className = '',
+  inputClassName = '',
+  placeholder = 'Nome',
+}: InlineEditNameProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentValue, setCurrentValue] = useState(value);
+  const [isSaving, setIsSaving] = useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setCurrentValue(value);
+  }, [value]);
+
+  useEffect(() => {
+    if (isEditing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [isEditing]);
+
+  const handleSave = async () => {
+    const trimmed = currentValue.trim();
+    if (!trimmed || trimmed === value) {
+      setIsEditing(false);
+      setCurrentValue(value);
+      return;
+    }
+    try {
+      setIsSaving(true);
+      await onSave(trimmed);
+      setIsEditing(false);
+    } catch (err) {
+      setCurrentValue(value);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsEditing(false);
+      setCurrentValue(value);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="inline-flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+        <Input
+          ref={inputRef}
+          value={currentValue}
+          onChange={(e) => setCurrentValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleSave}
+          disabled={isSaving}
+          placeholder={placeholder}
+          className={`h-7 px-2 text-sm font-medium border-primary/50 focus-visible:ring-1 bg-background ${inputClassName}`}
+        />
+        {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={(e) => {
+        e.stopPropagation();
+        setIsEditing(true);
+      }}
+      title="Clique para editar o nome"
+      className={`group inline-flex items-center gap-1.5 cursor-pointer rounded px-1.5 py-0.5 -mx-1.5 hover:bg-muted/80 transition-colors ${className}`}
+    >
+      <span className="font-medium">{value}</span>
+      <Pencil className="h-3.5 w-3.5 opacity-0 group-hover:opacity-60 text-muted-foreground transition-opacity shrink-0" />
+    </div>
+  );
+}
 
 /**
  * Stages — Configuração de Funis e Etapas
@@ -764,6 +858,8 @@ export default function Stages() {
      * en-US: Memoizes per-section params to avoid GET on every action.
      */
     const sectionParams = useMemo(() => ({ page: 1, per_page: 50 }), []);
+    const updateStageMutation = useUpdateStage(funnel.id);
+    const updateFunnelMutation = useUpdateFunnel();
     const { data: stagesData, isLoading } = useStagesList(
       funnel.id,
       sectionParams,
@@ -852,18 +948,30 @@ export default function Stages() {
       <Card className="mt-4">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => onToggleExpand?.()}
-              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-              aria-expanded={isExpanded}
-              aria-controls={`funnel-${funnel.id}-stages`}
-            >
-              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              <span>{funnel.name}</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onToggleExpand?.()}
+                className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+                aria-expanded={isExpanded}
+                aria-controls={`funnel-${funnel.id}-stages`}
+              >
+                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </button>
+              <InlineEditName
+                value={funnel.name}
+                className="text-base font-semibold"
+                onSave={async (newName) => {
+                  await updateFunnelMutation.mutateAsync({
+                    id: funnel.id,
+                    data: { name: newName },
+                  });
+                  toast({ title: 'Nome do funil atualizado!' });
+                }}
+              />
               {renderFunnelAreaBadge(funnel)}
               <Badge variant="secondary" className="ml-2">{localStages.length} etapas</Badge>
-            </button>
+            </div>
             <Button size="sm" onClick={() => onAddStage(funnel)} className="flex items-center gap-2">
               <Plus className="h-4 w-4" /> Adicionar Etapa
             </Button>
@@ -883,18 +991,18 @@ export default function Stages() {
                 <TableHead className="w-20">Cor</TableHead>
                 <TableHead className="w-28">Automações</TableHead>
                 <TableHead className="w-24">Status</TableHead>
-                <TableHead className="text-right w-40">Ações</TableHead>
+                <TableHead className="text-right w-24 whitespace-nowrap">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-sm text-muted-foreground">Carregando etapas...</TableCell>
+                  <TableCell colSpan={7} className="text-sm text-muted-foreground">Carregando etapas...</TableCell>
                 </TableRow>
               )}
               {!isLoading && localStages.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-sm text-muted-foreground">Nenhuma etapa cadastrada</TableCell>
+                  <TableCell colSpan={7} className="text-sm text-muted-foreground">Nenhuma etapa cadastrada</TableCell>
                 </TableRow>
               )}
               {!isLoading && localStages.map((stage, idx) => {
@@ -916,7 +1024,19 @@ export default function Stages() {
                     <GripVertical className="h-4 w-4" />
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">{stage.name}</div>
+                    <InlineEditName
+                      value={stage.name}
+                      onSave={async (newName) => {
+                        await updateStageMutation.mutateAsync({
+                          stageId: stage.id,
+                          data: { name: newName, funnel_id: funnel.id },
+                        });
+                        setLocalStages((prev) =>
+                          prev.map((s) => (s.id === stage.id ? { ...s, name: newName } : s))
+                        );
+                        toast({ title: 'Nome da etapa atualizado!' });
+                      }}
+                    />
                     <div className="text-xs text-muted-foreground">ID: {stage.id}</div>
                   </TableCell>
                   <TableCell>{Number(stage.order ?? idx + 1)}</TableCell>
@@ -938,13 +1058,27 @@ export default function Stages() {
                       <Badge variant="secondary">Inativo</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Button variant="ghost" size="sm" onClick={() => onEditStage(funnel, stage)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => onDeleteStage(funnel, stage)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <TableCell className="text-right whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                        onClick={() => onEditStage(funnel, stage)}
+                        title="Editar etapa"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => onDeleteStage(funnel, stage)}
+                        title="Excluir etapa"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
                 );
@@ -994,7 +1128,7 @@ export default function Stages() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead className="text-right w-[240px] whitespace-nowrap">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1013,7 +1147,16 @@ export default function Stages() {
                   </TableCell>
                   <TableCell className="cursor-pointer" onClick={() => setSelectedFunnel(funnel)}>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{funnel.name}</span>
+                      <InlineEditName
+                        value={funnel.name}
+                        onSave={async (newName) => {
+                          await updateFunnelMutation.mutateAsync({
+                            id: funnel.id,
+                            data: { name: newName },
+                          });
+                          toast({ title: 'Nome do funil atualizado!' });
+                        }}
+                      />
                       {renderFunnelAreaBadge(funnel)}
                     </div>
                     <div className="text-xs text-muted-foreground">ID: {funnel.id}</div>
@@ -1022,34 +1165,58 @@ export default function Stages() {
                   <TableCell>
                     {(funnel.isActive ?? funnel.active) ? <Badge variant="default">Ativo</Badge> : <Badge variant="secondary">Inativo</Badge>}
                   </TableCell>
-                  <TableCell className="text-right space-x-2">
-                    {(() => {
-                      const strategy = FunnelStrategyFactory.getStrategy(funnel);
-                      return (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(strategy.targetRoute(funnel.id))}
-                          title={`Gerenciar no Kanban (${strategy.label})`}
-                          className="gap-1"
-                        >
-                          <Kanban className="h-4 w-4" />
-                          <span className="hidden sm:inline">Kanban</span>
-                        </Button>
-                      );
-                    })()}
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedFunnel(funnel)} title="Ver etapas deste funil">
-                      <ListOrdered className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => openStageForFunnel(funnel)} title="Adicionar etapa neste funil">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/settings/stages/edit/${funnel.id}`)} title="Editar funil">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setDeletingFunnel(funnel)} title="Excluir funil">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <TableCell className="text-right whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-1.5">
+                      {(() => {
+                        const strategy = FunnelStrategyFactory.getStrategy(funnel);
+                        return (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(strategy.targetRoute(funnel.id))}
+                            title={`Gerenciar no Kanban (${strategy.label})`}
+                            className="h-8 gap-1.5 text-xs font-medium border-primary/30 hover:border-primary hover:bg-primary/5 hover:text-primary transition-colors"
+                          >
+                            <Kanban className="h-3.5 w-3.5" />
+                            <span>Kanban</span>
+                          </Button>
+                        );
+                      })()}
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openStageForFunnel(funnel)}
+                        title="Adicionar nova etapa a este funil"
+                        className="h-8 gap-1 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline font-medium">+ Etapa</span>
+                      </Button>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => setSelectedFunnel(selectedFunnel?.id === funnel.id ? null : funnel)}>
+                            <ListOrdered className="h-4 w-4 mr-2 text-primary" />
+                            {selectedFunnel?.id === funnel.id ? 'Ocultar Etapas' : 'Ver Etapas'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/admin/settings/stages/edit/${funnel.id}`)}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Editar Funil
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setDeletingFunnel(funnel)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir Funil
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

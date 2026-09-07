@@ -108,13 +108,26 @@ class MatriculaController extends Controller
         // $query->selectRaw('JSON_UNQUOTE(cursos_config) as curso_config');
         // dd($request->filled('situacao'));
         if ($request->filled('situacao')) {
-            // $query->join('posts', 'matriculas.situacao_id', '=', 'posts.id');
-            if($request->input('situacao') == 'mat'){
-                $query->where('posts.post_name','!=', 'int');
-            }else{
-                 $query->where('posts.post_name', $request->input('situacao'));
+            if ($request->input('situacao') == 'mat') {
+                if (!$request->filled('situacao_id')) {
+                    $query->where('posts.post_name', '!=', 'int');
+                }
+            } else {
+                $query->where('posts.post_name', $request->input('situacao'));
             }
         }
+        if ($request->filled('situacao_id')) {
+            $sitVal = $request->input('situacao_id');
+            if (is_array($sitVal)) {
+                $query->whereIn('matriculas.situacao_id', array_filter($sitVal));
+            } elseif (is_string($sitVal) && str_contains($sitVal, ',')) {
+                $ids = array_filter(array_map('trim', explode(',', $sitVal)));
+                $query->whereIn('matriculas.situacao_id', $ids);
+            } else {
+                $query->where('matriculas.situacao_id', $sitVal);
+            }
+        }
+
         // Qualificar colunas para evitar ambiguidade: sempre usar prefixo da tabela
         $filterColumnMap = [
             'id_cliente'    => 'matriculas.id_cliente',
@@ -122,7 +135,6 @@ class MatriculaController extends Controller
             'id_responsavel'=> 'matriculas.id_responsavel',
             'id_consultor'  => 'matriculas.id_consultor',
             'id_turma'      => 'matriculas.id_turma',
-            'situacao_id'   => 'matriculas.situacao_id',
             'status'        => 'matriculas.status',
             'ativo'         => 'matriculas.ativo',
             'funnel_id'     => 'matriculas.funnel_id',

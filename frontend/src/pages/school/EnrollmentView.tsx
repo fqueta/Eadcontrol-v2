@@ -111,6 +111,17 @@ export default function EnrollmentView() {
     return sit.includes('interessado') || sit.includes('int');
   }, [enrollmentSituacao]);
 
+  const currentSituationName = useMemo(() => {
+    const list = Array.isArray((situationsData as any)?.data) ? (situationsData as any).data : [];
+    const sid = String((enrollment as any)?.situacao_id || (enrollment as any)?.situacao || '');
+    const found = list.find((s: any) => String(s.id) === sid || String(s.post_name) === sid || String(s.slug) === sid || String(s.name).toLowerCase() === sid.toLowerCase());
+    if (found?.name) return found.name;
+    if ((enrollment as any)?.situacao_nome) return (enrollment as any).situacao_nome;
+    if ((enrollment as any)?.situacao?.name) return (enrollment as any).situacao.name;
+    if (typeof (enrollment as any)?.situacao === 'string' && (enrollment as any).situacao.trim() && (enrollment as any).situacao !== '0') return (enrollment as any).situacao;
+    return isInteressado ? 'Interessado' : 'Matriculado';
+  }, [situationsData, enrollment, isInteressado]);
+
   // Mutation to confirm enrollment (change situation to Matriculado)
   const confirmEnrollment = useUpdateEnrollment({
     onSuccess: () => {
@@ -724,14 +735,41 @@ export default function EnrollmentView() {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 gap-4 text-sm w-full md:w-auto">
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-white border shadow-sm">
-              <div className={`h-10 w-10 rounded-lg flex items-center justify-center font-bold text-lg ${isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
-                {clientName?.[0]?.toUpperCase() || '?'}
+          <div className="flex flex-col sm:flex-row items-stretch gap-3 w-full md:w-auto">
+            {/* Card de Situação da Matrícula */}
+            <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-white dark:bg-slate-900 border shadow-xs min-w-[210px]">
+              <div className={`h-11 w-11 rounded-xl flex items-center justify-center font-bold text-lg shrink-0 ${
+                isInteressado
+                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+                  : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+              }`}>
+                {isInteressado ? <Clock className="h-5 w-5" /> : <GraduationCap className="h-5 w-5" />}
               </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] font-bold uppercase text-muted-foreground leading-none mb-1">Status Operacional</span>
-                <span className={`font-bold uppercase tracking-wider ${isActive ? 'text-emerald-700' : 'text-red-700'}`}>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground leading-none">
+                  Situação da Matrícula
+                </span>
+                <Badge
+                  variant="outline"
+                  className={`w-fit font-extrabold text-xs px-2.5 py-0.5 rounded-full ${
+                    isInteressado
+                      ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
+                      : 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
+                  }`}
+                >
+                  {isInteressado ? '🟡 Interessado (Proposta)' : `🟢 ${currentSituationName}`}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Card de Status Operacional */}
+            <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-white dark:bg-slate-900 border shadow-xs shrink-0">
+              <div className={`h-11 w-11 rounded-xl flex items-center justify-center font-bold text-lg shrink-0 ${isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                {isActive ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <ShieldAlert className="h-5 w-5 text-red-600" />}
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase text-muted-foreground leading-none">Status Operacional</span>
+                <span className={`font-bold text-xs uppercase tracking-wider ${isActive ? 'text-emerald-700' : 'text-red-700'}`}>
                   {isActive ? 'Ativa' : 'Inativa'}
                 </span>
               </div>
