@@ -52,7 +52,14 @@ class StageActionService
         $actions = $settings['actions'][$trigger] ?? [];
         if (!is_array($actions)) return [];
         // filter enabled and sort by order
-        $filtered = array_filter($actions, fn($a) => ($a['enabled'] ?? true) && !empty($a['situacao_id']));
+        $filtered = array_filter($actions, function($a) {
+            if (!($a['enabled'] ?? true)) return false;
+            $type = $a['type'] ?? 'set_situacao';
+            if ($type === 'move_to_funnel' || $type === 'transfer_funnel') {
+                return !empty($a['target_funnel_id']) && !empty($a['target_stage_id']);
+            }
+            return !empty($a['situacao_id']);
+        });
         usort($filtered, fn($a,$b)=> ($a['order'] ?? 0) <=> ($b['order'] ?? 0));
         return array_values($filtered);
     }
@@ -60,6 +67,60 @@ class StageActionService
     private function executeAction(Matricula $matricula, ?Stage $oldStage, Stage $newStage, array $action, string $trigger, ?int $oldStageId, int $newStageId, ?string $actorId): ?array
     {
         $type = $action['type'] ?? 'set_situacao';
+
+        // 1) Ação de transferir para outro funil e etapa específica
+        if ($type === 'move_to_funnel' || $type === 'transfer_funnel') {
+            $targetFunnelId = (int)($action['target_funnel_id'] ?? 0);
+            $targetStageId = (int)($action['target_stage_id'] ?? 0);
+            if (!$targetFunnelId || !$targetStageId) return null;
+
+            $targetFunnel = \App\Models\Funnel::find($targetFunnelId);
+            $targetStage = \App\Models\Stage::find($targetStageId);
+            if (!$targetFunnel || !$targetStage) return null;
+
+            $oldFunnelId = $matricula->funnel_id;
+            $oldStageIdVal = $matricula->stage_id;
+
+            // Transfere o card para o novo funil e nova etapa
+            $matricula->funnel_id = $targetFunnelId;
+            $matricula->stage_id = $targetStageId;
+
+            // Atualiza o JSON config se presente
+            $cfg = $matricula->config ?? [];
+            if (is_array($cfg)) {
+                $cfg['funnelId'] = $targetFunnelId;
+                $cfg['stage_id'] = $targetStageId;
+                $matricula->config = $cfg;
+            }
+            $matricula->save();
+
+            try {
+                $log = MatriculaStageLog::create([
+                    'matricula_id' => $matricula->id,
+                    'from_stage_id' => $oldStageIdVal,
+                    'to_stage_id' => $targetStageId,
+                    'funnel_id' => $targetFunnelId,
+                    'stage_id' => $targetStageId,
+                    'trigger' => $trigger,
+                    'from_situacao_id' => $matricula->situacao_id,
+                    'to_situacao_id' => $matricula->situacao_id,
+                    'actor_id' => $actorId,
+                    'meta' => [
+                        'action_type' => 'move_to_funnel',
+                        'action_id' => $action['id'] ?? null,
+                        'from_funnel_id' => $oldFunnelId,
+                        'to_funnel_id' => $targetFunnelId,
+                        'to_funnel_name' => $targetFunnel->name,
+                        'to_stage_name' => $targetStage->name,
+                    ],
+                ]);
+                return $log->toArray();
+            } catch (\Throwable $e) {
+                return null;
+            }
+        }
+
+        // 2) Ação de alterar situação da matrícula
         if ($type !== 'set_situacao') return null;
 
         $targetSituacaoId = (int)($action['situacao_id'] ?? 0);

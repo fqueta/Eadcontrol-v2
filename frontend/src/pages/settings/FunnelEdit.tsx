@@ -22,7 +22,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 
 import { FunnelStrategyFactory } from '@/lib/funnelStrategies';
-import { useStagesList, useCreateStage, useUpdateStage, useDeleteStage, useUpdateFunnel } from '@/hooks/funnels';
+import { useFunnelsList, useStagesList, useCreateStage, useUpdateStage, useDeleteStage, useUpdateFunnel } from '@/hooks/funnels';
 import { funnelsService } from '@/services/funnelsService';
 import { enrollmentSituationsService } from '@/services/enrollmentSituationsService';
 import { EnrollmentSituation } from '@/types/enrollmentSituation';
@@ -66,10 +66,177 @@ const stageSchema = z.object({
 
 type StageFormData = z.infer<typeof stageSchema>;
 
+function StageActionCard({
+  act,
+  trigger,
+  funnelsList,
+  situacoesList,
+  managedSituationsList,
+  otherSituationsList,
+  isLoadingSituacoes,
+  onUpdate,
+  onRemove,
+}: {
+  act: StageAction;
+  trigger: 'onEnter' | 'onExit';
+  funnelsList: FunnelRecord[];
+  situacoesList: EnrollmentSituation[];
+  managedSituationsList: EnrollmentSituation[];
+  otherSituationsList: EnrollmentSituation[];
+  isLoadingSituacoes: boolean;
+  onUpdate: (patch: Partial<StageAction>) => void;
+  onRemove: () => void;
+}) {
+  const [targetStages, setTargetStages] = useState<StageRecord[]>([]);
+  const [isLoadingTargetStages, setIsLoadingTargetStages] = useState(false);
+
+  const selectedTargetFunnelId = act.target_funnel_id ? String(act.target_funnel_id) : '';
+
+  useEffect(() => {
+    if (act.type === 'move_to_funnel' && selectedTargetFunnelId) {
+      setIsLoadingTargetStages(true);
+      funnelsService.listStages(selectedTargetFunnelId, { page: 1, per_page: 50 })
+        .then((res: any) => {
+          const list = res?.data ?? (Array.isArray(res) ? res : []);
+          setTargetStages(Array.isArray(list) ? list : []);
+        })
+        .catch(() => setTargetStages([]))
+        .finally(() => setIsLoadingTargetStages(false));
+    } else {
+      setTargetStages([]);
+    }
+  }, [act.type, selectedTargetFunnelId]);
+
+  return (
+    <div className="border rounded-lg p-3 bg-muted/30 space-y-3">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="w-full sm:w-64">
+          <label className="text-[11px] font-medium text-muted-foreground">Tipo de Ação de Automação</label>
+          <Select
+            value={act.type || 'set_situacao'}
+            onValueChange={(v) => onUpdate({ type: v as any })}
+          >
+            <SelectTrigger className="h-8 text-xs mt-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="set_situacao">🎯 Alterar Situação da Matrícula</SelectItem>
+              <SelectItem value="move_to_funnel">🔀 Transferir para Outro Funil / Etapa</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2 pt-2">
+          <Switch
+            checked={!!act.enabled}
+            onCheckedChange={(v) => onUpdate({ enabled: v })}
+          />
+          <span className="text-xs">{act.enabled === false ? 'Inativa' : 'Ativa'}</span>
+          <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={onRemove}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {(!act.type || act.type === 'set_situacao') && (
+        <div>
+          <label className="text-xs font-medium">Situação de Matrícula Destino</label>
+          <Select
+            value={act.situacao_id ? String(act.situacao_id) : ''}
+            onValueChange={(v) => onUpdate({ situacao_id: Number(v) })}
+          >
+            <SelectTrigger className="mt-1">
+              <SelectValue placeholder="Selecione a situação" />
+            </SelectTrigger>
+            <SelectContent>
+              {isLoadingSituacoes && <SelectItem value="0" disabled>Carregando...</SelectItem>}
+              {!isLoadingSituacoes && situacoesList.length === 0 && <SelectItem value="0" disabled>Nenhuma situação</SelectItem>}
+              {!isLoadingSituacoes && (
+                <>
+                  {managedSituationsList.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                        Situações Gerenciadas por este Funil
+                      </SelectLabel>
+                      {managedSituationsList.map((s) => (
+                        <SelectItem key={String(s.id)} value={String(s.id)}>
+                          ⭐ {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                  {otherSituationsList.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel className="text-xs text-muted-foreground">
+                        Outras Situações
+                      </SelectLabel>
+                      {otherSituationsList.map((s) => (
+                        <SelectItem key={String(s.id)} value={String(s.id)}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                </>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {act.type === 'move_to_funnel' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t">
+          <div>
+            <label className="text-xs font-medium">Funil Destino *</label>
+            <Select
+              value={selectedTargetFunnelId}
+              onValueChange={(v) => onUpdate({ target_funnel_id: v, target_stage_id: '' })}
+            >
+              <SelectTrigger className="mt-1 text-xs">
+                <SelectValue placeholder="Selecione o funil destino" />
+              </SelectTrigger>
+              <SelectContent>
+                {funnelsList.map((f) => (
+                  <SelectItem key={f.id} value={String(f.id)}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium">Etapa Destino no Funil *</label>
+            <Select
+              value={act.target_stage_id ? String(act.target_stage_id) : ''}
+              onValueChange={(v) => onUpdate({ target_stage_id: v })}
+              disabled={!selectedTargetFunnelId || isLoadingTargetStages}
+            >
+              <SelectTrigger className="mt-1 text-xs">
+                <SelectValue placeholder={isLoadingTargetStages ? 'Carregando etapas...' : 'Selecione a etapa'} />
+              </SelectTrigger>
+              <SelectContent>
+                {targetStages.map((stg) => (
+                  <SelectItem key={stg.id} value={String(stg.id)}>
+                    {stg.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function FunnelEdit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const funnelId = id || '';
+
+  const { data: allFunnelsData } = useFunnelsList({ page: 1, per_page: 50 });
+  const allFunnels = useMemo(() => allFunnelsData?.data ?? [], [allFunnelsData?.data]);
 
   const [funnel, setFunnel] = useState<FunnelRecord | null>(null);
   const [isLoadingFunnel, setIsLoadingFunnel] = useState(true);
@@ -250,9 +417,17 @@ export default function FunnelEdit() {
     else setStageActionsOnExit(prev => prev.map(a => a.id === actionId ? { ...a, ...patch } as StageAction : a));
   };
 
+  const isValidAction = (a: StageAction) => {
+    const type = a.type || 'set_situacao';
+    if (type === 'move_to_funnel' || (type as string) === 'transfer_funnel') {
+      return !!a.target_funnel_id && !!a.target_stage_id;
+    }
+    return !!a.situacao_id && Number(a.situacao_id) > 0;
+  };
+
   const onSubmitStage = async (data: StageFormData) => {
-    const cleanOnEnter = stageActionsOnEnter.filter(a => a.situacao_id && Number(a.situacao_id) > 0).map((a, i) => ({ ...a, order: i, enabled: a.enabled ?? true }));
-    const cleanOnExit = stageActionsOnExit.filter(a => a.situacao_id && Number(a.situacao_id) > 0).map((a, i) => ({ ...a, order: i, enabled: a.enabled ?? true }));
+    const cleanOnEnter = stageActionsOnEnter.filter(isValidAction).map((a, i) => ({ ...a, order: i, enabled: a.enabled ?? true }));
+    const cleanOnExit = stageActionsOnExit.filter(isValidAction).map((a, i) => ({ ...a, order: i, enabled: a.enabled ?? true }));
     const hasActions = cleanOnEnter.length > 0 || cleanOnExit.length > 0;
 
     try {
@@ -918,58 +1093,18 @@ export default function FunnelEdit() {
                         </p>
                       )}
                       {stageActionsOnEnter.map((act) => (
-                        <div key={act.id} className="flex items-end gap-2 border rounded-lg p-3 bg-muted/30">
-                          <div className="flex-1">
-                            <label className="text-xs font-medium">Situação de Matrícula Destino</label>
-                            <Select
-                              value={String(act.situacao_id)}
-                              onValueChange={(v) => updateStageAction('onEnter', act.id, { situacao_id: Number(v) })}
-                            >
-                              <SelectTrigger className="mt-1">
-                                <SelectValue placeholder="Selecione a situação" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {isLoadingSituacoes && <SelectItem value="0" disabled>Carregando...</SelectItem>}
-                                {!isLoadingSituacoes && situacoesList.length === 0 && <SelectItem value="0" disabled>Nenhuma situação</SelectItem>}
-                                {!isLoadingSituacoes && (
-                                  <>
-                                    {managedSituationsList.length > 0 && (
-                                      <SelectGroup>
-                                        <SelectLabel className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                                          Situações Gerenciadas por este Funil
-                                        </SelectLabel>
-                                        {managedSituationsList.map((s) => (
-                                          <SelectItem key={String(s.id)} value={String(s.id)}>
-                                            ⭐ {s.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectGroup>
-                                    )}
-                                    {otherSituationsList.length > 0 && (
-                                      <SelectGroup>
-                                        <SelectLabel className="text-xs text-muted-foreground">
-                                          Outras Situações
-                                        </SelectLabel>
-                                        {otherSituationsList.map((s) => (
-                                          <SelectItem key={String(s.id)} value={String(s.id)}>
-                                            {s.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectGroup>
-                                    )}
-                                  </>
-                                )}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="flex items-center gap-1 pb-1">
-                            <Switch checked={!!act.enabled} onCheckedChange={(v) => updateStageAction('onEnter', act.id, { enabled: v })} />
-                            <span className="text-xs">{act.enabled === false ? 'Inativa' : 'Ativa'}</span>
-                          </div>
-                          <Button type="button" variant="ghost" size="sm" onClick={() => removeStageAction('onEnter', act.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
+                        <StageActionCard
+                          key={act.id}
+                          act={act}
+                          trigger="onEnter"
+                          funnelsList={allFunnels}
+                          situacoesList={situacoesList}
+                          managedSituationsList={managedSituationsList}
+                          otherSituationsList={otherSituationsList}
+                          isLoadingSituacoes={isLoadingSituacoes}
+                          onUpdate={(patch) => updateStageAction('onEnter', act.id, patch)}
+                          onRemove={() => removeStageAction('onEnter', act.id)}
+                        />
                       ))}
                       <Button type="button" variant="outline" size="sm" onClick={() => addStageAction('onEnter')} className="w-full gap-1">
                         <Plus className="h-4 w-4" /> Adicionar ação ao entrar
@@ -983,58 +1118,18 @@ export default function FunnelEdit() {
                         </p>
                       )}
                       {stageActionsOnExit.map((act) => (
-                        <div key={act.id} className="flex items-end gap-2 border rounded-lg p-3 bg-muted/30">
-                          <div className="flex-1">
-                            <label className="text-xs font-medium">Situação de Matrícula Destino</label>
-                            <Select
-                              value={String(act.situacao_id)}
-                              onValueChange={(v) => updateStageAction('onExit', act.id, { situacao_id: Number(v) })}
-                            >
-                              <SelectTrigger className="mt-1">
-                                <SelectValue placeholder="Selecione a situação" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {isLoadingSituacoes && <SelectItem value="0" disabled>Carregando...</SelectItem>}
-                                {!isLoadingSituacoes && situacoesList.length === 0 && <SelectItem value="0" disabled>Nenhuma situação</SelectItem>}
-                                {!isLoadingSituacoes && (
-                                  <>
-                                    {managedSituationsList.length > 0 && (
-                                      <SelectGroup>
-                                        <SelectLabel className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                                          Situações Gerenciadas por este Funil
-                                        </SelectLabel>
-                                        {managedSituationsList.map((s) => (
-                                          <SelectItem key={String(s.id)} value={String(s.id)}>
-                                            ⭐ {s.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectGroup>
-                                    )}
-                                    {otherSituationsList.length > 0 && (
-                                      <SelectGroup>
-                                        <SelectLabel className="text-xs text-muted-foreground">
-                                          Outras Situações
-                                        </SelectLabel>
-                                        {otherSituationsList.map((s) => (
-                                          <SelectItem key={String(s.id)} value={String(s.id)}>
-                                            {s.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectGroup>
-                                    )}
-                                  </>
-                                )}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="flex items-center gap-1 pb-1">
-                            <Switch checked={!!act.enabled} onCheckedChange={(v) => updateStageAction('onExit', act.id, { enabled: v })} />
-                            <span className="text-xs">{act.enabled === false ? 'Inativa' : 'Ativa'}</span>
-                          </div>
-                          <Button type="button" variant="ghost" size="sm" onClick={() => removeStageAction('onExit', act.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
+                        <StageActionCard
+                          key={act.id}
+                          act={act}
+                          trigger="onExit"
+                          funnelsList={allFunnels}
+                          situacoesList={situacoesList}
+                          managedSituationsList={managedSituationsList}
+                          otherSituationsList={otherSituationsList}
+                          isLoadingSituacoes={isLoadingSituacoes}
+                          onUpdate={(patch) => updateStageAction('onExit', act.id, patch)}
+                          onRemove={() => removeStageAction('onExit', act.id)}
+                        />
                       ))}
                       <Button type="button" variant="outline" size="sm" onClick={() => addStageAction('onExit')} className="w-full gap-1">
                         <Plus className="h-4 w-4" /> Adicionar ação ao sair

@@ -39,8 +39,10 @@ export interface FunnelRecord {
 // Ação configurável de etapa (automação ao mover card)
 export interface StageAction {
   id: string;
-  type: 'set_situacao';
-  situacao_id: number;
+  type: 'set_situacao' | 'move_to_funnel' | 'transfer_funnel';
+  situacao_id?: number;
+  target_funnel_id?: string | number;
+  target_stage_id?: string | number;
   enabled?: boolean;
   order?: number;
 }
