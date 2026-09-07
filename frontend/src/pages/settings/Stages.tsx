@@ -699,7 +699,8 @@ export default function Stages() {
     if (!selectedFunnel) return;
     // validar ações: filtrar incompletas
     const isValidAction = (a: StageAction) => {
-      if (a.type === 'move_to_funnel') {
+      const type = a.type || 'set_situacao';
+      if (type === 'move_to_funnel' || (type as string) === 'transfer_funnel') {
         return !!a.target_funnel_id && !!a.target_stage_id;
       }
       return !!a.situacao_id && Number(a.situacao_id) > 0;

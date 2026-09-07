@@ -516,6 +516,8 @@ class StageController extends Controller
                     'id' => $act['id'] ?? (string) \Illuminate\Support\Str::uuid(),
                     'type' => $act['type'] ?? 'set_situacao',
                     'situacao_id' => isset($act['situacao_id']) ? (int)$act['situacao_id'] : null,
+                    'target_funnel_id' => isset($act['target_funnel_id']) && $act['target_funnel_id'] !== '' ? $act['target_funnel_id'] : null,
+                    'target_stage_id' => isset($act['target_stage_id']) && $act['target_stage_id'] !== '' ? $act['target_stage_id'] : null,
                     'enabled' => array_key_exists('enabled', $act) ? (bool)$act['enabled'] : true,
                     'order' => isset($act['order']) ? (int)$act['order'] : $idx,
                 ];
