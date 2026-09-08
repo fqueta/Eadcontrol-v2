@@ -803,62 +803,7 @@ export default function FunnelEdit() {
             </CardContent>
           </Card>
 
-          {/* Card 3: Configurações de Automação Globais */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Settings2 className="h-5 w-5 text-primary" /> Regras e Automações Globais
-              </CardTitle>
-              <CardDescription>
-                Comportamentos do funil para transição automática e alertas.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField name="autoAdvance" control={form.control} render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-sm font-semibold">Avanço Automático</FormLabel>
-                      <FormDescription className="text-xs">
-                        Avança cards automaticamente após ações configuradas.
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                  </FormItem>
-                )} />
 
-                <FormField name="requiresApproval" control={form.control} render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-sm font-semibold">Requer Aprovação</FormLabel>
-                      <FormDescription className="text-xs">
-                        Exige confirmação para mover cards de etapa.
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                  </FormItem>
-                )} />
-
-                <FormField name="notificationEnabled" control={form.control} render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-sm font-semibold">Notificações</FormLabel>
-                      <FormDescription className="text-xs">
-                        Dispara alertas ao responsável na mudança de etapa.
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                  </FormItem>
-                )} />
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Card 4: Gerenciamento de Etapas do Funil */}
           <Card>

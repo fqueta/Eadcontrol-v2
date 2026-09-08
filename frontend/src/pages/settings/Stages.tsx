@@ -1362,7 +1362,7 @@ export default function Stages() {
                         className="h-8 gap-1 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
                       >
                         <Plus className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline font-medium">+ Etapa</span>
+                        <span className="hidden sm:inline font-medium">Etapa</span>
                       </Button>
 
                       <DropdownMenu>
@@ -1582,36 +1582,7 @@ export default function Stages() {
                 </div>
               )}
 
-              {/* Settings estruturados em switches */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField name="autoAdvance" control={funnelForm.control} render={({ field }) => (
-                  <FormItem className="flex items-center justify-between">
-                    <FormLabel>Avanço automático</FormLabel>
-                    <FormControl>
-                      <Switch checked={!!field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField name="requiresApproval" control={funnelForm.control} render={({ field }) => (
-                  <FormItem className="flex items-center justify-between">
-                    <FormLabel>Requer aprovação</FormLabel>
-                    <FormControl>
-                      <Switch checked={!!field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField name="notificationEnabled" control={funnelForm.control} render={({ field }) => (
-                  <FormItem className="flex items-center justify-between">
-                    <FormLabel>Notificações habilitadas</FormLabel>
-                    <FormControl>
-                      <Switch checked={!!field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
+
               <FormField name="isActive" control={funnelForm.control} render={({ field }) => (
                 <FormItem className="flex items-center justify-between">
                   <FormLabel>Ativo</FormLabel>

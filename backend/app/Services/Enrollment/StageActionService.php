@@ -85,14 +85,51 @@ class StageActionService
             $matricula->funnel_id = $targetFunnelId;
             $matricula->stage_id = $targetStageId;
 
+            // Garantir que a situação da matrícula seja compatível com o funil de destino
+            $targetManaged = $targetFunnel->settings['managed_situations'] ?? [];
+            $currentSitId = $matricula->situacao_id ? (int)$matricula->situacao_id : null;
+            $newSitId = $currentSitId;
+
+            if (!empty($targetManaged) && (!in_array($currentSitId, array_map('intval', $targetManaged)))) {
+                $newSitId = (int) $targetManaged[0];
+            } elseif (!$currentSitId || $currentSitId === 16) {
+                $matSit = DB::table('posts')->where('post_type', 'situacao_matricula')->where('post_name', 'like', 'mat%')->first();
+                if ($matSit) {
+                    $newSitId = (int) $matSit->ID;
+                }
+            }
+
+            if ($newSitId && $newSitId !== $currentSitId) {
+                $matricula->situacao_id = $newSitId;
+                $sitName = DB::table('posts')->where('ID', $newSitId)->value('post_name');
+                if ($sitName && \Illuminate\Support\Str::startsWith(strtolower($sitName), 'mat')) {
+                    try {
+                        \App\Services\Qlib::update_matriculameta($matricula->id, 'dt_inicio_matricula', now()->format('Y-m-d H:i:s'));
+                    } catch (\Throwable $e) {}
+                }
+            }
+
             // Atualiza o JSON config se presente
             $cfg = $matricula->config ?? [];
             if (is_array($cfg)) {
                 $cfg['funnelId'] = $targetFunnelId;
                 $cfg['stage_id'] = $targetStageId;
+                if ($newSitId) {
+                    $cfg['situacao_id'] = $newSitId;
+                }
                 $matricula->config = $cfg;
             }
             $matricula->save();
+
+            // Disparar ações de entrada (onEnter) da etapa destino se houver
+            if ($trigger === 'enter') {
+                $targetActions = $this->getActions($targetStage, 'onEnter');
+                foreach ($targetActions as $tAct) {
+                    if (($tAct['type'] ?? 'set_situacao') === 'set_situacao') {
+                        $this->executeAction($matricula, null, $targetStage, $tAct, 'enter', $oldStageIdVal, $targetStageId, $actorId);
+                    }
+                }
+            }
 
             try {
                 $log = MatriculaStageLog::create([
@@ -102,7 +139,7 @@ class StageActionService
                     'funnel_id' => $targetFunnelId,
                     'stage_id' => $targetStageId,
                     'trigger' => $trigger,
-                    'from_situacao_id' => $matricula->situacao_id,
+                    'from_situacao_id' => $currentSitId,
                     'to_situacao_id' => $matricula->situacao_id,
                     'actor_id' => $actorId,
                     'meta' => [
