@@ -1073,97 +1073,88 @@ export default function ProposalsEdit() {
   }, [form]);
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-8 animate-in fade-in duration-500 pb-32">
+    <div className="container mx-auto py-3 px-4 space-y-4 animate-in fade-in duration-300 pb-24">
       
       {/* Breadcrumbs & Navigation Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <Breadcrumb className="bg-muted/30 px-4 py-2 rounded-lg border w-fit">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/admin/school/enroll" className="hover:text-primary transition-colors font-medium">Matrículas</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="font-bold text-primary">Editar Matrícula</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-        
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={handleBack} title="Voltar" className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Cancelar
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-1 border-b border-slate-100">
         <div className="flex items-center gap-3">
-           <div className="p-3 bg-primary/10 rounded-2xl">
-              <Pencil className="h-8 w-8 text-primary" />
-           </div>
-           <div>
-              <h2 className="text-3xl font-black tracking-tight text-foreground/90">Gestão de Matrícula</h2>
-              <p className="text-muted-foreground text-sm font-medium">Configure os detalhes acadêmicos, financeiros e prazos de acesso.</p>
-           </div>
+          <Breadcrumb className="bg-muted/30 px-3 py-1.5 rounded-lg border text-xs">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin/school/enroll" className="hover:text-primary transition-colors font-medium">Matrículas</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="font-bold text-primary">Editar Matrícula #{id || ''}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <h2 className="text-xl font-extrabold tracking-tight text-foreground/90 flex items-center gap-2">
+            <Pencil className="h-5 w-5 text-primary" /> Gestão de Matrícula
+          </h2>
         </div>
+        
+        <Button variant="ghost" size="sm" onClick={handleBack} title="Voltar" className="text-muted-foreground hover:text-foreground h-8 px-3">
+          <ArrowLeft className="h-4 w-4 mr-1.5" /> Cancelar
+        </Button>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-8">
+        <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="bg-slate-100/50 p-1.5 rounded-2xl mb-12 w-full md:w-auto grid grid-cols-2 lg:flex border border-slate-200/40 shadow-inner">
+            <TabsList className="bg-slate-100/70 p-1 rounded-xl mb-4 w-full md:w-auto inline-flex border border-slate-200/50 shadow-inner">
               <TabsTrigger 
                 value="principal" 
-                className="rounded-xl px-10 py-3.5 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-[0_10px_25px_-8px_rgba(0,0,0,0.1)] font-black text-[13px] uppercase tracking-wider flex items-center gap-3 transition-all duration-300 text-muted-foreground/40 hover:text-muted-foreground/70 border border-transparent data-[state=active]:border-slate-100"
+                className="rounded-lg px-6 py-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xs font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all text-muted-foreground/60 hover:text-muted-foreground"
               >
-                <User className={`h-4 w-4 transition-colors ${activeTab === 'principal' ? 'text-primary' : 'text-slate-400'}`} /> Principal
+                <User className={`h-3.5 w-3.5 transition-colors ${activeTab === 'principal' ? 'text-primary' : 'text-slate-400'}`} /> Principal
               </TabsTrigger>
               <TabsTrigger 
                 value="academico" 
-                className="rounded-xl px-10 py-3.5 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-[0_10px_25px_-8px_rgba(0,0,0,0.1)] font-black text-[13px] uppercase tracking-wider flex items-center gap-3 transition-all duration-300 text-muted-foreground/40 hover:text-muted-foreground/70 border border-transparent data-[state=active]:border-slate-100"
+                className="rounded-lg px-6 py-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xs font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all text-muted-foreground/60 hover:text-muted-foreground"
               >
-                <GraduationCap className={`h-4 w-4 transition-colors ${activeTab === 'academico' ? 'text-primary' : 'text-slate-400'}`} /> Acadêmico
+                <GraduationCap className={`h-3.5 w-3.5 transition-colors ${activeTab === 'academico' ? 'text-primary' : 'text-slate-400'}`} /> Acadêmico
               </TabsTrigger>
               <TabsTrigger 
                 value="financeiro" 
-                className="rounded-xl px-10 py-3.5 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-[0_10px_25px_-8px_rgba(0,0,0,0.1)] font-black text-[13px] uppercase tracking-wider flex items-center gap-3 transition-all duration-300 text-muted-foreground/40 hover:text-muted-foreground/70 border border-transparent data-[state=active]:border-slate-100"
+                className="rounded-lg px-6 py-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xs font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all text-muted-foreground/60 hover:text-muted-foreground"
               >
-                <DollarSign className={`h-4 w-4 transition-colors ${activeTab === 'financeiro' ? 'text-primary' : 'text-slate-400'}`} /> Financeiro
+                <DollarSign className={`h-3.5 w-3.5 transition-colors ${activeTab === 'financeiro' ? 'text-primary' : 'text-slate-400'}`} /> Financeiro
               </TabsTrigger>
               <TabsTrigger 
                 value="acesso" 
-                className="rounded-xl px-10 py-3.5 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-[0_10px_25px_-8px_rgba(0,0,0,0.1)] font-black text-[13px] uppercase tracking-wider flex items-center gap-3 transition-all duration-300 text-muted-foreground/40 hover:text-muted-foreground/70 border border-transparent data-[state=active]:border-slate-100"
+                className="rounded-lg px-6 py-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xs font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all text-muted-foreground/60 hover:text-muted-foreground"
               >
-                <Clock className={`h-4 w-4 transition-colors ${activeTab === 'acesso' ? 'text-primary' : 'text-slate-400'}`} /> Acesso
+                <Clock className={`h-3.5 w-3.5 transition-colors ${activeTab === 'acesso' ? 'text-primary' : 'text-slate-400'}`} /> Acesso
               </TabsTrigger>
             </TabsList>
 
             {/* ABA: PRINCIPAL */}
-            <TabsContent value="principal" className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 outline-none">
-              <Card className="border shadow-md overflow-hidden bg-white">
-                <CardHeader className="bg-muted/10 border-b py-5">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center">
-                       <User className="h-5 w-5 text-primary" />
+            <TabsContent value="principal" className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300 outline-none">
+              <Card className="border shadow-xs overflow-hidden bg-white">
+                <CardHeader className="bg-muted/10 border-b py-3 px-5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                       <User className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-xl font-bold">Dados Principais</CardTitle>
-                      <CardDescription>Identificação do cliente e responsáveis pela venda.</CardDescription>
+                      <CardTitle className="text-base font-bold">Dados Principais</CardTitle>
+                      <CardDescription className="text-xs">Identificação do cliente e responsáveis pela venda.</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-8 space-y-8">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <CardContent className="p-5 space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {/* Cliente */}
                     <FormField
                       control={form.control}
                       name="id_cliente"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="font-bold text-foreground/70">Aluno / Cliente *</FormLabel>
+                          <FormLabel className="font-bold text-xs text-foreground/70">Aluno / Cliente *</FormLabel>
                           {idClienteFromUrl ? (
-                            <div className="text-base font-bold py-3 px-4 border-2 rounded-xl bg-primary/5 border-primary/20 text-primary flex items-center gap-3">
-                              <User className="h-5 w-5" />
+                            <div className="text-sm font-bold py-2.5 px-3 border-2 rounded-xl bg-primary/5 border-primary/20 text-primary flex items-center gap-2">
+                              <User className="h-4 w-4" />
                               {clientDetailData?.name ? String(clientDetailData.name) : `Cliente ${idClienteFromUrl}`}
                             </div>
                           ) : (
@@ -1178,7 +1169,7 @@ export default function ProposalsEdit() {
                               loading={isLoadingClients || isLoadingEnrollment}
                               onSearch={setClientSearch}
                               searchTerm={clientSearch}
-                              className="h-12 border-2 focus-visible:ring-primary/20 rounded-xl"
+                              className="h-11 border-2 focus-visible:ring-primary/20 rounded-xl"
                             />
                           )}
                           <FormMessage />
@@ -1186,67 +1177,13 @@ export default function ProposalsEdit() {
                       )}
                     />
 
-                    {/* Resumo do Cliente Selecionado */}
-                    {currentClient && (
-                      <div className="md:col-span-2 mt-4 animate-in fade-in slide-in-from-top-2 duration-500">
-                        <div className="bg-slate-50/50 border border-slate-200/60 rounded-2xl p-6 relative group overflow-hidden">
-                          <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button 
-                              type="button"
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-9 px-4 rounded-xl font-bold bg-white shadow-sm border hover:bg-primary hover:text-white transition-all gap-2"
-                              onClick={() => setEditClientOpen(true)}
-                            >
-                               <Edit2 className="h-3.5 w-3.5" />
-                               Editar Cliente
-                            </Button>
-                          </div>
-                          
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-6 flex items-center gap-2">
-                             <div className="h-1 w-4 bg-primary rounded-full" />
-                             Resumo do Aluno
-                          </h4>
-                          
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8">
-                             <div className="space-y-1">
-                                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/50">Nome Completo</span>
-                                <p className="text-sm font-bold text-foreground/90">{currentClient.name}</p>
-                             </div>
-                             <div className="space-y-1">
-                                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/50">E-mail de Contato</span>
-                                <p className="text-sm font-bold text-foreground/90 truncate">{currentClient.email}</p>
-                             </div>
-                             <div className="space-y-1">
-                                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/50">Documento (CPF/CNPJ)</span>
-                                <p className="text-sm font-bold text-foreground/90">{currentClient.cpf || currentClient.cnpj || 'Não informado'}</p>
-                             </div>
-                             <div className="space-y-1">
-                                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/50">WhatsApp / Celular</span>
-                                <p className="text-sm font-bold text-foreground/90">{currentClient.config?.celular || 'Não informado'}</p>
-                             </div>
-                             <div className="space-y-1">
-                                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/50">Localização</span>
-                                <p className="text-sm font-bold text-foreground/90 line-clamp-1">
-                                   {currentClient.config?.cidade ? `${currentClient.config.cidade} - ${currentClient.config.uf}` : 'Não informado'}
-                                </p>
-                             </div>
-                             <div className="space-y-1">
-                                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/50">Gênero / Identificação</span>
-                                <p className="text-sm font-bold text-foreground/90 uppercase">{currentClient.genero === 'm' ? 'Masculino' : currentClient.genero === 'f' ? 'Feminino' : 'Não informado'}</p>
-                             </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
                     {/* Consultor */}
                     <FormField
                       control={form.control}
                       name="id_consultor"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="font-bold text-foreground/70">Consultor Responsável *</FormLabel>
+                          <FormLabel className="font-bold text-xs text-foreground/70">Consultor Responsável *</FormLabel>
                           <Combobox
                             options={consultantOptionsWithSelected}
                             value={field.value}
@@ -1258,21 +1195,75 @@ export default function ProposalsEdit() {
                             loading={isLoadingConsultants}
                             onSearch={setConsultantSearch}
                             searchTerm={consultantSearch}
-                            className="h-12 border-2 focus-visible:ring-primary/20 rounded-xl"
+                            className="h-11 border-2 focus-visible:ring-primary/20 rounded-xl"
                           />
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+
+                    {/* Resumo do Cliente Selecionado */}
+                    {currentClient && (
+                      <div className="md:col-span-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="bg-slate-50/70 border border-slate-200/60 rounded-xl p-4 relative group">
+                          <div className="absolute top-3 right-3 opacity-90 group-hover:opacity-100 transition-opacity">
+                            <Button 
+                              type="button"
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 px-3 rounded-lg text-xs font-bold bg-white shadow-xs border hover:bg-primary hover:text-white transition-all gap-1.5"
+                              onClick={() => setEditClientOpen(true)}
+                            >
+                               <Edit2 className="h-3 w-3" />
+                               Editar Cliente
+                            </Button>
+                          </div>
+                          
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-3 flex items-center gap-1.5">
+                             <div className="h-1 w-3 bg-primary rounded-full" />
+                             Resumo do Aluno
+                          </h4>
+                          
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                             <div className="space-y-0.5">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/50">Nome Completo</span>
+                                <p className="text-xs font-bold text-foreground/90 truncate">{currentClient.name}</p>
+                             </div>
+                             <div className="space-y-0.5">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/50">E-mail</span>
+                                <p className="text-xs font-bold text-foreground/90 truncate">{currentClient.email}</p>
+                             </div>
+                             <div className="space-y-0.5">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/50">Documento</span>
+                                <p className="text-xs font-bold text-foreground/90 truncate">{currentClient.cpf || currentClient.cnpj || 'Não informado'}</p>
+                             </div>
+                             <div className="space-y-0.5">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/50">WhatsApp</span>
+                                <p className="text-xs font-bold text-foreground/90 truncate">{currentClient.config?.celular || 'Não informado'}</p>
+                             </div>
+                             <div className="space-y-0.5">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/50">Localização</span>
+                                <p className="text-xs font-bold text-foreground/90 truncate">
+                                   {currentClient.config?.cidade ? `${currentClient.config.cidade} - ${currentClient.config.uf}` : 'Não informado'}
+                                </p>
+                             </div>
+                             <div className="space-y-0.5">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/50">Gênero</span>
+                                <p className="text-xs font-bold text-foreground/90 uppercase truncate">{currentClient.genero === 'm' ? 'Masculino' : currentClient.genero === 'f' ? 'Feminino' : 'Não informado'}</p>
+                             </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {showResponsible && (
-                    <div className="pt-8 border-t space-y-6 animate-in slide-in-from-top-4 duration-500">
-                      <div className="bg-amber-50/50 border border-amber-100 p-4 rounded-2xl flex items-start gap-3">
-                         <Info className="h-5 w-5 text-amber-500 mt-0.5" />
+                    <div className="pt-4 border-t space-y-4 animate-in slide-in-from-top-4 duration-300">
+                      <div className="bg-amber-50/50 border border-amber-100 p-3 rounded-xl flex items-start gap-2.5">
+                         <Info className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
                          <div>
-                            <p className="text-sm font-bold text-amber-900">Responsável Vinculado</p>
-                            <p className="text-xs text-amber-700">Utilize este campo se o aluno for menor de idade ou se o pagador for outra pessoa.</p>
+                            <p className="text-xs font-bold text-amber-900">Responsável Vinculado</p>
+                            <p className="text-[11px] text-amber-700">Utilize este campo se o aluno for menor de idade ou se o pagador for outra pessoa.</p>
                          </div>
                       </div>
                       <FormField
@@ -1280,8 +1271,8 @@ export default function ProposalsEdit() {
                         name="id_responsavel"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="font-bold text-foreground/70 flex items-center gap-2">
-                              <Users className="h-4 w-4 text-primary/60" />
+                            <FormLabel className="font-bold text-xs text-foreground/70 flex items-center gap-1.5">
+                              <Users className="h-3.5 w-3.5 text-primary/60" />
                               Responsável Financeiro/Legal
                             </FormLabel>
                             <Combobox
@@ -1295,7 +1286,7 @@ export default function ProposalsEdit() {
                               loading={isLoadingResponsibles}
                               onSearch={setResponsibleSearch}
                               searchTerm={responsibleSearch}
-                              className="h-12 border-2 rounded-xl"
+                              className="h-11 border-2 rounded-xl"
                             />
                             <FormMessage />
                           </FormItem>
@@ -1308,28 +1299,28 @@ export default function ProposalsEdit() {
             </TabsContent>
 
             {/* ABA: ACADÊMICO */}
-            <TabsContent value="academico" className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 outline-none">
-              <Card className="border shadow-md overflow-hidden bg-white">
-                <CardHeader className="bg-muted/10 border-b py-5">
-                   <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-orange-50 flex items-center justify-center">
-                         <GraduationCap className="h-5 w-5 text-orange-600" />
+            <TabsContent value="academico" className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300 outline-none">
+              <Card className="border shadow-xs overflow-hidden bg-white">
+                <CardHeader className="bg-muted/10 border-b py-3 px-5">
+                   <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-lg bg-orange-50 flex items-center justify-center">
+                         <GraduationCap className="h-4 w-4 text-orange-600" />
                       </div>
                       <div>
-                        <CardTitle className="text-xl font-bold">Trilha Pedagógica</CardTitle>
-                        <CardDescription>Configure o curso, turma e observações acadêmicas.</CardDescription>
+                        <CardTitle className="text-base font-bold">Trilha Pedagógica</CardTitle>
+                        <CardDescription className="text-xs">Configure o curso, turma e observações acadêmicas.</CardDescription>
                       </div>
                    </div>
                 </CardHeader>
-                <CardContent className="p-8 space-y-10">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <CardContent className="p-5 space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Curso */}
                     <FormField
                       control={form.control}
                       name="id_curso"
                       render={({ field }) => (
                         <FormItem className="md:col-span-2">
-                          <FormLabel className="font-bold text-foreground/70">Curso *</FormLabel>
+                          <FormLabel className="font-bold text-xs text-foreground/70">Curso *</FormLabel>
                           <Combobox
                             options={courseOptionsWithSelected}
                             value={field.value}
@@ -1350,7 +1341,7 @@ export default function ProposalsEdit() {
                             }}
                             placeholder="Selecione o curso"
                             searchPlaceholder="Pesquisar curso pelo nome..."
-                            className="h-12 border-2 rounded-xl"
+                            className="h-11 border-2 rounded-xl"
                             disabled={isLoadingCourses || !isCurrentlyInterested}
                             loading={isLoadingCourses}
                             onSearch={setCourseSearch}
@@ -1367,15 +1358,15 @@ export default function ProposalsEdit() {
                       name="situacao_id"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="font-bold text-foreground/70">Situação Atual</FormLabel>
+                          <FormLabel className="font-bold text-xs text-foreground/70">Situação Atual</FormLabel>
                           <Select value={field.value || ''} onValueChange={field.onChange} disabled={isLoadingSituations}>
-                            <SelectTrigger className="w-full h-12 border-2 rounded-xl font-bold">
+                            <SelectTrigger className="w-full h-11 border-2 rounded-xl font-bold">
                               <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl">
                               {Array.isArray((situationsData as any)?.data || (situationsData as any)?.items)
                                 ? (((situationsData as any).data || (situationsData as any).items).map((s: any) => (
-                                    <SelectItem key={String(s.id)} value={String(s.id)} className="font-medium p-3">
+                                    <SelectItem key={String(s.id)} value={String(s.id)} className="font-medium p-2.5 text-xs">
                                       {String(s.name || s.nome || `Situação ${s.id}`)}
                                     </SelectItem>
                                   )))
@@ -1388,21 +1379,21 @@ export default function ProposalsEdit() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Funil */}
                     <FormField
                       control={form.control}
                       name="funnel_id"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="font-bold text-foreground/70">Funil de Vendas</FormLabel>
+                          <FormLabel className="font-bold text-xs text-foreground/70">Funil de Vendas</FormLabel>
                           <Select value={field.value || ''} onValueChange={(val) => { field.onChange(val); form.setValue('stage_id', ''); }} disabled={isLoadingFunnels}>
-                            <SelectTrigger className="w-full h-12 border-2 rounded-xl font-bold">
+                            <SelectTrigger className="w-full h-11 border-2 rounded-xl font-bold">
                               <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl">
                               {funnels.map((f: any) => (
-                                <SelectItem key={String(f.id)} value={String(f.id)} className="font-medium p-3">
+                                <SelectItem key={String(f.id)} value={String(f.id)} className="font-medium p-2.5 text-xs">
                                   {String(f.name || f.nome || `Funil ${f.id}`)}
                                 </SelectItem>
                               ))}
@@ -1419,14 +1410,14 @@ export default function ProposalsEdit() {
                       name="stage_id"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="font-bold text-foreground/70">Etapa do Funil</FormLabel>
+                          <FormLabel className="font-bold text-xs text-foreground/70">Etapa do Funil</FormLabel>
                           <Select value={field.value || ''} onValueChange={field.onChange} disabled={!selectedFunnelId || isLoadingStages}>
-                            <SelectTrigger className="w-full h-12 border-2 rounded-xl font-bold">
+                            <SelectTrigger className="w-full h-11 border-2 rounded-xl font-bold">
                               <SelectValue placeholder={!selectedFunnelId ? "Selecione um funil primeiro" : "Selecione a etapa"} />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl">
                               {stages.map((s: any) => (
-                                <SelectItem key={String(s.id)} value={String(s.id)} className="font-medium p-3">
+                                <SelectItem key={String(s.id)} value={String(s.id)} className="font-medium p-2.5 text-xs">
                                   {String(s.name || s.nome || `Etapa ${s.id}`)}
                                 </SelectItem>
                               ))}
@@ -1438,21 +1429,21 @@ export default function ProposalsEdit() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      {/* Turma */}
                      <FormField
                         control={form.control}
                         name="id_turma"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="font-bold text-foreground/70">Turma Letiva *</FormLabel>
+                            <FormLabel className="font-bold text-xs text-foreground/70">Turma Letiva *</FormLabel>
                             <Combobox
                               options={classOptionsWithFallback}
                               value={field.value}
                               onValueChange={field.onChange}
                               placeholder="Selecione a turma"
                               searchPlaceholder="Pesquisar turma..."
-                              className="h-12 border-2 rounded-xl"
+                              className="h-11 border-2 rounded-xl"
                               disabled={!selectedCourseId || isLoadingClasses || !isCurrentlyInterested}
                               loading={isLoadingClasses}
                               onSearch={setClassSearch}
@@ -1463,20 +1454,20 @@ export default function ProposalsEdit() {
                         )}
                       />
                       
-                      <div className="bg-muted/20 border-dashed border-2 rounded-2xl p-4 flex items-center gap-4">
-                         <div className="h-12 w-12 rounded-full bg-white flex items-center justify-center border shadow-sm shrink-0">
-                            <Info className="h-6 w-6 text-primary/40" />
+                      <div className="bg-muted/20 border-dashed border-2 rounded-xl p-3 flex items-center gap-3">
+                         <div className="h-9 w-9 rounded-full bg-white flex items-center justify-center border shadow-xs shrink-0">
+                            <Info className="h-4 w-4 text-primary/50" />
                          </div>
-                         <p className="text-xs text-muted-foreground leading-relaxed">
-                            A turma define o calendário e o acesso compartilhado aos conteúdos. Se mudar o curso, lembre-se de readequar a turma correspondente.
+                         <p className="text-xs text-muted-foreground leading-snug">
+                            A turma define o calendário e o acesso aos conteúdos. Se mudar o curso, readequar a turma correspondente.
                          </p>
                       </div>
                   </div>
 
                   {/* Observações */}
-                  <div className="pt-4 space-y-4">
-                     <FormLabel className="font-bold text-foreground/70 flex items-center gap-2">
-                        <AlignLeft className="h-5 w-5 text-primary/60" />
+                  <div className="pt-2 space-y-2">
+                     <FormLabel className="font-bold text-xs text-foreground/70 flex items-center gap-1.5">
+                        <AlignLeft className="h-4 w-4 text-primary/60" />
                         Observações e Histórico Interno
                      </FormLabel>
                      <FormField
@@ -1485,7 +1476,7 @@ export default function ProposalsEdit() {
                         render={({ field }) => (
                           <FormItem>
                             <FormControl>
-                              <div className="rounded-2xl border-2 shadow-inner bg-white overflow-hidden focus-within:border-primary/30 transition-all">
+                              <div className="rounded-xl border-2 shadow-inner bg-white overflow-hidden focus-within:border-primary/30 transition-all">
                                 <RichTextEditor
                                   value={field.value || ''}
                                   onChange={field.onChange}
@@ -1503,29 +1494,29 @@ export default function ProposalsEdit() {
             </TabsContent>
 
             {/* ABA: FINANCEIRO */}
-            <TabsContent value="financeiro" className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 outline-none">
-              <Card className="border shadow-md overflow-hidden bg-white">
-                <CardHeader className="bg-muted/10 border-b py-5">
-                   <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                         <DollarSign className="h-5 w-5 text-emerald-600" />
+            <TabsContent value="financeiro" className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300 outline-none">
+              <Card className="border shadow-xs overflow-hidden bg-white">
+                <CardHeader className="bg-muted/10 border-b py-3 px-5">
+                   <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                         <DollarSign className="h-4 w-4 text-emerald-600" />
                       </div>
                       <div>
-                        <CardTitle className="text-xl font-bold">Detalhamento Financeiro</CardTitle>
-                        <CardDescription>Configure valores, descontos e taxas da matrícula.</CardDescription>
+                        <CardTitle className="text-base font-bold">Detalhamento Financeiro</CardTitle>
+                        <CardDescription className="text-xs">Configure valores, descontos e taxas da matrícula.</CardDescription>
                       </div>
                    </div>
                 </CardHeader>
-                <CardContent className="p-8 space-y-8">
+                <CardContent className="p-5 space-y-5">
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormField control={form.control} name="subtotal" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-foreground/70">Valor Base (Curso)</FormLabel>
+                        <FormLabel className="font-bold text-xs text-foreground/70">Valor Base (Curso)</FormLabel>
                         <FormControl>
                           <Input
                             placeholder="R$ 0,00"
-                            className="font-black text-foreground/80 h-12 text-lg border-2"
+                            className="font-black text-foreground/80 h-11 text-base border-2"
                             value={field.value || ''}
                             onChange={(e) => field.onChange(currencyApplyMask(e.target.value, 'pt-BR', 'BRL'))}
                           />
@@ -1535,11 +1526,11 @@ export default function ProposalsEdit() {
                     )} />
                     <FormField control={form.control} name="inscricao" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-foreground/70">Taxa de Inscrição</FormLabel>
+                        <FormLabel className="font-bold text-xs text-foreground/70">Taxa de Inscrição</FormLabel>
                         <FormControl>
                           <Input
                             placeholder="R$ 0,00"
-                            className="font-black text-foreground/80 h-12 text-lg border-2"
+                            className="font-black text-foreground/80 h-11 text-base border-2"
                             value={field.value || ''}
                             onChange={(e) => field.onChange(currencyApplyMask(e.target.value, 'pt-BR', 'BRL'))}
                           />
@@ -1549,11 +1540,11 @@ export default function ProposalsEdit() {
                     )} />
                     <FormField control={form.control} name="desconto" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-bold text-red-600/80">Desconto Concedido</FormLabel>
+                        <FormLabel className="font-bold text-xs text-red-600/80">Desconto Concedido</FormLabel>
                         <FormControl>
                           <Input
                             placeholder="R$ 0,00"
-                            className="font-black text-red-600 h-12 text-lg border-2 border-red-100 bg-red-50/10 focus-visible:ring-red-500/20"
+                            className="font-black text-red-600 h-11 text-base border-2 border-red-100 bg-red-50/10 focus-visible:ring-red-500/20"
                             value={field.value || ''}
                             onChange={(e) => field.onChange(currencyApplyMask(e.target.value, 'pt-BR', 'BRL'))}
                           />
@@ -1563,21 +1554,20 @@ export default function ProposalsEdit() {
                     )} />
                   </div>
 
-                  <div className="pt-8 border-t">
+                  <div className="pt-3 border-t">
                     <FormField control={form.control} name="total" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-black text-primary uppercase tracking-widest leading-none mb-4 block">Total Final da Matrícula</FormLabel>
+                        <FormLabel className="text-xs font-black text-primary uppercase tracking-widest leading-none mb-2 block">Total Final da Matrícula</FormLabel>
                         <FormControl>
                           <div className="relative group">
-                            <div className="absolute inset-0 bg-primary/20 blur-xl opacity-0 group-hover:opacity-20 transition-opacity duration-700" />
                             <Input
                               placeholder="R$ 0,00"
                               disabled
-                              className="font-black text-4xl text-primary h-24 bg-primary/5 border-2 border-primary/20 pl-8 rounded-2xl disabled:opacity-100 cursor-default shadow-inner relative z-10"
+                              className="font-black text-2xl text-primary h-14 bg-primary/5 border-2 border-primary/20 pl-5 rounded-xl disabled:opacity-100 cursor-default shadow-xs"
                               value={field.value || ''}
                             />
-                            <div className="absolute right-8 top-1/2 -translate-y-1/2">
-                               <CreditCard className="h-10 w-10 text-primary/20" />
+                            <div className="absolute right-5 top-1/2 -translate-y-1/2">
+                               <CreditCard className="h-6 w-6 text-primary/30" />
                             </div>
                           </div>
                         </FormControl>
@@ -1587,7 +1577,7 @@ export default function ProposalsEdit() {
                   </div>
                   
                   {/* Preview da Proposta Opcional */}
-                  <div className="pt-4 border-t-2 border-dashed">
+                  <div className="pt-3 border-t-2 border-dashed">
                     <BudgetPreview
                       title="Simulação da Proposta Comercial"
                       clientName={selectedClient?.name || selectedClient?.nome || ''}
@@ -1608,28 +1598,28 @@ export default function ProposalsEdit() {
             </TabsContent>
 
             {/* ABA: ACESSO */}
-            <TabsContent value="acesso" className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300 outline-none">
-              <Card className="border shadow-md overflow-hidden bg-white">
-                <CardHeader className="bg-muted/10 border-b py-5">
-                   <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                         <ShieldAlert className="h-5 w-5 text-blue-600" />
+            <TabsContent value="acesso" className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300 outline-none">
+              <Card className="border shadow-xs overflow-hidden bg-white">
+                <CardHeader className="bg-muted/10 border-b py-3 px-5">
+                   <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                         <ShieldAlert className="h-4 w-4 text-blue-600" />
                       </div>
                       <div>
-                        <CardTitle className="text-xl font-bold">Configurações de Acesso</CardTitle>
-                        <CardDescription>Controle de validade e status operacional da matrícula.</CardDescription>
+                        <CardTitle className="text-base font-bold">Configurações de Acesso</CardTitle>
+                        <CardDescription className="text-xs">Controle de validade e status operacional da matrícula.</CardDescription>
                       </div>
                    </div>
                 </CardHeader>
-                <CardContent className="p-8 space-y-10">
+                <CardContent className="p-5 space-y-5">
                   <FormField
                     control={form.control}
                     name="ativo"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-2xl border-2 p-6 bg-white shadow-sm hover:border-primary/20 transition-colors">
-                        <div className="space-y-1">
-                          <FormLabel className="text-xl font-black text-foreground/80">Matrícula Ativa</FormLabel>
-                          <p className="text-sm text-muted-foreground font-medium">
+                      <FormItem className="flex flex-row items-center justify-between rounded-xl border p-4 bg-white shadow-xs">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base font-bold text-foreground/80">Matrícula Ativa</FormLabel>
+                          <p className="text-xs text-muted-foreground font-medium">
                             Se desativado, o aluno perderá imediatamente o acesso ao conteúdo do curso.
                           </p>
                         </div>
@@ -1637,47 +1627,47 @@ export default function ProposalsEdit() {
                           <Switch
                             checked={field.value}
                             onCheckedChange={field.onChange}
-                            className="scale-125 data-[state=checked]:bg-emerald-500"
+                            className="scale-110 data-[state=checked]:bg-emerald-500"
                           />
                         </FormControl>
                       </FormItem>
                     )}
                   />
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                     <FormField
                       control={form.control}
                       name="validade"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-lg font-bold text-foreground/70">Tempo de Permanência</FormLabel>
+                          <FormLabel className="text-xs font-bold text-foreground/70">Tempo de Permanência</FormLabel>
                           <Select value={field.value || ''} onValueChange={field.onChange}>
-                            <SelectTrigger className="w-full h-14 border-2 rounded-xl font-bold text-lg shadow-sm">
+                            <SelectTrigger className="w-full h-11 border-2 rounded-xl font-bold shadow-xs">
                               <SelectValue placeholder="Selecione a validade" />
                             </SelectTrigger>
                             <SelectContent className="rounded-2xl">
-                              <SelectItem value="no_validity" className="font-medium p-3 text-muted-foreground">Sem validade definida</SelectItem>
-                              <SelectItem value="7" className="font-medium p-3">7 Dias</SelectItem>
-                              <SelectItem value="14" className="font-medium p-3">14 Dias</SelectItem>
-                              <SelectItem value="30" className="font-medium p-3">30 Dias (1 Mês)</SelectItem>
-                              <SelectItem value="60" className="font-medium p-3">60 Dias (2 Meses)</SelectItem>
-                              <SelectItem value="90" className="font-medium p-3">90 Dias (3 Meses)</SelectItem>
-                              <SelectItem value="180" className="font-medium p-3">180 Dias (6 Meses)</SelectItem>
-                              <SelectItem value="365" className="font-medium p-3">365 Dias (1 Ano)</SelectItem>
-                              <SelectItem value="730" className="font-medium p-3">730 Dias (2 Anos)</SelectItem>
-                              <SelectItem value="9999" className="font-bold p-3 text-emerald-600">Acesso Vitalício ✨</SelectItem>
+                              <SelectItem value="no_validity" className="font-medium p-2.5 text-xs text-muted-foreground">Sem validade definida</SelectItem>
+                              <SelectItem value="7" className="font-medium p-2.5 text-xs">7 Dias</SelectItem>
+                              <SelectItem value="14" className="font-medium p-2.5 text-xs">14 Dias</SelectItem>
+                              <SelectItem value="30" className="font-medium p-2.5 text-xs">30 Dias (1 Mês)</SelectItem>
+                              <SelectItem value="60" className="font-medium p-2.5 text-xs">60 Dias (2 Meses)</SelectItem>
+                              <SelectItem value="90" className="font-medium p-2.5 text-xs">90 Dias (3 Meses)</SelectItem>
+                              <SelectItem value="180" className="font-medium p-2.5 text-xs">180 Dias (6 Meses)</SelectItem>
+                              <SelectItem value="365" className="font-medium p-2.5 text-xs">365 Dias (1 Ano)</SelectItem>
+                              <SelectItem value="730" className="font-medium p-2.5 text-xs">730 Dias (2 Anos)</SelectItem>
+                              <SelectItem value="9999" className="font-bold p-2.5 text-xs text-emerald-600">Acesso Vitalício ✨</SelectItem>
                             </SelectContent>
                           </Select>
                           
-                          <div className="mt-4 p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
+                          <div className="mt-3 p-3 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-between">
                              <div className="flex flex-col">
                                 <span className="text-[10px] font-black uppercase text-primary/60 tracking-widest">Data Limite de Acesso</span>
-                                <span className="text-lg font-black text-primary">
+                                <span className="text-base font-black text-primary">
                                    {field.value === '9999' ? 'Ilimitado (Vitalício)' : (field.value && field.value !== 'no_validity') ? computeValidityDate(field.value) : 'Não Definido'}
                                 </span>
                              </div>
-                             <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center border shadow-sm">
-                                <Calendar className="h-5 w-5 text-primary/50" />
+                             <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center border shadow-xs">
+                                <Calendar className="h-4 w-4 text-primary/50" />
                              </div>
                           </div>
                           <FormMessage />
@@ -1685,28 +1675,28 @@ export default function ProposalsEdit() {
                       )}
                     />
                     
-                    <div className="space-y-4">
-                       <FormLabel className="text-lg font-bold text-foreground/70">Ações Especiais</FormLabel>
-                       <div className="grid grid-cols-1 gap-3">
+                    <div className="space-y-3">
+                       <FormLabel className="text-xs font-bold text-foreground/70">Ações Especiais</FormLabel>
+                       <div className="grid grid-cols-1 gap-2.5">
                           <Button 
                             type="button" 
                             variant="outline" 
-                            className="h-14 rounded-xl border-dashed border-2 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-all font-bold justify-start px-6 gap-3"
+                            className="h-11 rounded-xl border-dashed border-2 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 transition-all font-bold justify-start px-4 gap-2.5 text-xs"
                             onClick={handleImpersonate}
                           >
-                             <div className="h-8 w-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
-                                <LogIn className="h-5 w-5" />
+                             <div className="h-7 w-7 rounded-md bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                                <LogIn className="h-4 w-4" />
                              </div>
                              Acessar trilha como aluno
                           </Button>
                           <Button 
                             type="button" 
                             variant="outline" 
-                            className="h-14 rounded-xl border-dashed border-2 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all font-bold justify-start px-6 gap-3"
+                            className="h-11 rounded-xl border-dashed border-2 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all font-bold justify-start px-4 gap-2.5 text-xs"
                             onClick={() => navigate(`/admin/school/enroll/view/${id}`)}
                           >
-                             <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
-                                <Info className="h-5 w-5" />
+                             <div className="h-7 w-7 rounded-md bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                                <Info className="h-4 w-4" />
                              </div>
                              Ver Dashboard de Atividades
                           </Button>
@@ -1719,39 +1709,39 @@ export default function ProposalsEdit() {
           </Tabs>
 
           {/* Espaço para o rodapé fixo não cobrir o conteúdo */}
-          <div className="h-32" />
+          <div className="h-20" />
         </form>
       </Form>
 
       {/* Rodapé fixo com ações premium (Efeito Glassmorphism) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/70 backdrop-blur-xl border-t border-primary/10 p-6 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.08)]">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-slate-200/80 py-3 px-6 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
         <div className="container mx-auto max-w-7xl flex items-center justify-between gap-4">
           <Button 
             type="button" 
             variant="ghost" 
             onClick={handleBack}
-            className="text-muted-foreground hover:text-foreground font-bold px-8 h-12 rounded-xl transition-all"
+            className="text-muted-foreground hover:text-foreground font-bold px-6 h-10 rounded-lg text-xs transition-all"
           >
             Cancelar
           </Button>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Button 
               type="button" 
               variant="outline"
               onClick={handleSaveContinue} 
               disabled={updateEnrollment.isPending || isLoadingEnrollment}
-              className="border-primary/20 bg-white hover:bg-primary/5 text-primary font-bold h-12 px-8 rounded-xl min-w-[160px] shadow-sm transition-all"
+              className="border-primary/20 bg-white hover:bg-primary/5 text-primary font-bold h-10 px-6 rounded-lg text-xs min-w-[130px] shadow-xs transition-all"
             >
-              <Save className="h-4 w-4 mr-2" />
+              <Save className="h-3.5 w-3.5 mr-1.5" />
               Salvar
             </Button>
             <Button 
               type="button" 
               onClick={handleSaveFinish} 
               disabled={updateEnrollment.isPending || isLoadingEnrollment}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-black h-12 px-10 rounded-xl shadow-lg shadow-primary/25 min-w-[220px] transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 px-8 rounded-lg text-xs shadow-md shadow-primary/20 min-w-[180px] transition-all hover:scale-[1.01] active:scale-[0.99]"
             >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
+              <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
               Finalizar e Sair
             </Button>
           </div>

@@ -117,104 +117,101 @@ export function ClientsTable({ clients, onEdit, onDelete, onForceDelete, isLoadi
         </div>
       )}
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200/80">
           <TableRow>
-            <TableHead>Nome</TableHead>
-            <TableHead>CPF / CNPJ</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Celular</TableHead>
-            <TableHead>Consultor</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Ações</TableHead>
+            <TableHead className="px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">Nome</TableHead>
+            <TableHead className="px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">CPF / CNPJ</TableHead>
+            <TableHead className="px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">Email</TableHead>
+            <TableHead className="px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">Celular</TableHead>
+            <TableHead className="px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">Consultor</TableHead>
+            <TableHead className="px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">Status</TableHead>
+            <TableHead className="px-3 py-2 text-right text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">Ações</TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody className="divide-y divide-slate-100 dark:divide-slate-800">
           {clientsList.map((client) => (
             <TableRow 
               key={client.id}
               onDoubleClick={() => navigate(`/admin/clients/${client.id}/view`)}
-              className="cursor-pointer hover:bg-muted/50"
+              className="cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/80 transition-all border-transparent"
               title={`Visualizar detalhes do cliente ${client.name} com dois cliques`}
             >
-              <TableCell className="font-medium">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9">
+              <TableCell className="px-3 py-2 font-medium">
+                <div className="flex items-center gap-2.5">
+                  <Avatar className="h-7 w-7 rounded-lg border border-slate-200 dark:border-slate-800 shrink-0">
                     <AvatarImage src={client.foto_perfil || undefined} alt={client.name} />
-                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                    <AvatarFallback className="bg-primary/10 text-primary font-black text-[10px] uppercase">
                       {client.name.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-sm text-foreground">{client.name}</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-bold text-xs text-foreground/90 truncate">{client.name}</span>
                     {client.razao && (
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-tight">{client.razao}</span>
+                      <span className="text-[9px] text-muted-foreground uppercase tracking-tight truncate">{client.razao}</span>
                     )}
                   </div>
                 </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="px-3 py-2 font-mono">
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium">
+                  <span className="text-xs font-bold text-foreground/80">
                     {client.tipo_pessoa === 'pf' ? (client.cpf || '—') : (client.cnpj || '—')}
                   </span>
-                  <span className="text-[10px] text-muted-foreground uppercase">
+                  <span className="text-[9px] text-muted-foreground/60 uppercase">
                     {client.tipo_pessoa === 'pf' ? 'CPF' : 'CNPJ'}
                   </span>
                 </div>
               </TableCell>
-              <TableCell>
-                <span className="text-sm text-muted-foreground">{client.email || '—'}</span>
+              <TableCell className="px-3 py-2">
+                <span className="text-xs text-muted-foreground truncate block max-w-[200px]">{client.email || '—'}</span>
               </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Phone className="h-3 w-3" />
+              <TableCell className="px-3 py-2">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+                  <Phone className="h-3 w-3 text-muted-foreground/60 shrink-0" />
                   <span>
                     {phoneApplyMask(client.celular || '') || '—'}
                   </span>
                 </div>
               </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center">
+              <TableCell className="px-3 py-2">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-5 w-5 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
                     <User className="h-3 w-3 text-muted-foreground" />
                   </div>
-                  <span className="text-sm">{client.autor_name || '—'}</span>
+                  <span className="text-xs font-medium text-foreground/80 truncate">{client.autor_name || '—'}</span>
                 </div>
               </TableCell>
-              <TableCell>
-                {/* Debug temporário */}
-                <div style={{fontSize: '10px', color: 'gray', marginBottom: '4px'}}>
-                  {/* Debug: {JSON.stringify({ativo: client.status, type: typeof client.status})} */}
-                </div>
+              <TableCell className="px-3 py-2">
                 {getStatusBadge(client.status)}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="px-3 py-2 text-right">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex h-8 w-8 items-center justify-center rounded-md border hover:bg-muted">
-                      <MoreHorizontal className="h-4 w-4" />
+                    <button className="inline-flex h-7 w-7 items-center justify-center rounded-lg border hover:bg-slate-100 transition-colors">
+                      <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => navigate(`/admin/clients/${client.id}/view`, { state: { from: location } })}>
-                      <Eye className="mr-2 h-4 w-4" /> Visualizar
+                  <DropdownMenuContent align="end" className="w-[170px] rounded-xl shadow-xl p-1">
+                    <DropdownMenuItem onClick={() => navigate(`/admin/clients/${client.id}/view`, { state: { from: location } })} className="cursor-pointer gap-2 font-bold text-xs py-1.5">
+                      <Eye className="h-3.5 w-3.5 text-primary" /> Visualizar
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate(`/admin/clients/${client.id}/edit`, { state: { from: location } })}>
-                      <Pencil className="mr-2 h-4 w-4" /> Editar
+                    <DropdownMenuItem onClick={() => navigate(`/admin/clients/${client.id}/edit`, { state: { from: location } })} className="cursor-pointer gap-2 font-bold text-xs py-1.5">
+                      <Pencil className="h-3.5 w-3.5 text-slate-500" /> Editar
                     </DropdownMenuItem>
                     {trashEnabled ? (
                       <>
                         <DropdownMenuItem 
                           onClick={() => restoreClientMutation.mutate(client.id)}
                           disabled={restoreClientMutation.isPending}
+                          className="cursor-pointer gap-2 font-bold text-xs py-1.5"
                         >
-                          <RotateCcw className="mr-2 h-4 w-4" /> Restaurar
+                          <RotateCcw className="h-3.5 w-3.5 text-purple-600" /> Restaurar
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           onClick={() => onForceDelete?.(client)}
-                          className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                          className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer gap-2 font-bold text-xs py-1.5"
                         >
-                          <Trash2 className="mr-2 h-4 w-4" /> Excluir permanentemente
+                          <Trash2 className="h-3.5 w-3.5" /> Excluir permanentemente
                         </DropdownMenuItem>
                       </>
                     ) : (
@@ -222,12 +219,12 @@ export function ClientsTable({ clients, onEdit, onDelete, onForceDelete, isLoadi
                         <DropdownMenuItem 
                           onClick={() => setPromoteClient(client)}
                           disabled={promoteClientMutation.isPending}
-                          className="text-blue-600 focus:text-blue-700 focus:bg-blue-50"
+                          className="text-blue-600 focus:text-blue-700 focus:bg-blue-50 cursor-pointer gap-2 font-bold text-xs py-1.5"
                         >
-                          <UserPlus className="mr-2 h-4 w-4" /> Promover para Usuário
+                          <UserPlus className="h-3.5 w-3.5" /> Promover p/ Usuário
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onDelete(client)}>
-                          <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                        <DropdownMenuItem onClick={() => onDelete(client)} className="text-red-500 focus:bg-red-50 cursor-pointer gap-2 font-bold text-xs py-1.5">
+                          <Trash2 className="h-3.5 w-3.5" /> Excluir
                         </DropdownMenuItem>
                       </>
                     )}

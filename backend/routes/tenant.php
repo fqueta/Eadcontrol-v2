@@ -38,6 +38,7 @@ use App\Http\Controllers\api\ModuleController;
 use App\Http\Controllers\api\ActivityController;
 use App\Http\Controllers\api\FileStorageController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\api\CursoCategoriaController;
 use App\Http\Controllers\api\CursoController;
 use App\Http\Controllers\TurmaController;
 use App\Http\Controllers\Auth\RegisteredUserController;

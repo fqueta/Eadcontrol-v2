@@ -243,68 +243,63 @@ export default function Enroll() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500 pb-20">
+    <div className="space-y-3.5 animate-in fade-in duration-300 pb-12">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground/60">
-            <Users className="h-3 w-3" />
-            Escola
-            <span className="text-primary/40">•</span>
-            <span className="text-primary italic">Matrículas</span>
-          </div>
-          <h1 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-3">
-            <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-1 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h1 className="text-xl font-black tracking-tight text-foreground flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
             Gestão de Alunos
           </h1>
-          <p className="text-sm font-medium text-muted-foreground">Monitore o desempenho e status acadêmico da sua instituição.</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row w-full lg:w-auto items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Button 
             variant="outline" 
+            size="sm"
             onClick={() => setTrashOpen(true)}
-            className="h-12 w-full sm:w-auto rounded-xl border-red-200 font-bold px-4 hover:bg-red-50 transition-all gap-2 text-red-600 hover:text-red-700"
+            className="h-9 rounded-lg border-red-200 font-bold px-3 hover:bg-red-50 text-xs text-red-600 hover:text-red-700"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3.5 w-3.5 mr-1" />
             Lixeira
           </Button>
           <Button 
             variant="outline" 
+            size="sm"
             onClick={() => navigate('/admin/school/interested')}
-            className="h-12 w-full sm:w-auto rounded-xl border-slate-200 font-bold px-6 hover:bg-slate-50 transition-all gap-2"
+            className="h-9 rounded-lg border-slate-200 font-bold px-4 text-xs hover:bg-slate-50"
           >
-            <UserPlus className="h-4 w-4 text-primary" />
+            <UserPlus className="h-3.5 w-3.5 text-primary mr-1" />
             Interessados
           </Button>
-          <div className="relative group w-full lg:w-80">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <div className="relative group w-64 sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input
               placeholder="Pesquisar por aluno, curso ou ID..."
-              className="h-12 pl-11 rounded-xl border-slate-200 bg-white/40 dark:bg-slate-900/40 group-hover:bg-white dark:group-hover:bg-slate-900 focus:bg-white dark:focus:bg-slate-950 transition-all shadow-sm focus:ring-4 focus:ring-primary/10 font-medium text-slate-900 dark:text-slate-100"
+              className="h-9 pl-9 rounded-lg border-slate-200 text-xs bg-white dark:bg-slate-900 focus:ring-2 focus:ring-primary/10 font-medium"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
         </div>
       </div>
+
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-in fade-in slide-in-from-top-4 duration-700">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Total Registros', value: total, sub: 'Na base de dados', icon: LayoutGrid, color: 'text-primary', bg: 'bg-primary/10' },
-          { label: 'Alunos Ativos', value: enrollments.filter((e: any) => String(e?.situacao ?? '').startsWith('mat')).length, sub: 'Cursando agora', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-          { label: 'Interessados', value: enrollments.filter((e: any) => String(e?.situacao ?? '').startsWith('int')).length, sub: 'Potenciais alunos', icon: Target, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+          { label: 'Total Registros', value: total, sub: 'Na base', icon: LayoutGrid, color: 'text-primary', bg: 'bg-primary/10' },
+          { label: 'Alunos Ativos', value: enrollments.filter((e: any) => String(e?.situacao ?? '').startsWith('mat')).length, sub: 'Cursando', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+          { label: 'Interessados', value: enrollments.filter((e: any) => String(e?.situacao ?? '').startsWith('int')).length, sub: 'Potenciais', icon: Target, color: 'text-amber-500', bg: 'bg-amber-500/10' },
           { label: 'Cancelados', value: enrollments.filter((e: any) => String(e?.situacao ?? '').startsWith('can')).length, sub: 'Últimos 30 dias', icon: Eraser, color: 'text-red-500', bg: 'bg-red-500/10' },
         ].map((stat, i) => (
-          <Card key={i} className="border-none shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-3xl overflow-hidden p-6 hover:shadow-xl transition-all group border-b-4 border-transparent hover:border-primary/20">
-             <div className="flex items-center gap-4">
-                <div className={`h-12 w-12 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
-                   <stat.icon className="h-6 w-6" />
+          <Card key={i} className="border border-slate-100 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 rounded-xl p-3">
+             <div className="flex items-center gap-3">
+                <div className={`h-9 w-9 rounded-lg ${stat.bg} ${stat.color} flex items-center justify-center shrink-0`}>
+                   <stat.icon className="h-4 w-4" />
                 </div>
                 <div>
-                   <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{stat.label}</p>
-                   <h3 className="text-2xl font-black text-foreground/90">{stat.value}</h3>
-                   <p className="text-[9px] font-bold text-muted-foreground/40 italic">{stat.sub}</p>
+                   <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/60">{stat.label}</p>
+                   <h3 className="text-lg font-black text-foreground/90 leading-none">{stat.value}</h3>
                 </div>
              </div>
           </Card>
@@ -312,55 +307,51 @@ export default function Enroll() {
       </div>
 
       {/* Main Container */}
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Filters Card */}
-        <Card className="border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden">
-          <CardHeader className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 px-8 py-6">
+        <Card className="border border-slate-200/80 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 rounded-xl overflow-hidden">
+          <CardHeader className="bg-slate-50/70 dark:bg-slate-800/70 border-b border-slate-100 dark:border-slate-800 px-4 py-2.5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm">
-                  <Filter className="h-5 w-5" />
-                </div>
-                <div>
-                  <CardTitle className="text-base font-black tracking-tight">Filtros Avançados</CardTitle>
-                  <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{buildFiltersLegend()}</CardDescription>
-                </div>
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-primary" />
+                <CardTitle className="text-xs font-black tracking-tight">Filtros Avançados</CardTitle>
+                <span className="text-[10px] font-medium text-muted-foreground/70 ml-2">({buildFiltersLegend()})</span>
               </div>
               {(selectedSituationId || selectedCourseId || selectedClassId || studentFilter || search) && (
-                <Button variant="ghost" size="sm" className="h-9 px-4 rounded-lg font-bold text-xs text-red-500 hover:text-red-600 hover:bg-red-50 transition-all gap-2" onClick={clearFilters}>
-                  <Eraser className="h-3.5 w-3.5" />
-                  Limpar Todos
+                <Button variant="ghost" size="sm" className="h-7 px-2.5 rounded-md font-bold text-[11px] text-red-500 hover:text-red-600 hover:bg-red-50 transition-all gap-1" onClick={clearFilters}>
+                  <Eraser className="h-3 w-3" />
+                  Limpar
                 </Button>
               )}
             </div>
           </CardHeader>
-          <CardContent className="px-8 py-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <CardContent className="px-4 py-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {/* Situação */}
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Situação</Label>
+              <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Situação</Label>
                 <Select
                   value={selectedSituationId || undefined}
                   onValueChange={(v) => { setSelectedSituationId(v === '__all__' ? '' : v); setPage(1); }}
                 >
-                  <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-white/40 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900 transition-all font-bold text-slate-900 dark:text-slate-100">
-                    <div className="flex items-center gap-2">
-                      <Target className="h-4 w-4 text-slate-400" />
+                  <SelectTrigger className="h-9 rounded-lg border-slate-200 font-bold text-xs">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <Target className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                       <SelectValue placeholder="Todas as situações" />
                     </div>
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl border-slate-200">
-                    <SelectItem value="__all__" className="font-bold">Todas as situações</SelectItem>
+                  <SelectContent className="rounded-xl border-slate-200 text-xs">
+                    <SelectItem value="__all__" className="font-bold text-xs">Todas as situações</SelectItem>
                     {situationOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} className="font-bold">{opt.label}</SelectItem>
+                      <SelectItem key={opt.value} value={opt.value} className="font-bold text-xs">{opt.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Curso */}
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Curso</Label>
+              <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Curso</Label>
                 <Combobox
                   options={courseOptions}
                   value={selectedCourseId}
@@ -371,34 +362,34 @@ export default function Enroll() {
                   }}
                   placeholder="Selecione o curso"
                   disabled={coursesQuery.isLoading}
-                  className="h-11 rounded-xl border-slate-200 bg-white/40 hover:bg-white transition-all"
+                  className="h-9 rounded-lg border-slate-200 text-xs"
                 />
               </div>
 
               {/* Turma */}
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Turma</Label>
+              <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Turma</Label>
                 <Combobox
                   options={classOptions}
                   value={selectedClassId}
                   onValueChange={(val) => { setSelectedClassId(val); setPage(1); }}
                   placeholder={selectedCourseId ? 'Turmas do curso' : 'Selecione a turma'}
                   disabled={classesQuery.isLoading}
-                  className="h-11 rounded-xl border-slate-200 bg-white/40 hover:bg-white transition-all"
+                  className="h-9 rounded-lg border-slate-200 text-xs"
                 />
               </div>
 
               {/* Aluno */}
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Identificação do Aluno</Label>
+              <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Identificação do Aluno</Label>
                 <div className="relative group">
                    <Input 
                     placeholder="Nome ou Email..." 
                     value={studentFilter} 
                     onChange={(e) => setStudentFilter(e.target.value)} 
-                    className="h-11 pl-10 rounded-xl border-slate-200 bg-white/40 hover:bg-white transition-all font-bold"
+                    className="h-9 pl-8 rounded-lg border-slate-200 font-bold text-xs"
                   />
-                  <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 group-focus-within:text-primary transition-colors" />
+                  <Users className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                 </div>
               </div>
             </div>
@@ -406,12 +397,12 @@ export default function Enroll() {
         </Card>
 
         {/* Table Results */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-2">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
               <LayoutGrid className="h-4 w-4 text-primary" />
-              <span className="text-sm font-black uppercase tracking-widest text-foreground/80">Resultados da Listagem</span>
-              <Badge variant="outline" className="ml-2 bg-primary/5 text-primary border-none font-bold text-[10px]">{total} registros</Badge>
+              <span className="text-xs font-black uppercase tracking-widest text-foreground/80">Resultados da Listagem</span>
+              <Badge variant="outline" className="ml-1.5 bg-primary/5 text-primary border-none font-bold text-[10px]">{total} registros</Badge>
             </div>
             {isFetching && <Loader2 className="h-4 w-4 animate-spin text-primary/40" />}
           </div>

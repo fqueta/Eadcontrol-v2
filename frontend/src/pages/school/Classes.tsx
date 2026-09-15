@@ -1,13 +1,28 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableRow, TableHead, TableCell, TableBody } from '@/components/ui/table';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Search, ChevronLeft, ChevronRight, MoreHorizontal, Plus, Loader2, BookOpen, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { 
+  Search, 
+  ChevronLeft, 
+  ChevronRight, 
+  MoreHorizontal, 
+  Plus, 
+  Loader2, 
+  GraduationCap, 
+  ArrowUpDown, 
+  ArrowUp, 
+  ArrowDown,
+  CheckCircle2,
+  Users,
+  Target,
+  UserCheck
+} from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { turmasService } from '@/services/turmasService';
@@ -55,7 +70,7 @@ export default function Classes() {
     params.set('order_by', sort.column);
     params.set('sort_order', sort.dir);
     navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
-  }, [perPage, page, searchTerm, sort]);
+  }, [perPage, page, searchTerm, sort, location.pathname, navigate]);
 
   const listQuery = useQuery({
     queryKey: ['turmas', 'list', perPage, page, searchTerm, sort.column, sort.dir],
@@ -80,6 +95,16 @@ export default function Classes() {
       ? <ArrowUp className="ml-1 h-3 w-3 inline" />
       : <ArrowDown className="ml-1 h-3 w-3 inline" />;
   };
+
+  // --- KPI Stats Calculation ---
+  const stats = useMemo(() => {
+    const list = listQuery.data?.data || [];
+    const totalCount = listQuery.data?.total ?? list.length;
+    const activeCount = list.filter((t) => t.ativo === 's').length;
+    const interestedCount = list.reduce((acc, t) => acc + (Number(t.interessados) || 0), 0);
+    const enrolledCount = list.reduce((acc, t) => acc + (Number(t.matriculados) || 0), 0);
+    return { totalCount, activeCount, interestedCount, enrolledCount };
+  }, [listQuery.data]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string | number) => turmasService.deleteTurma(id),
@@ -114,159 +139,211 @@ export default function Classes() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground/90">Turmas</h1>
-          <p className="text-sm font-medium text-muted-foreground">Gerencie turmas da escola (criar, editar, excluir)</p>
+    <div className="space-y-3.5 animate-in fade-in duration-300 pb-12">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-1 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h1 className="text-xl font-black tracking-tight text-foreground flex items-center gap-2">
+            <GraduationCap className="h-5 w-5 text-primary" />
+            Turmas
+          </h1>
+          <p className="text-xs text-muted-foreground font-medium mt-0.5">
+            Gerenciamento de turmas, períodos, vagas e alunos inscritos.
+          </p>
         </div>
-        <Button onClick={goToCreate} size="lg" className="shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
-          <Plus className="h-4 w-4 mr-2" /> Novo Cadastro
+        <Button onClick={goToCreate} size="sm" className="h-9 px-3 gap-1.5 font-semibold shadow-sm">
+          <Plus className="h-4 w-4" /> Nova turma
         </Button>
       </div>
 
-      <Card className="border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm overflow-hidden">
-        <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              <div className="relative w-full md:w-[320px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
-                <Input
-                  value={searchTerm}
-                  onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
-                  className="pl-9 h-10 rounded-xl bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 w-full"
-                  placeholder="Buscar turmas por nome..."
-                />
-              </div>
+      {/* KPI Stats Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="p-3 border shadow-sm rounded-xl bg-card flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total de Turmas</p>
+            <p className="text-xl font-black tracking-tight text-foreground mt-0.5">{stats.totalCount}</p>
+          </div>
+          <div className="h-9 w-9 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
+            <GraduationCap className="h-4 w-4" />
+          </div>
+        </Card>
+
+        <Card className="p-3 border shadow-sm rounded-xl bg-card flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Turmas Ativas (Pág.)</p>
+            <p className="text-xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 mt-0.5">{stats.activeCount}</p>
+          </div>
+          <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="h-4 w-4" />
+          </div>
+        </Card>
+
+        <Card className="p-3 border shadow-sm rounded-xl bg-card flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Interessados (Pág.)</p>
+            <p className="text-xl font-black tracking-tight text-amber-600 dark:text-amber-400 mt-0.5">{stats.interestedCount}</p>
+          </div>
+          <div className="h-9 w-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+            <Target className="h-4 w-4" />
+          </div>
+        </Card>
+
+        <Card className="p-3 border shadow-sm rounded-xl bg-card flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Matriculados (Pág.)</p>
+            <p className="text-xl font-black tracking-tight text-violet-600 dark:text-violet-400 mt-0.5">{stats.enrolledCount}</p>
+          </div>
+          <div className="h-9 w-9 rounded-xl bg-violet-500/10 text-violet-600 flex items-center justify-center shrink-0">
+            <Users className="h-4 w-4" />
+          </div>
+        </Card>
+      </div>
+
+      {/* Main Table Card */}
+      <Card className="border shadow-sm rounded-xl overflow-hidden bg-card">
+        {/* Toolbar */}
+        <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+          <div className="flex items-center gap-2 flex-1 min-w-[240px]">
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+                className="pl-8 h-8 text-xs bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                placeholder="Pesquisar turma por nome..."
+              />
             </div>
+            {listQuery.data?.total !== undefined && (
+              <Badge variant="secondary" className="font-mono text-[11px] px-2 py-0.5 shrink-0">
+                {listQuery.data.total} {listQuery.data.total === 1 ? 'turma' : 'turmas'}
+              </Badge>
+            )}
+          </div>
 
-            <div className="flex items-center gap-3 justify-between md:justify-end">
-              <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
-                <SelectTrigger className="w-[100px] h-10 bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="10">10 itens</SelectItem>
-                  <SelectItem value="25">25 itens</SelectItem>
-                  <SelectItem value="50">50 itens</SelectItem>
-                  <SelectItem value="100">100 itens</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="flex items-center gap-2">
+            <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
+              <SelectTrigger className="w-[95px] h-8 text-xs bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10 por pág.</SelectItem>
+                <SelectItem value="25">25 por pág.</SelectItem>
+                <SelectItem value="50">50 por pág.</SelectItem>
+                <SelectItem value="100">100 por pág.</SelectItem>
+              </SelectContent>
+            </Select>
 
-              <div className="flex items-center gap-1 bg-white/50 dark:bg-slate-800/50 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
-                <Button variant="ghost" size="icon" className="h-8 w-8" title="Página anterior" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={(listQuery.data?.current_page ?? 1) <= 1 || listQuery.isFetching}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground px-2">
-                  {listQuery.isFetching ? <Loader2 className="h-3 w-3 animate-spin mx-auto" /> : `${listQuery.data?.current_page ?? page} / ${listQuery.data?.last_page ?? 1}`}
-                </span>
-                <Button variant="ghost" size="icon" className="h-8 w-8" title="Próxima página" onClick={() => { const last = listQuery.data?.last_page ?? page; setPage((p) => Math.min(last, p + 1)); }} disabled={(listQuery.data?.current_page ?? 1) >= (listQuery.data?.last_page ?? 1) || listQuery.isFetching}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+            <div className="flex items-center gap-1 bg-white dark:bg-slate-800 p-0.5 rounded-md border border-slate-200 dark:border-slate-700 text-xs">
+              <Button variant="ghost" size="icon" className="h-7 w-7" title="Página anterior" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={(listQuery.data?.current_page ?? 1) <= 1 || listQuery.isFetching}>
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <span className="text-[11px] font-bold tracking-wider text-muted-foreground px-1.5">
+                {listQuery.isFetching ? <Loader2 className="h-3 w-3 animate-spin mx-auto" /> : `${listQuery.data?.current_page ?? page} / ${listQuery.data?.last_page ?? 1}`}
+              </span>
+              <Button variant="ghost" size="icon" className="h-7 w-7" title="Próxima página" onClick={() => { const last = listQuery.data?.last_page ?? page; setPage((p) => Math.min(last, p + 1)); }} disabled={(listQuery.data?.current_page ?? 1) >= (listQuery.data?.last_page ?? 1) || listQuery.isFetching}>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
             </div>
           </div>
-        </CardHeader>
+        </div>
 
         <CardContent className="p-0">
           <div className="relative overflow-x-auto">
             <Table>
-              <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
-                <TableRow>
-                  <TableHead className="w-[60px] pl-6 font-bold text-xs uppercase tracking-wider text-slate-500">ID</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider text-slate-500 cursor-pointer select-none" onClick={() => handleSort('nome')}>
+              <TableHeader className="bg-slate-50/70 dark:bg-slate-800/70">
+                <TableRow className="border-b border-slate-100 dark:border-slate-800">
+                  <TableHead className="w-[60px] px-3 py-2 font-bold text-[11px] uppercase tracking-wider text-muted-foreground">ID</TableHead>
+                  <TableHead className="px-3 py-2 font-bold text-[11px] uppercase tracking-wider text-muted-foreground cursor-pointer select-none" onClick={() => handleSort('nome')}>
                     Nome / Período <SortIcon column="nome" />
                   </TableHead>
-                  <TableHead className="w-[100px] text-center font-bold text-xs uppercase tracking-wider text-slate-500 cursor-pointer select-none" onClick={() => handleSort('ativo')}>
+                  <TableHead className="w-[85px] text-center px-3 py-2 font-bold text-[11px] uppercase tracking-wider text-muted-foreground cursor-pointer select-none" onClick={() => handleSort('ativo')}>
                     Ativo <SortIcon column="ativo" />
                   </TableHead>
-                  <TableHead className="w-[60px] text-center font-bold text-xs uppercase tracking-wider text-slate-500 cursor-pointer select-none" onClick={() => handleSort('min_alunos')}>
+                  <TableHead className="w-[65px] text-center px-3 py-2 font-bold text-[11px] uppercase tracking-wider text-muted-foreground cursor-pointer select-none" onClick={() => handleSort('min_alunos')}>
                     Min <SortIcon column="min_alunos" />
                   </TableHead>
-                  <TableHead className="w-[60px] text-center font-bold text-xs uppercase tracking-wider text-slate-500 cursor-pointer select-none" onClick={() => handleSort('max_alunos')}>
+                  <TableHead className="w-[65px] text-center px-3 py-2 font-bold text-[11px] uppercase tracking-wider text-muted-foreground cursor-pointer select-none" onClick={() => handleSort('max_alunos')}>
                     Max <SortIcon column="max_alunos" />
                   </TableHead>
-                  <TableHead className="w-[100px] text-center font-bold text-xs uppercase tracking-wider text-slate-500">Interessados</TableHead>
-                  <TableHead className="w-[100px] text-center font-bold text-xs uppercase tracking-wider text-slate-500">Matriculados</TableHead>
-                  <TableHead className="w-[120px] font-bold text-xs uppercase tracking-wider text-slate-500 cursor-pointer select-none" onClick={() => handleSort('Valor')}>
+                  <TableHead className="w-[100px] text-center px-3 py-2 font-bold text-[11px] uppercase tracking-wider text-muted-foreground">Interessados</TableHead>
+                  <TableHead className="w-[100px] text-center px-3 py-2 font-bold text-[11px] uppercase tracking-wider text-muted-foreground">Matriculados</TableHead>
+                  <TableHead className="w-[110px] px-3 py-2 font-bold text-[11px] uppercase tracking-wider text-muted-foreground cursor-pointer select-none" onClick={() => handleSort('Valor')}>
                     Valor <SortIcon column="Valor" />
                   </TableHead>
-                  <TableHead className="w-[80px] text-right pr-6 font-bold text-xs uppercase tracking-wider text-slate-500">Ações</TableHead>
+                  <TableHead className="w-[70px] text-right px-3 py-2 font-bold text-[11px] uppercase tracking-wider text-muted-foreground">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {listQuery.isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-16 text-center text-muted-foreground animate-pulse">
-                    Carregando...
-                  </TableCell>
-                </TableRow>
-              ) : listQuery.data?.data?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
-                    Nenhuma turma encontrada com os filtros atuais.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                listQuery.data?.data?.map((t) => (
-                  <TableRow
-                    key={t.id}
-                    onDoubleClick={() => handleRowDoubleClick(t.id)}
-                    className="hover:bg-primary/[0.02] dark:hover:bg-primary/[0.05] transition-colors cursor-pointer group"
-                  >
-                    <TableCell className="font-mono text-xs text-muted-foreground pl-6">{String(t.id).padStart(4, '0')}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-foreground/90">{t.nome ?? 'Sem nome'}</span>
-                        <span className="text-xs text-muted-foreground font-medium flex items-center gap-1 mt-0.5">
-                          {t.inicio || t.fim
-                            ? `${formatDate(t.inicio) || '?'} — ${formatDate(t.fim) || '?'}`
-                            : 'Sem período'}
-                        </span>
-                        {t.professor && (
-                          <span className="text-xs text-muted-foreground font-medium flex items-center gap-1 mt-0.5">
-                            Prof: {t.professor}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={t.ativo === 's' ? 'default' : 'secondary'} className={t.ativo === 's' ? 'bg-green-500/10 text-green-700 hover:bg-green-500/20 border-green-500/20 shadow-none' : 'bg-slate-100 text-slate-500 shadow-none'}>
-                        {t.ativo === 's' ? 'Sim' : 'Não'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center font-medium text-xs">{t.min_alunos ?? 0}</TableCell>
-                    <TableCell className="text-center font-medium text-xs">{t.max_alunos ?? 0}</TableCell>
-                    <TableCell className="text-center font-bold text-xs text-amber-600 dark:text-amber-400">{t.interessados ?? 0}</TableCell>
-                    <TableCell className="text-center font-bold text-xs text-green-600 dark:text-green-400">{t.matriculados ?? 0}</TableCell>
-                    <TableCell className="font-bold text-xs">
-                      {t.Valor ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(t.Valor)) : 'Grátis'}
-                    </TableCell>
-                    <TableCell className="text-right pr-6">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40 rounded-xl shadow-xl border-slate-100 dark:border-slate-800">
-                          <DropdownMenuLabel className="text-xs font-black uppercase text-muted-foreground tracking-wider">Ações</DropdownMenuLabel>
-                          <DropdownMenuSeparator className="bg-slate-100 dark:bg-slate-800" />
-                          <DropdownMenuItem onClick={() => goToDetails(t.id)} className="font-medium cursor-pointer rounded-lg focus:bg-primary/10 focus:text-primary">
-                            Visualizar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => goToEdit(t.id)} className="font-medium cursor-pointer rounded-lg focus:bg-primary/10 focus:text-primary">
-                            Editar Turma
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600 font-medium cursor-pointer rounded-lg focus:bg-red-50 focus:text-red-700" onClick={() => deleteMutation.mutate(t.id)}>
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell colSpan={9} className="h-12 text-center text-xs text-muted-foreground animate-pulse">
+                        Carregando turmas...
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : listQuery.data?.data?.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="h-24 text-center text-xs text-muted-foreground">
+                      Nenhuma turma encontrada com os filtros atuais.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
+                ) : (
+                  listQuery.data?.data?.map((t) => (
+                    <TableRow
+                      key={t.id}
+                      onDoubleClick={() => handleRowDoubleClick(t.id)}
+                      className="hover:bg-muted/50 transition-colors cursor-pointer group"
+                    >
+                      <TableCell className="px-3 py-2 font-mono text-xs text-muted-foreground">#{String(t.id).padStart(4, '0')}</TableCell>
+                      <TableCell className="px-3 py-2">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-xs text-foreground group-hover:text-primary transition-colors leading-tight">{t.nome ?? 'Sem nome'}</span>
+                          <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1 mt-0.5">
+                            {t.inicio || t.fim
+                              ? `${formatDate(t.inicio) || '?'} — ${formatDate(t.fim) || '?'}`
+                              : 'Sem período definido'}
+                          </span>
+                          {t.professor && (
+                            <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1 mt-0.5">
+                              Prof: {t.professor}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-center">
+                        <Badge variant={t.ativo === 's' ? 'default' : 'secondary'} className={t.ativo === 's' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 shadow-none text-[10px] py-0 px-2' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 shadow-none text-[10px] py-0 px-2'}>
+                          {t.ativo === 's' ? 'Sim' : 'Não'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-center font-medium text-xs">{t.min_alunos ?? 0}</TableCell>
+                      <TableCell className="px-3 py-2 text-center font-medium text-xs">{t.max_alunos ?? 0}</TableCell>
+                      <TableCell className="px-3 py-2 text-center font-bold text-xs text-amber-600 dark:text-amber-400">{t.interessados ?? 0}</TableCell>
+                      <TableCell className="px-3 py-2 text-center font-bold text-xs text-emerald-600 dark:text-emerald-400">{t.matriculados ?? 0}</TableCell>
+                      <TableCell className="px-3 py-2 font-bold text-xs">
+                        {t.Valor ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(t.Valor)) : <span className="text-muted-foreground font-normal text-xs">Grátis</span>}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg">
+                              <MoreHorizontal className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-44 p-1 rounded-xl shadow-lg">
+                            <DropdownMenuLabel className="px-2 py-1 text-[11px] text-muted-foreground">Ações da Turma</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => goToDetails(t.id)} className="rounded-lg text-xs cursor-pointer">Detalhes da Turma</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => goToEdit(t.id)} className="rounded-lg text-xs cursor-pointer">Editar Turma</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate(`/admin/school/enrollments/create?id_turma=${t.id}`)} className="rounded-lg text-xs cursor-pointer">Matricular Aluno</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-red-600 focus:bg-red-50 focus:text-red-700 dark:focus:bg-red-950/50 rounded-lg text-xs cursor-pointer" onClick={() => deleteMutation.mutate(t.id)}>Remover Turma</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

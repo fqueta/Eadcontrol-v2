@@ -101,26 +101,19 @@ export default function Dashboard() {
   }, [dashboardSummaryQuery.data]);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 pb-20">
+    <div className="space-y-3.5 animate-in fade-in duration-300 pb-12">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground/60">
-            <LayoutDashboard className="h-3 w-3" />
-            Escola
-            <span className="text-primary/40">•</span>
-            <span className="text-primary italic">Visão Geral</span>
-          </div>
-          <h1 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-3">
-            <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-1 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h1 className="text-xl font-black tracking-tight text-foreground flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary animate-pulse" />
             Dashboard
           </h1>
-          <p className="text-sm font-medium text-muted-foreground">Bem-vindo ao centro de comando da sua escola EAD.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button asChild variant="outline" className="h-11 rounded-xl border-slate-200 font-bold px-6 hover:bg-slate-50 transition-all gap-2">
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="h-9 rounded-lg border-slate-200 font-bold px-4 text-xs hover:bg-slate-50">
             <Link to="/admin/reports/content-access">
-              <FileText className="h-4 w-4 text-primary" />
+              <FileText className="h-3.5 w-3.5 text-primary mr-1.5" />
               Relatório de Acesso
             </Link>
           </Button>
@@ -128,40 +121,37 @@ export default function Dashboard() {
       </div>
 
       {/* Filters Card */}
-      <Card className="border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-2xl overflow-hidden">
-        <div className="p-6 flex flex-wrap items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm">
-              <Filter className="h-5 w-5" />
-            </div>
+      <Card className="border border-slate-200/80 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 rounded-xl overflow-hidden">
+        <div className="px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <Filter className="h-4 w-4 text-primary" />
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mb-1">Período de Análise</p>
-              <h3 className="text-sm font-black text-foreground uppercase tracking-tight">Filtros Operacionais</h3>
+              <h3 className="text-xs font-black text-foreground uppercase tracking-tight">Filtros Operacionais</h3>
             </div>
           </div>
           
-          <div className="flex items-center gap-4 bg-slate-100/50 dark:bg-slate-800/50 p-2 rounded-2xl border border-slate-200/50 dark:border-slate-700/50">
-            <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground/70 ml-2">Ano</Label>
+          <div className="flex items-center gap-2 bg-slate-100/70 dark:bg-slate-800/70 p-1 px-2 rounded-lg border border-slate-200/50">
+            <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground ml-1">Ano</Label>
             <Select 
               value={String(selectedYear)} 
               onValueChange={(v) => setSelectedYear(parseInt(v, 10))}
             >
-              <SelectTrigger className="w-32 h-10 rounded-xl border-none bg-white dark:bg-slate-900 shadow-sm font-bold">
+              <SelectTrigger className="w-28 h-8 rounded-md border-none bg-white dark:bg-slate-900 shadow-xs font-bold text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="rounded-xl border-slate-200">
                 {Array.from({ length: 6 }).map((_, idx) => {
                   const y = new Date().getFullYear() - idx;
                   return (
-                    <SelectItem key={y} value={String(y)} className="font-bold">{y}</SelectItem>
+                    <SelectItem key={y} value={String(y)} className="font-bold text-xs">{y}</SelectItem>
                   );
                 })}
               </SelectContent>
             </Select>
             {dashboardSummaryQuery.isFetching && (
-              <div className="flex items-center gap-2 pr-4 pl-2 border-l border-slate-200 dark:border-slate-700 ml-2">
-                <div className="h-4 w-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-primary italic">Sincronizando</span>
+              <div className="flex items-center gap-1.5 pr-2 pl-2 border-l border-slate-200 dark:border-slate-700 ml-1">
+                <div className="h-3 w-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                <span className="text-[9px] font-black uppercase tracking-widest text-primary italic">Sync</span>
               </div>
             )}
           </div>
@@ -169,45 +159,36 @@ export default function Dashboard() {
       </Card>
 
       {/* KPI Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         {[
-          { title: "Total de Interessados", desc: "Pré-cadastros registrados", value: totalInteressados, to: "/admin/school/interested", icon: Users, color: "primary" },
-          { title: "Total de Alunos", desc: "Matrículas em dia", value: totalAlunos, to: "/admin/school/enroll", icon: UserCheck, color: "emerald" },
-          { title: "Agendados", desc: "Resumo operacional", value: "0", to: "/admin/school/classes", icon: CalendarRange, color: "amber" },
-          { title: "Cursos Ativos", desc: "Conteúdo publicado", value: totalCursos, to: "/admin/school/courses", icon: Library, color: "blue" },
+          { title: "Total de Interessados", desc: "Pré-cadastros", value: totalInteressados, to: "/admin/school/interested", icon: Users, color: "primary", bg: "bg-primary/10", textColor: "text-primary" },
+          { title: "Total de Alunos", desc: "Matrículas ativas", value: totalAlunos, to: "/admin/school/enroll", icon: UserCheck, color: "emerald", bg: "bg-emerald-500/10", textColor: "text-emerald-600" },
+          { title: "Agendados", desc: "Operacional", value: "0", to: "/admin/school/classes", icon: CalendarRange, color: "amber", bg: "bg-amber-500/10", textColor: "text-amber-600" },
+          { title: "Cursos Ativos", desc: "Publicados", value: totalCursos, to: "/admin/school/courses", icon: Library, color: "blue", bg: "bg-blue-500/10", textColor: "text-blue-600" },
         ].map((kpi, i) => (
           <KpiCardLink key={i} to={kpi.to}>
-            <Card className="h-full border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl group-hover:bg-white transition-all rounded-3xl overflow-hidden relative">
-              <div className={`absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity`}>
-                <kpi.icon className="h-24 w-24" />
+            <Card className="h-full border border-slate-200/80 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 rounded-xl p-3.5 hover:shadow-sm transition-all">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`h-9 w-9 rounded-lg ${kpi.bg} ${kpi.textColor} flex items-center justify-center shrink-0`}>
+                    <kpi.icon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/60">{kpi.title}</p>
+                    <div className="text-xl font-black tracking-tight text-foreground leading-none mt-0.5">{kpi.value}</div>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary transition-transform group-hover:translate-x-0.5" />
               </div>
-              <CardHeader className="p-8 pb-4 relative z-10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`h-11 w-11 rounded-2xl bg-${kpi.color}-500/10 flex items-center justify-center text-${kpi.color}-600 group-hover:scale-110 transition-transform`}>
-                    <kpi.icon className="h-5 w-5" />
-                  </div>
-                  <div className="h-6 w-full flex items-center">
-                    <div className="h-0.5 w-8 bg-slate-100 dark:bg-slate-800 rounded-full group-hover:w-full group-hover:bg-primary/20 transition-all duration-500" />
-                  </div>
-                </div>
-                <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">{kpi.title}</CardTitle>
-                <CardDescription className="font-bold text-[11px] group-hover:text-primary transition-colors">{kpi.desc}</CardDescription>
-              </CardHeader>
-              <CardContent className="p-8 pt-0 flex items-end justify-between relative z-10">
-                <div className="text-4xl font-black tracking-tight text-foreground">{kpi.value}</div>
-                <div className="h-8 w-8 rounded-full border-2 border-slate-100 dark:border-slate-800 flex items-center justify-center group-hover:border-primary/30 group-hover:bg-primary/5 transition-all">
-                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-transform group-hover:translate-x-0.5" />
-                </div>
-              </CardContent>
             </Card>
           </KpiCardLink>
         ))}
       </div>
 
       {/* Quick Actions */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 mr-4">
-          <MousePointer2 className="h-4 w-4 text-primary animate-bounce-slow" />
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        <div className="flex items-center gap-1.5 mr-2">
+          <MousePointer2 className="h-3.5 w-3.5 text-primary" />
           <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Acesso Rápido</span>
         </div>
         {[
@@ -216,9 +197,9 @@ export default function Dashboard() {
           { label: "Matrículas", to: "/admin/school/enroll", variant: "outline", icon: UserCheck },
           { label: "Relatórios", to: "/admin/reports/content-access", variant: "ghost", icon: FileText },
         ].map((action, i) => (
-          <Button key={i} asChild variant={action.variant as any} className={`h-11 rounded-xl font-bold px-6 transition-all hover:scale-105 active:scale-95 gap-2 ${action.variant === 'outline' ? 'border-slate-200' : ''}`}>
+          <Button key={i} asChild variant={action.variant as any} size="sm" className="h-8 rounded-lg font-bold text-xs px-3 gap-1.5 border-slate-200">
             <Link to={action.to}>
-              <action.icon className="h-4 w-4" />
+              <action.icon className="h-3.5 w-3.5" />
               {action.label}
             </Link>
           </Button>
@@ -226,77 +207,72 @@ export default function Dashboard() {
       </div>
 
       {/* Charts */}
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 pt-1">
         {[
-          { title: "Interessados", data: interestedMonthlyData, color: "#3b82f6", label: "Comparativo de Leads" },
-          { title: "Matriculados", data: enrolledMonthlyData, color: "#10b981", label: "Evolução de Alunos" }
+          { title: "Interessados", data: interestedMonthlyData, color: "#3b82f6" },
+          { title: "Matriculados", data: enrolledMonthlyData, color: "#10b981" }
         ].map((chart, i) => (
-          <Card key={i} className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden p-1">
-            <CardHeader className="p-8">
+          <Card key={i} className="border border-slate-200/80 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 rounded-xl overflow-hidden p-1">
+            <CardHeader className="px-4 py-3 pb-1">
               <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary/60">
-                    <Clock className="h-3 w-3" />
-                    Trend Analysis
-                  </div>
-                  <CardTitle className="text-xl font-black tracking-tight flex items-center gap-2">
-                    {chart.title} do ano de {selectedYear}
-                    <ArrowUpRight className="h-5 w-5 text-primary" />
+                <div className="space-y-0.5">
+                  <CardTitle className="text-sm font-black tracking-tight flex items-center gap-1.5">
+                    {chart.title} ({selectedYear})
+                    <ArrowUpRight className="h-4 w-4 text-primary" />
                   </CardTitle>
-                  <CardDescription className="font-bold flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-slate-900" /> {selectedYear} 
-                    <span className="text-slate-300 mx-1">vs</span> 
-                    <span className="h-2 w-2 rounded-full bg-primary" /> {comparisonYear}
+                  <CardDescription className="text-[11px] font-bold">
+                    <span className="inline-block h-2 w-2 rounded-full bg-slate-900 mr-1" /> {selectedYear} 
+                    <span className="text-slate-400 mx-1">vs</span> 
+                    <span className="inline-block h-2 w-2 rounded-full bg-primary mr-1" /> {comparisonYear}
                   </CardDescription>
                 </div>
                 {dashboardSummaryQuery.isFetching && (
-                   <Badge variant="outline" className="animate-pulse bg-primary/5 text-primary border-primary/20 font-black text-[9px] uppercase tracking-widest px-3">Syncing</Badge>
+                   <Badge variant="outline" className="animate-pulse bg-primary/5 text-primary border-primary/20 font-bold text-[9px] uppercase px-2 py-0.5">Syncing</Badge>
                 )}
               </div>
             </CardHeader>
-            <CardContent className="px-6 pb-8">
-              <div className="h-[320px] w-full pr-4">
+            <CardContent className="px-3 pb-3">
+              <div className="h-[210px] w-full pr-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chart.data} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+                  <LineChart data={chart.data} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.5} />
                     <XAxis 
                       dataKey="mes" 
                       axisLine={false} 
                       tickLine={false} 
-                      tick={{ fontSize: 10, fontWeight: '800', fill: '#64748B' }} 
-                      dy={10}
+                      tick={{ fontSize: 9, fontWeight: '800', fill: '#64748B' }} 
+                      dy={5}
                     />
                     <YAxis 
                       axisLine={false} 
                       tickLine={false} 
-                      tick={{ fontSize: 10, fontWeight: '800', fill: '#64748B' }} 
+                      tick={{ fontSize: 9, fontWeight: '800', fill: '#64748B' }} 
                     />
                     <Tooltip 
-                      contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
-                      itemStyle={{ fontSize: '12px' }}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontWeight: 'bold', fontSize: '11px' }}
                     />
                     <Legend 
                       verticalAlign="top" 
                       align="right" 
                       iconType="circle" 
-                      wrapperStyle={{ paddingBottom: '20px', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }} 
+                      wrapperStyle={{ paddingBottom: '10px', fontSize: '9px', fontWeight: '800', textTransform: 'uppercase' }} 
                     />
                     <Line 
                       type="monotone" 
                       dataKey={keyCurr} 
                       stroke="#0F172A" 
-                      strokeWidth={4} 
+                      strokeWidth={3} 
                       dot={false}
-                      activeDot={{ r: 6, stroke: '#FFF', strokeWidth: 2, fill: '#0F172A' }} 
+                      activeDot={{ r: 5, stroke: '#FFF', strokeWidth: 2, fill: '#0F172A' }} 
                       name={`${chart.title} ${selectedYear}`} 
                     />
                     <Line 
                       type="monotone" 
                       dataKey={keyPrev} 
                       stroke={chart.color} 
-                      strokeWidth={4} 
+                      strokeWidth={3} 
                       dot={false}
-                      activeDot={{ r: 6, stroke: '#FFF', strokeWidth: 2, fill: chart.color }} 
+                      activeDot={{ r: 5, stroke: '#FFF', strokeWidth: 2, fill: chart.color }} 
                       name={`${chart.title} ${comparisonYear}`} 
                     />
                   </LineChart>

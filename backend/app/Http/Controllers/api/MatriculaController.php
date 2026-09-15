@@ -84,7 +84,7 @@ class MatriculaController extends Controller
             // LEFT JOIN permite incluir registros com id_turma = 0 (sem turma associada)
             ->leftJoin('turmas', 'matriculas.id_turma', '=', 'turmas.id')
             ->leftJoin('users', 'matriculas.id_cliente', '=', 'users.id')
-            ->leftJoin('posts', 'matriculas.situacao_id', '=', 'posts.id')
+            ->leftJoin('posts', 'matriculas.situacao_id', '=', 'posts.ID')
             ->select('matriculas.*', 'cursos.nome as curso_nome','cursos.tipo as curso_tipo', 'turmas.nome as turma_nome', 'users.name as cliente_nome', 'users.email as email', 'users.celular as celular', 'posts.post_title as situacao','cursos.slug as curso_slug','cursos.config as curso_config', 'cursos.modulos as curso_modulos')
             ->where(function($q) {
                 $q->whereNull('matriculas.excluido')
@@ -382,10 +382,10 @@ class MatriculaController extends Controller
             'id_curso' => [$update ? 'sometimes' : 'required', 'integer', 'exists:cursos,id'],
             'id_responsavel' => ['nullable', 'uuid'],
             'id_consultor' => ['nullable', 'uuid'],
-            // Permitir salvar com turma = 0.
-            // EN: Allow saving with class (turma) = 0.
+            // Permitir salvar com turma = 0 ou sem turma definida (id_turma = 0).
+            // EN: Allow saving with class (turma) = 0 or without defined turma.
             'id_turma' => [
-                $update ? 'sometimes' : 'required',
+                $update ? 'sometimes' : 'nullable',
                 'integer',
                 function ($attribute, $value, $fail) {
                     $intVal = (int) $value;
@@ -506,15 +506,17 @@ class MatriculaController extends Controller
                 $data['id_responsavel'] = null;
             }
         }
-        // Normalizar id_turma: aceitar "0" como inteiro 0
-        // EN: Normalize id_turma: accept "0" as integer 0
+        // Normalizar id_turma: aceitar "0", vazio, null ou "none" como 0
+        // EN: Normalize id_turma: default to 0 if omitted, empty, null or 'none'
         if (array_key_exists('id_turma', $data)) {
             $vt = trim((string)$data['id_turma']);
-            if ($vt === '0') {
+            if ($vt === '' || $vt === '0' || $vt === 'null' || $vt === 'none' || $data['id_turma'] === null) {
                 $data['id_turma'] = 0;
-            } elseif ($vt !== '') {
+            } else {
                 $data['id_turma'] = (int) $vt;
             }
+        } else {
+            $data['id_turma'] = 0;
         }
         // Garantir string aparada para id_cliente
         if (array_key_exists('id_cliente', $data)) {
@@ -618,14 +620,28 @@ class MatriculaController extends Controller
             }
         }
         
-        // se o situacao_id não foi informado, usar o default
-        if (!array_key_exists('situacao_id', $validated)) {
-            $matricula->situacao_id = $this->default_proposal_situacao_id;
+        $matricula->fill($validated);
+
+        // Garantir que a situação_id seja definida para Interessado (default proposal / lead) se não informada ou vazia
+        if (empty($matricula->situacao_id)) {
+            $interessadoSitId = $this->default_proposal_situacao_id;
+            if (!$interessadoSitId || !\DB::table('posts')->where('ID', $interessadoSitId)->where('post_type', 'situacao_matricula')->exists()) {
+                $found = \DB::table('posts')
+                    ->where('post_type', 'situacao_matricula')
+                    ->where(function($q) {
+                        $q->where('post_name', 'int')
+                          ->orWhere('post_title', 'like', '%Interessado%');
+                    })
+                    ->first();
+                if ($found) {
+                    $interessadoSitId = $found->ID;
+                }
+            }
+            if ($interessadoSitId) {
+                $matricula->situacao_id = $interessadoSitId;
+            }
         }
 
-
-
-        $matricula->fill($validated);
         $matricula->save();
 
         // Vincular parcelamentos do curso (até 2), garantindo compatibilidade com o curso da matrícula
@@ -679,7 +695,7 @@ class MatriculaController extends Controller
             ->leftJoin('turmas', 'matriculas.id_turma', '=', 'turmas.id')
             ->leftJoin('users', 'matriculas.id_cliente', '=', 'users.id')
             ->leftJoin('users as consultores', 'matriculas.id_consultor', '=', 'consultores.id')
-            ->leftJoin('posts', 'matriculas.situacao_id', '=', 'posts.id')
+            ->leftJoin('posts', 'matriculas.situacao_id', '=', 'posts.ID')
             ->select(
                 'matriculas.*', 
                 'cursos.nome as curso_nome',

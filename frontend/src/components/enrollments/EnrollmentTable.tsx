@@ -215,42 +215,42 @@ export default function EnrollmentTable({
     }
 
     return (
-      <div className={`p-2 rounded-xl ${bgColor} border border-transparent hover:border-slate-100 dark:hover:border-slate-800 transition-all space-y-1.5 group/progress`}>
+      <div className={`p-1.5 px-2 rounded-lg ${bgColor} border border-transparent hover:border-slate-100 dark:hover:border-slate-800 transition-all space-y-1 group/progress`}>
         <div className="flex items-center justify-between px-0.5">
            <span className={`text-[9px] font-black uppercase tracking-tighter ${textColor}`}>{label}</span>
            <span className={`text-[10px] font-black ${textColor}`}>{progress}%</span>
         </div>
-        <Progress value={progress} className="h-1.5 bg-slate-200/50 dark:bg-slate-800/50" indicatorClassName={`${colorClass} shadow-[0_0_8px_rgba(0,0,0,0.1)] transition-all duration-1000`} />
+        <Progress value={progress} className="h-1 bg-slate-200/50 dark:bg-slate-800/50" indicatorClassName={`${colorClass} transition-all duration-700`} />
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-500">
+    <div className="rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden bg-white dark:bg-slate-900 animate-in fade-in duration-300">
       <Table>
-        <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+        <TableHeader className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200/80 dark:border-slate-800">
           <TableRow className="hover:bg-transparent">
-            <TableHead className="w-[50px] px-2 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70">Ações</TableHead>
-            <SortableHeader field="id" label="ID" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="w-[80px] px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground/70" />
-            <SortableHeader field="cliente_nome" label="Cliente" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground/70">
-              <div className="flex items-center gap-2">
+            <TableHead className="w-[45px] px-2 py-2 text-center text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">Ações</TableHead>
+            <SortableHeader field="id" label="ID" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="w-[70px] px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground/70" />
+            <SortableHeader field="cliente_nome" label="Cliente" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">
+              <div className="flex items-center gap-1.5">
                 <User className="h-3 w-3" /> Cliente
               </div>
             </SortableHeader>
-            <SortableHeader field="curso_nome" label="Curso" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground/70">
-              <div className="flex items-center gap-2">
+            <SortableHeader field="curso_nome" label="Curso" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">
+              <div className="flex items-center gap-1.5">
                 <BookOpen className="h-3 w-3" /> Curso / Turma
               </div>
             </SortableHeader>
-            <TableHead className="px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70">Situação</TableHead>
-            <TableHead className="px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70 min-w-[120px]">
-               <div className="flex items-center justify-center gap-2">
+            <TableHead className="px-3 py-2 text-center text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">Situação</TableHead>
+            <TableHead className="px-3 py-2 text-center text-[11px] font-black uppercase tracking-wider text-muted-foreground/70 min-w-[110px]">
+               <div className="flex items-center justify-center gap-1.5">
                   <BarChart3 className="h-3 w-3" /> Progresso
                </div>
             </TableHead>
-            <TableHead className="px-6 py-4 text-center text-xs font-black uppercase tracking-widest text-muted-foreground/70">Ativo</TableHead>
-            <SortableHeader field="valor" label="Valor" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-muted-foreground/70">
-              <div className="flex items-center justify-end gap-2">
+            <TableHead className="px-3 py-2 text-center text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">Ativo</TableHead>
+            <SortableHeader field="valor" label="Valor" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="px-3 py-2 text-right text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">
+              <div className="flex items-center justify-end gap-1.5">
                 <DollarSign className="h-3 w-3" /> Valor
               </div>
             </SortableHeader>
@@ -260,26 +260,26 @@ export default function EnrollmentTable({
           {isLoading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <TableRow key={i} className="animate-pulse">
-                <TableCell colSpan={8} className="px-6 py-10">
-                   <div className="flex items-center gap-4">
-                     <div className="h-10 w-10 rounded-xl bg-slate-200 dark:bg-slate-800" />
-                     <div className="flex flex-col gap-2 flex-1">
-                        <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/4" />
-                        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-1/2 opacity-50" />
-                     </div>
+                <TableCell colSpan={8} className="px-3 py-4">
+                   <div className="flex items-center gap-3">
+                      <div className="h-7 w-7 rounded-lg bg-slate-200 dark:bg-slate-800" />
+                      <div className="flex flex-col gap-1.5 flex-1">
+                         <div className="h-3.5 bg-slate-200 dark:bg-slate-800 rounded w-1/4" />
+                         <div className="h-2.5 bg-slate-200 dark:bg-slate-800 rounded w-1/2 opacity-50" />
+                      </div>
                    </div>
                 </TableCell>
               </TableRow>
             ))
           ) : items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={8} className="h-40 text-center">
-                <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                  <div className="h-12 w-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 mb-2">
-                    <User className="h-6 w-6 text-slate-300" />
+              <TableCell colSpan={8} className="h-32 text-center">
+                <div className="flex flex-col items-center justify-center gap-1 text-muted-foreground py-4">
+                  <div className="h-9 w-9 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center border border-dashed border-slate-200 dark:border-slate-700 mb-1">
+                    <User className="h-4 w-4 text-slate-300" />
                   </div>
-                  <span className="text-sm font-black uppercase tracking-tight text-foreground/60">Nenhuma matrícula encontrada</span>
-                  <p className="text-xs font-medium max-w-[200px]">Tente ajustar seus filtros ou termos de pesquisa.</p>
+                  <span className="text-xs font-black uppercase tracking-tight text-foreground/60">Nenhuma matrícula encontrada</span>
+                  <p className="text-[11px] font-medium max-w-[200px]">Tente ajustar seus filtros ou termos de pesquisa.</p>
                 </div>
               </TableCell>
             </TableRow>
@@ -292,16 +292,16 @@ export default function EnrollmentTable({
                   onDoubleClick={() => onView?.(enroll)}
                   className="group transition-all hover:bg-slate-50/80 dark:hover:bg-slate-800/80 items-center border-transparent cursor-pointer"
                 >
-                  <TableCell className="px-2 py-4 text-center">
+                  <TableCell className="px-2 py-2 text-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0 rounded-xl hover:bg-primary/5 group/btn focus-visible:ring-0">
-                          <MoreHorizontal className="h-4 w-4 text-muted-foreground group-hover/btn:text-primary transition-colors" />
+                        <Button variant="ghost" className="h-7 w-7 p-0 rounded-lg hover:bg-primary/10 group/btn focus-visible:ring-0">
+                          <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground group-hover/btn:text-primary transition-colors" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="w-[180px] rounded-xl border-slate-100 dark:border-slate-800 shadow-xl p-1">
-                        <DropdownMenuLabel className="text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2 py-2">Gerenciamento</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => onView?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                        <DropdownMenuLabel className="text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2 py-1.5">Gerenciamento</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => onView?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
                           <Eye className="h-3.5 w-3.5 text-primary" /> 
                           Visualizar
                         </DropdownMenuItem>
@@ -309,81 +309,81 @@ export default function EnrollmentTable({
                           <DropdownMenuItem onClick={() => {
                             const courseId = enroll?.id_curso || enroll?.curso_id || enroll?.course_id || '';
                             navigate(`/admin/school/enrollments/${enroll.id}/progress?id_curso=${courseId}`);
-                          }} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                          }} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
                             <BarChart3 className="h-3.5 w-3.5 text-emerald-500" /> 
                             Ver Progresso
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuSeparator className="my-1 bg-slate-50 dark:bg-slate-800" />
-                        <DropdownMenuLabel className="text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2 py-2">Edição Rápida</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'principal')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                        <DropdownMenuLabel className="text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2 py-1.5">Edição Rápida</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'principal')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
                           <User className="h-3.5 w-3.5 text-slate-500" /> 
                           Dados Principais
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'academico')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'academico')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
                           <BookOpen className="h-3.5 w-3.5 text-slate-500" /> 
                           Acadêmico
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'financeiro')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'financeiro')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
                           <DollarSign className="h-3.5 w-3.5 text-slate-500" /> 
                           Financeiro
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'acesso')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'acesso')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
                           <CalendarDays className="h-3.5 w-3.5 text-slate-500" /> 
                           Acesso e Validade
                         </DropdownMenuItem>
 
                         <DropdownMenuSeparator className="my-1 bg-slate-50 dark:bg-slate-800" />
-                        <DropdownMenuItem className="text-red-500 cursor-pointer focus:bg-red-50 focus:text-red-600 gap-2 font-bold text-xs rounded-lg" onClick={() => onDelete?.(enroll)}>
+                        <DropdownMenuItem className="text-red-500 cursor-pointer focus:bg-red-50 focus:text-red-600 gap-2 font-bold text-xs rounded-lg py-1.5" onClick={() => onDelete?.(enroll)}>
                           <Trash2 className="h-3.5 w-3.5" /> 
                           Excluir Registro
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
-                  <TableCell className="px-6 py-4 font-mono text-[10px] font-bold text-muted-foreground/60 group-hover:text-primary transition-colors">
+                  <TableCell className="px-3 py-2 font-mono text-[10px] font-bold text-muted-foreground/70 group-hover:text-primary transition-colors">
                     {String(enroll.id).padStart(4, '0')}
                   </TableCell>
-                  <TableCell className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9 rounded-xl border-2 border-white dark:border-slate-950 shadow-sm group-hover:scale-110 transition-transform">
-                        <AvatarFallback className="bg-primary/10 text-primary font-black text-xs uppercase">
+                  <TableCell className="px-3 py-2">
+                    <div className="flex items-center gap-2.5">
+                      <Avatar className="h-7 w-7 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xs shrink-0">
+                        <AvatarFallback className="bg-primary/10 text-primary font-black text-[10px] uppercase">
                           {studentName.substring(0, 2)}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-sm text-foreground/90 group-hover:text-primary transition-colors line-clamp-1">{studentName}</span>
-                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{enroll.email || 'sem email'}</span>
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-bold text-xs text-foreground/90 group-hover:text-primary transition-colors truncate">{studentName}</span>
+                        <span className="text-[10px] font-medium text-muted-foreground truncate">{enroll.email || 'sem email'}</span>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-4">
-                    <div className="flex flex-col gap-1.5 max-w-[280px]">
-                      <span className="font-black text-[12px] text-foreground/80 line-clamp-1 group-hover:text-foreground transition-colors">
+                  <TableCell className="px-3 py-2">
+                    <div className="flex flex-col gap-0.5 max-w-[260px]">
+                      <span className="font-bold text-xs text-foreground/80 truncate group-hover:text-foreground transition-colors">
                         {enroll.curso_nome || enroll.course_name || '-'}
                       </span>
-                      <div className="flex items-center gap-1.5">
-                        <CalendarDays className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                      <div className="flex items-center gap-1">
+                        <CalendarDays className="h-3 w-3 text-muted-foreground/60 shrink-0" />
+                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 rounded truncate">
                           {enroll.turma_nome ?? enroll?.turma?.nome ?? 'Sem turma'}
                         </span>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-4 text-center">
+                  <TableCell className="px-3 py-2 text-center">
                     {resolveStatusBadge(enroll)}
                   </TableCell>
-                  <TableCell className="px-6 py-4">
+                  <TableCell className="px-3 py-2">
                     {resolvePace(enroll)}
                   </TableCell>
-                  <TableCell className="px-6 py-4 text-center">
+                  <TableCell className="px-3 py-2 text-center">
                     <StatusSwitch
                       checked={String(enroll.ativo).toLowerCase() === 's' || enroll.ativo === 1 || enroll.ativo === '1'}
                       onCheckedChange={(checked) => onToggleActive?.(enroll, checked)}
                     />
                   </TableCell>
-                  <TableCell className="px-6 py-4 text-right">
-                    <span className="font-black text-sm text-primary/90 tabular-nums">
+                  <TableCell className="px-3 py-2 text-right font-mono">
+                    <span className="font-bold text-xs text-primary/90 tabular-nums">
                       {amountFormatter(enroll)}
                     </span>
                   </TableCell>

@@ -286,38 +286,6 @@ class ClientController extends Controller
             return response()->json(['error' => 'Acesso negado'], 403);
         }
 
-        // Verificar se o email já existe na lixeira
-        if ($request->filled('email')) {
-            $existingUser = Client::withoutGlobalScope('client')
-                ->where('email', $request->email)
-                ->where(function($q) {
-                    $q->where('deletado', 's')->orWhere('excluido', 's');
-                })
-                ->first();
-
-            if ($existingUser) {
-                return response()->json([
-                    'message' => 'Este cadastro já está em nossa base de dados, verifique na lixeira.',
-                    'errors'  => ['email' => ['Cadastro com este e-mail está na lixeira']],
-                ], 422);
-            }
-        }
-        // verificar se ja existe o celular na lixeira
-        if ($request->filled('celular')) {
-            $existingUser = Client::withoutGlobalScope('client')
-                ->where('celular', $request->celular)
-                ->where(function($q) {
-                    $q->where('deletado', 's')->orWhere('excluido', 's');
-                })
-                ->first();
-
-            if ($existingUser) {
-                return response()->json([
-                    'message' => 'Este cadastro já está em nossa base de dados, verifique na lixeira.',
-                    'errors'  => ['celular' => ['Cadastro com este celular está na lixeira']],
-                ], 422);
-            }
-        }
         // Remover máscaras de celular e documentos e normalizar campos opcionais
         if ($request->filled('celular')) {
             $request->merge(['celular' => preg_replace('/\D/', '', $request->celular)]);
@@ -329,29 +297,91 @@ class ClientController extends Controller
             $request->merge(['cnpj' => preg_replace('/\D/', '', $request->cnpj)]);
         }
 
+        $cleanEmail = $this->normalizeOptionalString($request->get('email'));
+        $cleanCpf = $this->normalizeOptionalString($request->get('cpf'));
+        $cleanCnpj = $this->normalizeOptionalString($request->get('cnpj'));
+        $cleanCelular = $this->normalizeOptionalString($request->get('celular'));
+
         $request->merge([
-            'email'   => $this->normalizeOptionalString($request->get('email')),
-            'cpf'     => $this->normalizeOptionalString($request->get('cpf')),
-            'cnpj'    => $this->normalizeOptionalString($request->get('cnpj')),
-            'celular' => $this->normalizeOptionalString($request->get('celular')),
+            'email'   => $cleanEmail,
+            'cpf'     => $cleanCpf,
+            'cnpj'    => $cleanCnpj,
+            'celular' => $cleanCelular,
         ]);
-        // Verificar se o CPF ou CNPJ já existe na lixeira
-        if ($request->filled('cpf') || $request->filled('cnpj')) {
-            $existingUser = Client::withoutGlobalScope('client')
-                ->where(function($q) use ($request) {
-                    $q->where('cpf', $request->cpf)->orWhere('cnpj', $request->cnpj);
+
+        // Restaurar e atualizar silenciosamente se o cadastro já existir na lixeira
+        $trashedClient = null;
+        if ($cleanEmail || $cleanCelular || $cleanCpf || $cleanCnpj) {
+            $trashedClient = Client::withoutGlobalScope('client')
+                ->where(function($q) use ($cleanEmail, $cleanCelular, $cleanCpf, $cleanCnpj) {
+                    if ($cleanEmail) {
+                        $q->orWhere('email', $cleanEmail);
+                    }
+                    if ($cleanCelular) {
+                        $q->orWhere('celular', $cleanCelular);
+                    }
+                    if ($cleanCpf) {
+                        $q->orWhere('cpf', $cleanCpf);
+                    }
+                    if ($cleanCnpj) {
+                        $q->orWhere('cnpj', $cleanCnpj);
+                    }
                 })
                 ->where(function($q) {
                     $q->where('deletado', 's')->orWhere('excluido', 's');
                 })
                 ->first();
+        }
 
-            if ($existingUser) {
-                return response()->json([
-                    'message' => 'Este cadastro já está em nossa base de dados, verifique na lixeira.',
-                    'errors'  => ['cpf' => ['Cadastro com este CPF está na lixeira'], 'cnpj' => ['Cadastro com este CNPJ está na lixeira']],
-                ], 422);
+        if ($trashedClient) {
+            $updateData = [
+                'deletado'     => 'n',
+                'excluido'     => 'n',
+                'ativo'        => 's',
+                'status'       => $request->input('status', 'actived'),
+                'reg_deletado' => null,
+                'reg_excluido' => null,
+            ];
+
+            if ($request->filled('name')) $updateData['name'] = $request->input('name');
+            if ($cleanEmail) $updateData['email'] = $cleanEmail;
+            if ($cleanCelular) $updateData['celular'] = $cleanCelular;
+            if ($cleanCpf) $updateData['cpf'] = $cleanCpf;
+            if ($cleanCnpj) $updateData['cnpj'] = $cleanCnpj;
+            if ($request->filled('tipo_pessoa')) $updateData['tipo_pessoa'] = $request->input('tipo_pessoa');
+            if ($request->filled('genero')) $updateData['genero'] = $request->input('genero');
+
+            $trashedClient->update($updateData);
+
+            // Atualiza metadados/config
+            $config = is_array($trashedClient->config)
+                ? $trashedClient->config
+                : (is_string($trashedClient->config) ? (json_decode($trashedClient->config, true) ?? []) : []);
+
+            if ($cleanCelular) {
+                $config['celular'] = $cleanCelular;
             }
+            if ($request->has('config')) {
+                $reqConfig = $request->get('config');
+                if (is_string($reqConfig)) {
+                    $reqConfig = json_decode($reqConfig, true) ?? [];
+                }
+                if (is_array($reqConfig)) {
+                    $config = array_merge($config, $reqConfig);
+                }
+            }
+            $trashedClient->config = json_encode($config);
+            $trashedClient->save();
+
+            if (is_string($trashedClient->config)) {
+                $trashedClient->config = json_decode($trashedClient->config, true) ?? [];
+            }
+
+            return response()->json([
+                'data' => $trashedClient->fresh(),
+                'message' => 'Cliente restaurado e atualizado com sucesso',
+                'status' => 201
+            ], 201);
         }
 
         $request->merge([

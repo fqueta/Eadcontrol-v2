@@ -122,31 +122,45 @@ class UserController extends Controller
         if (!$this->permissionService->isHasPermission('create')) {
             return response()->json(['error' => 'Acesso negado'], 403);
         }
-        // Verifica se já existe usuário deletado com o mesmo CPF
-        if (!empty($request->cpf)) {
-            $userCpfDel = User::where('cpf', $request->cpf)
-                ->where(function($q){
-                    $q->where('deletado', 's')->orWhere('excluido', 's');
-                })->first();
-            if ($userCpfDel) {
-                return response()->json([
-                    'message' => 'Este cadastro já está em nossa base de dados, verifique na lixeira.',
-                    'errors'  => ['cpf' => ['Cadastro com este CPF está na lixeira']],
-                ], 422);
-            }
+        // Se já existir cadastro na lixeira (CPF ou E-mail), restaura e atualiza silenciosamente
+        $trashedUser = null;
+        if (!empty($request->cpf) || !empty($request->email)) {
+            $trashedUser = User::where(function($q) use ($request) {
+                if (!empty($request->cpf)) {
+                    $q->orWhere('cpf', preg_replace('/\D/', '', $request->cpf));
+                }
+                if (!empty($request->email)) {
+                    $q->orWhere('email', trim($request->email));
+                }
+            })
+            ->where(function($q) {
+                $q->where('deletado', 's')->orWhere('excluido', 's');
+            })
+            ->first();
         }
-        // Verifica se já existe usuário deletado com o mesmo EMAIL
-        if (!empty($request->email)) {
-            $userEmailDel = User::where('email', $request->email)
-                ->where(function($q){
-                    $q->where('deletado', 's')->orWhere('excluido', 's');
-                })->first();
-            if ($userEmailDel) {
-                return response()->json([
-                    'message' => 'Este cadastro já está em nossa base de dados, verifique na lixeira.',
-                    'errors'  => ['email' => ['Cadastro com este e-mail está na lixeira']],
-                ], 422);
-            }
+
+        if ($trashedUser) {
+            $updateData = [
+                'deletado'     => 'n',
+                'excluido'     => 'n',
+                'ativo'        => 's',
+                'status'       => $request->input('status', 'actived'),
+                'reg_deletado' => null,
+                'reg_excluido' => null,
+            ];
+
+            if ($request->filled('name')) $updateData['name'] = $request->input('name');
+            if ($request->filled('email')) $updateData['email'] = trim($request->email);
+            if ($request->filled('cpf')) $updateData['cpf'] = preg_replace('/\D/', '', $request->cpf);
+            if ($request->filled('tipo_pessoa')) $updateData['tipo_pessoa'] = $request->input('tipo_pessoa');
+
+            $trashedUser->update($updateData);
+
+            return response()->json([
+                'data' => $trashedUser->fresh(),
+                'message' => 'Usuário restaurado e atualizado com sucesso',
+                'status' => 201
+            ], 201);
         }
         $validator = Validator::make($request->all(), [
             'tipo_pessoa'   => ['required', Rule::in(['pf','pj'])],

@@ -616,12 +616,12 @@ export default function EnrollmentView() {
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div className="container mx-auto py-3 px-4 space-y-3.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
       
-      {/* Breadcrumbs */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
-        <Breadcrumb className="bg-muted/30 px-4 py-2 rounded-lg border w-fit">
-          <BreadcrumbList>
+      {/* Breadcrumbs & Action Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 no-print">
+        <Breadcrumb className="bg-muted/30 px-3 py-1.5 rounded-md border w-fit">
+          <BreadcrumbList className="text-xs">
             <BreadcrumbItem>
               <BreadcrumbLink href="/admin/school/enroll" className="hover:text-primary transition-colors font-medium">Matrículas</BreadcrumbLink>
             </BreadcrumbItem>
@@ -632,258 +632,189 @@ export default function EnrollmentView() {
           </BreadcrumbList>
         </Breadcrumb>
         
-        <div className="flex gap-2 no-print">
-          <Button variant="ghost" size="sm" onClick={handleBack} title="Voltar" className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+        <div className="flex items-center gap-1.5 no-print">
+          <Button variant="ghost" size="sm" onClick={handleBack} title="Voltar" className="h-8 text-xs text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Voltar
           </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate(`/admin/sales/proposals/edit/${id}`)} className="shadow-sm border-muted-foreground/20 hover:bg-muted font-semibold">
-            <Settings className="h-4 w-4 mr-2" /> Editar Matrícula
+          <Button variant="outline" size="sm" onClick={() => navigate(`/admin/sales/proposals/edit/${id}`)} className="h-8 text-xs shadow-sm border-muted-foreground/20 hover:bg-muted font-semibold">
+            <Settings className="h-3.5 w-3.5 mr-1" /> Editar Matrícula
           </Button>
           {isInteressado && matriculadoSituationId && !loadingEnroll && (
             <Button
               size="sm"
               onClick={handleConfirmEnrollment}
               disabled={confirmEnrollment.isPending}
-              className="font-bold shadow-sm bg-emerald-600 text-white hover:bg-emerald-700"
+              className="h-8 text-xs font-bold shadow-sm bg-emerald-600 text-white hover:bg-emerald-700"
             >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
+              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
               {confirmEnrollment.isPending ? 'Efetivando...' : 'Efetivar Matrícula'}
             </Button>
           )}
 
-          <Button size="sm" onClick={handlePrint} className="font-bold shadow-sm bg-primary text-primary-foreground hover:bg-primary/90">
-             <Printer className="h-4 w-4 mr-2" /> Imprimir
+          <Button size="sm" onClick={handlePrint} className="h-8 text-xs font-bold shadow-sm bg-primary text-primary-foreground hover:bg-primary/90">
+             <Printer className="h-3.5 w-3.5 mr-1" /> Imprimir
           </Button>
         </div>
       </div>
 
-      {/* Hero Summary Section */}
-      <div className="bg-white rounded-3xl border shadow-sm overflow-hidden">
-        <div className="p-8 md:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8 bg-gradient-to-br from-primary/5 via-transparent to-transparent">
-          <div className="space-y-5 max-w-2xl">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <h2 className="text-3xl font-extrabold tracking-tight text-foreground/90">{clientName}</h2>
-                <div className="flex items-center gap-1">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors" 
-                    title="Editar cadastro do aluno"
-                    onClick={handleEditClient}
-                  >
-                    <UserCog className="h-5 w-5" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 rounded-full hover:bg-emerald-100 hover:text-emerald-600 transition-colors" 
-                    title="Acessar como aluno (Impersonate)"
-                    onClick={handleImpersonate}
-                  >
-                    <LogIn className="h-5 w-5" />
-                  </Button>
-                </div>
-              </div>
-              <p className="text-lg font-medium text-muted-foreground flex items-center gap-2">
-                <BookOpen className="h-5 w-5 opacity-60" /> {courseTitle}
-              </p>
-            </div>
-
-            {/* Student Details (Email, Phone, CPF) */}
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-              {clientEmail && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 px-3 py-1 rounded-full border border-muted-foreground/5">
-                  <Mail className="h-3.5 w-3.5 text-primary/60" />
-                  <span className="font-medium">{clientEmail}</span>
-                </div>
-              )}
-              {clientPhone && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 px-3 py-1 rounded-full border border-muted-foreground/5">
-                  <Phone className="h-3.5 w-3.5 text-primary/60" />
-                  <span className="font-medium">{clientPhone}</span>
-                  <a
-                    href={`https://wa.me/55${clientPhone.replace(/\D/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="ml-1 flex items-center gap-1 text-[10px] font-bold uppercase text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 px-2 py-0.5 rounded-full transition-colors"
-                    title="Abrir WhatsApp Web"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
-                    WhatsApp
-                  </a>
-                </div>
-              )}
-              {clientCpf && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 px-3 py-1 rounded-full border border-muted-foreground/5">
-                  <Fingerprint className="h-3.5 w-3.5 text-primary/60" />
-                  <span className="font-medium">CPF: {clientCpf}</span>
-                </div>
-              )}
-            </div>
-            
-            <div className="flex flex-wrap gap-3">
-              <div className="px-4 py-2 rounded-2xl bg-primary/10 border border-primary/10 flex flex-col">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-primary/70">Valor da Matrícula</span>
-                <span className="text-xl font-black text-primary">{totalMasked || 'R$ 0,00'}</span>
-              </div>
-              <div className="px-4 py-2 rounded-2xl bg-muted/50 border border-muted/10 flex flex-col">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">ID da Matrícula</span>
-                <span className="text-xl font-black text-foreground/70">{id}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row items-stretch gap-3 w-full md:w-auto">
-            {/* Card de Situação da Matrícula */}
-            <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-white dark:bg-slate-900 border shadow-xs min-w-[210px]">
-              <div className={`h-11 w-11 rounded-xl flex items-center justify-center font-bold text-lg shrink-0 ${
-                isInteressado
-                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-                  : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-              }`}>
-                {isInteressado ? <Clock className="h-5 w-5" /> : <GraduationCap className="h-5 w-5" />}
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground leading-none">
-                  Situação da Matrícula
-                </span>
-                <Badge
-                  variant="outline"
-                  className={`w-fit font-extrabold text-xs px-2.5 py-0.5 rounded-full ${
-                    isInteressado
-                      ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
-                      : 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
-                  }`}
+      {/* Hero Summary Section (Compact Layout) */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border shadow-sm p-4 sm:p-5 bg-gradient-to-br from-primary/5 via-transparent to-transparent space-y-3">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border-b pb-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-extrabold tracking-tight text-foreground">{clientName}</h1>
+              <div className="flex items-center gap-0.5">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7 rounded-full hover:bg-primary/10 hover:text-primary transition-colors" 
+                  title="Editar cadastro do aluno"
+                  onClick={handleEditClient}
                 >
-                  {isInteressado ? '🟡 Interessado (Proposta)' : `🟢 ${currentSituationName}`}
-                </Badge>
+                  <UserCog className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7 rounded-full hover:bg-emerald-100 hover:text-emerald-600 transition-colors" 
+                  title="Acessar como aluno (Impersonate)"
+                  onClick={handleImpersonate}
+                >
+                  <LogIn className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-
-            {/* Card de Status Operacional */}
-            <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-white dark:bg-slate-900 border shadow-xs shrink-0">
-              <div className={`h-11 w-11 rounded-xl flex items-center justify-center font-bold text-lg shrink-0 ${isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
-                {isActive ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <ShieldAlert className="h-5 w-5 text-red-600" />}
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-bold uppercase text-muted-foreground leading-none">Status Operacional</span>
-                <span className={`font-bold text-xs uppercase tracking-wider ${isActive ? 'text-emerald-700' : 'text-red-700'}`}>
-                  {isActive ? 'Ativa' : 'Inativa'}
-                </span>
-              </div>
-            </div>
+            <p className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
+              <BookOpen className="h-4 w-4 text-primary shrink-0" /> {courseTitle}
+            </p>
           </div>
+
+          {/* Badges de Status & Situação */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {/* Valor */}
+            <div className="px-3 py-1 rounded-xl bg-primary/10 border border-primary/20 flex flex-col items-center">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-primary/70">Valor Total</span>
+              <span className="text-sm font-black text-primary">{totalMasked || 'R$ 0,00'}</span>
+            </div>
+            {/* ID */}
+            <div className="px-3 py-1 rounded-xl bg-muted/50 border flex flex-col items-center">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Matrícula</span>
+              <span className="text-sm font-black text-foreground/70">#{id}</span>
+            </div>
+            {/* Situação */}
+            <Badge
+              variant="outline"
+              className={`font-extrabold text-xs px-2.5 py-1 rounded-xl ${
+                isInteressado
+                  ? 'bg-amber-50 text-amber-800 border-amber-300'
+                  : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+              }`}
+            >
+              {isInteressado ? '🟡 Interessado (Proposta)' : `🟢 ${currentSituationName}`}
+            </Badge>
+            {/* Status Operacional */}
+            <Badge
+              variant="outline"
+              className={`font-extrabold text-xs px-2.5 py-1 rounded-xl ${
+                isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-red-50 text-red-700 border-red-300'
+              }`}
+            >
+              {isActive ? '🟢 Operacional Ativa' : '🔴 Operacional Inativa'}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Student Details Row (Email, Phone, CPF) */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          {clientEmail && (
+            <div className="flex items-center gap-1.5 text-muted-foreground bg-muted/40 px-2.5 py-0.5 rounded-full border">
+              <Mail className="h-3 w-3 text-primary/70" />
+              <span className="font-medium">{clientEmail}</span>
+            </div>
+          )}
+          {clientPhone && (
+            <div className="flex items-center gap-1.5 text-muted-foreground bg-muted/40 px-2.5 py-0.5 rounded-full border">
+              <Phone className="h-3 w-3 text-primary/70" />
+              <span className="font-medium">{clientPhone}</span>
+              <a
+                href={`https://wa.me/55${clientPhone.replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="ml-1 flex items-center gap-0.5 text-[9px] font-bold uppercase text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 px-1.5 py-0.5 rounded-full transition-colors"
+                title="Abrir WhatsApp Web"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+                WhatsApp
+              </a>
+            </div>
+          )}
+          {clientCpf && (
+            <div className="flex items-center gap-1.5 text-muted-foreground bg-muted/40 px-2.5 py-0.5 rounded-full border">
+              <Fingerprint className="h-3 w-3 text-primary/70" />
+              <span className="font-medium">CPF: {clientCpf}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* KPIs Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-3">
-        <Card className="shadow-sm border-muted/60 bg-muted/5 print:border print:bg-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Conteúdos</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{total}</div>
-            <p className="text-xs text-muted-foreground">Aulas no curso</p>
-          </CardContent>
+      {/* Metrics Bar (Compact Grid) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+        <Card className="p-3 shadow-xs border-muted/60 bg-muted/5 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Conteúdo</span>
+            <span className="text-lg font-black text-foreground">{total} <span className="text-xs font-medium text-muted-foreground">aulas ({completed} concl.)</span></span>
+          </div>
+          <BookOpen className="h-5 w-5 text-primary/60 shrink-0" />
         </Card>
 
-        <Card className="shadow-sm border-muted/60 bg-muted/5">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">{completed}</div>
-            <p className="text-xs text-muted-foreground">Atividades finalizadas</p>
-          </CardContent>
+        <Card className="p-3 shadow-xs border-muted/60 bg-muted/5 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Progresso</span>
+            <span className="font-black text-primary">{percent}%</span>
+          </div>
+          <div className="h-2 w-full bg-muted rounded-full overflow-hidden border">
+            <div className="h-full bg-primary transition-all duration-500" style={{ width: `${percent}%` }} />
+          </div>
         </Card>
 
-        <Card className={`shadow-sm border-muted/60 ${paceInfo?.bgColor || 'bg-muted/5'}`}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className={`text-sm font-medium ${paceInfo?.color || ''}`}>Saúde da Matrícula</CardTitle>
-            {paceInfo ? <paceInfo.icon className={`h-4 w-4 ${paceInfo.color}`} /> : <ActivityIcon className="h-4 w-4 text-muted-foreground" />}
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${paceInfo?.color || ''}`}>
-              {paceInfo?.label || 'Ideal'}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {paceInfo ? (
-                paceInfo.diff >= 0 
-                  ? `Está ${paceInfo.diff}% acima do ritmo ideal`
-                  : `Está ${Math.abs(paceInfo.diff)}% abaixo do esperado`
-              ) : 'Ritmo baseado no tempo de acesso'}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-1 print:gap-2">
-        <Card className="shadow-sm border-muted/60 bg-muted/5 print:border print:bg-white">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Progresso Detalhado</CardTitle>
-            <TrendingUp className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline justify-between mb-2">
-               <div className="text-2xl font-bold text-primary">{percent}% concluído</div>
-               <div className="text-xs text-muted-foreground">{completed} de {total} aulas</div>
-            </div>
-            <div className="h-3 w-full bg-muted rounded-full overflow-hidden border border-muted-foreground/5 shadow-inner">
-               <div className="h-full bg-primary transition-all duration-700 ease-in-out" style={{ width: `${percent}%` }} />
-            </div>
-          </CardContent>
+        <Card className={`p-3 shadow-xs border-muted/60 flex items-center justify-between ${paceInfo?.bgColor || 'bg-muted/5'}`}>
+          <div>
+            <span className={`text-[10px] font-bold uppercase tracking-wider block ${paceInfo?.color || 'text-muted-foreground'}`}>Saúde da Matrícula</span>
+            <span className={`text-base font-black ${paceInfo?.color || 'text-foreground'}`}>{paceInfo?.label || 'Ideal'}</span>
+          </div>
+          {paceInfo ? <paceInfo.icon className={`h-5 w-5 ${paceInfo.color} shrink-0`} /> : <ActivityIcon className="h-5 w-5 text-muted-foreground shrink-0" />}
         </Card>
 
-        <Card className="shadow-sm border-emerald-500/20 bg-emerald-50/50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-emerald-700">Onde o aluno parou?</CardTitle>
-            <PlayCircle className="h-4 w-4 text-emerald-600" />
-          </CardHeader>
-          <CardContent>
-             {nextActivityTitle ? (
-               <div className="flex items-center gap-3">
-                 <div className="flex-1">
-                    <div className="text-sm font-bold text-emerald-900 line-clamp-1 leading-tight">
-                        {nextActivityTitle}
-                    </div>
-                    <p className="text-xs text-emerald-600/80 mt-1 font-medium">
-                        Próxima atividade na trilha
-                    </p>
-                 </div>
-                 <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600" onClick={handleImpersonate}>
-                    <ArrowRight className="h-4 w-4" />
-                 </Button>
-               </div>
-             ) : (
-                <>
-                 <div className="text-sm font-bold text-muted-foreground text-center py-2">✨ Curso Finalizado!</div>
-                </>
-             )}
-          </CardContent>
+        <Card className="p-3 shadow-xs border-emerald-500/20 bg-emerald-50/40 flex items-center justify-between">
+          <div className="overflow-hidden pr-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Onde parou?</span>
+            <span className="text-xs font-bold text-emerald-900 truncate block">{nextActivityTitle || '✨ Curso Finalizado!'}</span>
+          </div>
+          {nextActivityTitle && (
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-700 shrink-0 hover:bg-emerald-100" onClick={handleImpersonate}>
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          )}
         </Card>
       </div>
 
       <Tabs defaultValue="geral" className="w-full">
-        <TabsList className="bg-muted/50 p-1 rounded-xl mb-6 flex flex-wrap">
-          <TabsTrigger value="geral" className="rounded-lg px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm">
-            <BookOpen className="h-4 w-4 mr-1 md:mr-2" /> Trilha Acadêmica
+        <TabsList className="bg-muted/50 p-1 rounded-xl mb-3 flex flex-wrap">
+          <TabsTrigger value="geral" className="rounded-lg px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm font-semibold">
+            <BookOpen className="h-3.5 w-3.5 mr-1.5" /> Trilha Acadêmica
           </TabsTrigger>
-          <TabsTrigger value="financeiro" className="rounded-lg px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm">
-            <CreditCard className="h-4 w-4 mr-1 md:mr-2" /> Financeiro
+          <TabsTrigger value="financeiro" className="rounded-lg px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm font-semibold">
+            <CreditCard className="h-3.5 w-3.5 mr-1.5" /> Financeiro
           </TabsTrigger>
-          <TabsTrigger value="automacoes" className="rounded-lg px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm">
-            <Settings className="h-4 w-4 mr-1 md:mr-2" /> Automações
+          <TabsTrigger value="automacoes" className="rounded-lg px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm font-semibold">
+            <Settings className="h-3.5 w-3.5 mr-1.5" /> Automações
             {(Array.isArray((enrollment as any)?.stage_logs) && (enrollment as any)?.stage_logs.length > 0) && (
-              <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0">{(enrollment as any).stage_logs.length}</Badge>
+              <Badge variant="secondary" className="ml-1.5 text-[10px] px-1 py-0 font-bold">{(enrollment as any).stage_logs.length}</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="logs" className="rounded-lg px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm">
-            <History className="h-4 w-4 mr-1 md:mr-2" /> Logs de Acesso
+          <TabsTrigger value="logs" className="rounded-lg px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-xs md:text-sm font-semibold">
+            <History className="h-3.5 w-3.5 mr-1.5" /> Logs de Acesso
           </TabsTrigger>
         </TabsList>
 

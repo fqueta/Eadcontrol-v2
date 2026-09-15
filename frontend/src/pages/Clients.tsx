@@ -58,6 +58,7 @@ import {
 } from '@/hooks/clients';
 import { generateMockClients } from '@/mocks/clients';
 import { useQueryClient } from '@tanstack/react-query';
+import QuickClientDialog from '@/components/clients/QuickClientDialog';
 import { ClientRecord, CreateClientInput } from '@/types/clients';
 import { ClientForm } from '@/components/clients/ClientForm';
 import { ClientsTable } from '@/components/clients/ClientsTable';
@@ -349,10 +350,12 @@ export default function Clients() {
     },
   });
 
+  const [quickClientOpen, setQuickClientOpen] = useState(false);
+
   // Handle opening new client dialog - memoized for performance
   const handleNewClient = useCallback(() => {
-    navigate('/admin/clients/create');
-  }, [navigate]);
+    setQuickClientOpen(true);
+  }, []);
   // console.log('Autor inicial:', form.getValues());
   // Handle opening edit dialog - memoized for performance
   const handleEditClient = useCallback((client: ClientRecord) => {
@@ -722,131 +725,107 @@ export default function Clients() {
   }, [clientToForceDelete, forceDeleteClient, toast, queryClient]);
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto py-3 px-4 space-y-3.5 animate-in fade-in duration-300 pb-12">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Clientes</h1>
-        <Button onClick={handleNewClient}>
-          <Plus className="mr-2 h-4 w-4" /> Novo Cliente
+      <div className="flex items-center justify-between gap-3 pb-1 border-b border-slate-100 dark:border-slate-800">
+        <h1 className="text-xl font-black tracking-tight text-foreground">Clientes</h1>
+        <Button onClick={handleNewClient} size="sm" className="h-9 rounded-lg font-bold text-xs px-4">
+          <Plus className="mr-1.5 h-3.5 w-3.5" /> Novo Cliente
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total de Clientes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {useMock ? effectiveClients.length : (clientsQuery.data?.total || 0)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Clientes cadastrados no sistema
-            </p>
-          </CardContent>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="border border-slate-200/80 shadow-xs bg-white dark:bg-slate-900 rounded-xl p-3">
+          <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/60">Total de Clientes</p>
+          <div className="text-xl font-black text-foreground leading-none mt-1">
+            {useMock ? effectiveClients.length : (clientsQuery.data?.total || 0)}
+          </div>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Clientes Ativos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {effectiveClients.filter(client => client.status === 'actived').length || 0}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Clientes com status ativo
-            </p>
-          </CardContent>
+        <Card className="border border-slate-200/80 shadow-xs bg-white dark:bg-slate-900 rounded-xl p-3">
+          <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/60">Clientes Ativos</p>
+          <div className="text-xl font-black text-emerald-600 leading-none mt-1">
+            {effectiveClients.filter(client => client.status === 'actived').length || 0}
+          </div>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Pré-registrados</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {effectiveClients.filter(client => client.status === 'pre_registred').length || 0}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Clientes pré-registrados
-            </p>
-          </CardContent>
+        <Card className="border border-slate-200/80 shadow-xs bg-white dark:bg-slate-900 rounded-xl p-3">
+          <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/60">Pré-registrados</p>
+          <div className="text-xl font-black text-amber-600 leading-none mt-1">
+            {effectiveClients.filter(client => client.status === 'pre_registred').length || 0}
+          </div>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Clientes Inativos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {effectiveClients.filter(client => client.status === 'inactived').length || 0}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Clientes com status inativo
-            </p>
-          </CardContent>
+        <Card className="border border-slate-200/80 shadow-xs bg-white dark:bg-slate-900 rounded-xl p-3">
+          <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/60">Clientes Inativos</p>
+          <div className="text-xl font-black text-red-500 leading-none mt-1">
+            {effectiveClients.filter(client => client.status === 'inactived').length || 0}
+          </div>
         </Card>
       </div>
 
       {/* Client List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Clientes</CardTitle>
-          <CardDescription>
-            Gerencie seus clientes, visualize informações e histórico de atividades.
-          </CardDescription>
-          <div className="flex flex-col sm:flex-row gap-4 mt-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome, email ou documento..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            <div className="w-full sm:w-48">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filtrar por status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Status</SelectItem>
-                  <SelectItem value="actived">Ativados</SelectItem>
-                  <SelectItem value="pre_registred">Pré-registrados</SelectItem>
-                  <SelectItem value="inactived">Inativos</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {/* Toggle Lixeira */}
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={showTrash}
-                onCheckedChange={setShowTrash}
-                aria-label="Mostrar registros na lixeira"
-              />
-              <span className="text-sm">Lixeira</span>
+      <Card className="border border-slate-200/80 shadow-xs bg-white dark:bg-slate-900 rounded-xl overflow-hidden">
+        <CardHeader className="bg-slate-50/70 dark:bg-slate-800/70 border-b border-slate-100 dark:border-slate-800 px-4 py-2.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <CardTitle className="text-sm font-black tracking-tight">Lista de Clientes</CardTitle>
             </div>
             
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => {
-                const url = window.location.href;
-                navigator.clipboard.writeText(url);
-                setIsCopying(true);
-                toast({
-                  title: "Link copiado!",
-                  description: "O link com os filtros atuais foi copiado para sua área de transferência.",
-                });
-                setTimeout(() => setIsCopying(false), 2000);
-              }}
-              title="Copiar link com filtros"
-            >
-              {isCopying ? <Check className="h-4 w-4 text-green-600" /> : <Share2 className="h-4 w-4" />}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome, email ou documento..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="h-8 pl-8 text-xs rounded-lg border-slate-200"
+                />
+              </div>
+              <div className="w-36">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-8 text-xs font-bold rounded-lg border-slate-200">
+                    <SelectValue placeholder="Filtrar por status" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-slate-200 text-xs">
+                    <SelectItem value="all" className="font-bold text-xs">Todos os Status</SelectItem>
+                    <SelectItem value="actived" className="font-bold text-xs">Ativados</SelectItem>
+                    <SelectItem value="pre_registred" className="font-bold text-xs">Pré-registrados</SelectItem>
+                    <SelectItem value="inactived" className="font-bold text-xs">Inativos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {/* Toggle Lixeira */}
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs font-bold">
+                <Switch
+                  checked={showTrash}
+                  onCheckedChange={setShowTrash}
+                  aria-label="Mostrar registros na lixeira"
+                  className="scale-90"
+                />
+                <span className="text-[11px]">Lixeira</span>
+              </div>
+              
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-lg"
+                onClick={() => {
+                  const url = window.location.href;
+                  navigator.clipboard.writeText(url);
+                  setIsCopying(true);
+                  toast({
+                    title: "Link copiado!",
+                    description: "O link com os filtros atuais foi copiado.",
+                  });
+                  setTimeout(() => setIsCopying(false), 2000);
+                }}
+                title="Copiar link com filtros"
+              >
+                {isCopying ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Share2 className="h-3.5 w-3.5" />}
+              </Button>
+            </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {(useMock ? false : clientsQuery.isLoading) ? (
             <div className="flex justify-center items-center py-8">
               <p>Carregando clientes...</p>
@@ -988,6 +967,12 @@ export default function Clients() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <QuickClientDialog
+        open={quickClientOpen}
+        onOpenChange={setQuickClientOpen}
+        onSuccess={() => clientsQuery.refetch()}
+      />
     </div>
   );
 }

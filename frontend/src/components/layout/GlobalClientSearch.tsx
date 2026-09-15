@@ -28,6 +28,7 @@ import {
   Keyboard,
 } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
+import QuickClientDialog from "@/components/clients/QuickClientDialog";
 import { clientsService } from "@/services/clientsService";
 import { enrollmentsService } from "@/services/enrollmentsService";
 import { coursesService } from "@/services/coursesService";
@@ -182,7 +183,8 @@ export function GlobalClientSearch({
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Histórico
+  // Modal de Cadastro Rápido de Cliente
+  const [quickClientOpen, setQuickClientOpen] = useState(false);
   const [history, setHistory] = useState<SearchHistoryEntry[]>(loadHistory);
 
   // Navegação por teclado
@@ -360,7 +362,8 @@ export function GlobalClientSearch({
   const showEmpty = showResults && hasSearched && !isLoading && clientResults.length === 0 && enrollmentResults.length === 0 && courseResults.length === 0;
 
   return (
-    <Dialog open={isOpen} onOpenChange={setOpen}>
+    <>
+      <Dialog open={isOpen} onOpenChange={setOpen}>
       <DialogContent
         className={cn(
           "sm:max-w-[1100px] p-0 gap-0 overflow-hidden",
@@ -413,7 +416,7 @@ export function GlobalClientSearch({
             className="shrink-0 gap-2 h-8 px-3"
             onClick={() => {
               setOpen(false);
-              navigate('/admin/clients/create');
+              setQuickClientOpen(true);
             }}
           >
             <UserPlus className="h-4 w-4" />
@@ -783,5 +786,10 @@ export function GlobalClientSearch({
         </div>
       </DialogContent>
     </Dialog>
+    <QuickClientDialog
+      open={quickClientOpen}
+      onOpenChange={setQuickClientOpen}
+    />
+    </>
   );
 }

@@ -31,7 +31,7 @@ class EnrollmentsService extends BaseApiService {
     );
     const defaultParams = hasSpecificFilter ? {} : { situacao: 'mat' };
     const mergedParams: any = { ...defaultParams, ...(params || {}) };
-    if (mergedParams.situacao === undefined || mergedParams.situacao === '') {
+    if (mergedParams.situacao === undefined || mergedParams.situacao === '' || mergedParams.situacao === 'all') {
       delete mergedParams.situacao;
     }
     const response = await this.get<any>('/matriculas', mergedParams);
@@ -53,8 +53,8 @@ class EnrollmentsService extends BaseApiService {
    * en-US: Creates a new enrollment.
    */
   async createEnrollment(payload: CreateEnrollmentInput): Promise<EnrollmentRecord> {
-    const response = await this.post<ApiResponse<EnrollmentRecord>>('/matriculas', payload);
-    return response.data;
+    const response = await this.post<any>('/matriculas', payload);
+    return response?.data || response;
   }
 
   /**

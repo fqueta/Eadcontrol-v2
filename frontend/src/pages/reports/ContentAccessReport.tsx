@@ -114,125 +114,98 @@ export default function ContentAccessReport() {
   const chartData = data?.views_chart || [];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700 pb-20">
+    <div className="space-y-3.5 animate-in fade-in duration-300 pb-12">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground/60">
-            <BarChart3 className="h-3 w-3" />
-            Relatórios
-            <span className="text-primary/40">•</span>
-            <span className="text-primary italic">Acesso & Engajamento</span>
-          </div>
-          <h1 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-3">
-            <TrendingUp className="h-8 w-8 text-primary" />
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-1 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h1 className="text-xl font-black tracking-tight text-foreground flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
             Relatório de Acesso
           </h1>
-          <p className="text-sm font-medium text-muted-foreground">Acompanhe métricas em tempo real de visualização e retenção.</p>
         </div>
         
-        <Card className="border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-2xl p-2 flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm">
-            <Calendar className="h-4 w-4" />
-          </div>
-          <div className="flex flex-col mr-2">
-            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Intervado</span>
-            <span className="text-xs font-black text-foreground uppercase tracking-tight">Período</span>
-          </div>
+        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200/80 rounded-lg px-2.5 py-1 shadow-xs">
+          <Calendar className="h-3.5 w-3.5 text-primary" />
+          <span className="text-[10px] font-black uppercase text-muted-foreground">Período:</span>
           <Select 
             value={String(days)} 
             onValueChange={(v) => setDays(Number(v))}
           >
-            <SelectTrigger className="w-40 h-10 rounded-xl border-slate-200/50 bg-white dark:bg-slate-900 shadow-sm font-bold transition-all focus:ring-4 focus:ring-primary/10">
+            <SelectTrigger className="w-36 h-7 rounded-md border-none bg-slate-100/70 font-bold text-xs">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border-slate-200 overflow-hidden">
-              <SelectItem value="7" className="font-bold">Últimos 7 dias</SelectItem>
-              <SelectItem value="30" className="font-bold">Últimos 30 dias</SelectItem>
-              <SelectItem value="90" className="font-bold">Últimos 90 dias</SelectItem>
+            <SelectContent className="rounded-xl border-slate-200">
+              <SelectItem value="7" className="font-bold text-xs">Últimos 7 dias</SelectItem>
+              <SelectItem value="30" className="font-bold text-xs">Últimos 30 dias</SelectItem>
+              <SelectItem value="90" className="font-bold text-xs">Últimos 90 dias</SelectItem>
             </SelectContent>
           </Select>
-        </Card>
+        </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-3">
         {[
-          { title: "Total de Visualizações", label: "Acessos Brutos", value: overview.total_views, icon: Eye, color: "primary", desc: "No período selecionado" },
-          { title: "Alunos Ativos", label: "Engajamento Único", value: overview.active_users, icon: Users, color: "emerald", desc: "Usuários únicos logados" },
-          { title: "Média de Acessos", label: "Frequência Relativa", value: overview.active_users > 0 ? (overview.total_views / overview.active_users).toFixed(1) : 0, icon: TrendingUp, color: "indigo", desc: "Média por aluno ativo" },
+          { title: "Total de Visualizações", label: "Acessos Brutos", value: overview.total_views, icon: Eye, color: "primary", bg: "bg-primary/10", textColor: "text-primary" },
+          { title: "Alunos Ativos", label: "Engajamento Único", value: overview.active_users, icon: Users, color: "emerald", bg: "bg-emerald-500/10", textColor: "text-emerald-600" },
+          { title: "Média de Acessos", label: "Frequência Relativa", value: overview.active_users > 0 ? (overview.total_views / overview.active_users).toFixed(1) : 0, icon: TrendingUp, color: "indigo", bg: "bg-indigo-500/10", textColor: "text-indigo-600" },
         ].map((kpi, i) => (
-          <Card key={i} className="border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden relative group hover:bg-white transition-all duration-300">
-             <div className={`absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity`}>
-               <kpi.icon className="h-20 w-20" />
-             </div>
-             <CardHeader className="p-8 pb-4 relative z-10">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className={`h-11 w-11 rounded-2xl bg-${kpi.color}-500/10 flex items-center justify-center text-${kpi.color}-600 group-hover:scale-110 transition-transform`}>
-                    <kpi.icon className="h-5 w-5" />
-                  </div>
-                  <div className="h-6 w-full flex items-center">
-                    <div className="h-0.5 w-8 bg-slate-100 dark:bg-slate-800 rounded-full group-hover:w-full group-hover:bg-primary/20 transition-all duration-500" />
-                  </div>
+          <Card key={i} className="border border-slate-200/80 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 rounded-xl p-3.5">
+             <div className="flex items-center gap-3">
+                <div className={`h-9 w-9 rounded-lg ${kpi.bg} ${kpi.textColor} flex items-center justify-center shrink-0`}>
+                  <kpi.icon className="h-4 w-4" />
                 </div>
-                <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">{kpi.title}</CardTitle>
-                <CardDescription className="font-bold text-[11px] group-hover:text-primary transition-colors underline decoration-primary/20 underline-offset-4">{kpi.label}</CardDescription>
-             </CardHeader>
-             <CardContent className="p-8 pt-0 relative z-10">
-                <div className="text-4xl font-black tracking-tight text-foreground mb-1">{kpi.value}</div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 italic">{kpi.desc}</p>
-             </CardContent>
+                <div>
+                   <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/60">{kpi.title}</p>
+                   <div className="text-xl font-black tracking-tight text-foreground leading-none mt-0.5">{kpi.value}</div>
+                </div>
+             </div>
           </Card>
         ))}
       </div>
 
       {/* Chart Section */}
-      <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden p-1">
-        <CardHeader className="p-8">
+      <Card className="border border-slate-200/80 dark:border-slate-800 shadow-xs bg-white dark:bg-slate-900 rounded-xl overflow-hidden p-1">
+        <CardHeader className="px-4 py-3 pb-1">
           <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary/60">
-                <TrendingUp className="h-3 w-3" />
-                Evolution Trend
-              </div>
-              <CardTitle className="text-2xl font-black tracking-tight flex items-center gap-2">
-                Evolução de Visualizações
-                <ArrowUpRight className="h-6 w-6 text-primary animate-pulse" />
+            <div className="space-y-0.5">
+              <CardTitle className="text-sm font-black tracking-tight flex items-center gap-1.5">
+                Evolução de Visualizações ({days} dias)
+                <ArrowUpRight className="h-4 w-4 text-primary" />
               </CardTitle>
-              <CardDescription className="font-bold">Acompanhamento diário de engajamento nos últimos {days} dias.</CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="px-6 pb-8">
-          <div className="h-[350px] w-full pr-4">
+        <CardContent className="px-3 pb-3">
+          <div className="h-[210px] w-full pr-2">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+              <LineChart data={chartData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.5} />
                 <XAxis 
                   dataKey="date" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 10, fontWeight: '800', fill: '#64748B' }} 
-                  dy={10}
+                  tick={{ fontSize: 9, fontWeight: '800', fill: '#64748B' }} 
+                  dy={5}
                   tickFormatter={(date) => new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                 />
                 <YAxis 
                    axisLine={false} 
                    tickLine={false} 
-                   tick={{ fontSize: 10, fontWeight: '800', fill: '#64748B' }} 
+                   tick={{ fontSize: 9, fontWeight: '800', fill: '#64748B' }} 
                 />
                 <Tooltip 
-                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
-                   labelFormatter={(date) => new Date(date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontWeight: 'bold', fontSize: '11px' }}
+                   labelFormatter={(date) => new Date(date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
                    formatter={(value) => [value, 'Visualizações']}
                 />
                 <Line 
                    type="monotone" 
                    dataKey="count" 
                    stroke="#3b82f6" 
-                   strokeWidth={4} 
-                   dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#FFF' }}
-                   activeDot={{ r: 6, stroke: '#FFF', strokeWidth: 2, fill: '#3b82f6' }} 
+                   strokeWidth={3} 
+                   dot={{ r: 3, fill: '#3b82f6', strokeWidth: 1.5, stroke: '#FFF' }}
+                   activeDot={{ r: 5, stroke: '#FFF', strokeWidth: 2, fill: '#3b82f6' }} 
                    name="Visualizações" 
                 />
               </LineChart>
