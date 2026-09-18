@@ -230,7 +230,6 @@ export default function EnrollmentTable({
       <Table>
         <TableHeader className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200/80 dark:border-slate-800">
           <TableRow className="hover:bg-transparent">
-            <TableHead className="w-[45px] px-2 py-2 text-center text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">Ações</TableHead>
             <SortableHeader field="id" label="ID" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="w-[70px] px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground/70" />
             <SortableHeader field="cliente_nome" label="Cliente" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">
               <div className="flex items-center gap-1.5">
@@ -254,6 +253,7 @@ export default function EnrollmentTable({
                 <DollarSign className="h-3 w-3" /> Valor
               </div>
             </SortableHeader>
+            <TableHead className="w-[50px] px-2 py-2 text-center text-[11px] font-black uppercase tracking-wider text-muted-foreground/70 sticky right-0 z-20 bg-slate-50/95 dark:bg-slate-800/95 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.08)]">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -292,55 +292,6 @@ export default function EnrollmentTable({
                   onDoubleClick={() => onView?.(enroll)}
                   className="group transition-all hover:bg-slate-50/80 dark:hover:bg-slate-800/80 items-center border-transparent cursor-pointer"
                 >
-                  <TableCell className="px-2 py-2 text-center">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-7 w-7 p-0 rounded-lg hover:bg-primary/10 group/btn focus-visible:ring-0">
-                          <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground group-hover/btn:text-primary transition-colors" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-[180px] rounded-xl border-slate-100 dark:border-slate-800 shadow-xl p-1">
-                        <DropdownMenuLabel className="text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2 py-1.5">Gerenciamento</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => onView?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
-                          <Eye className="h-3.5 w-3.5 text-primary" /> 
-                          Visualizar
-                        </DropdownMenuItem>
-                        {isMatriculated(enroll) && Number(user?.permission_id) <= 3 && (
-                          <DropdownMenuItem onClick={() => {
-                            const courseId = enroll?.id_curso || enroll?.curso_id || enroll?.course_id || '';
-                            navigate(`/admin/school/enrollments/${enroll.id}/progress?id_curso=${courseId}`);
-                          }} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
-                            <BarChart3 className="h-3.5 w-3.5 text-emerald-500" /> 
-                            Ver Progresso
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuSeparator className="my-1 bg-slate-50 dark:bg-slate-800" />
-                        <DropdownMenuLabel className="text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2 py-1.5">Edição Rápida</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'principal')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
-                          <User className="h-3.5 w-3.5 text-slate-500" /> 
-                          Dados Principais
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'academico')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
-                          <BookOpen className="h-3.5 w-3.5 text-slate-500" /> 
-                          Acadêmico
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'financeiro')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
-                          <DollarSign className="h-3.5 w-3.5 text-slate-500" /> 
-                          Financeiro
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'acesso')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
-                          <CalendarDays className="h-3.5 w-3.5 text-slate-500" /> 
-                          Acesso e Validade
-                        </DropdownMenuItem>
-
-                        <DropdownMenuSeparator className="my-1 bg-slate-50 dark:bg-slate-800" />
-                        <DropdownMenuItem className="text-red-500 cursor-pointer focus:bg-red-50 focus:text-red-600 gap-2 font-bold text-xs rounded-lg py-1.5" onClick={() => onDelete?.(enroll)}>
-                          <Trash2 className="h-3.5 w-3.5" /> 
-                          Excluir Registro
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
                   <TableCell className="px-3 py-2 font-mono text-[10px] font-bold text-muted-foreground/70 group-hover:text-primary transition-colors">
                     {String(enroll.id).padStart(4, '0')}
                   </TableCell>
@@ -386,6 +337,55 @@ export default function EnrollmentTable({
                     <span className="font-bold text-xs text-primary/90 tabular-nums">
                       {amountFormatter(enroll)}
                     </span>
+                  </TableCell>
+                  <TableCell className="px-2 py-2 text-center sticky right-0 z-10 bg-white/95 dark:bg-slate-900/95 group-hover:bg-slate-50/95 dark:group-hover:bg-slate-800/95 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.08)]">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-7 w-7 p-0 rounded-lg hover:bg-primary/10 group/btn focus-visible:ring-0">
+                          <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground group-hover/btn:text-primary transition-colors" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-[180px] rounded-xl border-slate-100 dark:border-slate-800 shadow-xl p-1">
+                        <DropdownMenuLabel className="text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2 py-1.5">Gerenciamento</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => onView?.(enroll)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
+                          <Eye className="h-3.5 w-3.5 text-primary" /> 
+                          Visualizar
+                        </DropdownMenuItem>
+                        {isMatriculated(enroll) && Number(user?.permission_id) <= 3 && (
+                          <DropdownMenuItem onClick={() => {
+                            const courseId = enroll?.id_curso || enroll?.curso_id || enroll?.course_id || '';
+                            navigate(`/admin/school/enrollments/${enroll.id}/progress?id_curso=${courseId}`);
+                          }} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
+                            <BarChart3 className="h-3.5 w-3.5 text-emerald-500" /> 
+                            Ver Progresso
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator className="my-1 bg-slate-50 dark:bg-slate-800" />
+                        <DropdownMenuLabel className="text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2 py-1.5">Edição Rápida</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'principal')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
+                          <User className="h-3.5 w-3.5 text-slate-500" /> 
+                          Dados Principais
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'academico')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
+                          <BookOpen className="h-3.5 w-3.5 text-slate-500" /> 
+                          Acadêmico
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'financeiro')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
+                          <DollarSign className="h-3.5 w-3.5 text-slate-500" /> 
+                          Financeiro
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onEdit?.(enroll, 'acesso')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg py-1.5">
+                          <CalendarDays className="h-3.5 w-3.5 text-slate-500" /> 
+                          Acesso e Validade
+                        </DropdownMenuItem>
+
+                        <DropdownMenuSeparator className="my-1 bg-slate-50 dark:bg-slate-800" />
+                        <DropdownMenuItem className="text-red-500 cursor-pointer focus:bg-red-50 focus:text-red-600 gap-2 font-bold text-xs rounded-lg py-1.5" onClick={() => onDelete?.(enroll)}>
+                          <Trash2 className="h-3.5 w-3.5" /> 
+                          Excluir Registro
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               );

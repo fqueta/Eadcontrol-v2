@@ -14,10 +14,61 @@ use Illuminate\Support\Str;
 class ApiCredentialController extends Controller
 {
     /**
+     * Valida se o usuário pertence ao Grupo 1 (Master / Superadmin).
+     */
+    protected function checkGroup1Access(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Não autenticado'], 401);
+        }
+
+        $permissionId = (int) ($user->permission_id ?? 0);
+        if ($permissionId !== 1) {
+            return response()->json([
+                'message' => 'Acesso negado. Apenas administradores do Grupo 1 podem gerenciar credenciais de integrações.',
+                'permission_id' => $permissionId,
+            ], 403);
+        }
+
+        return null;
+    }
+
+    /**
+     * Busca credencial diretamente pelo slug para uso no painel.
+     */
+    public function getBySlug(Request $request, string $slug)
+    {
+        if ($deny = $this->checkGroup1Access($request)) {
+            return $deny;
+        }
+
+        $credential = ApiCredential::with('metas')->where('slug', $slug)->first();
+        if (!$credential) {
+            return response()->json(['message' => 'Credencial não encontrada', 'exists' => false], 404);
+        }
+
+        // Não expor senha/segredos reais por completo no GET
+        $config = $credential->config ?? [];
+        if (isset($config['pass'])) $config['pass'] = '';
+        if (isset($config['secret_access_key'])) $config['secret_access_key'] = '';
+        $credential->config = $config;
+
+        return response()->json([
+            'exists' => true,
+            'data' => $credential,
+        ]);
+    }
+
+    /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
+        if ($deny = $this->checkGroup1Access($request)) {
+            return $deny;
+        }
+
         $query = ApiCredential::query();
 
         if ($request->has('name')) {
@@ -39,6 +90,10 @@ class ApiCredentialController extends Controller
      */
     public function store(Request $request)
     {
+        if ($deny = $this->checkGroup1Access($request)) {
+            return $deny;
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:api_credentials,slug',
@@ -98,24 +153,25 @@ class ApiCredentialController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
+        if ($deny = $this->checkGroup1Access($request)) {
+            return $deny;
+        }
+
         $credential = ApiCredential::with('metas')->find($id);
 
         if (!$credential) {
             return response()->json(['message' => 'Credential not found'], 404);
         }
 
-        // For security, we might not want to return the decrypted password in show
-        // But for editing purposes, sometimes it's needed or we keep it encrypted/hidden
-        // The requirement says "Ao responder, descriptografar para uso no frontend quando necessário."
-        // Usually for edit form, we don't send the password back, we just let them overwrite it.
-        // But if needed, we can add a flag to decrypt. For now, keeping as is (encrypted).
-
         if ($credential) {
              $config = $credential->config;
              if (isset($config['pass'])) {
-                 $config['pass'] = ''; // Return empty so it's not exposed and not re-encrypted on save if untouched
+                 $config['pass'] = ''; // Return empty so it's not exposed
+             }
+             if (isset($config['secret_access_key'])) {
+                 $config['secret_access_key'] = '';
              }
              $credential->config = $config;
         }
@@ -128,6 +184,10 @@ class ApiCredentialController extends Controller
      */
     public function update(Request $request, $id)
     {
+        if ($deny = $this->checkGroup1Access($request)) {
+            return $deny;
+        }
+
         $credential = ApiCredential::find($id);
 
         if (!$credential) {
@@ -160,11 +220,23 @@ class ApiCredentialController extends Controller
                  if (!empty($data['config']['pass'])) {
                      $data['config']['pass'] = Crypt::encryptString($data['config']['pass']);
                  } else {
-                     // If empty string sent, maybe they want to keep previous?
-                     // Or if they didn't send 'pass' key at all, we merge with existing.
-                     // A safe merge strategy:
                      unset($data['config']['pass']); 
-                     // Pass will be merged from existing below if not present in new data
+                 }
+            }
+
+            if (isset($data['config']['secret_access_key'])) {
+                 if (!empty($data['config']['secret_access_key'])) {
+                     $data['config']['secret_access_key'] = Crypt::encryptString($data['config']['secret_access_key']);
+                 } else {
+                     unset($data['config']['secret_access_key']);
+                 }
+            }
+
+            if (isset($data['config']['access_token'])) {
+                 if (!empty($data['config']['access_token'])) {
+                     $data['config']['access_token'] = Crypt::encryptString($data['config']['access_token']);
+                 } else {
+                     unset($data['config']['access_token']);
                  }
             }
             
@@ -276,14 +348,19 @@ class ApiCredentialController extends Controller
     {
         $credential = ApiCredential::where('slug', $slug)->with('metas')->first();
 
-        if ($credential && isset($credential->config['pass'])) {
-            try {
-                $config = $credential->config;
-                $config['pass'] = Crypt::decryptString($config['pass']);
-                $credential->config = $config;
-            } catch (\Exception $e) {
-                // Failed to decrypt, return as is or handle error
+        if ($credential && is_array($credential->config)) {
+            $config = $credential->config;
+            $encryptedKeys = ['pass', 'secret_access_key', 'access_token'];
+            foreach ($encryptedKeys as $k) {
+                if (isset($config[$k]) && !empty($config[$k])) {
+                    try {
+                        $config[$k] = Crypt::decryptString($config[$k]);
+                    } catch (\Exception $e) {
+                        // Mantém como está se não foi possível descriptografar (ex: já em texto plano antigo)
+                    }
+                }
             }
+            $credential->config = $config;
         }
 
         return $credential;

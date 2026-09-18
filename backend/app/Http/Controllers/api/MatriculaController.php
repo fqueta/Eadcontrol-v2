@@ -622,6 +622,23 @@ class MatriculaController extends Controller
         
         $matricula->fill($validated);
 
+        // Preencher automaticamente subtotal e total com base no Curso caso não informados
+        if ((empty($matricula->total) || (float)$matricula->total === 0.0) && !empty($matricula->id_curso)) {
+            $cursoModel = Curso::find($matricula->id_curso);
+            if ($cursoModel) {
+                $valorLimpo = preg_replace('/[^\d.]/', '', str_replace(',', '.', (string)($cursoModel->valor ?? '')));
+                $inscricaoLimpa = preg_replace('/[^\d.]/', '', str_replace(',', '.', (string)($cursoModel->inscricao ?? '')));
+                $cursoSubtotal = is_numeric($valorLimpo) ? (float)$valorLimpo : 0.0;
+                $cursoInscricao = is_numeric($inscricaoLimpa) ? (float)$inscricaoLimpa : 0.0;
+                $cursoTotal = $cursoSubtotal + $cursoInscricao;
+
+                if (empty($matricula->subtotal) || (float)$matricula->subtotal === 0.0) {
+                    $matricula->subtotal = number_format($cursoSubtotal, 2, '.', '');
+                }
+                $matricula->total = number_format($cursoTotal, 2, '.', '');
+            }
+        }
+
         // Garantir que a situação_id seja definida para Interessado (default proposal / lead) se não informada ou vazia
         if (empty($matricula->situacao_id)) {
             $interessadoSitId = $this->default_proposal_situacao_id;

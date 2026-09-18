@@ -682,12 +682,17 @@ Route::name('api.')->prefix('api/v1')->middleware([
         });
 
         // Rotas para api-credentials
+        Route::get('api-credentials/by-slug/{slug}', [\App\Http\Controllers\api\ApiCredentialController::class, 'getBySlug'])->name('api-credentials.by-slug');
         Route::get('api-credentials/trash/list', [\App\Http\Controllers\api\ApiCredentialController::class, 'trash'])->name('api-credentials.trash');
         Route::put('api-credentials/{id}/restore', [\App\Http\Controllers\api\ApiCredentialController::class, 'restore'])->name('api-credentials.restore');
         Route::delete('api-credentials/{id}/force', [\App\Http\Controllers\api\ApiCredentialController::class, 'forceDelete'])->name('api-credentials.forceDelete');
         Route::apiResource('api-credentials', \App\Http\Controllers\api\ApiCredentialController::class,['parameters' => [
             'api-credentials' => 'id'
         ]]);
+
+        // Rotas de teste de integração e presign R2
+        Route::post('integrations/test/{slug}', [\App\Http\Controllers\api\IntegrationTestController::class, 'testConnection'])->name('integrations.test');
+        Route::post('integrations/r2/presign', [\App\Http\Controllers\api\IntegrationTestController::class, 'presignR2Upload'])->name('integrations.r2.presign');
 
         // Rotas para cupons de desconto
         Route::get('cupons/{id}/usages', [\App\Http\Controllers\api\CupomController::class, 'usages'])->name('cupons.usages');

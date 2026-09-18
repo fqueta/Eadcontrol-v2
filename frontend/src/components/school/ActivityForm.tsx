@@ -286,6 +286,24 @@ export const ActivityForm = ({ initialData, onSubmit }: { initialData?: Partial<
   }
 
   /**
+   * fetchDirectVideoDuration
+   * Obtém a duração em segundos de arquivos MP4/R2 diretamente dos metadados.
+   */
+  async function fetchDirectVideoDuration(videoUrl: string): Promise<number> {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => {
+        resolve(video.duration || 0);
+      };
+      video.onerror = () => {
+        resolve(0);
+      };
+      video.src = videoUrl;
+    });
+  }
+
+  /**
    * importVideoDuration
    * pt-BR: Importa automaticamente a duração quando o tipo é vídeo e há URL.
    * en-US: Automatically imports duration when type is video and URL is present.
@@ -298,10 +316,12 @@ export const ActivityForm = ({ initialData, onSubmit }: { initialData?: Partial<
       let seconds = 0;
       if (url.includes('vimeo.com')) {
         seconds = await fetchVimeoDuration(url);
-      } else {
+      } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
         const id = parseYouTubeVideoId(url);
-        if (!id) throw new Error('Não foi possível extrair o ID do YouTube');
-        seconds = await fetchYouTubeDuration(id);
+        if (id) seconds = await fetchYouTubeDuration(id);
+      } else {
+        // Tenta obter duração de vídeo direto / Cloudflare R2
+        seconds = await fetchDirectVideoDuration(url);
       }
       if (seconds > 0) {
         form.setValue('duration', String(Math.round(seconds)));
@@ -348,7 +368,7 @@ export const ActivityForm = ({ initialData, onSubmit }: { initialData?: Partial<
   const type = form.watch('type_activities') as ActivityType;
   const contentPlaceholder = useMemo(() => {
     switch (type) {
-      case 'video': return 'URL do vídeo (YouTube/Vimeo)';
+      case 'video': return 'URL do vídeo (YouTube, Vimeo ou Cloudflare R2 / MP4)';
       case 'apostila': return 'Descrição do arquivo (upload em etapa futura)';
       case 'avaliacao': return 'Instruções ou JSON de questões (etapa futura)';
       default: return 'Conteúdo da atividade';
@@ -483,7 +503,7 @@ export const ActivityForm = ({ initialData, onSubmit }: { initialData?: Partial<
             <Select value={form.watch('type_activities')} onValueChange={(v) => form.setValue('type_activities', v as any)}>
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="video">Vídeo (YouTube/Vimeo)</SelectItem>
+                <SelectItem value="video">Vídeo (YouTube, Vimeo ou Cloudflare R2)</SelectItem>
                 <SelectItem value="apostila">Apostila (PDF/TXT)</SelectItem>
                 <SelectItem value="avaliacao">Avaliação (Prova/Simulado)</SelectItem>
               </SelectContent>

@@ -473,7 +473,6 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
-                  <TableHead className="w-[60px] text-center">Ações</TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Valor</TableHead>
@@ -481,6 +480,7 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
                   <TableHead>Status</TableHead>
                   <TableHead>Categoria</TableHead>
                   <TableHead>Forma de Pagamento</TableHead>
+                  <TableHead className="w-[60px] text-center sticky right-0 z-20 bg-background/95 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.08)]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -491,52 +491,6 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
                         checked={selectedAccountIds.has(account.id)}
                         onCheckedChange={() => toggleSelect(account.id)}
                       />
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0 rounded-xl hover:bg-primary/5 focus-visible:ring-0">
-                            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-[180px] rounded-xl border-slate-100 dark:border-slate-800 shadow-xl p-1">
-                          <DropdownMenuItem onClick={() => handleEditAccount(account)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
-                            <Edit className="h-3.5 w-3.5 text-primary" /> Editar
-                          </DropdownMenuItem>
-
-                          {account.status === AccountStatus.PENDING && (
-                            <>
-                              <DropdownMenuItem onClick={() => handleMarkAsReceived(account)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
-                                <Check className="h-3.5 w-3.5 text-green-600" /> Receber
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleCancelAccount(account)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
-                                <X className="h-3.5 w-3.5 text-orange-600" /> Cancelar
-                              </DropdownMenuItem>
-                            </>
-                          )}
-
-                          {account.status === AccountStatus.PENDING && !account.config?.invoice_url && (
-                            <>
-                              <DropdownMenuItem onClick={() => handleGenerateCharge(account, 'BOLETO')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
-                                <Download className="h-3.5 w-3.5 text-blue-600" /> Gerar Boleto
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleGenerateCharge(account, 'PIX')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
-                                <Download className="h-3.5 w-3.5 text-blue-600" /> Gerar PIX
-                              </DropdownMenuItem>
-                            </>
-                          )}
-
-                          {account.config?.invoice_url && (
-                            <DropdownMenuItem onClick={() => window.open(account.config.invoice_url, '_blank')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
-                              <Download className="h-3.5 w-3.5 text-blue-600" /> Ver Fatura
-                            </DropdownMenuItem>
-                          )}
-
-                          <DropdownMenuItem onClick={() => handleDeleteAccount(account)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg text-red-600">
-                            <Trash2 className="h-3.5 w-3.5" /> Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     </TableCell>
                     <TableCell className="font-medium">
                       <div className="flex flex-col">
@@ -574,6 +528,52 @@ export const AccountsReceivableTable: React.FC<AccountsReceivableTableProps> = (
                     <TableCell>{getCategoryName(account.category)}</TableCell>
                     <TableCell>
                       {account.paymentMethod ? getPaymentMethodLabel(account.paymentMethod) : '-'}
+                    </TableCell>
+                    <TableCell className="text-center sticky right-0 z-10 bg-background/95 group-hover:bg-muted/95 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.08)]">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0 rounded-xl hover:bg-primary/5 focus-visible:ring-0">
+                            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[180px] rounded-xl border-slate-100 dark:border-slate-800 shadow-xl p-1">
+                          <DropdownMenuItem onClick={() => handleEditAccount(account)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                            <Edit className="h-3.5 w-3.5 text-primary" /> Editar
+                          </DropdownMenuItem>
+
+                          {account.status === AccountStatus.PENDING && (
+                            <>
+                              <DropdownMenuItem onClick={() => handleMarkAsReceived(account)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                                <Check className="h-3.5 w-3.5 text-green-600" /> Receber
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleCancelAccount(account)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                                <X className="h-3.5 w-3.5 text-orange-600" /> Cancelar
+                              </DropdownMenuItem>
+                            </>
+                          )}
+
+                          {account.status === AccountStatus.PENDING && !account.config?.invoice_url && (
+                            <>
+                              <DropdownMenuItem onClick={() => handleGenerateCharge(account, 'BOLETO')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                                <Download className="h-3.5 w-3.5 text-blue-600" /> Gerar Boleto
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleGenerateCharge(account, 'PIX')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                                <Download className="h-3.5 w-3.5 text-blue-600" /> Gerar PIX
+                              </DropdownMenuItem>
+                            </>
+                          )}
+
+                          {account.config?.invoice_url && (
+                            <DropdownMenuItem onClick={() => window.open(account.config.invoice_url, '_blank')} className="cursor-pointer gap-2 font-bold text-xs rounded-lg">
+                              <Download className="h-3.5 w-3.5 text-blue-600" /> Ver Fatura
+                            </DropdownMenuItem>
+                          )}
+
+                          <DropdownMenuItem onClick={() => handleDeleteAccount(account)} className="cursor-pointer gap-2 font-bold text-xs rounded-lg text-red-600">
+                            <Trash2 className="h-3.5 w-3.5" /> Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}

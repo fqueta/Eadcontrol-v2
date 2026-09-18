@@ -27,6 +27,7 @@ import { Separator } from '@/components/ui/separator';
 import { generateCertificatePdf } from '@/lib/certificates/generateCertificatePdf';
 import { QuizGradeDetail } from './components/QuizGradeDetail';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { CustomVideoPlayer } from '@/components/common/CustomVideoPlayer';
 
 /**
  * VideoDescriptionToggle
@@ -1507,6 +1508,8 @@ function htmlEquals(a: string, b: string): boolean {
    * en-US: Last known position (useful for Vimeo and postMessage fallback).
    */
   const lastKnownTimeRef = useRef<number>(0);
+  const saveVideoProgressOnPauseRef = useRef<(seconds: number) => void>(() => {});
+  const [currentPlaybackStartTime, setCurrentPlaybackStartTime] = useState<number>(0);
   /* 
    * pt-BR: Função de conclusão movida para o escopo do componente para acesso no JSX.
    * en-US: Completion function moved to component scope for JSX access.
@@ -1681,6 +1684,7 @@ function htmlEquals(a: string, b: string): boolean {
         persistPosition(secs, true);
       } catch {}
     };
+    saveVideoProgressOnPauseRef.current = saveVideoProgressOnPause;
 
     /**
      * markCompleteAndAdvance
@@ -2025,7 +2029,17 @@ function htmlEquals(a: string, b: string): boolean {
         // pt-BR: Atualiza flag de “Retomar” baseada na API (carregamento antecipado).
         // en-US: Update “Resume” flag based on API (early fetch).
         setPlaybackExists(Boolean(apiRes?.exists === true));
-      } catch {}
+        const lastSecs = String(lastProgressRef.current?.activityId) === String(aid)
+          ? Number(lastProgressRef.current?.seconds || 0) || 0
+          : 0;
+        const startAt = savedApi || savedLocal || lastSecs || 0;
+        setCurrentPlaybackStartTime(startAt);
+      } catch {
+        const lastSecs = String(lastProgressRef.current?.activityId) === String(aid)
+          ? Number(lastProgressRef.current?.seconds || 0) || 0
+          : 0;
+        setCurrentPlaybackStartTime(savedLocal || lastSecs || 0);
+      }
     })();
 
     // Decide qual player inicializar (YouTube/Vimeo via iframe, ou HTML5 para MP4)
@@ -3075,15 +3089,36 @@ function htmlEquals(a: string, b: string): boolean {
                             <div className="flex items-center justify-center h-full text-white text-sm">Vídeo indisponível</div>
                           );
                         }
-                        if (isMp4) {
+                        const isDirectOrR2Video = isMp4 || 
+                          lowerUrl.endsWith('.webm') || 
+                          lowerUrl.endsWith('.m4v') || 
+                          lowerUrl.endsWith('.mov') || 
+                          lowerUrl.includes('.r2.dev') || 
+                          lowerUrl.includes('r2.cloudflarestorage.com') ||
+                          lowerUrl.includes('/videos/');
+
+                        if (isDirectOrR2Video) {
                           return (
-                            <video
-                              ref={html5VideoRef}
+                            <CustomVideoPlayer
                               key={playerId}
-                              className="w-full h-full"
                               src={String(url)}
-                              controls
-                              preload="metadata"
+                              title={title}
+                              initialTime={currentPlaybackStartTime}
+                              onPlay={() => {
+                                startedPlaybackRef.current = true;
+                              }}
+                              onPause={(currentTime) => {
+                                saveVideoProgressOnPauseRef.current(currentTime);
+                              }}
+                              onTimeUpdate={(currentTime, duration) => {
+                                lastKnownTimeRef.current = currentTime;
+                                if (duration > 0) durationRef.current = duration;
+                                if (currentTime > 0) startedPlaybackRef.current = true;
+                              }}
+                              onEnded={() => {
+                                if (String(activeActivityIdRef.current) !== String(aid)) return;
+                                markCompleteAndAdvance();
+                              }}
                             />
                           );
                         }
