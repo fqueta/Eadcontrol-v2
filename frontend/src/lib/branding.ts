@@ -177,6 +177,21 @@ export function getInstitutionUrl(defaultUrl: string = ''): string {
 }
 
 /**
+ * getAppVersion
+ * pt-BR: Obtém a versão configurada da aplicação (localStorage -> window -> default).
+ */
+export function getAppVersion(defaultVersion: string = '1.0.0'): string {
+  try {
+    const v = localStorage.getItem('app_version');
+    if (v && v.trim() !== '') return v.trim();
+  } catch {}
+  const anyWin = window as any;
+  const w = anyWin?.__APP_VERSION__;
+  if (typeof w === 'string' && w.trim() !== '') return w.trim();
+  return defaultVersion;
+}
+
+/**
  * hydrateBrandingFromApi
  * pt-BR: Busca opções em `/options/all` e persiste branding (logo, nome) em
  *        localStorage e `window.__APP_*__`. Retorna os valores encontrados.
@@ -243,6 +258,13 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
       const showLogo = getVal('home_hero_show_logo');
       const showButton = getVal('home_hero_show_button');
       const autoplayInterval = getVal('home_hero_autoplay_interval');
+      const appVersion = String(dataObj['app_version'] || '').trim();
+      if (appVersion) {
+        anyWin.__APP_VERSION__ = appVersion;
+        if (persist) {
+          try { localStorage.setItem('app_version', appVersion); } catch {}
+        }
+      }
       const hf1t = String(dataObj['home_feature_1_title'] || '').trim();
       const hf1d = String(dataObj['home_feature_1_desc'] || '').trim();
       const hf2t = String(dataObj['home_feature_2_title'] || '').trim();

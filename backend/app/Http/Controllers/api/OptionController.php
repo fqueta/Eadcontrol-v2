@@ -91,6 +91,7 @@ class OptionController extends Controller
             'cta_config',
             'footer_config',
             'app_footer_logo_url',
+            'app_version',
             // SEO home overrides (tenant-specific)
             'seo_home_title',
             'seo_home_description',

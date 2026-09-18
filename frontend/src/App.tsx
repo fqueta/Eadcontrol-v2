@@ -14,6 +14,7 @@ import { AuthRedirect } from "./components/auth/AuthRedirect";
 import { AppLayout } from "./components/layout/AppLayout";
 import FaviconUpdater from "@/components/branding/FaviconUpdater";
 import { CookieConsent } from "@/components/common/CookieConsent";
+import { VersionChecker } from "@/components/common/VersionChecker";
 import { hydrateBrandingFromPublicApi, applyBrandingFromPersistedSources } from "@/lib/branding";
 import React, { useEffect, lazy, Suspense } from "react";
 // import Dashboard from "./pages/Dashboard";
@@ -223,6 +224,7 @@ const App = () => {
              * en-US: Keeps favicon in sync with persisted/global values.
              */}
             <FaviconUpdater />
+            <VersionChecker />
             <Toaster />
             <Sonner />
           <BrowserRouter>

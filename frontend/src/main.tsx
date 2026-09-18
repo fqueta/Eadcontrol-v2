@@ -12,5 +12,11 @@ notifyManager.setBatchNotifyFunction((callback) => {
   unstable_batchedUpdates(callback)
 })
 
+// Evita tela branca (ChunkLoadError) caso um deploy substitua chunks lazy-loaded no servidor
+window.addEventListener('vite:preloadError', (event) => {
+  console.warn('[vite:preloadError] Erro ao carregar chunk de versão antiga. Recarregando aplicativo...', event);
+  window.location.reload();
+});
+
 // A limpeza de service workers é feita no index.html (síncrono, antes dos bundles)
 createRoot(document.getElementById("root")!).render(<App />);

@@ -8,9 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Settings, Save, Palette, Link, Image as ImageIcon, Building2, ShieldCheck, Layers, Plus, MonitorPlay, Clock } from "lucide-react";
+import { Settings, Save, Palette, Link, Image as ImageIcon, Building2, ShieldCheck, Layers, Plus, MonitorPlay, Clock, RefreshCw, Sparkles } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription, getInstitutionUrl, syncBrandingToMetaTags } from "@/lib/branding";
+import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription, getInstitutionUrl, getAppVersion, syncBrandingToMetaTags } from "@/lib/branding";
 import { predefinedThemes } from "@/lib/themes";
 import { systemSettingsService, AdvancedSystemSettings } from "@/services/systemSettingsService";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -254,6 +254,7 @@ export default function SystemSettings() {
       return val ? format(val, { mask: '+__ (__) _____-____', replacement: { _: /\d/ } }) : '';
     } catch { return ''; }
   });
+  const [appVersionState, setAppVersionState] = useState<string>(() => getAppVersion('1.0.0'));
 
   /**
    * hydrateBrandingFromApiOptions
@@ -416,9 +417,67 @@ export default function SystemSettings() {
         localStorage.setItem('app_whatsapp', valWhatsapp);
         (window as any).__APP_WHATSAPP__ = valWhatsapp;
       }
+
+      const optVersion = getOptByKeys(['app_version']);
+      const valVersion = (optVersion && (optVersion.value ?? '')) || '';
+      if (valVersion && valVersion !== appVersionState) {
+        setAppVersionState(valVersion);
+        localStorage.setItem('app_version', valVersion);
+        (window as any).__APP_VERSION__ = valVersion;
+      }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiOptions]);
+
+  /**
+   * handleSaveAppVersion
+   * Salva a versão do sistema e propaga para todos os clientes
+   */
+  async function handleSaveAppVersion(versionToSave?: string) {
+    const v = (versionToSave || appVersionState || '').trim();
+    if (!v) {
+      toast.warning('Informe uma versão válida.');
+      return;
+    }
+    try {
+      setIsLoading(true);
+      try { localStorage.setItem('app_version', v); } catch {}
+      (window as any).__APP_VERSION__ = v;
+      setAppVersionState(v);
+
+      const ok = await saveMultipleOptions({
+        app_version: v,
+      });
+
+      if (ok) {
+        toast.success(`Versão v${v} salva com sucesso! Os navegadores dos usuários receberão o aviso.`);
+      } else {
+        toast.error('Erro ao salvar versão no servidor.');
+      }
+    } catch (err: any) {
+      toast.error(`Falha ao salvar versão: ${err?.message || 'erro desconhecido'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  /**
+   * handleIncrementVersion
+   * Incrementa o patch (ex: 1.0.0 -> 1.0.1)
+   */
+  function handleIncrementVersion() {
+    const parts = (appVersionState || '1.0.0').split('.');
+    if (parts.length === 3 && !isNaN(Number(parts[2]))) {
+      const next = `${parts[0]}.${parts[1]}.${Number(parts[2]) + 1}`;
+      setAppVersionState(next);
+      handleSaveAppVersion(next);
+    } else {
+      const now = new Date();
+      const dateVersion = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+      setAppVersionState(dateVersion);
+      handleSaveAppVersion(dateVersion);
+    }
+  }
 
   /**
    * handleSaveInstitution
@@ -1559,6 +1618,70 @@ export default function SystemSettings() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Card - Versão do Sistema & Atualizações */}
+          {!isRestrictedLevel && (
+            <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden mt-8 border-l-4 border-l-indigo-500">
+              <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 shadow-sm">
+                      <RefreshCw className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl font-black tracking-tight">Versão do Sistema & Atualizações</CardTitle>
+                      <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mt-1">
+                        Controle de versão do Frontend SPA para os usuários
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-mono text-xs rounded-full border border-indigo-200/50 dark:border-indigo-800/50 font-bold">
+                      Ativo: v{appVersionState || '1.0.0'}
+                    </span>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6 p-8">
+                <div className="space-y-2">
+                  <Label htmlFor="app_version_input">Número da Versão (ex: 1.0.1, 2.0.0 ou data)</Label>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Input
+                      id="app_version_input"
+                      type="text"
+                      value={appVersionState}
+                      onChange={(e) => setAppVersionState(e.target.value)}
+                      placeholder="1.0.0"
+                      className="font-mono text-base max-w-sm"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleIncrementVersion}
+                      className="gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950/40"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Incrementar (+0.0.1)
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                    Sempre que você alterar esse número e salvar, o navegador de todos os usuários abertos receberá uma notificação discreta avisando que há uma nova versão disponível para recarregar o sistema.
+                  </p>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <Button 
+                    onClick={() => handleSaveAppVersion()}
+                    disabled={isLoading}
+                    className="h-11 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-indigo-600/20"
+                  >
+                    <Save className="h-4 w-4" />
+                    Publicar Versão
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           {/* Card 1 - Configurações com Switch */}
           <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden mt-8">
             <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
