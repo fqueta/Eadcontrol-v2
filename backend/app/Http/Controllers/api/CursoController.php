@@ -751,18 +751,71 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
                     $activityId = isset($act['activity_id']) && is_numeric($act['activity_id']) ? (int) $act['activity_id'] : $activityId;
                 }
 
+                $existingActivity = $activityId ? Activity::find($activityId) : null;
+                $existingConfig = is_array($existingActivity?->config) ? $existingActivity->config : [];
+
+                // Detectar e forçar modelo HLS otimizado se já disponível
+                $videoUrl = $act['video_url'] ?? $act['content'] ?? null;
+                $hlsUrl = null;
+                $thumbnailUrl = null;
+
+                if (is_string($videoUrl) && str_contains($videoUrl, '.m3u8')) {
+                    $hlsUrl = $videoUrl;
+                } elseif (!empty($act['hls_master_url'])) {
+                    $hlsUrl = $act['hls_master_url'];
+                } elseif (!empty($existingConfig['hls_master_url'])) {
+                    $hlsUrl = $existingConfig['hls_master_url'];
+                } elseif (str_contains($existingActivity?->post_content ?? '', '.m3u8')) {
+                    $hlsUrl = $existingActivity->post_content;
+                }
+
+                // Busca se existe MediaFile vinculada ou com o mesmo arquivo que já foi otimizada para HLS
+                if (!$hlsUrl && is_string($videoUrl) && !empty($videoUrl)) {
+                    $searchKey = null;
+                    if (str_contains($videoUrl, 'stream?path=')) {
+                        parse_str(parse_url($videoUrl, PHP_URL_QUERY) ?? '', $qParams);
+                        $searchKey = $qParams['path'] ?? null;
+                    }
+                    $mf = \App\Models\MediaFile::whereNotNull('hls_url')->where('hls_url', '!=', '')
+                        ->where(function($q) use ($searchKey, $videoUrl, $activityId) {
+                            if ($activityId) {
+                                $q->where('linked_activity_id', $activityId);
+                            }
+                            if ($searchKey) {
+                                $q->orWhere('storage_path', $searchKey)
+                                  ->orWhere('storage_path', 'like', "%{$searchKey}%");
+                            }
+                            $q->orWhere('public_url', $videoUrl);
+                        })->first();
+
+                    if ($mf && !empty($mf->hls_url)) {
+                        $hlsUrl = $mf->hls_url;
+                        $thumbnailUrl = $mf->thumbnail_url;
+                    }
+                }
+
+                if ($hlsUrl) {
+                    $act['content'] = $hlsUrl;
+                    $act['video_url'] = $hlsUrl;
+                    $act['hls_master_url'] = $hlsUrl;
+                }
+
                 $mappedActivity = [
                     'post_title' => $act['title'] ?? '',
                     'post_excerpt' => $act['description'] ?? '',
-                    'post_content' => is_string($act['content'] ?? '') ? ($act['content'] ?? '') : json_encode($act['content'] ?? ''),
+                    'post_content' => $hlsUrl ?? (is_string($act['content'] ?? '') ? ($act['content'] ?? '') : json_encode($act['content'] ?? '')),
                     'post_status' => $this->get_status($this->normalizeActiveFlag($act['active'] ?? 's')),
                     'post_parent' => $moduleId,
-                    'config' => [
-                        'type_activities' => $act['type_activities'] ?? null,
-                        'type_duration' => $act['type_duration'] ?? null,
-                        'duration' => $act['duration'] ?? null,
-                        'quiz_config' => $act['quiz_config'] ?? null,
-                    ],
+                    'config' => array_merge($existingConfig, [
+                        'type_activities' => $act['type_activities'] ?? ($existingConfig['type_activities'] ?? null),
+                        'type_duration' => $act['type_duration'] ?? ($existingConfig['type_duration'] ?? null),
+                        'duration' => $act['duration'] ?? ($existingConfig['duration'] ?? null),
+                        'quiz_config' => $act['quiz_config'] ?? ($existingConfig['quiz_config'] ?? null),
+                        'video_source' => $act['video_source'] ?? ($existingConfig['video_source'] ?? null),
+                        'video_url' => $hlsUrl ?? ($act['video_url'] ?? $act['content'] ?? ($existingConfig['video_url'] ?? null)),
+                        'hls_master_url' => $hlsUrl ?? ($existingConfig['hls_master_url'] ?? null),
+                        'thumbnail_url' => $thumbnailUrl ?? ($existingConfig['thumbnail_url'] ?? null),
+                    ]),
                     'post_type' => 'activities',
                     'token' => Qlib::token(),
                     'post_author' => $authorId,
@@ -795,8 +848,13 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
                     $this->syncQuizQuestions($activityModel, $act['quiz_questions'], $authorId);
                 }
 
-                // Monta retorno da atividade com ID
-                $activitiesResult[] = array_merge($act, [ 'id' => $activityId ]);
+                // Monta retorno da atividade com ID e URLs sincronizadas
+                $activitiesResult[] = array_merge($act, [
+                    'id' => $activityId,
+                    'content' => $hlsUrl ?? ($act['content'] ?? ''),
+                    'video_url' => $hlsUrl ?? ($act['video_url'] ?? ''),
+                    'hls_master_url' => $hlsUrl ?? ($existingConfig['hls_master_url'] ?? null),
+                ]);
             }
 
             // Salvar estrutura reutilizável das atividades dentro do módulo (template)
@@ -1089,6 +1147,52 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
                             $act['quiz_config'] = $activityModel->config['quiz_config'];
                         }
                         $changed = true;
+                    }
+                } elseif ($tipo === 'video') {
+                    // Detecta se existe versão HLS otimizada disponível para esta atividade de vídeo
+                    $activityId = $act['id'] ?? $act['activity_id'] ?? null;
+                    $contentUrl = (string)($act['content'] ?? $act['video_url'] ?? '');
+
+                    if (!str_contains($contentUrl, '.m3u8')) {
+                        $hlsFound = null;
+                        if ($activityId) {
+                            $actModel = Activity::find($activityId);
+                            if (!empty($actModel?->config['hls_master_url'])) {
+                                $hlsFound = $actModel->config['hls_master_url'];
+                            } elseif (str_contains($actModel?->post_content ?? '', '.m3u8')) {
+                                $hlsFound = $actModel->post_content;
+                            }
+                        }
+
+                        if (!$hlsFound && !empty($contentUrl)) {
+                            $searchKey = null;
+                            if (str_contains($contentUrl, 'stream?path=')) {
+                                parse_str(parse_url($contentUrl, PHP_URL_QUERY) ?? '', $qParams);
+                                $searchKey = $qParams['path'] ?? null;
+                            }
+                            $mf = \App\Models\MediaFile::whereNotNull('hls_url')->where('hls_url', '!=', '')
+                                ->where(function($q) use ($searchKey, $contentUrl, $activityId) {
+                                    if ($activityId) {
+                                        $q->where('linked_activity_id', $activityId);
+                                    }
+                                    if ($searchKey) {
+                                        $q->orWhere('storage_path', $searchKey)
+                                          ->orWhere('storage_path', 'like', "%{$searchKey}%");
+                                    }
+                                    $q->orWhere('public_url', $contentUrl);
+                                })->first();
+
+                            if ($mf && !empty($mf->hls_url)) {
+                                $hlsFound = $mf->hls_url;
+                            }
+                        }
+
+                        if ($hlsFound) {
+                            $act['content'] = $hlsFound;
+                            $act['video_url'] = $hlsFound;
+                            $act['hls_master_url'] = $hlsFound;
+                            $changed = true;
+                        }
                     }
                 }
             }

@@ -278,8 +278,10 @@ export function CourseForm({
       queryClient.invalidateQueries({ queryKey: ['courses', 'list'] });
       toast({ title: 'Salvo', description: 'Curso salvo. Você permanece na página.' });
     } catch (e: any) {
-      applyServerErrors(e);
-      toast({ title: 'Erro ao salvar', description: String(e?.message || e), variant: 'destructive' });
+      const handled = applyServerErrors(e);
+      if (!handled) {
+        toast({ title: 'Erro ao salvar', description: String(e?.message || e), variant: 'destructive' });
+      }
     } finally {
       setSaving(null);
     }
@@ -309,8 +311,10 @@ export function CourseForm({
       queryClient.invalidateQueries({ queryKey: ['courses', 'list'] });
       navigate('/admin/school/courses');
     } catch (e: any) {
-      applyServerErrors(e);
-      toast({ title: 'Erro ao salvar', description: String(e?.message || e), variant: 'destructive' });
+      const handled = applyServerErrors(e);
+      if (!handled) {
+        toast({ title: 'Erro ao salvar', description: String(e?.message || e), variant: 'destructive' });
+      }
     } finally {
       setSaving(null);
     }
@@ -513,9 +517,10 @@ export function CourseForm({
            * video_source / video_url
            * pt-BR: Campos opcionais exibidos quando tipo="video" (YouTube/Vimeo + URL).
            * en-US: Optional fields shown when type="video" (YouTube/Vimeo + URL).
-           */
-          video_source: z.enum(['youtube','vimeo']).optional(),
+          video_source: z.enum(['youtube','vimeo', 'eadcontrol']).optional().or(z.string().optional()),
           video_url: z.string().url('URL inválida').optional().or(z.string().min(0).optional()),
+          hls_master_url: z.string().optional(),
+          thumbnail_url: z.string().optional(),
           /**
            * arquivo_url
            * pt-BR: URL do arquivo quando tipo="arquivo" (PDF/TXT/DOC, etc.).
@@ -741,8 +746,18 @@ export function CourseForm({
       const isVideo = tipo === 'video';
       const isArquivo = tipo === 'arquivo';
       const isQuiz = tipo === 'quiz';
+      const rawSource = a?.video_source || a?.config?.video_source;
       const video_source = isVideo
-        ? (content.toLowerCase().includes('vimeo') ? 'vimeo' : 'youtube')
+        ? (rawSource || (
+            content.includes('r2.cloudflarestorage.com') || content.includes('.r2.dev') || content.includes('/videos/') || content.includes('media/stream')
+              ? 'eadcontrol'
+              : content.toLowerCase().includes('vimeo')
+                ? 'vimeo'
+                : 'youtube'
+          ))
+        : undefined;
+      const resolvedVideoUrl = isVideo
+        ? (a?.hls_master_url || a?.config?.hls_master_url || (content.includes('.m3u8') ? content : (a?.video_url?.includes('.m3u8') ? a.video_url : (a?.video_url || content))))
         : undefined;
       return {
         titulo: a?.title ?? a?.name ?? '',
@@ -752,9 +767,11 @@ export function CourseForm({
         unidade_duracao: normalizeUnit(a?.type_duration),
         requisito: '',
         active: (a?.active as any) ?? 's',
-        activity_id: a?.id ? String(a.id) : undefined,
+        activity_id: a?.id ? String(a.id) : (a?.activity_id ? String(a.activity_id) : undefined),
         video_source,
-        video_url: isVideo ? content : undefined,
+        video_url: resolvedVideoUrl,
+        hls_master_url: a?.hls_master_url || a?.config?.hls_master_url || (resolvedVideoUrl?.includes('.m3u8') ? resolvedVideoUrl : undefined),
+        thumbnail_url: a?.thumbnail_url || a?.config?.thumbnail_url,
         arquivo_url: isArquivo ? content : undefined,
         /**
          * quiz_questions
@@ -1805,6 +1822,24 @@ export function CourseForm({
   }
 
   /**
+   * fetchDirectVideoDuration
+   * Obtém a duração em segundos de arquivos MP4/Ead Control diretamente dos metadados.
+   */
+  async function fetchDirectVideoDuration(videoUrl: string): Promise<number> {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => {
+        resolve(video.duration || 0);
+      };
+      video.onerror = () => {
+        resolve(0);
+      };
+      video.src = videoUrl;
+    });
+  }
+
+  /**
    * importVideoDuration
    * pt-BR: Importa a duração automaticamente com base em video_source e video_url.
    * en-US: Automatically imports duration based on video_source and video_url.
@@ -1819,12 +1854,15 @@ export function CourseForm({
     if (!url) return;
     try {
       let seconds = 0;
-      if (source === 'youtube') {
+      if (source === 'youtube' && !url.includes('.r2.') && !url.includes('/videos/')) {
         const id = parseYouTubeVideoId(url);
         if (!id) throw new Error('Não foi possível extrair o ID do YouTube');
         seconds = await fetchYouTubeDuration(id);
       } else if (source === 'vimeo') {
         seconds = await fetchVimeoDuration(url);
+      } else {
+        // Ead Control / Arquivo Direto
+        seconds = await fetchDirectVideoDuration(url);
       }
       if (seconds > 0) {
         setActivityField(moduleIdx, activityIdx, 'duracao', String(Math.round(seconds)));
@@ -2098,37 +2136,40 @@ export function CourseForm({
      * pt-BR: Mapeia atividade interna para o payload solicitado pelo backend.
      * en-US: Maps internal activity to the requested backend payload.
      */
-  const mapActivityToRequestedPayload = (a: any) => ({
-      /**
-       * pt-BR: Inclui activity_id quando houver reaproveitamento.
-       * en-US: Includes activity_id when reusing existing activity.
-       */
-      activity_id: a?.activity_id,
-      title: a?.titulo ?? '',
-      name: a?.titulo ?? '',
-      type_duration: a?.unidade_duracao ?? '',
-      type_activities: a?.tipo ?? '',
-      duration: a?.duracao ?? '',
-      /**
-       * pt-BR: Para vídeo, envia a URL em content; caso contrário, usa descricao.
-       * en-US: For video, send URL in content; otherwise, use description.
-       */
-      content: (a?.tipo === 'video') ? (a?.video_url ?? '') : (a?.tipo === 'arquivo') ? (a?.arquivo_url ?? '') : (a?.descricao ?? ''),
-      description: a?.descricao ?? '',
-      active: a?.active ?? 's',
-      /**
-       * quiz_questions
-       * pt-BR: Inclui perguntas do quiz quando tipo="quiz".
-       * en-US: Includes quiz questions when type="quiz".
-       */
-      quiz_questions: a?.tipo === 'quiz' ? (a?.quiz_questions || []) : undefined,
-      /**
-       * quiz_config
-       * pt-BR: Inclui configurações do quiz quando tipo="quiz".
-       * en-US: Includes quiz config when type="quiz".
-       */
-      quiz_config: a?.tipo === 'quiz' ? (a?.quiz_config || {}) : undefined,
-    });
+    const mapActivityToRequestedPayload = (a: any) => {
+      const tipo = a?.tipo || a?.type_activities || 'video';
+      const isVideo = tipo === 'video';
+      const isArquivo = tipo === 'arquivo';
+      return {
+        /**
+         * pt-BR: Inclui activity_id quando houver reaproveitamento.
+         * en-US: Includes activity_id when reusing existing activity.
+         */
+        activity_id: a?.activity_id,
+        title: a?.titulo || a?.title || a?.name || 'Nova Atividade',
+        name: a?.titulo || a?.title || a?.name || 'Nova Atividade',
+        type_duration: a?.unidade_duracao || a?.type_duration || 'seg',
+        type_activities: tipo,
+        duration: a?.duracao ?? a?.duration ?? '0',
+        video_source: a?.video_source || (isVideo ? 'eadcontrol' : undefined),
+        video_url: isVideo ? ((a?.hls_master_url || a?.video_url) ?? '') : undefined,
+        hls_master_url: a?.hls_master_url || (isVideo && a?.video_url?.includes('.m3u8') ? a.video_url : undefined),
+        thumbnail_url: a?.thumbnail_url,
+        /**
+         * pt-BR: Para vídeo, envia a URL em content; caso contrário, usa descricao.
+         * en-US: For video, send URL in content; otherwise, use description.
+         */
+        content: isVideo
+          ? ((a?.hls_master_url || a?.video_url) ?? '')
+          : isArquivo
+            ? (a?.arquivo_url ?? '')
+            : (a?.descricao ?? (a?.content ?? '')),
+        description: a?.descricao ?? a?.description ?? '',
+        active: a?.active ?? 's',
+        quiz_questions: tipo === 'quiz' ? (a?.quiz_questions || []) : undefined,
+        quiz_config: tipo === 'quiz' ? (a?.quiz_config || {}) : undefined,
+      };
+    };
 
     /**
      * mapModuleToRequestedPayload
@@ -2205,9 +2246,14 @@ export function CourseForm({
    * pt-BR: Aplica normalização e encaminha valores do formulário.
    * en-US: Applies normalization and forwards form values to callback.
    */
-  const handleSubmit = (data: CoursePayload) => {
+  const handleSubmit = async (data: CoursePayload) => {
     const normalized = normalizePayload(data);
-    return onSubmit(normalized);
+    try {
+      return await onSubmit(normalized);
+    } catch (e: any) {
+      applyServerErrors(e);
+      throw e;
+    }
   };
 
   /**
@@ -2232,12 +2278,41 @@ export function CourseForm({
    * pt-BR: Exibe mensagem amigável quando validação falha (ex.: módulo sem título).
    * en-US: Shows a friendly message when validation fails (e.g., module without title).
    */
-  const onInvalid = () => {
-    const errors = form.formState.errors as any;
-    const hasModuleTitleError = Array.isArray(errors?.modulos) && errors.modulos.some((e: any) => e?.titulo);
+  const onInvalid = (errors: any) => {
+    console.warn('Erros de validação do formulário:', errors);
+    const errorMessages: string[] = [];
+    if (errors?.nome?.message || errors?.titulo?.message) {
+      errorMessages.push('Nome do curso');
+    }
+    if (errors?.slug?.message) {
+      errorMessages.push('Slug/Identificador');
+    }
+    if (Array.isArray(errors?.modulos)) {
+      errors.modulos.forEach((mErr: any, mIdx: number) => {
+        if (!mErr) return;
+        if (mErr?.titulo || mErr?.title) {
+          errorMessages.push(`Título do Módulo #${mIdx + 1}`);
+        }
+        if (Array.isArray(mErr?.atividades)) {
+          mErr.atividades.forEach((aErr: any, aIdx: number) => {
+            if (!aErr) return;
+            const keys = Object.keys(aErr).filter(k => k !== 'ref');
+            if (keys.length > 0) {
+              const friendlyKeys = keys.map(k => k === 'titulo' ? 'Título' : k === 'tipo' ? 'Tipo' : k).join(', ');
+              errorMessages.push(`Atividade #${aIdx + 1} no Módulo #${mIdx + 1} (${friendlyKeys})`);
+            }
+          });
+        }
+      });
+    }
+
+    const desc = errorMessages.length > 0 
+      ? `Campos pendentes: ${errorMessages.slice(0, 3).join(', ')}` 
+      : 'Verifique os campos obrigatórios do curso e das atividades.';
+
     toast({
       title: 'Erro de validação',
-      description: hasModuleTitleError ? 'Preencha o título em todos os módulos.' : 'Verifique os campos obrigatórios.',
+      description: desc,
       variant: 'destructive',
     });
   };
@@ -2251,9 +2326,13 @@ export function CourseForm({
    *        to react-hook-form errors and shows them on respective fields.
    *        Also shows friendly toast and expands modules/activities with errors.
    */
-  const applyServerErrors = (err: any) => {
-    const rawErrors = (err?.errors) || (err?.data?.errors) || (err?.response?.data?.errors);
-    if (!rawErrors || typeof rawErrors !== 'object') return;
+  const applyServerErrors = (err: any): boolean => {
+    const rawErrors = (err?.errors) || 
+                      (err?.body?.errors) || 
+                      (err?.data?.errors) || 
+                      (err?.response?.data?.errors) || 
+                      (err?.response?.data?.error);
+    if (!rawErrors || typeof rawErrors !== 'object') return false;
 
     /**
      * fieldNameLabels
@@ -2413,7 +2492,9 @@ export function CourseForm({
         variant: 'destructive',
         duration: 8000,
       });
+      return true;
     }
+    return false;
   };
 
   /**

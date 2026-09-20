@@ -149,6 +149,7 @@ const VideoTipForm = lazy(() => import("./pages/school/VideoTipForm"));
 const CursoCategorias = lazy(() => import("./pages/school/CursoCategorias"));
 const LiveSessionsCalendar = lazy(() => import("./pages/school/LiveSessionsCalendar"));
 const StudentLiveCalendar = lazy(() => import("./pages/school/StudentLiveCalendar"));
+const MediaLibrary = lazy(() => import("./pages/school/MediaLibrary"));
 const PublicVideoTip = lazy(() => import("./pages/public/PublicVideoTip"));
 const UserManual = lazy(() => import("./pages/help/UserManual"));
 
@@ -566,6 +567,14 @@ const App = () => {
                 <AdminProtectedRoute>
                   <AppLayout>
                     <CertificateGenerate />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              {/* Escola / Mediateca — Biblioteca de Vídeos */}
+              <Route path="/admin/school/media-library" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <MediaLibrary />
                   </AppLayout>
                 </AdminProtectedRoute>
               } />

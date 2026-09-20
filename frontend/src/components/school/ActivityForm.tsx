@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -9,8 +9,28 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { UploadCloud, Video, Loader2, CheckCircle2, AlertCircle, Link as LinkIcon, Film, X } from 'lucide-react';
 import type { ActivityPayload, ActivityRecord, ActivityType } from '@/types/activities';
 import { uploadActivityFile } from '@/services/activitiesService';
+import { integrationsService } from '@/services/integrationsService';
+
+function formatBytes(bytes: number, decimals = 1) {
+  if (!+bytes) return '0 Bytes';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}
+
+function formatDurationDisplay(seconds: number) {
+  if (!seconds || isNaN(seconds)) return '';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}m ${secs.toString().padStart(2, '0')}s`;
+}
 
 /**
  * ActivityForm
@@ -366,14 +386,192 @@ export const ActivityForm = ({ initialData, onSubmit }: { initialData?: Partial<
   };
 
   const type = form.watch('type_activities') as ActivityType;
+  const currentContent = form.watch('content') || '';
+  const isCurrentR2Video = Boolean(
+    currentContent &&
+    (currentContent.includes('.r2.dev') ||
+     currentContent.includes('r2.cloudflarestorage.com') ||
+     currentContent.includes('/videos/'))
+  );
   const contentPlaceholder = useMemo(() => {
     switch (type) {
-      case 'video': return 'URL do vídeo (YouTube, Vimeo ou Cloudflare R2 / MP4)';
+      case 'video': return 'URL do vídeo (YouTube, Vimeo ou Ead Control / MP4)';
       case 'apostila': return 'Descrição do arquivo (upload em etapa futura)';
       case 'avaliacao': return 'Instruções ou JSON de questões (etapa futura)';
       default: return 'Conteúdo da atividade';
     }
   }, [type]);
+
+  // --- Upload de Vídeo para Cloudflare R2 ---
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
+  const [videoUploadError, setVideoUploadError] = useState<string | null>(null);
+  const [videoUploadSuccess, setVideoUploadSuccess] = useState(false);
+  const [detectedDuration, setDetectedDuration] = useState<number>(0);
+  const [videoTab, setVideoTab] = useState<'r2' | 'url'>('r2');
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
+
+  // Sincroniza a aba ativa quando initialData carregar
+  useEffect(() => {
+    if (initialData?.content) {
+      const c = initialData.content;
+      if (c.includes('youtube.com') || c.includes('youtu.be') || c.includes('vimeo.com')) {
+        setVideoTab('url');
+      } else {
+        setVideoTab('r2');
+      }
+    }
+  }, [initialData]);
+
+  // Cancela upload em andamento ao desmontar o componente
+  useEffect(() => {
+    return () => {
+      if (xhrRef.current) {
+        xhrRef.current.abort();
+      }
+    };
+  }, []);
+
+  /**
+   * fetchFileVideoDuration
+   * Obtém a duração em segundos a partir do arquivo de vídeo selecionado no navegador.
+   */
+  async function fetchFileVideoDuration(file: File): Promise<number> {
+    return new Promise((resolve) => {
+      try {
+        const url = URL.createObjectURL(file);
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => {
+          const d = video.duration || 0;
+          URL.revokeObjectURL(url);
+          resolve(d);
+        };
+        video.onerror = () => {
+          URL.revokeObjectURL(url);
+          resolve(0);
+        };
+        video.src = url;
+      } catch {
+        resolve(0);
+      }
+    });
+  }
+
+  const handleVideoFileChange = async (file: File | null) => {
+    setVideoFile(file);
+    setVideoUploadError(null);
+    setVideoUploadSuccess(false);
+    setVideoUploadProgress(0);
+    setDetectedDuration(0);
+    if (file) {
+      try {
+        const sec = await fetchFileVideoDuration(file);
+        setDetectedDuration(sec);
+        if (sec > 0 && !form.getValues('duration')) {
+          form.setValue('duration', String(Math.round(sec)));
+          form.setValue('type_duration', 'seg');
+        }
+      } catch (e) {
+        // silencioso
+      }
+    }
+  };
+
+  const cancelVideoUpload = () => {
+    if (xhrRef.current) {
+      xhrRef.current.abort();
+      xhrRef.current = null;
+    }
+    setVideoUploading(false);
+    setVideoUploadProgress(0);
+  };
+
+  /**
+   * handleR2VideoUpload
+   * Envia arquivo diretamente para Cloudflare R2 via Presigned PUT URL.
+   */
+  const handleR2VideoUpload = async () => {
+    if (!videoFile) return;
+    setVideoUploading(true);
+    setVideoUploadProgress(0);
+    setVideoUploadError(null);
+    setVideoUploadSuccess(false);
+
+    try {
+      const mimeType = videoFile.type || 'video/mp4';
+      const res: any = await integrationsService.getR2PresignedUploadUrl(
+        videoFile.name,
+        mimeType,
+        'videos'
+      );
+
+      const presignedData = res?.data || res;
+      const uploadUrl = presignedData?.upload_url;
+      const publicUrl = presignedData?.public_url;
+
+      if (!uploadUrl || !publicUrl) {
+        throw new Error('Servidor não retornou a URL assinada de upload para o armazenamento Ead Control.');
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhrRef.current = xhr;
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            setVideoUploadProgress(percent);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error(`Falha no upload para o Ead Control (Código HTTP ${xhr.status})`));
+          }
+        };
+
+        xhr.onerror = () => {
+          reject(new Error('Falha de conexão com o armazenamento Ead Control durante o upload. Verifique as configurações de rede ou CORS do armazenamento.'));
+        };
+
+        xhr.onabort = () => {
+          reject(new Error('Upload cancelado pelo usuário.'));
+        };
+
+        xhr.open('PUT', uploadUrl);
+        xhr.setRequestHeader('Content-Type', mimeType);
+        xhr.send(videoFile);
+      });
+
+      form.setValue('content', String(publicUrl));
+      setVideoUploadSuccess(true);
+
+      // Aplica duração do vídeo
+      if (detectedDuration > 0) {
+        form.setValue('duration', String(Math.round(detectedDuration)));
+        form.setValue('type_duration', 'seg');
+      } else {
+        const sec = await fetchDirectVideoDuration(publicUrl);
+        if (sec > 0) {
+          setDetectedDuration(sec);
+          form.setValue('duration', String(Math.round(sec)));
+          form.setValue('type_duration', 'seg');
+        }
+      }
+    } catch (err: any) {
+      console.error('Erro no upload para o Ead Control:', err);
+      const msg = err?.response?.data?.message || err?.message || 'Falha no upload do vídeo para o Ead Control.';
+      setVideoUploadError(String(msg));
+    } finally {
+      setVideoUploading(false);
+      xhrRef.current = null;
+    }
+  };
 
   // --- Upload de Apostila ---
   const [apostilaFile, setApostilaFile] = useState<File | null>(null);
@@ -503,7 +701,7 @@ export const ActivityForm = ({ initialData, onSubmit }: { initialData?: Partial<
             <Select value={form.watch('type_activities')} onValueChange={(v) => form.setValue('type_activities', v as any)}>
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="video">Vídeo (YouTube, Vimeo ou Cloudflare R2)</SelectItem>
+                <SelectItem value="video">Vídeo (YouTube, Vimeo ou Ead Control)</SelectItem>
                 <SelectItem value="apostila">Apostila (PDF/TXT)</SelectItem>
                 <SelectItem value="avaliacao">Avaliação (Prova/Simulado)</SelectItem>
               </SelectContent>
@@ -528,10 +726,210 @@ export const ActivityForm = ({ initialData, onSubmit }: { initialData?: Partial<
 
           {/* Conteúdo dinâmico por tipo */}
           {type === 'video' && (
-            <div className="space-y-2 md:col-span-2">
-              <Label>Conteúdo</Label>
-              <Textarea rows={3} placeholder={contentPlaceholder} {...form.register('content')} onBlur={importVideoDuration} />
-              <p className="text-xs text-muted-foreground">Informe o link completo do vídeo. Suporte a YouTube/Vimeo.</p>
+            <div className="space-y-4 md:col-span-2 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <Label className="text-base font-semibold">Vídeo da Atividade</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Faça upload do arquivo de vídeo diretamente para o Ead Control ou utilize um link externo.
+                  </p>
+                </div>
+              </div>
+
+              <Tabs value={videoTab} onValueChange={(v) => setVideoTab(v as 'r2' | 'url')} className="w-full">
+                <TabsList className="grid grid-cols-2 w-full max-w-md h-10 bg-slate-200/70 dark:bg-slate-800">
+                  <TabsTrigger value="r2" className="flex items-center gap-2 font-medium">
+                    <UploadCloud className="w-4 h-4" />
+                    Upload Ead Control
+                  </TabsTrigger>
+                  <TabsTrigger value="url" className="flex items-center gap-2 font-medium">
+                    <LinkIcon className="w-4 h-4" />
+                    Link Externo (YouTube / Vimeo)
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Aba Upload Ead Control */}
+                <TabsContent value="r2" className="space-y-4 pt-2 focus-visible:outline-none">
+                  {/* Se já há URL de vídeo salva no formulário */}
+                  {isCurrentR2Video && (
+                    <div className="flex items-start gap-3 p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 rounded-xl text-emerald-900 dark:text-emerald-200 text-sm">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-center gap-2 font-medium">
+                          <span>Vídeo ativo armazenado no Ead Control</span>
+                        </div>
+                        <p className="text-xs font-mono break-all text-emerald-800 dark:text-emerald-300">
+                          {currentContent}
+                        </p>
+                      </div>
+                      <a
+                        href={currentContent}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs underline font-medium hover:text-emerald-700 shrink-0 self-center"
+                      >
+                        Visualizar
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Área de seleção de arquivo */}
+                  <div className="space-y-3">
+                    <input
+                      ref={videoInputRef}
+                      type="file"
+                      accept="video/mp4,video/webm,video/ogg,video/quicktime,.mp4,.webm,.mov,.m4v"
+                      className="hidden"
+                      onChange={(e) => handleVideoFileChange(e.target.files?.[0] || null)}
+                    />
+
+                    {!videoFile ? (
+                      <div
+                        onClick={() => videoInputRef.current?.click()}
+                        className="cursor-pointer border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-primary dark:hover:border-primary transition-colors rounded-xl p-6 flex flex-col items-center justify-center text-center gap-2 bg-white dark:bg-slate-950/40"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                          <UploadCloud className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                            Clique para selecionar um vídeo do seu computador
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Formatos suportados: MP4, WebM, MOV (Armazenamento direto no Ead Control)
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="border border-slate-200 dark:border-slate-800 rounded-xl p-4 bg-white dark:bg-slate-950 space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                              <Film className="w-5 h-5" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{videoFile.name}</p>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span>{formatBytes(videoFile.size)}</span>
+                                {detectedDuration > 0 && (
+                                  <>
+                                    <span>•</span>
+                                    <span>Duração detectada: {formatDurationDisplay(detectedDuration)}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {!videoUploading && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                handleVideoFileChange(null);
+                                if (videoInputRef.current) videoInputRef.current.value = '';
+                              }}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <X className="w-4 h-4 mr-1" /> Remover
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Progresso do upload */}
+                        {videoUploading && (
+                          <div className="space-y-2 pt-2">
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1.5 font-medium text-primary">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                Enviando vídeo para o Ead Control...
+                              </span>
+                              <span className="font-semibold">{videoUploadProgress}%</span>
+                            </div>
+                            <Progress value={videoUploadProgress} className="h-2" />
+                            <div className="flex justify-end pt-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={cancelVideoUpload}
+                                className="text-xs h-7 text-muted-foreground hover:text-destructive"
+                              >
+                                Cancelar upload
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Botões de Ação */}
+                        {!videoUploading && (
+                          <div className="pt-2 flex flex-wrap items-center gap-3">
+                            <Button
+                              type="button"
+                              onClick={handleR2VideoUpload}
+                              className="w-full sm:w-auto"
+                            >
+                              <UploadCloud className="w-4 h-4 mr-2" />
+                              Fazer Upload para o Ead Control
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => videoInputRef.current?.click()}
+                            >
+                              Escolher outro arquivo
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Mensagem de Erro */}
+                    {videoUploadError && (
+                      <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg text-red-700 dark:text-red-300 text-xs flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-semibold">Erro no upload do vídeo:</p>
+                          <p>{videoUploadError}</p>
+                          {videoUploadError.toLowerCase().includes('não está configurada') && (
+                            <p className="mt-1 text-slate-600 dark:text-slate-400">
+                              Para configurar o armazenamento, acesse o menu <strong>Configurações &gt; Integrações</strong>.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Campo de URL gerada / atual */}
+                  <div className="space-y-1.5 pt-1">
+                    <Label className="text-xs text-muted-foreground">URL do vídeo (armazenada no Ead Control)</Label>
+                    <Input
+                      placeholder="https://..."
+                      {...form.register('content')}
+                      className="font-mono text-xs"
+                      onBlur={importVideoDuration}
+                    />
+                  </div>
+                </TabsContent>
+
+                {/* Aba Link Externo */}
+                <TabsContent value="url" className="space-y-3 pt-2 focus-visible:outline-none">
+                  <div className="space-y-2">
+                    <Label>Link do Vídeo</Label>
+                    <Textarea
+                      rows={2}
+                      placeholder={contentPlaceholder}
+                      {...form.register('content')}
+                      onBlur={importVideoDuration}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Informe o link completo do vídeo (YouTube, Vimeo ou link direto MP4). A duração será obtida automaticamente ao sair do campo.
+                    </p>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           )}
           {type === 'apostila' && (

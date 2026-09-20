@@ -27,6 +27,15 @@ import { useCreateApiCredential, useUpdateApiCredential } from '@/hooks/apiCrede
 import { useToast } from '@/hooks/use-toast';
 import { ApiCredential } from '@/types';
 
+function cleanAccountId(val: string): string {
+  const trimmed = val.trim();
+  const urlMatch = trimmed.match(/https?:\/\/([a-f0-9]{32})\.r2\.cloudflarestorage\.com/i);
+  if (urlMatch) return urlMatch[1];
+  const dashMatch = trimmed.match(/dash\.cloudflare\.com\/([a-f0-9]{32})/i);
+  if (dashMatch) return dashMatch[1];
+  return trimmed;
+}
+
 interface R2ConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -56,6 +65,9 @@ export const R2ConfigDialog: React.FC<R2ConfigDialogProps> = ({
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  const isTokenInAccountId = accountId.trim().startsWith('cfat_');
+  const isTokenInAccessKeyId = accessKeyId.trim().startsWith('cfat_');
+
   // Carregar dados existentes ao abrir
   useEffect(() => {
     if (open) {
@@ -81,10 +93,40 @@ export const R2ConfigDialog: React.FC<R2ConfigDialogProps> = ({
 
   // Testar Conexão R2
   const handleTestConnection = async () => {
-    if (!accountId.trim() || !accessKeyId.trim() || !bucket.trim()) {
+    const resolvedAccountId = cleanAccountId(accountId);
+    const resolvedAccessKeyId = accessKeyId.trim();
+
+    if (!resolvedAccountId || !resolvedAccessKeyId || !bucket.trim()) {
       toast({
         title: 'Campos incompletos',
-        description: 'Preencha Account ID, Access Key e Bucket para testar.',
+        description: 'Preencha o ID da conta, ID da chave de acesso e Nome do Bucket para testar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (resolvedAccountId.startsWith('cfat_')) {
+      toast({
+        title: 'ID da conta incorreto',
+        description: 'Você inseriu o "Valor do token" (cfat_...) no campo ID da conta. O ID da conta é o código hexadecimal de 32 caracteres presente no endpoint S3 ou na URL do painel Cloudflare.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (resolvedAccessKeyId.startsWith('cfat_')) {
+      toast({
+        title: 'Chave de acesso incorreta',
+        description: 'Você inseriu o "Valor do token" (cfat_...) no campo "ID da chave de acesso". Utilize a chave da seção "Use as credenciais seguintes para clientes S3".',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (resolvedAccountId === resolvedAccessKeyId) {
+      toast({
+        title: 'Campos duplicados',
+        description: 'O "ID da conta" e o "ID da chave de acesso" não podem ser iguais. O ID da conta é o código da sua conta Cloudflare (64982c192275a7afd4ae802efaa9d883), e o ID da chave pertence ao token S3 (c0c182e7...).',
         variant: 'destructive',
       });
       return;
@@ -94,8 +136,8 @@ export const R2ConfigDialog: React.FC<R2ConfigDialogProps> = ({
     setTestResult(null);
     try {
       const configPayload: Record<string, any> = {
-        account_id: accountId.trim(),
-        access_key_id: accessKeyId.trim(),
+        account_id: resolvedAccountId,
+        access_key_id: resolvedAccessKeyId,
         bucket: bucket.trim(),
         public_url: publicUrl.trim(),
       };
@@ -132,10 +174,31 @@ export const R2ConfigDialog: React.FC<R2ConfigDialogProps> = ({
 
   // Salvar Credencial
   const handleSave = async () => {
-    if (!accountId.trim() || !accessKeyId.trim() || !bucket.trim()) {
+    const resolvedAccountId = cleanAccountId(accountId);
+    const resolvedAccessKeyId = accessKeyId.trim();
+
+    if (!resolvedAccountId || !resolvedAccessKeyId || !bucket.trim()) {
       toast({
         title: 'Campos obrigatórios',
-        description: 'Preencha os campos obrigatórios (Account ID, Access Key e Bucket).',
+        description: 'Preencha os campos obrigatórios (ID da conta, ID da chave de acesso e Bucket).',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (resolvedAccountId.startsWith('cfat_')) {
+      toast({
+        title: 'ID da conta incorreto',
+        description: 'O ID da conta não pode ser o token cfat_... Utilize o código de 32 caracteres da Cloudflare.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (resolvedAccessKeyId.startsWith('cfat_')) {
+      toast({
+        title: 'ID da chave incorreto',
+        description: 'O ID da chave de acesso não pode ser o token cfat_... Utilize a chave da seção de clientes S3.',
         variant: 'destructive',
       });
       return;
@@ -145,8 +208,8 @@ export const R2ConfigDialog: React.FC<R2ConfigDialogProps> = ({
     try {
       const configObject: Record<string, any> = {
         ...(initialCredential?.config || {}),
-        account_id: accountId.trim(),
-        access_key_id: accessKeyId.trim(),
+        account_id: resolvedAccountId,
+        access_key_id: resolvedAccessKeyId,
         bucket: bucket.trim(),
         public_url: publicUrl.trim(),
       };
@@ -210,9 +273,9 @@ export const R2ConfigDialog: React.FC<R2ConfigDialogProps> = ({
         {/* Guia Rápido */}
         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-300 flex items-start justify-between">
           <div>
-            <p className="font-semibold mb-0.5">Onde encontrar essas chaves?</p>
+            <p className="font-semibold mb-0.5">Onde encontrar essas credenciais na Cloudflare?</p>
             <p>
-              Acesse o Cloudflare Dashboard → <strong>R2 Object Storage</strong> → <strong>Manage R2 API Tokens</strong> → crie um token com permissão de <strong>Object Read & Write</strong>.
+              No painel da Cloudflare → <strong>Armazenamento de objetos R2</strong> → <strong>Manage R2 API Tokens</strong> → crie um token. Na tela de sucesso, utilize os dados da seção <strong>"Use as credenciais seguintes para clientes S3"</strong>.
             </p>
           </div>
           <a
@@ -239,43 +302,62 @@ export const R2ConfigDialog: React.FC<R2ConfigDialogProps> = ({
 
           {/* Account ID */}
           <div className="space-y-1.5">
-            <Label htmlFor="account_id">Cloudflare Account ID <span className="text-red-500">*</span></Label>
+            <Label htmlFor="account_id">
+              ID da conta Cloudflare (Account ID) <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="account_id"
               value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-              placeholder="Ex: 8f4a3c1b2e9d0f7a6c5b4a3c2e1d0f8a"
+              onChange={(e) => setAccountId(cleanAccountId(e.target.value))}
+              placeholder="Ex: 64982c192275a7afd4ae802efaa9d883 ou cole o endpoint S3"
               className="font-mono text-sm"
             />
-            <p className="text-[11px] text-muted-foreground">
-              Encontrado no painel da Cloudflare no canto inferior direito da página inicial.
-            </p>
+            {isTokenInAccountId ? (
+              <p className="text-xs text-red-600 dark:text-red-400 font-medium">
+                Atenção: Você colou o "Valor do token" (cfat_...). O ID da conta é o código de 32 caracteres presente na URL da Cloudflare ou no endpoint S3.
+              </p>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">
+                Código de 32 caracteres presente no endpoint S3 (<span className="font-mono font-medium">https://[ID_DA_CONTA].r2.cloudflarestorage.com</span>) ou na URL da Cloudflare. Não utilize o "Valor do token".
+              </p>
+            )}
           </div>
 
           {/* Access Key ID */}
           <div className="space-y-1.5">
-            <Label htmlFor="access_key">R2 Access Key ID <span className="text-red-500">*</span></Label>
+            <Label htmlFor="access_key">
+              ID da chave de acesso <span className="text-red-500">*</span>
+            </Label>
             <Input
               id="access_key"
               value={accessKeyId}
-              onChange={(e) => setAccessKeyId(e.target.value)}
-              placeholder="Ex: 6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f"
+              onChange={(e) => setAccessKeyId(e.target.value.trim())}
+              placeholder="Ex: c0c182e73f09a7cb940069bf3a923f01"
               className="font-mono text-sm"
             />
+            {isTokenInAccessKeyId ? (
+              <p className="text-xs text-red-600 dark:text-red-400 font-medium">
+                Atenção: Você colou o "Valor do token" (cfat_...). Utilize o valor do campo "ID da chave de acesso" da seção "clientes S3" da Cloudflare.
+              </p>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">
+                Corresponde exatamente ao campo <strong>"ID da chave de acesso"</strong> na seção <em>"Use as credenciais seguintes para clientes S3"</em> da Cloudflare.
+              </p>
+            )}
           </div>
 
           {/* Secret Access Key */}
           <div className="space-y-1.5">
             <Label htmlFor="secret_key">
-              R2 Secret Access Key {initialCredential ? '(preencha apenas para alterar)' : <span className="text-red-500">*</span>}
+              Chave de acesso secreta {initialCredential ? '(preencha apenas para alterar)' : <span className="text-red-500">*</span>}
             </Label>
             <div className="relative">
               <Input
                 id="secret_key"
                 type={showSecret ? 'text' : 'password'}
                 value={secretAccessKey}
-                onChange={(e) => setSecretAccessKey(e.target.value)}
-                placeholder={initialCredential ? '••••••••••••••••••••••••••••••••' : 'Cole sua Secret Access Key'}
+                onChange={(e) => setSecretAccessKey(e.target.value.trim())}
+                placeholder={initialCredential ? '••••••••••••••••••••••••••••••••' : 'Cole sua Chave de acesso secreta'}
                 className="font-mono text-sm pr-10"
               />
               <button
@@ -287,7 +369,7 @@ export const R2ConfigDialog: React.FC<R2ConfigDialogProps> = ({
               </button>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              A chave secreta é criptografada com padrão AES-256 no banco de dados.
+              Corresponde ao campo <strong>"Chave de acesso secreta"</strong> na seção de clientes S3 da Cloudflare (criptografada no banco com AES-256).
             </p>
           </div>
 
@@ -297,10 +379,13 @@ export const R2ConfigDialog: React.FC<R2ConfigDialogProps> = ({
             <Input
               id="bucket"
               value={bucket}
-              onChange={(e) => setBucket(e.target.value)}
-              placeholder="Ex: eadcontrol-videos"
+              onChange={(e) => setBucket(e.target.value.trim())}
+              placeholder="Ex: ead-control"
               className="font-mono text-sm"
             />
+            <p className="text-[11px] text-muted-foreground">
+              Nome do bucket criado em Cloudflare → Armazenamento de objetos R2.
+            </p>
           </div>
 
           {/* URL Pública / Domínio Personalizado */}
@@ -309,12 +394,12 @@ export const R2ConfigDialog: React.FC<R2ConfigDialogProps> = ({
             <Input
               id="public_url"
               value={publicUrl}
-              onChange={(e) => setPublicUrl(e.target.value)}
-              placeholder="Ex: https://media.seusite.com.br ou https://pub-xxx.r2.dev"
+              onChange={(e) => setPublicUrl(e.target.value.trim())}
+              placeholder="Ex: https://64982c192275a7afd4ae802efaa9d883.r2.cloudflarestorage.com/ead-control"
               className="font-mono text-sm"
             />
             <p className="text-[11px] text-muted-foreground">
-              URL base onde os vídeos públicos são acessados. Pode ser um domínio personalizado no Cloudflare ou o domínio padrão .r2.dev.
+              URL base onde os vídeos públicos são acessados. Pode ser o endpoint do bucket ou um domínio personalizado configurado no Cloudflare R2.
             </p>
           </div>
 

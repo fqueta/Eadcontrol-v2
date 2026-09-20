@@ -173,6 +173,12 @@ export const defaultMenu: MenuItemDTO[] = [
         url: "/admin/school/video-tips",
         permission: "school.view",
         can_view: true
+      },
+      {
+        title: "Mediateca",
+        url: "/admin/school/media-library",
+        permission: "school.view",
+        can_view: true
       }
     ]
   },

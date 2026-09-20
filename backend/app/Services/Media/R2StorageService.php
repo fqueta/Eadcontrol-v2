@@ -58,6 +58,36 @@ class R2StorageService
     }
 
     /**
+     * Configura automaticamente as regras de CORS no bucket do R2 para permitir upload direto via navegador.
+     */
+    public function ensureCors(): bool
+    {
+        if (!$this->isConfigured()) {
+            return false;
+        }
+
+        try {
+            $this->client->putBucketCors([
+                'Bucket' => $this->bucket,
+                'CORSConfiguration' => [
+                    'CORSRules' => [
+                        [
+                            'AllowedHeaders' => ['*'],
+                            'AllowedMethods' => ['GET', 'PUT', 'POST', 'HEAD', 'DELETE'],
+                            'AllowedOrigins' => ['*'],
+                            'MaxAgeSeconds' => 3600,
+                        ],
+                    ],
+                ],
+            ]);
+            return true;
+        } catch (\Throwable $e) {
+            \Log::warning("R2StorageService: erro ao configurar CORS no bucket {$this->bucket}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Gera uma URL pré-assinada (Presigned URL) para o navegador fazer upload direto para o R2.
      *
      * @param string $path Caminho relativo no bucket (ex: "tenant-hair/videos/uuid.mp4")
@@ -91,37 +121,117 @@ class R2StorageService
     }
 
     /**
-     * Retorna a URL pública de streaming/CDN do vídeo.
+     * Retorna o cliente S3 configurado.
+     */
+    public function getClient(): ?S3Client
+    {
+        return $this->client;
+    }
+
+    /**
+     * Retorna o bucket configurado.
+     */
+    public function getBucket(): string
+    {
+        return $this->bucket;
+    }
+
+    /**
+     * Retorna a URL pública configurada.
+     */
+    public function getPublicUrlConfig(): string
+    {
+        return $this->publicUrl;
+    }
+
+    /**
+     * Extrai a chave relativa do objeto (Key no bucket) a partir de uma URL completa ou caminho.
+     * Suporta URLs de streaming, URLs S3 diretas ou caminhos parciais.
+     */
+    public function extractObjectKey(string $pathOrUrl): string
+    {
+        $decoded = urldecode(trim($pathOrUrl));
+        if (str_contains($decoded, 'path=')) {
+            $parts = parse_url($decoded);
+            parse_str($parts['query'] ?? '', $query);
+            if (!empty($query['path'])) {
+                $decoded = $query['path'];
+            }
+        }
+        if (str_contains($decoded, '://')) {
+            $parsed = parse_url($decoded);
+            $decoded = ltrim($parsed['path'] ?? '', '/');
+        }
+        $decoded = ltrim($decoded, '/');
+        // Se começar com o nome do bucket no caminho, remove
+        if (!empty($this->bucket) && str_starts_with($decoded, "{$this->bucket}/")) {
+            $decoded = substr($decoded, strlen("{$this->bucket}/"));
+        }
+        return ltrim($decoded, '/');
+    }
+
+    /**
+     * Retorna a URL de streaming/CDN do vídeo.
+     * Se houver um domínio CDN público real configurado (ex: media.site.com ou pub-xxx.r2.dev), usa-o diretamente.
+     * Se for o endpoint S3 (*.r2.cloudflarestorage.com) ou não houver domínio CDN, usa a rota de streaming da API
+     * com suporte a HTTP 206 Partial Content (Range), permitindo que o navegador toque o vídeo imediatamente.
      */
     public function getPublicUrl(string $path): string
     {
         $cleanPath = ltrim($path, '/');
-        if (!empty($this->publicUrl)) {
-            return "{$this->publicUrl}/{$cleanPath}";
+        if (!empty($this->publicUrl) && !str_contains($this->publicUrl, 'r2.cloudflarestorage.com')) {
+            return rtrim($this->publicUrl, '/') . "/{$cleanPath}";
         }
 
-        // Fallback para URL do R2 público (se habilitado r2.dev)
-        return "https://{$this->bucket}.r2.cloudflarestorage.com/{$cleanPath}";
+        // Rota de streaming otimizada da API
+        return url("/api/v1/integrations/media/stream?path=" . urlencode($cleanPath));
     }
 
     /**
      * Deleta um arquivo no Cloudflare R2.
      */
-    public function deleteObject(string $path): bool
+    public function deleteObject(string $pathOrUrl): bool
     {
         if (!$this->isConfigured()) {
+            return false;
+        }
+
+        $key = $this->extractObjectKey($pathOrUrl);
+        if (empty($key)) {
             return false;
         }
 
         try {
             $this->client->deleteObject([
                 'Bucket' => $this->bucket,
-                'Key' => ltrim($path, '/'),
+                'Key' => $key,
             ]);
             return true;
         } catch (\Throwable $e) {
-            \Log::error("R2StorageService: erro ao deletar {$path}: " . $e->getMessage());
+            \Log::error("R2StorageService: erro ao deletar {$key}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Verifica se um objeto existe no bucket do R2.
+     */
+    public function hasObject(string $pathOrUrl): bool
+    {
+        if (!$this->isConfigured()) {
+            return false;
+        }
+
+        $key = $this->extractObjectKey($pathOrUrl);
+        if (empty($key)) {
+            return false;
+        }
+
+        try {
+            return $this->client->doesObjectExist($this->bucket, $key);
+        } catch (\Throwable $e) {
             return false;
         }
     }
 }
+

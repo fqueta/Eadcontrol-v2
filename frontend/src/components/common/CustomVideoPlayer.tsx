@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import Hls from 'hls.js';
 import { 
   Play, 
   Pause, 
@@ -52,6 +53,7 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const hideControlsTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hlsRef = useRef<Hls | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -67,6 +69,8 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   const [hoverPosition, setHoverPosition] = useState<number>(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [centerAnimation, setCenterAnimation] = useState<'play' | 'pause' | null>(null);
+  const [qualities, setQualities] = useState<{ id: number; height: number; bitrate: number }[]>([]);
+  const [currentQuality, setCurrentQuality] = useState<number>(-1); // -1 = Auto
 
   // Formatar tempo (00:00 ou 00:00:00)
   const formatTime = (timeInSeconds: number) => {
@@ -288,12 +292,74 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
   }, []);
 
-  // Inicialização e Retoma
+  // Inicialização e Retoma (com suporte híbrido a HLS e MP4)
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     let hasResumed = false;
+    const isHls = Boolean(
+      src && (
+        src.includes('.m3u8') || 
+        src.includes('hls/') || 
+        src.toLowerCase().endsWith('.m3u8')
+      )
+    );
+
+    // Destruir instância anterior do Hls se houver
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    if (isHls) {
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: false,
+          backBufferLength: 90,
+          maxBufferLength: 30,
+        });
+        hlsRef.current = hls;
+
+        hls.loadSource(src);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+          setIsLoading(false);
+          if (data.levels && data.levels.length > 0) {
+            const list = data.levels.map((lvl, index) => ({
+              id: index,
+              height: lvl.height,
+              bitrate: lvl.bitrate,
+            }));
+            setQualities(list);
+          }
+        });
+
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                hls.recoverMediaError();
+                break;
+              default:
+                hls.destroy();
+                break;
+            }
+          }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Safari / iOS nativo
+        video.src = src;
+      }
+    } else {
+      // MP4 padrão
+      video.src = src;
+    }
 
     const onLoadedMetadata = () => {
       setDuration(video.duration);
@@ -344,6 +410,10 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
     video.addEventListener('playing', onPlaying);
 
     return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
       video.removeEventListener('loadedmetadata', onLoadedMetadata);
       video.removeEventListener('timeupdate', onTimeUpdateHandler);
       video.removeEventListener('play', onPlayHandler);
@@ -353,6 +423,13 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
       video.removeEventListener('playing', onPlaying);
     };
   }, [src, initialTime, onTimeUpdate, onPause, onEnded, onPlay]);
+
+  const handleQualityChange = (levelIndex: number) => {
+    setCurrentQuality(levelIndex);
+    if (hlsRef.current) {
+      hlsRef.current.currentLevel = levelIndex;
+    }
+  };
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
   const bufferPercent = duration > 0 ? (buffered / duration) * 100 : 0;
@@ -368,10 +445,9 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
         className
       )}
     >
-      {/* Vídeo HTML5 */}
+      {/* Vídeo HTML5 / HLS */}
       <video
         ref={videoRef}
-        src={src}
         poster={poster}
         autoPlay={autoPlay}
         playsInline
@@ -564,6 +640,46 @@ export const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Menu de Configurações / Qualidade de Vídeo (HLS) */}
+            {qualities.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="p-1.5 hover:bg-white/10 rounded-full transition-colors focus:outline-none text-white/90 hover:text-white"
+                    title="Qualidade do Vídeo"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-neutral-900 text-white border-neutral-800 min-w-[150px]">
+                  <div className="text-xs text-white/60 px-2 py-1 font-medium border-b border-neutral-800">
+                    Qualidade
+                  </div>
+                  <DropdownMenuItem
+                    onClick={() => handleQualityChange(-1)}
+                    className={cn(
+                      'cursor-pointer text-xs py-1.5 focus:bg-neutral-800 focus:text-white',
+                      currentQuality === -1 ? 'text-red-500 font-bold' : 'text-neutral-300'
+                    )}
+                  >
+                    Automático (Recomendado)
+                  </DropdownMenuItem>
+                  {qualities.map((q) => (
+                    <DropdownMenuItem
+                      key={q.id}
+                      onClick={() => handleQualityChange(q.id)}
+                      className={cn(
+                        'cursor-pointer text-xs py-1.5 focus:bg-neutral-800 focus:text-white',
+                        currentQuality === q.id ? 'text-red-500 font-bold' : 'text-neutral-300'
+                      )}
+                    >
+                      {q.height ? `${q.height}p` : `Qualidade ${q.id + 1}`}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
             {/* Picture-in-Picture */}
             {document.pictureInPictureEnabled && (

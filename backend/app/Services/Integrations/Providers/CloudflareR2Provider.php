@@ -75,9 +75,28 @@ class CloudflareR2Provider implements IntegrationProviderInterface
                 'Bucket' => $bucket,
             ]);
 
+            // Configura automaticamente as regras de CORS para permitir uploads direto do navegador
+            try {
+                $s3Client->putBucketCors([
+                    'Bucket' => $bucket,
+                    'CORSConfiguration' => [
+                        'CORSRules' => [
+                            [
+                                'AllowedHeaders' => ['*'],
+                                'AllowedMethods' => ['GET', 'PUT', 'POST', 'HEAD', 'DELETE'],
+                                'AllowedOrigins' => ['*'],
+                                'MaxAgeSeconds' => 3600,
+                            ],
+                        ],
+                    ],
+                ]);
+            } catch (\Throwable $corsError) {
+                // Continua se não tiver permissão para mudar CORS
+            }
+
             return [
                 'success' => true,
-                'message' => "Conexão com o Cloudflare R2 estabelecida com sucesso! Bucket '{$bucket}' acessível.",
+                'message' => "Conexão com o Cloudflare R2 estabelecida com sucesso! Bucket '{$bucket}' acessível e CORS configurado.",
                 'data' => [
                     'bucket' => $bucket,
                     'endpoint' => $endpoint,

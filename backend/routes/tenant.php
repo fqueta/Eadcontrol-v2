@@ -79,6 +79,10 @@ Route::middleware([
     //     return Inertia::render('welcome');
     // })->name('home');
     Route::get('/teste', [ TesteController::class,'index'])->name('teste.index');
+
+    // Player protegido público (URL raiz: /watch/{token})
+    Route::get('/watch/{token}', [\App\Http\Controllers\api\SecureStreamController::class, 'watch'])->name('web.secure.watch');
+    Route::get('/watch/{token}/stream/{file}', [\App\Http\Controllers\api\SecureStreamController::class, 'secureStream'])->where('file', '.*')->name('web.secure.stream');
     // // Route::get('/', function () {
     //     //     return 'This is your multi-tenant application. The id of the current tenant is ' . tenant('id');
     //     // });
@@ -129,6 +133,17 @@ Route::name('api.')->prefix('api/v1')->middleware([
     // Comentários aprovados públicos (listagem apenas)
     Route::get('courses/{id}/comments', [CommentController::class, 'indexForCourse'])->name('courses.comments.index');
     Route::get('activities/{id}/comments', [CommentController::class, 'indexForActivity'])->name('activities.comments.index');
+
+    // Streaming de mídia / vídeo (público para alunos e painel com suporte a Range / 206 Partial Content e HLS)
+    Route::get('integrations/media/stream', [\App\Http\Controllers\api\IntegrationTestController::class, 'streamR2Media'])->name('integrations.media.stream');
+    Route::get('media/stream', [\App\Http\Controllers\api\IntegrationTestController::class, 'streamR2Media'])->name('media.stream');
+    Route::get('integrations/media/{segment}', [\App\Http\Controllers\api\IntegrationTestController::class, 'streamR2Segment'])->where('segment', '.*\.ts')->name('integrations.media.segment');
+    Route::get('media/{segment}', [\App\Http\Controllers\api\IntegrationTestController::class, 'streamR2Segment'])->where('segment', '.*\.ts')->name('media.segment');
+    Route::get('integrations/media/transcode/status', [\App\Http\Controllers\api\IntegrationTestController::class, 'transcodeStatus'])->name('integrations.media.transcode.status.public');
+
+    // Player protegido público — acesso via token assinado HMAC (sem autenticação, protegido por token)
+    Route::get('watch/{token}', [\App\Http\Controllers\api\SecureStreamController::class, 'watch'])->name('secure.watch');
+    Route::get('watch/{token}/stream/{file}', [\App\Http\Controllers\api\SecureStreamController::class, 'secureStream'])->where('file', '.*')->name('secure.stream');
 
     // Tokens para formulários públicos (sem autenticação)
     // Public form tokens (no authentication)
@@ -693,6 +708,17 @@ Route::name('api.')->prefix('api/v1')->middleware([
         // Rotas de teste de integração e presign R2
         Route::post('integrations/test/{slug}', [\App\Http\Controllers\api\IntegrationTestController::class, 'testConnection'])->name('integrations.test');
         Route::post('integrations/r2/presign', [\App\Http\Controllers\api\IntegrationTestController::class, 'presignR2Upload'])->name('integrations.r2.presign');
+        Route::delete('integrations/r2/delete', [\App\Http\Controllers\api\IntegrationTestController::class, 'deleteR2Media'])->name('integrations.r2.delete');
+        Route::post('integrations/media/transcode', [\App\Http\Controllers\api\IntegrationTestController::class, 'transcodeMedia'])->name('integrations.media.transcode');
+        Route::get('integrations/media/transcode/status', [\App\Http\Controllers\api\IntegrationTestController::class, 'transcodeStatus'])->name('integrations.media.transcode.status');
+
+        // Mediateca — Biblioteca de Vídeos
+        Route::get('media-files/stats', [\App\Http\Controllers\api\MediaFileController::class, 'stats'])->name('media-files.stats');
+        Route::post('media-files/scan', [\App\Http\Controllers\api\MediaFileController::class, 'scan'])->name('media-files.scan');
+        Route::post('media-files/{id}/link', [\App\Http\Controllers\api\MediaFileController::class, 'link'])->name('media-files.link');
+        Route::post('media-files/{id}/share', [\App\Http\Controllers\api\SecureStreamController::class, 'generateShareToken'])->name('media-files.share');
+        Route::post('media-files/{id}/download', [\App\Http\Controllers\api\MediaFileController::class, 'download'])->name('media-files.download');
+        Route::apiResource('media-files', \App\Http\Controllers\api\MediaFileController::class, ['parameters' => ['media-files' => 'id']]);
 
         // Rotas para cupons de desconto
         Route::get('cupons/{id}/usages', [\App\Http\Controllers\api\CupomController::class, 'usages'])->name('cupons.usages');

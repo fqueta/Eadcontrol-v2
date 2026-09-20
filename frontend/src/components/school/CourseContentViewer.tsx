@@ -28,6 +28,7 @@ import { generateCertificatePdf } from '@/lib/certificates/generateCertificatePd
 import { QuizGradeDetail } from './components/QuizGradeDetail';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { CustomVideoPlayer } from '@/components/common/CustomVideoPlayer';
+import { resolveEadControlPlayUrl } from './components/CourseActivityItem';
 
 /**
  * VideoDescriptionToggle
@@ -1347,7 +1348,7 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
       const id = u.split('vimeo.com/')[1]?.split('?')[0]?.replace(/[^0-9]/g, '');
       if (id) return `https://player.vimeo.com/video/${id}`;
     }
-    return u;
+    return resolveEadControlPlayUrl(u);
   };
 
   /**
@@ -3093,9 +3094,11 @@ function htmlEquals(a: string, b: string): boolean {
                           lowerUrl.endsWith('.webm') || 
                           lowerUrl.endsWith('.m4v') || 
                           lowerUrl.endsWith('.mov') || 
+                          lowerUrl.includes('.m3u8') ||
                           lowerUrl.includes('.r2.dev') || 
                           lowerUrl.includes('r2.cloudflarestorage.com') ||
-                          lowerUrl.includes('/videos/');
+                          lowerUrl.includes('/videos/') ||
+                          lowerUrl.includes('media/stream');
 
                         if (isDirectOrR2Video) {
                           return (

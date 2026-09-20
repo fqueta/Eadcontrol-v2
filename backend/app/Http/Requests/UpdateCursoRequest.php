@@ -82,6 +82,8 @@ class UpdateCursoRequest extends FormRequest
             'modulos.*.atividades.*.type_duration' => ['nullable','string','max:50'],
             'modulos.*.atividades.*.type_activities' => ['required','string','max:50'],
             'modulos.*.atividades.*.active' => ['nullable', Rule::in(['s','n','true','false','1','0'])],
+            'modulos.*.atividades.*.video_source' => ['nullable', 'string', 'max:50'],
+            'modulos.*.atividades.*.video_url' => ['nullable', 'string'],
             
             // Campos de quiz
             'modulos.*.atividades.*.quiz_questions' => ['nullable', 'array'],
