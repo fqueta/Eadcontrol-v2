@@ -67,6 +67,9 @@ RUN mkdir -p storage/logs \
     && mkdir -p storage/framework/cache \
     && chown -R www-data:www-data storage bootstrap/cache
 
+# Ensure bundled media binaries are executable (git stores them as non-executable)
+RUN chmod +x bin/ffmpeg bin/ffprobe bin/qt-faststart || true
+
 # Get RoadRunner Binary (download specific version to be safe)
 COPY --from=ghcr.io/roadrunner-server/roadrunner:2023.3 /usr/bin/rr /usr/local/bin/rr
 RUN chmod +x /usr/local/bin/rr
