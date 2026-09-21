@@ -462,9 +462,10 @@ function QuizViewer({
           <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
             {currentQuestion.tipo_pergunta === 'multipla_escolha' ? 'Múltipla Escolha' : 'Verdadeiro ou Falso'}
           </Badge>
-          <h3 className="text-lg md:text-xl font-semibold leading-relaxed">
-            {currentQuestion.enunciado}
-          </h3>
+          <div
+            className="text-lg md:text-xl font-semibold leading-relaxed prose prose-sm max-w-none dark:prose-invert break-words [&_h1]:text-lg [&_h2]:text-lg [&_h3]:text-lg [&_h3]:font-semibold [&_p]:m-0 [&_h3]:m-0"
+            dangerouslySetInnerHTML={{ __html: String(currentQuestion.enunciado || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '').replace(/\sstyle\s*=\s*(["'])[\s\S]*?\1/gi, '') }}
+          />
         </div>
 
         {/* Options */}
