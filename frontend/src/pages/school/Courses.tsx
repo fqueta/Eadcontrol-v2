@@ -300,7 +300,7 @@ export default function Courses() {
                   <TableHead className="w-[120px] px-3 py-2 font-bold text-[11px] uppercase tracking-wider text-muted-foreground cursor-pointer select-none" onClick={() => handleSort('valor')}>
                     Valor <SortIcon column="valor" />
                   </TableHead>
-                  <TableHead className="w-[70px] text-right px-3 py-2 font-bold text-[11px] uppercase tracking-wider text-muted-foreground">Ações</TableHead>
+                  <TableHead className="w-[70px] text-right px-3 py-2 font-bold text-[11px] uppercase tracking-wider text-muted-foreground sticky right-0 z-20 bg-slate-50/95 dark:bg-slate-800/95 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.08)]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -363,7 +363,7 @@ export default function Courses() {
                           <span className="text-muted-foreground font-normal text-xs">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="px-3 py-2 text-right">
+                      <TableCell className="px-3 py-2 text-right sticky right-0 z-10 bg-white/95 dark:bg-slate-900/95 group-hover:bg-slate-50/95 dark:group-hover:bg-slate-800/95 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.08)]">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg"><MoreHorizontal className="h-3.5 w-3.5" /></Button>
