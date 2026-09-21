@@ -140,6 +140,7 @@ Route::name('api.')->prefix('api/v1')->middleware([
     Route::get('integrations/media/{segment}', [\App\Http\Controllers\api\IntegrationTestController::class, 'streamR2Segment'])->where('segment', '.*\.ts')->name('integrations.media.segment');
     Route::get('media/{segment}', [\App\Http\Controllers\api\IntegrationTestController::class, 'streamR2Segment'])->where('segment', '.*\.ts')->name('media.segment');
     Route::get('integrations/media/transcode/status', [\App\Http\Controllers\api\IntegrationTestController::class, 'transcodeStatus'])->name('integrations.media.transcode.status.public');
+    Route::get('integrations/media/duration', [\App\Http\Controllers\api\IntegrationTestController::class, 'mediaDuration'])->name('integrations.media.duration.public');
 
     // Player protegido público — acesso via token assinado HMAC (sem autenticação, protegido por token)
     Route::get('watch/{token}', [\App\Http\Controllers\api\SecureStreamController::class, 'watch'])->name('secure.watch');

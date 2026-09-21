@@ -140,6 +140,20 @@ export const integrationsService = {
   },
 
   /**
+   * Obtém a duração em segundos de uma mídia no Ead Control via API
+   */
+  async getMediaDuration(pathOrUrl: string): Promise<number> {
+    try {
+      const response = await api.get('/integrations/media/duration', {
+        params: { path: pathOrUrl, url: pathOrUrl },
+      });
+      return Number(response.data?.duration || 0);
+    } catch {
+      return 0;
+    }
+  },
+
+  /**
    * Gera URL temporária de download (5 min) para um vídeo com download habilitado
    */
   async requestDownload(id: number): Promise<DownloadResult> {
@@ -147,4 +161,72 @@ export const integrationsService = {
     return response.data;
   },
 };
+
+/**
+ * Detecta a duração em segundos de qualquer vídeo do Ead Control.
+ * 1. Tenta obter via endpoint da API backend (tabela media_files, cache de transcode ou manifesto R2).
+ * 2. Se for HLS (.m3u8 ou rota de streaming HLS), faz fetch do manifesto e soma as tags #EXTINF.
+ * 3. Se for arquivo MP4 direto, carrega metadados via elemento <video> com timeout seguro.
+ */
+export async function fetchEadControlVideoDuration(rawUrl: string): Promise<number> {
+  const url = (rawUrl || '').trim();
+  if (!url) return 0;
+
+  // 1. Tentar obter pelo backend
+  try {
+    const sec = await integrationsService.getMediaDuration(url);
+    if (sec > 0) return sec;
+  } catch {}
+
+  // 2. Se for HLS (.m3u8 ou rota de streaming HLS), buscar o manifesto e somar #EXTINF
+  if (url.includes('.m3u8') || url.includes('/hls/') || url.includes('media/stream')) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        const text = await res.text();
+        if (text.includes('#EXTINF:')) {
+          let total = 0;
+          const matches = text.matchAll(/#EXTINF:([0-9.]+)/g);
+          for (const m of matches) {
+            total += parseFloat(m[1]);
+          }
+          if (total > 0) return Math.round(total);
+        }
+      }
+    } catch {}
+  }
+
+  // 3. Fallback: elemento <video> para MP4s diretos
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (val: number) => {
+      if (!settled) {
+        settled = true;
+        resolve(val);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      finish(0);
+    }, 6000);
+
+    try {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => {
+        clearTimeout(timer);
+        finish(Math.round(video.duration || 0));
+      };
+      video.onerror = () => {
+        clearTimeout(timer);
+        finish(0);
+      };
+      video.src = url;
+    } catch {
+      clearTimeout(timer);
+      finish(0);
+    }
+  });
+}
+
 

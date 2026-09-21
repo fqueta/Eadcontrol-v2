@@ -792,6 +792,12 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
                         $hlsUrl = $mf->hls_url;
                         $thumbnailUrl = $mf->thumbnail_url;
                     }
+                    if ($mf && !empty($mf->duration_seconds) && (int)$mf->duration_seconds > 0) {
+                        if (empty($act['duration']) || $act['duration'] === '0' || $act['duration'] === 0) {
+                            $act['duration'] = (string) $mf->duration_seconds;
+                            $act['type_duration'] = 'seg';
+                        }
+                    }
                 }
 
                 if ($hlsUrl) {
@@ -1192,6 +1198,56 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
                             $act['video_url'] = $hlsFound;
                             $act['hls_master_url'] = $hlsFound;
                             $changed = true;
+                        }
+                    }
+
+                    // Auto-preenchimento da duração do vídeo se estiver vazia ou zero
+                    $currDuration = $act['duration'] ?? ($act['config']['duration'] ?? null);
+                    if (empty($currDuration) || $currDuration === '0' || $currDuration === 0) {
+                        $targetUrl = (string)($act['video_url'] ?? $act['content'] ?? '');
+                        if (!empty($targetUrl)) {
+                            $searchKey = null;
+                            if (str_contains($targetUrl, 'stream?path=')) {
+                                parse_str(parse_url($targetUrl, PHP_URL_QUERY) ?? '', $qParams);
+                                $searchKey = $qParams['path'] ?? null;
+                            } else {
+                                $searchKey = (new \App\Services\Media\R2StorageService())->extractObjectKey($targetUrl);
+                            }
+
+                            $fileId = pathinfo($searchKey ?: $targetUrl, PATHINFO_FILENAME);
+                            if (str_contains($targetUrl, '.m3u8')) {
+                                $p = basename(dirname($searchKey ?: $targetUrl));
+                                if (!empty($p) && !in_array(strtolower($p), ['.', 'hls', 'videos', 'video'])) {
+                                    $fileId = $p;
+                                }
+                            }
+                            $isGeneric = in_array(strtolower($fileId), ['master', 'index', 'playlist', 'video', 'videos', 'hls', 'default', '']);
+
+                            $mf = \App\Models\MediaFile::where(function($q) use ($searchKey, $targetUrl, $activityId, $fileId, $isGeneric) {
+                                if ($activityId) {
+                                    $q->where('linked_activity_id', $activityId);
+                                }
+                                if ($searchKey) {
+                                    $q->orWhere('storage_path', $searchKey)
+                                      ->orWhere('hls_path', $searchKey);
+                                }
+                                $q->orWhere('public_url', $targetUrl)
+                                  ->orWhere('hls_url', $targetUrl);
+                                if (!$isGeneric && strlen($fileId) > 5) {
+                                    $q->orWhere('storage_path', 'like', "%{$fileId}%")
+                                      ->orWhere('hls_path', 'like', "%{$fileId}%");
+                                }
+                            })->first();
+
+                            if ($mf && !empty($mf->duration_seconds) && (int)$mf->duration_seconds > 0) {
+                                $act['duration'] = (string) $mf->duration_seconds;
+                                $act['type_duration'] = 'seg';
+                                if (isset($act['config'])) {
+                                    $act['config']['duration'] = (string) $mf->duration_seconds;
+                                    $act['config']['type_duration'] = 'seg';
+                                }
+                                $changed = true;
+                            }
                         }
                     }
                 }

@@ -36,6 +36,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { currencyApplyMask, currencyRemoveMaskToNumber, currencyRemoveMaskToString } from '@/lib/masks/currency';
 import { extractVideoMeta } from '@/services/videoTipsService';
+import { fetchEadControlVideoDuration } from '@/services/integrationsService';
 
 /**
  * ProductSelect
@@ -1826,17 +1827,7 @@ export function CourseForm({
    * Obtém a duração em segundos de arquivos MP4/Ead Control diretamente dos metadados.
    */
   async function fetchDirectVideoDuration(videoUrl: string): Promise<number> {
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.onloadedmetadata = () => {
-        resolve(video.duration || 0);
-      };
-      video.onerror = () => {
-        resolve(0);
-      };
-      video.src = videoUrl;
-    });
+    return fetchEadControlVideoDuration(videoUrl);
   }
 
   /**
@@ -1854,15 +1845,15 @@ export function CourseForm({
     if (!url) return;
     try {
       let seconds = 0;
-      if (source === 'youtube' && !url.includes('.r2.') && !url.includes('/videos/')) {
+      if (source === 'youtube' && !url.includes('.r2.') && !url.includes('/videos/') && !url.includes('media/stream')) {
         const id = parseYouTubeVideoId(url);
         if (!id) throw new Error('Não foi possível extrair o ID do YouTube');
         seconds = await fetchYouTubeDuration(id);
       } else if (source === 'vimeo') {
         seconds = await fetchVimeoDuration(url);
       } else {
-        // Ead Control / Arquivo Direto
-        seconds = await fetchDirectVideoDuration(url);
+        // Ead Control / Arquivo Direto / HLS
+        seconds = await fetchEadControlVideoDuration(url);
       }
       if (seconds > 0) {
         setActivityField(moduleIdx, activityIdx, 'duracao', String(Math.round(seconds)));
@@ -2029,7 +2020,8 @@ export function CourseForm({
     target[field] = value;
     activities[activityIndex] = target;
     modules[moduleIndex] = { ...modules[moduleIndex], atividades: activities } as any;
-    form.setValue('modulos', modules);
+    form.setValue('modulos', modules, { shouldDirty: true });
+    form.setValue(`modulos.${moduleIndex}.atividades.${activityIndex}.${field}` as any, value, { shouldValidate: true, shouldDirty: true });
     recalcCourseDuration();
   };
 

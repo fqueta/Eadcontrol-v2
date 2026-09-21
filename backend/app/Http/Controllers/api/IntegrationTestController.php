@@ -470,6 +470,117 @@ class IntegrationTestController extends Controller
     }
 
     /**
+     * Retorna a duração em segundos de um vídeo do Ead Control / Cloudflare R2.
+     * Busca na Mediateca (media_files), no cache de transcode, ou calcula via manifesto HLS (.m3u8).
+     */
+    public function mediaDuration(Request $request)
+    {
+        $rawPath = $request->query('path') ?: $request->query('url') ?: '';
+        if (empty($rawPath)) {
+            return response()->json(['message' => 'Caminho do vídeo não informado.'], 422);
+        }
+
+        $r2Service = new R2StorageService();
+        $sourceKey = $r2Service->extractObjectKey($rawPath);
+
+        // Identificador único do vídeo (se for master.m3u8, pega a pasta pai onde fica o nome/UUID do vídeo)
+        $fileIdentifier = pathinfo($sourceKey, PATHINFO_FILENAME);
+        if (str_contains($sourceKey, '.m3u8')) {
+            $parent = basename(dirname($sourceKey));
+            if (!empty($parent) && !in_array(strtolower($parent), ['.', 'hls', 'videos', 'video'])) {
+                $fileIdentifier = $parent;
+            }
+        }
+        $isGeneric = in_array(strtolower($fileIdentifier), ['master', 'index', 'playlist', 'video', 'videos', 'hls', 'default', '']);
+
+        // 1. Verificar cache de transcodificação recente
+        $cacheKey = "video_hls_status:" . md5($sourceKey);
+        try {
+            $cached = $this->getHlsCache()->get($cacheKey);
+            if (!empty($cached['duration']) && (int)$cached['duration'] > 0) {
+                return response()->json([
+                    'success'  => true,
+                    'duration' => (int) $cached['duration'],
+                    'source'   => 'cache',
+                ]);
+            }
+        } catch (\Throwable $e) {}
+
+        // 2. Buscar no banco de dados (tabela media_files)
+        $mf = MediaFile::where(function($q) use ($sourceKey, $rawPath, $fileIdentifier, $isGeneric) {
+            $q->where('storage_path', $sourceKey)
+              ->orWhere('hls_path', $sourceKey)
+              ->orWhere('public_url', $rawPath)
+              ->orWhere('hls_url', $rawPath);
+            if (!$isGeneric && strlen($fileIdentifier) > 5) {
+                $q->orWhere('storage_path', 'like', "%{$fileIdentifier}%")
+                  ->orWhere('hls_path', 'like', "%{$fileIdentifier}%");
+            }
+        })->first();
+
+        if ($mf && !empty($mf->duration_seconds) && (int)$mf->duration_seconds > 0) {
+            return response()->json([
+                'success'  => true,
+                'duration' => (int) $mf->duration_seconds,
+                'source'   => 'media_file',
+            ]);
+        }
+
+        // 3. Se for ou possuir HLS (.m3u8), calcular instantaneamente a partir do manifesto R2
+        $client = $r2Service->getClient();
+        $bucket = $r2Service->getBucket();
+
+        if ($client && $bucket) {
+            $candidateHlsKeys = [];
+            if ($mf && !empty($mf->hls_path)) {
+                $candidateHlsKeys[] = $mf->hls_path;
+            }
+            if (str_contains($sourceKey, '.m3u8')) {
+                $candidateHlsKeys[] = $sourceKey;
+            }
+            if (!$isGeneric) {
+                $dir = dirname($sourceKey);
+                $candidateHlsKeys[] = "{$dir}/hls/{$fileIdentifier}/master.m3u8";
+                $candidateHlsKeys[] = "{$dir}/{$fileIdentifier}/master.m3u8";
+            }
+
+            foreach (array_unique($candidateHlsKeys) as $hlsKey) {
+                try {
+                    $object = $client->getObject([
+                        'Bucket' => $bucket,
+                        'Key'    => $hlsKey,
+                    ]);
+                    $content = (string) $object['Body']->getContents();
+                    if (str_contains($content, '#EXTINF:')) {
+                        preg_match_all('/#EXTINF:([0-9.]+)/', $content, $matches);
+                        if (!empty($matches[1])) {
+                            $total = array_sum(array_map('floatval', $matches[1]));
+                            $sec = (int) round($total);
+                            if ($sec > 0) {
+                                // Salvar de forma persistente no media_file se existir
+                                if ($mf) {
+                                    $mf->update(['duration_seconds' => $sec]);
+                                }
+                                return response()->json([
+                                    'success'  => true,
+                                    'duration' => $sec,
+                                    'source'   => 'hls_manifest',
+                                ]);
+                            }
+                        }
+                    }
+                } catch (\Throwable $e) {}
+            }
+        }
+
+        return response()->json([
+            'success'  => false,
+            'duration' => 0,
+            'message'  => 'Duração não encontrada para este arquivo.',
+        ]);
+    }
+
+    /**
      * Exclui um arquivo de mídia do Cloudflare R2.
      */
     public function deleteR2Media(Request $request)

@@ -14,7 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { UploadCloud, Video, Loader2, CheckCircle2, AlertCircle, Link as LinkIcon, Film, X } from 'lucide-react';
 import type { ActivityPayload, ActivityRecord, ActivityType } from '@/types/activities';
 import { uploadActivityFile } from '@/services/activitiesService';
-import { integrationsService } from '@/services/integrationsService';
+import { integrationsService, fetchEadControlVideoDuration } from '@/services/integrationsService';
 
 function formatBytes(bytes: number, decimals = 1) {
   if (!+bytes) return '0 Bytes';
@@ -310,17 +310,7 @@ export const ActivityForm = ({ initialData, onSubmit }: { initialData?: Partial<
    * Obtém a duração em segundos de arquivos MP4/R2 diretamente dos metadados.
    */
   async function fetchDirectVideoDuration(videoUrl: string): Promise<number> {
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.onloadedmetadata = () => {
-        resolve(video.duration || 0);
-      };
-      video.onerror = () => {
-        resolve(0);
-      };
-      video.src = videoUrl;
-    });
+    return fetchEadControlVideoDuration(videoUrl);
   }
 
   /**

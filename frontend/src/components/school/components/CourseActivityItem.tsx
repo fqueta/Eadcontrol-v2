@@ -321,6 +321,9 @@ export function CourseActivityItem({
         if (file.duration_seconds && file.duration_seconds > 0) {
           onFieldChange('duracao', String(Math.round(file.duration_seconds)));
           onFieldChange('unidade_duracao', 'seg');
+        } else {
+          // Busca automática da duração se não constava ainda no objeto da mediateca
+          setTimeout(() => importVideoDuration(index, aIdx), 150);
         }
         if (!a.titulo && file.original_name) {
           const cleanTitle = file.original_name.replace(/\.[^/.]+$/, '');
@@ -337,6 +340,18 @@ export function CourseActivityItem({
         setIsMediaLibraryModalOpen(false);
       }
     };
+
+    // Auto-detectar duração automaticamente quando o vídeo é inserido ou já existente sem duração
+    useEffect(() => {
+      const hasVideo = a?.tipo === 'video' && Boolean(a?.video_url);
+      const isDurationEmpty = !a?.duracao || a?.duracao === '0' || Number(a?.duracao) === 0;
+      if (hasVideo && isDurationEmpty) {
+        const timer = setTimeout(() => {
+          importVideoDuration(index, aIdx);
+        }, 300);
+        return () => clearTimeout(timer);
+      }
+    }, [a?.video_url, a?.tipo]);
 
     // Cancel upload on unmount
     useEffect(() => {
@@ -356,7 +371,7 @@ export function CourseActivityItem({
         try {
           const sec = await fetchFileVideoDuration(file);
           setDetectedDuration(sec);
-          if (sec > 0 && !a.duracao) {
+          if (sec > 0 && (!a.duracao || a.duracao === '0' || Number(a.duracao) === 0)) {
             onFieldChange('duracao', String(Math.round(sec)));
             onFieldChange('unidade_duracao', 'seg');
           }
@@ -474,6 +489,10 @@ export function CourseActivityItem({
                 if (st.thumbnail_url) {
                   onFieldChange('thumbnail_url' as any, st.thumbnail_url);
                 }
+                if (st.duration && (!a.duracao || a.duracao === '0' || Number(a.duracao) === 0)) {
+                  onFieldChange('duracao', String(Math.round(st.duration)));
+                  onFieldChange('unidade_duracao', 'seg');
+                }
                 setIsTranscodingHls(false);
                 if (transcodePollRef.current) clearInterval(transcodePollRef.current);
                 toast({
@@ -553,6 +572,10 @@ export function CourseActivityItem({
               }
               if (st.thumbnail_url) {
                 onFieldChange('thumbnail_url' as any, st.thumbnail_url);
+              }
+              if (st.duration && (!a.duracao || a.duracao === '0' || Number(a.duracao) === 0)) {
+                onFieldChange('duracao', String(Math.round(st.duration)));
+                onFieldChange('unidade_duracao', 'seg');
               }
               setIsTranscodingHls(false);
               if (transcodePollRef.current) clearInterval(transcodePollRef.current);
@@ -740,13 +763,13 @@ export function CourseActivityItem({
                              <div className="space-y-1.5">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">Duração</Label>
                                 <Input 
-                                  className="h-9 bg-background text-center font-bold" 
-                                  {...control.register(`modulos.${index}.atividades.${aIdx}.duracao`)}
-                                  onChange={(e) => {
-                                    control.register(`modulos.${index}.atividades.${aIdx}.duracao`).onChange(e);
-                                    recalcCourseDuration();
-                                  }} 
-                                  placeholder="0" 
+                                   className="h-9 bg-background text-center font-bold" 
+                                   value={a?.duracao ?? ''}
+                                   onChange={(e) => {
+                                     onFieldChange('duracao', e.target.value);
+                                     recalcCourseDuration();
+                                   }} 
+                                   placeholder="0" 
                                 />
                              </div>
                              <div className="space-y-1.5">
@@ -827,7 +850,7 @@ export function CourseActivityItem({
                                             {(a as any).video_url && (
                                                 <>
                                                   <Button type="button" size="icon" variant="outline" className="h-10 w-10 shrink-0 border-2 hover:bg-primary/5 hover:text-primary transition-all shadow-sm" onClick={() => importVideoDuration(index, aIdx)} title="Sincronizar duração">
-                                                     <Loader2 className="h-4 w-4" />
+                                                     <RefreshCw className="h-4 w-4" />
                                                   </Button>
                                                   <Button 
                                                      type="button" 
