@@ -44,10 +44,10 @@ export default function CourseAdminPreview() {
     }
   }, [location.state]);
   return (
-    <div className="container mx-auto p-4 space-y-4">
-      <div className="p-3 border border-yellow-400 bg-yellow-50 rounded-md text-sm flex items-center justify-between">
-        <span>Pré-visualização da experiência do aluno para o curso {id} (endpoint privado).</span>
-        <Button variant="outline" size="sm" onClick={() => navigate(`/admin/school/courses/${String(id)}/edit`)}>
+    <div className="container mx-auto p-1 md:p-4 space-y-2 md:space-y-4">
+      <div className="p-2 md:p-3 border border-yellow-400 bg-yellow-50 rounded-md text-xs md:text-sm flex items-center justify-between gap-2">
+        <span className="line-clamp-1">Pré-visualização do aluno ({id})</span>
+        <Button variant="outline" size="sm" className="h-7 text-xs shrink-0" onClick={() => navigate(`/admin/school/courses/${String(id)}/edit`)}>
           Voltar para edição
         </Button>
       </div>

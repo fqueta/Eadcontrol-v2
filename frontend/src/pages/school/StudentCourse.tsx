@@ -746,7 +746,7 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
        */}
       <div className="container mx-auto p-0 md:p-4 space-y-0 md:space-y-6">
         <Card className="border-0 shadow-none md:border md:shadow-lg md:rounded-xl dark:bg-slate-900/50 backdrop-blur-sm overflow-hidden">
-          <CardHeader className="py-2 md:py-4 bg-violet-50/50 dark:bg-violet-950/20 border-b border-violet-100 dark:border-violet-800/50">
+          <CardHeader className="hidden md:block py-2 md:py-4 bg-violet-50/50 dark:bg-violet-950/20 border-b border-violet-100 dark:border-violet-800/50">
             <div className="flex items-start justify-between gap-2 md:gap-3">
               <div className="min-w-0">
                 <CardTitle className="text-lg md:text-2xl leading-tight break-words line-clamp-2">{isLoading ? 'Carregando...' : title}</CardTitle>
@@ -759,13 +759,13 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            {error && <div className="text-red-600">Falha ao carregar o curso.</div>}
+          <CardContent className="p-0">
+            {error && <div className="text-red-600 p-4">Falha ao carregar o curso.</div>}
             {!isLoading && modules.length === 0 && (
-              <div className="text-muted-foreground">Nenhum módulo disponível.</div>
+              <div className="text-muted-foreground p-4">Nenhum módulo disponível.</div>
             )}
             {!canAccessContent ? (
-              <div className="space-y-4">
+              <div className="space-y-4 p-4">
                 <div className="p-3 border rounded-md bg-yellow-50 text-yellow-800">
                   Você precisa estar matriculado para acessar este curso.
                 </div>
@@ -790,12 +790,10 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
                  */}
                 {/**
                  * viewerContainer
-                 * pt-BR: Contêiner de altura fixa para permitir rolagem independente
-                 *        da barra lateral e da área principal do viewer.
-                 * en-US: Fixed-height container to enable independent scrolling for
-                 *        the sidebar and the main viewer area.
+                 * pt-BR: Contêiner de altura flexível no mobile para tela cheia e fixa no desktop.
+                 * en-US: Flexible height container on mobile for full screen and fixed on desktop.
                  */}
-                <div className="h-[82vh] min-h-[60vh] overflow-hidden">
+                <div className="h-[calc(100dvh-56px)] md:h-[82vh] overflow-hidden">
                   <CourseContentViewer course={course} onActivityChange={handleActivityChange} enrollmentId={enrollmentId} />
                 </div>
               </>

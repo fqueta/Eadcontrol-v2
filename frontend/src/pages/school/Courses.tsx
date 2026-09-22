@@ -148,6 +148,7 @@ export default function Courses() {
   // --- Handlers ---
   const goToCreate = () => navigate('/admin/school/courses/create');
   const goToEdit = (id: string | number) => navigate(`/admin/school/courses/${id}/edit`);
+  const goToContent = (id: string | number) => navigate(`/admin/school/courses/${id}/edit?tab=content`);
   const handleRowDoubleClick = (id: string | number) => goToEdit(id);
 
   const handleToggleField = (course: CourseRecord, field: 'ativo' | 'publicar' | 'destaque') => {
@@ -372,6 +373,7 @@ export default function Courses() {
                             <DropdownMenuLabel className="px-2 py-1 text-[11px] text-muted-foreground">Ações do Curso</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => goToEdit(c.id)} className="rounded-lg text-xs cursor-pointer">Editar Detalhes</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => goToContent(c.id)} className="rounded-lg text-xs cursor-pointer">Editar Conteúdo</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => navigate(`/admin/school/courses/${c.id}/grades`)} className="rounded-lg text-xs cursor-pointer">Ver Notas/Alunos</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-red-600 focus:bg-red-50 focus:text-red-700 dark:focus:bg-red-950/50 rounded-lg text-xs cursor-pointer" onClick={() => deleteMutation.mutate(c.id)}>Remover Curso</DropdownMenuItem>

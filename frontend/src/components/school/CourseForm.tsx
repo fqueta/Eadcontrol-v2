@@ -174,6 +174,7 @@ export function CourseForm({
    */
   const [autoSlugEnabled, setAutoSlugEnabled] = useState<boolean>(true);
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   /**
    * mediaOpen
@@ -241,6 +242,15 @@ export function CourseForm({
    * en-US: Whenever active tab changes, save to sessionStorage and reflect in URL
    *        via replaceState without navigation (keeps history clean).
    */
+  useEffect(() => {
+    try {
+      const searchTab = new URLSearchParams(location.search).get('tab');
+      if (searchTab && searchTab !== activeTab) {
+        setActiveTab(searchTab);
+      }
+    } catch {}
+  }, [location.search]);
+
   useEffect(() => {
     try {
       const key = getCourseFormTabStorageKey();
@@ -1094,7 +1104,7 @@ export function CourseForm({
         aviao: [],
         atividades: [
           {
-            titulo: 'Quiz de Verificação',
+            titulo: 'Avaliação de Verificação',
             tipo: 'quiz' as any,
             descricao: 'Perguntas objetivas sobre os conteúdos estudados.',
             unidade_duracao: 'min' as any,
@@ -2641,7 +2651,7 @@ export function CourseForm({
 
   return (
     <FormProvider {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit, onInvalid)} className="space-y-8 pb-32">
+      <form onSubmit={form.handleSubmit(handleSubmit, onInvalid)} className="space-y-8 pb-20">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)} className="w-full">
           <TabsList className="bg-slate-100/50 dark:bg-slate-800/50 p-1 mb-8 h-auto flex-wrap justify-start gap-1 border border-slate-200 dark:border-slate-700/50 rounded-2xl shadow-sm backdrop-blur-md sticky top-0 z-10">
             <TabsTrigger value="info" className="rounded-xl py-2.5 px-5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-md data-[state=active]:text-primary text-muted-foreground transition-all duration-300 font-semibold flex items-center gap-2">
@@ -2660,7 +2670,7 @@ export function CourseForm({
               <Settings2 className="h-4 w-4" /> Configurações
             </TabsTrigger>
             <TabsTrigger value="questions" className="rounded-xl py-2.5 px-5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-md data-[state=active]:text-primary text-muted-foreground transition-all duration-300 font-semibold flex items-center gap-2">
-              <HelpCircle className="h-4 w-4" /> Perguntas
+              <HelpCircle className="h-4 w-4" /> Dúvidas Frequentes (FAQ)
             </TabsTrigger>
             <TabsTrigger value="enrollments" className="rounded-xl py-2.5 px-5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-md data-[state=active]:text-primary text-muted-foreground transition-all duration-300 font-semibold flex items-center gap-2">
               <Users className="h-4 w-4" /> Matrículas
@@ -3489,33 +3499,34 @@ export function CourseForm({
           </TabsContent>
         </Tabs>
 
-        {/* Barra fixa de ações no rodapé (Estilo SaaS Premium) */}
-        <div className="fixed bottom-0 left-0 right-0 z-[60] border-t border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xl shadow-[0_-8px_40px_rgba(0,0,0,0.08)]">
-          <div className="container mx-auto px-6 py-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Button type="button" variant="ghost" onClick={() => navigate('/admin/school/courses')} className="text-muted-foreground hover:text-foreground font-bold rounded-xl transition-all h-12 px-6 hover:bg-slate-100 dark:hover:bg-slate-800">
+        {/* Barra fixa de ações no rodapé Slim (Estilo SaaS Moderno) */}
+        <div className="fixed bottom-0 left-0 right-0 z-[60] border-t border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+          <div className="container mx-auto px-4 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Button type="button" variant="ghost" size="sm" onClick={() => navigate('/admin/school/courses')} className="text-muted-foreground hover:text-foreground font-semibold rounded-lg h-9 px-3 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs">
                 Descartar
               </Button>
-              <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-2 hidden md:block" />
-              <div className="hidden lg:flex items-center gap-4">
+              <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block" />
+              <div className="hidden md:flex items-center gap-2">
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   onClick={goToPreview}
                   disabled={!Boolean((initialData as any)?.slug || (initialData as any)?.token)}
-                  className="border-slate-200 dark:border-slate-800 font-bold rounded-xl h-12 px-6 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-900 transition-all"
+                  className="border-slate-200 dark:border-slate-800 font-semibold rounded-lg h-9 px-3 text-xs shadow-xs hover:bg-slate-50 dark:hover:bg-slate-900"
                 >
-                  <Eye className="h-4 w-4 mr-2" /> Ver Preview
+                  <Eye className="h-3.5 w-3.5 mr-1.5" /> Ver Preview
                 </Button>
                 {(() => {
                   const { href, absolute } = buildStudentPreviewUrl();
                   return href ? (
-                    <div className="flex items-center gap-2 group bg-slate-100/50 dark:bg-slate-800/50 p-1.5 rounded-xl pr-3 border border-slate-200/50 dark:border-slate-700/50">
-                       <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-lg bg-white dark:bg-slate-900 shadow-sm text-primary/60 hover:text-primary transition-all" onClick={() => copyText(absolute)} title="Copiar link do aluno">
-                        <Copy className="h-4 w-4" />
+                    <div className="flex items-center gap-1.5 bg-slate-100/70 dark:bg-slate-800/70 p-1 rounded-lg pr-2.5 border border-slate-200/60 dark:border-slate-700/60 text-xs">
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 rounded-md bg-white dark:bg-slate-900 shadow-xs text-primary/70 hover:text-primary" onClick={() => copyText(absolute)} title="Copiar link do aluno">
+                        <Copy className="h-3 w-3" />
                       </Button>
-                      <a href={href} target="_blank" rel="noreferrer" className="text-xs font-black text-muted-foreground hover:text-primary transition-colors flex items-center gap-2">
-                        URL DO ALUNO <ExternalLink className="h-3 w-3" />
+                      <a href={href} target="_blank" rel="noreferrer" className="text-[11px] font-bold text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
+                        Área do Aluno <ExternalLink className="h-2.5 w-2.5" />
                       </a>
                     </div>
                   ) : null;
@@ -3527,12 +3538,12 @@ export function CourseForm({
                   const origin = typeof window !== 'undefined' ? window.location.origin : '';
                   const absolute = `${origin}${href}`;
                   return (
-                    <div className="flex items-center gap-2 group bg-slate-100/50 dark:bg-slate-800/50 p-1.5 rounded-xl pr-3 border border-slate-200/50 dark:border-slate-700/50">
-                      <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-lg bg-white dark:bg-slate-900 shadow-sm text-primary/60 hover:text-primary transition-all" onClick={() => copyText(absolute)} title="Copiar link da página de detalhes">
-                        <Copy className="h-4 w-4" />
+                    <div className="flex items-center gap-1.5 bg-slate-100/70 dark:bg-slate-800/70 p-1 rounded-lg pr-2.5 border border-slate-200/60 dark:border-slate-700/60 text-xs">
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 rounded-md bg-white dark:bg-slate-900 shadow-xs text-primary/70 hover:text-primary" onClick={() => copyText(absolute)} title="Copiar link da página de detalhes">
+                        <Copy className="h-3 w-3" />
                       </Button>
-                      <a href={href} target="_blank" rel="noreferrer" className="text-xs font-black text-muted-foreground hover:text-primary transition-colors flex items-center gap-2">
-                        PÁGINA DO CURSO <ExternalLink className="h-3 w-3" />
+                      <a href={href} target="_blank" rel="noreferrer" className="text-[11px] font-bold text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
+                        Página do Curso <ExternalLink className="h-2.5 w-2.5" />
                       </a>
                     </div>
                   );
@@ -3540,34 +3551,36 @@ export function CourseForm({
               </div>
             </div>
             {/* Lado direito: ações principais */}
-            <div className="flex items-center gap-3">
-              <Button type="button" variant="ghost" className="text-primary hover:bg-primary/5 font-bold hidden sm:flex" onClick={() => navigate('/admin/school/courses/create')}>
-                <Plus className="h-4 w-4 mr-2" />Novo cadastro
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <Button type="button" variant="ghost" size="sm" className="text-primary hover:bg-primary/5 font-semibold text-xs h-9 px-3 hidden sm:flex" onClick={() => navigate('/admin/school/courses/create')}>
+                <Plus className="h-3.5 w-3.5 mr-1" />Novo
               </Button>
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 onClick={saveAndStay}
                 disabled={Boolean(saving)}
-                className="border-muted-foreground/20 hover:bg-muted font-bold min-w-[150px] hidden md:flex"
+                className="border-muted-foreground/20 hover:bg-muted font-bold text-xs h-9 px-4 hidden md:flex"
               >
                 {saving === 'stay' ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...</>
+                  <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Salvando...</>
                 ) : (
-                  <><Save className="h-4 w-4 mr-2" />Salvar</>
+                  <><Save className="h-3.5 w-3.5 mr-1.5" />Salvar</>
                 )}
               </Button>
               <Button
                 type="button"
                 variant="default"
+                size="sm"
                 onClick={saveAndExit}
                 disabled={Boolean(saving)}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-black shadow-lg shadow-primary/20 min-w-[180px]"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs h-9 px-4 shadow-sm"
               >
                 {saving === 'exit' ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Finalizando...</>
+                  <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Finalizando...</>
                 ) : (
-                  <><CheckCircle2 className="h-4 w-4 mr-2" />Salvar e Finalizar</>
+                  <><CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Salvar e Finalizar</>
                 )}
               </Button>
             </div>
@@ -3862,7 +3875,7 @@ export function CourseForm({
                                         <Plus className="h-3 w-3" /> Aula
                                      </Button>
                                       <Button type="button" size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => localQuickAddActivity(index, 'quiz')}>
-                                        <Plus className="h-3 w-3" /> Quiz
+                                        <Plus className="h-3 w-3" /> Prova / Avaliação
                                      </Button>
                                     <Popover>
                                       <PopoverTrigger asChild>

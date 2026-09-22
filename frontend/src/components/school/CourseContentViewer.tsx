@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
- import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock, Star, ChevronDown, ChevronUp, GraduationCap, Award, ChevronLeft, ChevronRight, Search, Circle, CircleCheck, AlertCircle, XCircle, Plus } from 'lucide-react';
+ import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock, Star, ChevronDown, ChevronUp, GraduationCap, Award, ChevronLeft, ChevronRight, Search, Circle, CircleCheck, AlertCircle, XCircle, Plus, X } from 'lucide-react';
 import { progressService } from '@/services/progressService';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -306,24 +306,24 @@ function QuizViewer({
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-medium">Este quiz não possui perguntas.</h3>
+        <h3 className="text-lg font-medium">Esta avaliação não possui perguntas.</h3>
       </div>
     );
   }
 
   if (currentStep === 'intro') {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center space-y-6">
-        <div className="bg-primary/10 p-4 rounded-full">
-          <FileText className="h-12 w-12 text-primary" />
+      <div className="flex flex-col items-center justify-center py-4 md:py-10 text-center space-y-3 md:space-y-6 px-2">
+        <div className="bg-primary/10 p-3 md:p-4 rounded-full">
+          <FileText className="h-7 w-7 md:h-12 md:w-12 text-primary" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold">{activity.titulo || 'Quiz'}</h2>
-          <p className="text-muted-foreground mt-2 max-w-md">
+          <h2 className="text-xl md:text-2xl font-bold">{activity.titulo || 'Prova / Avaliação'}</h2>
+          <p className="text-muted-foreground mt-1.5 max-w-md text-xs md:text-sm">
             {activity.descricao || 'Responda às perguntas para testar seus conhecimentos e completar a atividade.'}
           </p>
         </div>
-        <div className="flex items-center gap-4 text-sm font-medium">
+        <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4 text-xs md:text-sm font-medium">
           <div className="flex items-center gap-1">
             <Badge variant="outline">{questions.length} Questões</Badge>
           </div>
@@ -340,8 +340,8 @@ function QuizViewer({
              </div>
           )}
         </div>
-        <Button onClick={handleStart} size="lg" className="w-full max-w-xs">
-          Iniciar Quiz
+        <Button onClick={handleStart} size="lg" className="w-full max-w-xs h-11 md:h-12 text-base font-semibold shadow-md">
+          Iniciar Avaliação
         </Button>
       </div>
     );
@@ -566,27 +566,28 @@ function QuizViewer({
           </div>
         )}
 
-        {/* Action Button */}
-        <div className="pt-4 flex justify-between items-center">
+        {/* Action Button: Docked bottom bar on mobile */}
+        <div className="sticky bottom-0 z-30 bg-background/95 backdrop-blur-md border-t border-border/80 -mx-4 -mb-4 p-3 md:static md:bg-transparent md:border-0 md:p-0 md:m-0 flex justify-between items-center gap-2 mt-4 shadow-lg md:shadow-none">
           <Button 
             variant="ghost" 
+            size="sm"
             onClick={() => setCurrentStep('intro')}
-            className="text-muted-foreground"
+            className="text-muted-foreground text-xs md:text-sm h-9"
           >
-            Sair do Quiz
+            Sair
           </Button>
           <Button 
             disabled={!answers[currentQuestion.id || currentQuestionIdx]} 
             onClick={() => handleNext()}
             size="lg"
-            className="min-w-[140px]"
+            className="flex-1 sm:flex-initial min-w-[140px] h-10 md:h-11 font-semibold text-sm shadow-md"
           >
  
             {showFeedback
               ? (currentQuestionIdx < questions.length - 1 ? 'Próxima Pergunta' : 'Ver Resultados')
               : (showFeedback === false && ((config.show_answers === true || config.show_answers === 's' || config.show_answers === 'true' || config.show_answers === 1) || config.mostrar_correcao === true) 
                   ? 'Verificar Resposta' 
-                  : (currentQuestionIdx < questions.length - 1 ? 'Próxima Pergunta' : 'Finalizar Quiz')
+                  : (currentQuestionIdx < questions.length - 1 ? 'Próxima Pergunta' : 'Finalizar Avaliação')
                 )
             }
           </Button>
@@ -2557,9 +2558,83 @@ function htmlEquals(a: string, b: string): boolean {
        * en-US: Reduce paddings and gaps on mobile to avoid excessive spacing
        *        and make better use of the content area.
        */}
-      <div className="sticky top-0 z-10 bg-background text-foreground border-b px-2 py-2 md:px-3 md:py-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="hidden md:block">
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-md text-foreground border-b px-2 py-1.5 md:px-3 md:py-2.5">
+        {/* Mobile Header Row */}
+        <div className="flex md:hidden items-center justify-between gap-1.5 w-full">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-8 px-2.5 text-xs font-semibold gap-1.5 shadow-sm shrink-0"
+              onClick={() => setMobileSidebarOpen(true)}
+              title="Abrir atividades"
+            >
+              <Folder className="h-3.5 w-3.5 text-primary" />
+              <span>Aulas</span>
+              <Badge variant="outline" className="h-4 px-1 text-[10px] ml-0.5">{filteredActivities.length}</Badge>
+            </Button>
+
+            <Button
+              variant={showGrades ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowGrades(!showGrades)}
+              title="Meu Desempenho"
+              className="h-8 px-2 text-xs gap-1 shrink-0"
+            >
+              <GraduationCap className="h-3.5 w-3.5" />
+              <span>Notas</span>
+            </Button>
+
+            {(course?.config?.mostrar_botao_certificado ?? 's') !== 'n' && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs shrink-0"
+                onClick={handleRequestCertificate}
+                disabled={generatingCert || !enrollmentId || !certificateAllowed}
+                title="Certificado"
+              >
+                <Award className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {mobileSearchOpen ? (
+              <div className="flex items-center gap-1">
+                <Input
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    selectionIntentRef.current = 'auto';
+                    setCurrentIndex(0);
+                  }}
+                  placeholder="Buscar aula..."
+                  className="w-24 h-7 text-xs px-2"
+                  autoFocus
+                />
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setMobileSearchOpen(false)}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setMobileSearchOpen(true)} title="Buscar">
+                <Search className="h-3.5 w-3.5 text-muted-foreground" />
+              </Button>
+            )}
+
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium pl-1 border-l">
+              <span className="font-bold text-foreground text-xs">{courseProgressPercent}%</span>
+              <div className="w-10 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-primary transition-all duration-300" style={{ width: `${courseProgressPercent}%` }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Header Row */}
+        <div className="hidden md:flex items-center gap-2">
+          <div>
             <Input
               value={searchTerm}
               onChange={(e) => {
@@ -2568,26 +2643,8 @@ function htmlEquals(a: string, b: string): boolean {
                 setCurrentIndex(0);
               }}
               placeholder="Buscar conteúdo do curso"
-              className="w-[280px] md:max-w-md h-10"
+              className="w-[280px] md:max-w-md h-9"
             />
-          </div>
-          <div className="flex md:hidden items-center gap-2">
-            {mobileSearchOpen ? (
-              <Input
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  selectionIntentRef.current = 'auto';
-                  setCurrentIndex(0);
-                }}
-                placeholder="Buscar conteúdo do curso"
-                className="w-[60%] h-9"
-              />
-            ) : (
-              <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => setMobileSearchOpen(true)} title="Buscar">
-                <Search className="h-4 w-4" />
-              </Button>
-            )}
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -2595,33 +2652,24 @@ function htmlEquals(a: string, b: string): boolean {
               size="sm"
               onClick={() => setShowGrades(!showGrades)}
               title="Meu Desempenho"
-              className="gap-2"
+              className="gap-2 h-9"
             >
                <GraduationCap className="h-4 w-4" />
-               <span className="hidden sm:inline">Notas</span>
+               <span>Notas</span>
             </Button>
             <Button
               title={showSidebar ? 'Esconder painel lateral' : 'Mostrar painel lateral'}
               variant="ghost"
               size="sm"
-              className="hidden md:inline-flex h-8 w-8 p-0 items-center justify-center"
+              className="h-8 w-8 p-0 items-center justify-center"
               onClick={() => setShowSidebar((v) => !v)}
             >
               {showSidebar ? (<ChevronLeft className="h-3.5 w-3.5" />) : (<ChevronRight className="h-3.5 w-3.5" />)}
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="md:hidden h-8 px-2 whitespace-nowrap"
-              onClick={() => setMobileSidebarOpen(true)}
-              title="Abrir atividades"
-            >
-              <Folder className="h-4 w-4 mr-1" /> Atividades
-            </Button>
             {(course?.config?.mostrar_botao_certificado ?? 's') !== 'n' && (
             <Button
               size="sm"
-              className="h-8 px-2 whitespace-nowrap"
+              className="h-9 px-2 whitespace-nowrap"
               onClick={handleRequestCertificate}
               disabled={generatingCert || !enrollmentId || !certificateAllowed}
               title={!enrollmentId ? 'Matrícula não identificada'
@@ -2631,25 +2679,24 @@ function htmlEquals(a: string, b: string): boolean {
                         ? `Consuma ${course?.config?.certificado_percentual ?? 100}% do conteúdo para solicitar o certificado`
                         : 'Gerar certificado em PDF'))}
             >
-              <GraduationCap className="h-3.5 w-3.5 mr-1" />
+              <Award className="h-3.5 w-3.5 mr-1" />
               {generatingCert ? 'Gerando…' : 'Solicitar certificado'}
             </Button>
             )}
-            <Button title="Mostrar ou recolher atividades" variant="outline" size="sm" className="hidden md:inline-flex" onClick={() => setCollapseInactiveModules((v) => !v)}>
+            <Button title="Mostrar ou recolher atividades" variant="outline" size="sm" className="h-9" onClick={() => setCollapseInactiveModules((v) => !v)}>
               {collapseInactiveModules ? (
                 <><ChevronUp className="h-3.5 w-3.5 mr-1" /> Mostrar todos</>
               ) : (
                 <><ChevronDown className="h-3.5 w-3.5 mr-1" /> Recolher inativos</>
               )}
             </Button>
-            
           </div>
           {progressLoading && (
             <span className="flex items-center gap-1 text-[11px] md:text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" /> sincronizando…
             </span>
           )}
-          <span className="ml-auto flex items-center gap-2 text-[11px] md:text-sm">
+          <span className="ml-auto flex items-center gap-2 text-xs md:text-sm">
            {courseTotalLabel && (
              <span className="px-2 py-[2px] rounded-full bg-muted text-muted-foreground">
                {courseTotalLabel}
@@ -2663,14 +2710,12 @@ function htmlEquals(a: string, b: string): boolean {
                {completedSummaryText}
              </span>
            )}
-           {/* pt-BR: Barra percentual de progresso total do curso */}
-           {/* en-US: Total course progress percentage bar */}
-          <span className="flex items-center gap-2">
-            <div className="w-16 md:w-24 h-1 md:h-2 bg-muted rounded overflow-hidden">
-              <div className="h-full md:bg-primary bg-secondary" style={{ width: `${courseProgressPercent}%` }} />
-            </div>
-            <span className="hidden md:inline text-[10px] md:text-xs">{courseProgressPercent}%</span>
-          </span>
+           <span className="flex items-center gap-2">
+             <div className="w-16 md:w-24 h-1.5 md:h-2 bg-muted rounded overflow-hidden">
+               <div className="h-full bg-primary" style={{ width: `${courseProgressPercent}%` }} />
+             </div>
+             <span className="text-xs">{courseProgressPercent}%</span>
+           </span>
           </span>
         </div>
       </div>
@@ -2946,7 +2991,7 @@ function htmlEquals(a: string, b: string): boolean {
          * en-US: On mobile remove borders/shadows to save space, reduce inner
          *        padding and expand the player area.
          */}
-        <main className="flex-1 overflow-y-auto p-1 md:p-4">
+        <main className="flex-1 overflow-y-auto p-1 md:p-4 pb-20 md:pb-4">
           <Card className="border-0 shadow-none md:border md:shadow-sm md:rounded-lg">
             <CardContent className="p-2 md:p-4 space-y-3 md:space-y-4 pt-2 md:pt-4">
 
@@ -3232,6 +3277,7 @@ function htmlEquals(a: string, b: string): boolean {
                    * en-US: Activity title and description block.
                    *        For videos, description is hidden by default and can be toggled.
                    */}
+                  {!isQuiz(currentActivity) && (
                   <div>
                     {/**
                      * Title + Share Link
@@ -3358,12 +3404,15 @@ function htmlEquals(a: string, b: string): boolean {
                       );
                     })()}
                   </div>
+                  )}
 
-                  {/* Navigation */}
-                  <div className="flex items-center justify-between">
+                  {/* Navigation (Desktop) */}
+                  {!isQuiz(currentActivity) && (
+                  <div className="hidden md:flex items-center justify-between pt-2">
                     <Button variant="ghost" onClick={navigatePrev} disabled={currentIndex <= 0}>Anterior</Button>
                     <Button variant="ghost" onClick={navigateNext} disabled={currentIndex >= filteredActivities.length - 1}>Próximo</Button>
                   </div>
+                  )}
                 </>
               ) : (
                 <div className="text-sm text-muted-foreground">Nenhuma atividade encontrada.</div>
@@ -3371,8 +3420,9 @@ function htmlEquals(a: string, b: string): boolean {
             </CardContent>
           </Card>
           
-          {/* pt-BR: Card de comentários da atividade atual */}
-          {/* en-US: Comments card for current activity */}
+          {/* pt-BR: Card de comentários da atividade atual (Oculto em Provas/Avaliações) */}
+          {/* en-US: Comments card for current activity (Hidden during Quiz/Assessments) */}
+          {!isQuiz(currentActivity) && (
           <Card className="mt-8 border-t-4 border-t-primary shadow-lg overflow-hidden">
             <CardHeader className="bg-muted/30 pb-4">
               <div className="flex items-center gap-2">
@@ -3473,8 +3523,70 @@ function htmlEquals(a: string, b: string): boolean {
               </div>
             </CardContent>
           </Card>
+          )}
         </main>
       </div>
+
+      {/* ── Fixed Bottom Action Bar for Mobile in normal lessons ── */}
+      {!isQuiz(currentActivity) && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t border-border/80 px-3 py-2 flex items-center justify-between gap-2 md:hidden shadow-lg">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 px-2.5 text-xs font-semibold gap-1"
+            onClick={navigatePrev}
+            disabled={currentIndex <= 0}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Anterior</span>
+          </Button>
+
+          <button
+            type="button"
+            onClick={() => setMobileSidebarOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/70 hover:bg-muted text-xs font-medium border border-border/50 text-foreground transition-colors max-w-[170px] truncate"
+            title="Ver lista de aulas"
+          >
+            <Folder className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="truncate">
+              Aula {currentIndex + 1} de {filteredActivities.length}
+            </span>
+            <ChevronUp className="h-3 w-3 text-muted-foreground shrink-0" />
+          </button>
+
+          <Button
+            size="sm"
+            className={`h-9 px-3 text-xs font-semibold gap-1 shadow-sm ${
+              completedIds.has(String(getActivityId(currentActivity, currentActivity?._moduleIndex, currentActivity?._activityIndex)))
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+            }`}
+            onClick={() => {
+              const a = currentActivity;
+              const sid = String(getActivityId(a, a?._moduleIndex, a?._activityIndex));
+              const isCompleted = completedIds.has(sid);
+              if (!isCompleted) {
+                toggleCompleted(a, a?._moduleIndex, a?._activityIndex);
+              }
+              if (currentIndex < filteredActivities.length - 1) {
+                navigateNext();
+              }
+            }}
+          >
+            {completedIds.has(String(getActivityId(currentActivity, currentActivity?._moduleIndex, currentActivity?._activityIndex))) ? (
+              <>
+                <span>{currentIndex >= filteredActivities.length - 1 ? 'Concluído' : 'Próxima'}</span>
+                <ChevronRight className="h-4 w-4" />
+              </>
+            ) : (
+              <>
+                <Check className="h-3.5 w-3.5" />
+                <span>{currentIndex >= filteredActivities.length - 1 ? 'Concluir' : 'Concluir & Avançar'}</span>
+              </>
+            )}
+          </Button>
+        </div>
+      )}
 
       {/* ── Certificate Download Dialog ────────────────────── */}
       <Dialog open={showCertDialog} onOpenChange={setShowCertDialog}>
