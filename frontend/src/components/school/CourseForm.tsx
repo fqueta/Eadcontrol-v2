@@ -30,6 +30,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CourseActivityItem } from './components/CourseActivityItem';
+import { VimeoMigrationButton } from './components/VimeoMigrationButton';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
@@ -3332,7 +3333,9 @@ export function CourseForm({
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Módulo
                 </Button>
-                
+
+                {courseNumericId ? <VimeoMigrationButton courseId={courseNumericId} /> : null}
+
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button type="button" variant="outline" className="border-dashed font-semibold hover:border-primary/50 transition-all">

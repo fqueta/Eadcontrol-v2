@@ -591,6 +591,10 @@ Route::name('api.')->prefix('api/v1')->middleware([
             'courses' => 'id'
         ]]);
 
+        // Migração de vídeos legados do Vimeo para o R2 (com HLS)
+        Route::post('courses/{id}/migrate-vimeo', [\App\Http\Controllers\api\VimeoMigrationController::class, 'migrateCourse'])->name('courses.migrate-vimeo');
+        Route::get('courses/{id}/migrate-vimeo/status', [\App\Http\Controllers\api\VimeoMigrationController::class, 'migrationStatus'])->name('courses.migrate-vimeo.status');
+
         // Rotas para turmas (PT-BR)
         Route::get('turmas/trash', [TurmaController::class, 'trash'])->name('turmas.trash');
         Route::put('turmas/{id}/restore', [TurmaController::class, 'restore'])->name('turmas.restore');

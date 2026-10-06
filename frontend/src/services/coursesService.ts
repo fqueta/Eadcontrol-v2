@@ -116,6 +116,30 @@ class CoursesService extends GenericApiService<CourseRecord, CoursePayload, Cour
       : (response as CourseRecord);
     return normalized;
   }
+
+  /**
+   * migrateVimeoVideos
+   * pt-BR: Dispara a migração em lote dos vídeos do Vimeo do curso para o R2 (com HLS).
+   * en-US: Starts bulk migration of the course Vimeo videos to R2 (with HLS).
+   */
+  async migrateVimeoVideos(id: string | number, force = false): Promise<any> {
+    const response = await this.post<any>(`${this.getEndpoint()}/${id}/migrate-vimeo`, { force });
+    return (response && typeof response === 'object' && 'data' in response && !('success' in response))
+      ? response.data
+      : response;
+  }
+
+  /**
+   * vimeoMigrationStatus
+   * pt-BR: Consulta o progresso da migração dos vídeos do Vimeo do curso.
+   * en-US: Checks the Vimeo videos migration progress for the course.
+   */
+  async vimeoMigrationStatus(id: string | number): Promise<any> {
+    const response = await this.get<any>(`${this.getEndpoint()}/${id}/migrate-vimeo/status`);
+    return (response && typeof response === 'object' && 'data' in response && !('summary' in response))
+      ? response.data
+      : response;
+  }
 }
 
 /**
