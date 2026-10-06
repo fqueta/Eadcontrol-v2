@@ -14,6 +14,7 @@ import { integrationsService } from '@/services/integrationsService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { getTenantApiUrl, getVersionApi } from '@/lib/qlib';
+import { normalizeMediaUrl } from '@/lib/mediaUrl';
 import { CustomVideoPlayer } from '@/components/common/CustomVideoPlayer';
 import type { MediaFile } from '@/types/media';
 import { AssessmentEditor } from './assessment';
@@ -54,7 +55,7 @@ function fetchFileVideoDuration(file: File): Promise<number> {
 }
 
 export function resolveEadControlPlayUrl(rawUrl: string): string {
-  const url = (rawUrl || '').trim();
+  let url = normalizeMediaUrl(rawUrl);
   if (!url) return '';
   if (url.startsWith('blob:')) {
     return url;

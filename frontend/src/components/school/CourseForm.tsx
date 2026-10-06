@@ -37,6 +37,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { currencyApplyMask, currencyRemoveMaskToNumber, currencyRemoveMaskToString } from '@/lib/masks/currency';
 import { extractVideoMeta } from '@/services/videoTipsService';
 import { fetchEadControlVideoDuration } from '@/services/integrationsService';
+import { normalizeMediaUrl } from '@/lib/mediaUrl';
 
 /**
  * ProductSelect
@@ -2142,6 +2143,12 @@ export function CourseForm({
       const tipo = a?.tipo || a?.type_activities || 'video';
       const isVideo = tipo === 'video';
       const isArquivo = tipo === 'arquivo';
+      // Normaliza scheme das URLs de mídia (http -> https) para não persistir
+      // URLs bloqueadas por mixed content nas páginas https
+      const normVideoUrl = isVideo ? normalizeMediaUrl(String(a?.hls_master_url || a?.video_url || '')) : undefined;
+      const normHlsUrl = isVideo
+        ? normalizeMediaUrl(String(a?.hls_master_url || (a?.video_url?.includes('.m3u8') ? a.video_url : '') || ''))
+        : undefined;
       return {
         /**
          * pt-BR: Inclui activity_id quando houver reaproveitamento.
@@ -2154,15 +2161,15 @@ export function CourseForm({
         type_activities: tipo,
         duration: a?.duracao ?? a?.duration ?? '0',
         video_source: a?.video_source || (isVideo ? 'eadcontrol' : undefined),
-        video_url: isVideo ? ((a?.hls_master_url || a?.video_url) ?? '') : undefined,
-        hls_master_url: a?.hls_master_url || (isVideo && a?.video_url?.includes('.m3u8') ? a.video_url : undefined),
+        video_url: normVideoUrl,
+        hls_master_url: normHlsUrl || undefined,
         thumbnail_url: a?.thumbnail_url,
         /**
          * pt-BR: Para vídeo, envia a URL em content; caso contrário, usa descricao.
          * en-US: For video, send URL in content; otherwise, use description.
          */
         content: isVideo
-          ? ((a?.hls_master_url || a?.video_url) ?? '')
+          ? (normVideoUrl ?? '')
           : isArquivo
             ? (a?.arquivo_url ?? '')
             : (a?.descricao ?? (a?.content ?? '')),

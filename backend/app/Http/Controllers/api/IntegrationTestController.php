@@ -201,6 +201,31 @@ class IntegrationTestController extends Controller
 
             $rangeHeader = $request->header('Range');
 
+            // Evita estouro de memória no Octane/RoadRunner: payloads grandes não são
+            // proxyados pelo PHP — o navegador é redirecionado para uma URL pré-assinada
+            // do R2 (que suporta Range nativamente). Manifestos .m3u8 continuam proxyados
+            // pois são textos pequenos com reescrita de segmentos.
+            $isManifest = str_ends_with($key, '.m3u8');
+            if (!$isManifest) {
+                $proxyLimitBytes = 8 * 1024 * 1024;
+                $needsRedirect = false;
+                if (!$rangeHeader) {
+                    $needsRedirect = $fileSize > $proxyLimitBytes;
+                } elseif (preg_match('/bytes=(\d+)-(\d*)/i', $rangeHeader, $rangeMatch)) {
+                    $rangeStart = (int) $rangeMatch[1];
+                    $rangeEnd = ($rangeMatch[2] !== '') ? (int) $rangeMatch[2] : ($fileSize - 1);
+                    $needsRedirect = ($rangeEnd - $rangeStart + 1) > $proxyLimitBytes;
+                }
+                if ($needsRedirect) {
+                    try {
+                        $signedUrl = $r2Service->createPresignedDownloadUrl($key, 60, $mimeType);
+                        return redirect()->away($signedUrl, 302);
+                    } catch (\Throwable $e) {
+                        \Log::warning("Falha ao gerar URL assinada, usando proxy PHP: " . $e->getMessage());
+                    }
+                }
+            }
+
             if ($rangeHeader && preg_match('/bytes=(\d+)-(\d*)/i', $rangeHeader, $matches)) {
                 $start = (int) $matches[1];
                 $end = ($matches[2] !== '') ? (int) $matches[2] : ($fileSize - 1);

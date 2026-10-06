@@ -171,6 +171,40 @@ class R2StorageService
     }
 
     /**
+     * Gera uma URL pré-assinada (Presigned URL) para download/streaming direto do R2.
+     * Usada para redirecionar o navegador quando o arquivo é grande demais para ser
+     * proxyado pelo PHP (evita estouro de memória no Octane/RoadRunner).
+     *
+     * @param string $pathOrUrl Caminho relativo no bucket ou URL completa
+     * @param int $expiresMinutes Tempo de expiração da assinatura em minutos
+     * @param string|null $contentType Content-Type de resposta (ex: "video/mp4")
+     */
+    public function createPresignedDownloadUrl(string $pathOrUrl, int $expiresMinutes = 60, ?string $contentType = null): string
+    {
+        if (!$this->isConfigured()) {
+            throw new \RuntimeException("Cloudflare R2 não está configurado neste tenant.");
+        }
+
+        $key = $this->extractObjectKey($pathOrUrl);
+        if (empty($key)) {
+            throw new \RuntimeException("Caminho do arquivo inválido para download.");
+        }
+
+        $params = [
+            'Bucket' => $this->bucket,
+            'Key' => $key,
+        ];
+        if ($contentType) {
+            $params['ResponseContentType'] = $contentType;
+        }
+
+        $cmd = $this->client->getCommand('GetObject', $params);
+        $request = $this->client->createPresignedRequest($cmd, "+{$expiresMinutes} minutes");
+
+        return (string) $request->getUri();
+    }
+
+    /**
      * Retorna a URL de streaming/CDN do vídeo.
      * Se houver um domínio CDN público real configurado (ex: media.site.com ou pub-xxx.r2.dev), usa-o diretamente.
      * Se for o endpoint S3 (*.r2.cloudflarestorage.com) ou não houver domínio CDN, usa a rota de streaming da API
@@ -184,7 +218,23 @@ class R2StorageService
         }
 
         // Rota de streaming otimizada da API
-        return url("/api/v1/integrations/media/stream?path=" . urlencode($cleanPath));
+        $streamUrl = url("/api/v1/integrations/media/stream?path=" . urlencode($cleanPath));
+
+        // Garante https em produção: URLs http quebram o player (mixed content) nas páginas https
+        // e podem ser geradas quando o request chega ao Octane sem o proto original (jobs, proxy, etc.)
+        if (str_starts_with($streamUrl, 'http://')) {
+            try {
+                $parts = parse_url($streamUrl);
+                $host = strtolower($parts['host'] ?? '');
+                if ($host !== '' && !in_array($host, ['localhost', '127.0.0.1'], true)) {
+                    $streamUrl = 'https://' . substr($streamUrl, strlen('http://'));
+                }
+            } catch (\Throwable) {
+                // mantém a URL original em caso de falha no parse
+            }
+        }
+
+        return $streamUrl;
     }
 
     /**

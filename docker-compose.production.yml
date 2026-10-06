@@ -126,7 +126,9 @@ services:
   queue:
     image: eadcontrol-backend:latest
     container_name: octane_queue
-    command: php artisan queue:work --tries=3
+    # Inclui a fila "videos" (transcodificação HLS) além da padrão; timeout alto
+    # para comportar transcodes longos de vídeos (job permite até 30 min)
+    command: php artisan queue:work --queue=videos,default --tries=2 --timeout=1800 --sleep=3
     environment:
       APP_NAME: "${APP_NAME:-EadControl}"
       APP_ENV: production
