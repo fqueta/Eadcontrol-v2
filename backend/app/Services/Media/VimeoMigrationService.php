@@ -161,7 +161,11 @@ class VimeoMigrationService
                 $nDownload = is_array($data['download'] ?? null) ? count($data['download']) : 0;
                 $nProg = is_array($data['play']['progressive'] ?? null) ? count($data['play']['progressive']) : 0;
                 \Illuminate\Support\Facades\Log::info("VimeoMigrationService: vídeo {$vimeoId} sem links. owner={$owner} status={$status} privacy={$privacy} download_interaction={$dlState} counts(files={$nFiles},download={$nDownload},progressive={$nProg}) keys=" . implode(',', array_keys($data)));
-                return ['error' => "Este vídeo não possui arquivos para download na API do Vimeo (dono: {$owner}, status: {$status}, privacidade: {$privacy}, download: {$dlState}). Se o dono for diferente da conta do token, use um token da conta dona do vídeo. A conta precisa ter a capacidade de download liberada (planos pagos) e o token precisa do escopo video_files."];
+                return [
+                    'error' => "Este vídeo não possui arquivos para download na API do Vimeo (dono: {$owner}, status: {$status}, privacidade: {$privacy}, download: {$dlState}). Se o dono for diferente da conta do token, use um token da conta dona do vídeo. A conta precisa ter a capacidade de download liberada (planos pagos) e o token precisa do escopo video_files.",
+                    // Resposta literal da API (sem segredos) para diagnóstico
+                    'raw' => $data,
+                ];
             }
 
             usort($candidates, function ($a, $b) {

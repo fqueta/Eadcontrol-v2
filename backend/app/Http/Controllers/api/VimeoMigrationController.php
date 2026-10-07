@@ -116,6 +116,8 @@ class VimeoMigrationController extends Controller
         if (isset($file['error'])) {
             return response()->json([
                 'message' => 'Este vídeo não pode ser baixado: ' . $file['error'],
+                'vimeo_id' => $vimeoId,
+                'vimeo_raw' => $file['raw'] ?? null,
             ], 422);
         }
 
@@ -184,6 +186,7 @@ class VimeoMigrationController extends Controller
         // Testa até 3 vídeos (um vídeo isolado sem download não deve travar os demais).
         $probeOk = false;
         $probeError = null;
+        $probeRaw = null;
         foreach (array_slice($videos, 0, 3) as $candidate) {
             $probe = $service->getDownloadableFile($candidate['vimeo_id'], $token);
             if (!isset($probe['error'])) {
@@ -191,10 +194,12 @@ class VimeoMigrationController extends Controller
                 break;
             }
             $probeError = $probe['error'];
+            $probeRaw = $probe['raw'] ?? null;
         }
         if (!$probeOk) {
             return response()->json([
                 'message' => 'A conta do Vimeo não liberou os arquivos para download: ' . ($probeError ?? 'sem arquivos retornados pela API. Confira o plano e o escopo video_files do token.'),
+                'vimeo_raw' => $probeRaw ?? null,
             ], 422);
         }
 
