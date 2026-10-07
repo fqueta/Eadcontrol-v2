@@ -15,6 +15,12 @@ class TranscoderStrategyFactory
             return new AdaptiveMultiBitrateStrategy();
         }
 
+        // Teto automático de 720p: originais maiores são normalizados (uma
+        // passada H.264) antes de fatiar — arquivos menores seguem via remux.
+        if (self::exceedsResolutionCap($inputFilePath)) {
+            return new CappedReencodeStrategy();
+        }
+
         $codecs = self::detectCodecs($inputFilePath);
         $videoCodec = strtolower($codecs['video'] ?? '');
         $audioCodec = strtolower($codecs['audio'] ?? '');
@@ -28,6 +34,40 @@ class TranscoderStrategyFactory
         }
 
         return new AdaptiveMultiBitrateStrategy();
+    }
+
+    /**
+     * Verifica se o vídeo excede o teto de 720p (1280x720).
+     * Falha de leitura (dimensões zeradas) retorna false para manter o fluxo atual.
+     */
+    public static function exceedsResolutionCap(
+        string $inputFilePath,
+        int $maxWidth = CappedReencodeStrategy::MAX_WIDTH,
+        int $maxHeight = CappedReencodeStrategy::MAX_HEIGHT
+    ): bool {
+        $localBin = base_path('bin/ffprobe');
+        $ffprobe = file_exists($localBin) && is_executable($localBin) ? $localBin : 'ffprobe';
+
+        try {
+            $proc = new Process([
+                $ffprobe,
+                '-v', 'error',
+                '-select_streams', 'v:0',
+                '-show_entries', 'stream=width,height',
+                '-of', 'csv=p=0',
+                $inputFilePath,
+            ]);
+            $proc->setTimeout(15);
+            $proc->run();
+            if ($proc->isSuccessful()) {
+                $parts = explode(',', trim($proc->getOutput()));
+                $w = (int) ($parts[0] ?? 0);
+                $h = (int) ($parts[1] ?? 0);
+                return $w > $maxWidth || $h > $maxHeight;
+            }
+        } catch (\Throwable) {}
+
+        return false;
     }
 
     /**
