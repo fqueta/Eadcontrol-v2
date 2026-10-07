@@ -169,6 +169,62 @@ class IntegrationTestController extends Controller
             $s3 = $r2Service->getClient();
             $bucket = $r2Service->getBucket();
 
+            $isManifest = str_ends_with($key, '.m3u8');
+            $isSegment = str_ends_with($key, '.ts');
+            $earlyRangeHeader = $request->header('Range');
+
+            // Caminho rápido (player HLS): manifestos e segmentos TS sem Range
+            // dispensam o headObject — economiza um round-trip ao R2 por request.
+            if ($isManifest || ($isSegment && !$earlyRangeHeader)) {
+                try {
+                    $fastObject = $s3->getObject([
+                        'Bucket' => $bucket,
+                        'Key' => $key,
+                    ]);
+                } catch (\Aws\S3\Exception\S3Exception $e) {
+                    if ($e->getStatusCode() === 404 || str_contains($e->getAwsErrorCode() ?? '', 'NoSuchKey')) {
+                        return response()->json(['message' => 'Vídeo não encontrado no armazenamento'], 404);
+                    }
+                    throw $e;
+                }
+
+                if ($isManifest) {
+                    try {
+                        $tenantKey = tenancy()->tenant ? tenancy()->tenant->id : 'default';
+                        Cache::put("last_hls_dir:{$tenantKey}:" . $request->ip(), dirname($key), 7200);
+                    } catch (\Throwable) {}
+
+                    $manifestContent = (string) $fastObject['Body']->getContents();
+                    $finalContent = $this->rewriteHlsManifest($manifestContent, dirname($key));
+
+                    return response($finalContent, 200, [
+                        'Content-Type' => 'application/vnd.apple.mpegurl',
+                        'Content-Length' => strlen($finalContent),
+                        'Cache-Control' => 'public, max-age=60',
+                        'X-Accel-Buffering' => 'no',
+                        'Access-Control-Allow-Origin' => '*',
+                        'Access-Control-Allow-Headers' => 'Range, Origin, X-Requested-With, Content-Type, Accept',
+                        'Access-Control-Expose-Headers' => 'Content-Range, Content-Length, Accept-Ranges',
+                    ]);
+                }
+
+                $fastBody = $fastObject['Body'];
+                return response()->stream(function () use ($fastBody) {
+                    while (!$fastBody->eof()) {
+                        echo $fastBody->read(1024 * 64);
+                        if (connection_aborted()) break;
+                    }
+                }, 200, [
+                    'Content-Type' => 'video/mp2t',
+                    'Accept-Ranges' => 'bytes',
+                    'Cache-Control' => 'public, max-age=31536000, immutable',
+                    'X-Accel-Buffering' => 'no',
+                    'Access-Control-Allow-Origin' => '*',
+                    'Access-Control-Allow-Headers' => 'Range, Origin, X-Requested-With, Content-Type, Accept',
+                    'Access-Control-Expose-Headers' => 'Content-Range, Content-Length, Accept-Ranges',
+                ]);
+            }
+
             try {
                 $head = $s3->headObject([
                     'Bucket' => $bucket,
@@ -259,6 +315,7 @@ class IntegrationTestController extends Controller
                     'Accept-Ranges' => 'bytes',
                     'ETag' => $etag,
                     'Cache-Control' => $cacheControl,
+                    'X-Accel-Buffering' => 'no',
                     'Access-Control-Allow-Origin' => '*',
                     'Access-Control-Allow-Headers' => 'Range, Origin, X-Requested-With, Content-Type, Accept',
                     'Access-Control-Expose-Headers' => 'Content-Range, Content-Length, Accept-Ranges',
@@ -279,34 +336,13 @@ class IntegrationTestController extends Controller
                 ]);
                 $content = (string) $object['Body']->getContents();
                 $dir = dirname($key);
-                $lines = explode("\n", $content);
-                $rewritten = [];
-                foreach ($lines as $line) {
-                    $trimmed = trim($line);
-                    if ($trimmed !== '' && !str_starts_with($trimmed, '#')) {
-                        // Linha de segmento ou sub-playlist relativa (ex: segment_000.ts)
-                        if (!str_starts_with($trimmed, 'http://') && !str_starts_with($trimmed, 'https://') && !str_starts_with($trimmed, 'stream?')) {
-                            $segmentPath = ($dir === '.' || $dir === '') ? $trimmed : "{$dir}/{$trimmed}";
-                            $line = "stream?path=" . urlencode($segmentPath);
-                        }
-                    } elseif (str_starts_with($trimmed, '#EXT-X-KEY:') || str_starts_with($trimmed, '#EXT-X-MAP:')) {
-                        // URI dentro de atributos (se houver)
-                        if (preg_match('/URI="([^"]+)"/', $line, $m)) {
-                            $uri = $m[1];
-                            if (!str_starts_with($uri, 'http') && !str_starts_with($uri, 'stream?')) {
-                                $fullUri = ($dir === '.' || $dir === '') ? $uri : "{$dir}/{$uri}";
-                                $line = str_replace("URI=\"{$uri}\"", "URI=\"stream?path=" . urlencode($fullUri) . "\"", $line);
-                            }
-                        }
-                    }
-                    $rewritten[] = $line;
-                }
-                $finalContent = implode("\n", $rewritten);
+                $finalContent = $this->rewriteHlsManifest($content, $dir);
 
                 return response($finalContent, 200, [
                     'Content-Type' => 'application/vnd.apple.mpegurl',
                     'Content-Length' => strlen($finalContent),
                     'Cache-Control' => 'public, max-age=60',
+                    'X-Accel-Buffering' => 'no',
                     'Access-Control-Allow-Origin' => '*',
                     'Access-Control-Allow-Headers' => 'Range, Origin, X-Requested-With, Content-Type, Accept',
                     'Access-Control-Expose-Headers' => 'Content-Range, Content-Length, Accept-Ranges',
@@ -330,6 +366,7 @@ class IntegrationTestController extends Controller
                 'Accept-Ranges' => 'bytes',
                 'ETag' => $etag,
                 'Cache-Control' => $cacheControl,
+                'X-Accel-Buffering' => 'no',
                 'Access-Control-Allow-Origin' => '*',
                 'Access-Control-Allow-Headers' => 'Range, Origin, X-Requested-With, Content-Type, Accept',
                 'Access-Control-Expose-Headers' => 'Content-Range, Content-Length, Accept-Ranges',
@@ -338,6 +375,37 @@ class IntegrationTestController extends Controller
             \Log::error("Erro no streaming de mídia R2 ({$rawPath}): " . $e->getMessage());
             return response()->json(['message' => 'Erro ao reproduzir mídia: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Reescreve as URIs relativas de um manifesto HLS para passarem pelo
+     * endpoint de streaming com o path completo.
+     */
+    protected function rewriteHlsManifest(string $content, string $dir): string
+    {
+        $lines = explode("\n", $content);
+        $rewritten = [];
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if ($trimmed !== '' && !str_starts_with($trimmed, '#')) {
+                // Linha de segmento ou sub-playlist relativa (ex: segment_000.ts)
+                if (!str_starts_with($trimmed, 'http://') && !str_starts_with($trimmed, 'https://') && !str_starts_with($trimmed, 'stream?')) {
+                    $segmentPath = ($dir === '.' || $dir === '') ? $trimmed : "{$dir}/{$trimmed}";
+                    $line = "stream?path=" . urlencode($segmentPath);
+                }
+            } elseif (str_starts_with($trimmed, '#EXT-X-KEY:') || str_starts_with($trimmed, '#EXT-X-MAP:')) {
+                // URI dentro de atributos (se houver)
+                if (preg_match('/URI="([^"]+)"/', $line, $m)) {
+                    $uri = $m[1];
+                    if (!str_starts_with($uri, 'http') && !str_starts_with($uri, 'stream?')) {
+                        $fullUri = ($dir === '.' || $dir === '') ? $uri : "{$dir}/{$uri}";
+                        $line = str_replace("URI=\"{$uri}\"", "URI=\"stream?path=" . urlencode($fullUri) . "\"", $line);
+                    }
+                }
+            }
+            $rewritten[] = $line;
+        }
+        return implode("\n", $rewritten);
     }
 
     /**
