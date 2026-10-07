@@ -93,7 +93,7 @@ class VimeoMigrationService
                 ->accept(self::API_VERSION)
                 ->timeout(30)
                 ->get(self::API_BASE . "/videos/{$vimeoId}", [
-                    'fields' => 'name,duration,files,status,user,privacy,download,play',
+                    'fields' => 'name,duration,files,status,user,privacy,download,play,metadata.interactions.download',
                 ]);
 
             if ($response->status() === 401 || $response->status() === 403) {
@@ -152,8 +152,12 @@ class VimeoMigrationService
                 $owner = $data['user']['name'] ?? ($data['user']['uri'] ?? 'desconhecido');
                 $status = $data['status'] ?? 'desconhecido';
                 $privacy = $data['privacy']['view'] ?? 'desconhecida';
-                \Illuminate\Support\Facades\Log::info("VimeoMigrationService: vídeo {$vimeoId} sem files. owner={$owner} status={$status} privacy={$privacy} keys=" . implode(',', array_keys($data)));
-                return ['error' => "Este vídeo não possui arquivos para download na API do Vimeo (dono: {$owner}, status: {$status}, privacidade: {$privacy}). Se o dono for diferente da conta do token, use um token da conta dona do vídeo. A conta precisa ter a capacidade de download liberada (planos pagos) e o token precisa do escopo video_files."];
+                $dlInteraction = $data['metadata']['interactions']['download'] ?? null;
+                $dlState = is_array($dlInteraction)
+                    ? ($dlInteraction['data'] ?? json_encode($dlInteraction))
+                    : var_export($dlInteraction, true);
+                \Illuminate\Support\Facades\Log::info("VimeoMigrationService: vídeo {$vimeoId} sem files. owner={$owner} status={$status} privacy={$privacy} download_interaction={$dlState} keys=" . implode(',', array_keys($data)));
+                return ['error' => "Este vídeo não possui arquivos para download na API do Vimeo (dono: {$owner}, status: {$status}, privacidade: {$privacy}, download: {$dlState}). Se o dono for diferente da conta do token, use um token da conta dona do vídeo. A conta precisa ter a capacidade de download liberada (planos pagos) e o token precisa do escopo video_files."];
             }
 
             usort($candidates, function ($a, $b) {
