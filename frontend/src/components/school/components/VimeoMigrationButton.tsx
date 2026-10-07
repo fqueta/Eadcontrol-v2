@@ -191,27 +191,37 @@ export function VimeoMigrationButton({ courseId }: { courseId?: number }) {
                 </span>
               ))}
           </div>
-          {failedItems.length > 0 && (
+          {(status?.items || []).length > 0 && (
             <div>
               <button
                 type="button"
                 onClick={() => setShowDetails((s) => !s)}
-                className="text-[11px] font-bold text-red-700 dark:text-red-400 underline"
+                className="text-[11px] font-bold text-blue-700 dark:text-blue-400 underline"
               >
-                {showDetails ? 'Ocultar falhas' : `Ver ${failedItems.length} falha(s)`}
+                {showDetails ? 'Ocultar atividades' : `Ver todas as ${(status?.items || []).length} atividades (com ID do Vimeo)`}
               </button>
               {showDetails && (
-                <ul className="mt-1.5 space-y-1 max-h-40 overflow-y-auto text-[11px]">
-                  {failedItems.map((f) => (
-                    <li key={f.activity_id} className="rounded bg-white/70 dark:bg-slate-900/60 border border-red-200 dark:border-red-900 p-1.5">
-                      <span className="font-semibold">{f.title || `Atividade #${f.activity_id}`}</span>
-                      <span className="text-muted-foreground"> (vimeo:{f.vimeo_id})</span>
-                      {f.detail && <p className="text-red-700 dark:text-red-400 mt-0.5">{f.detail}</p>}
+                <ul className="mt-1.5 space-y-1 max-h-60 overflow-y-auto text-[11px]">
+                  {(status?.items || []).map((it) => (
+                    <li key={it.activity_id} className="rounded bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-1.5 flex items-center justify-between gap-2">
+                      <span className="min-w-0">
+                        <span className="font-semibold truncate block" title={it.title}>{it.title || `Atividade #${it.activity_id}`}</span>
+                        <span className="text-muted-foreground font-mono">vimeo:{it.vimeo_id} • atv:{it.activity_id}</span>
+                        {it.detail && it.status === 'failed' && <p className="text-red-700 dark:text-red-400 mt-0.5">{it.detail}</p>}
+                      </span>
+                      <span className={`shrink-0 font-bold uppercase ${it.status === 'ready' ? 'text-emerald-600' : it.status === 'failed' ? 'text-red-600' : 'text-blue-600'}`}>
+                        {STATUS_LABELS[it.status] || it.status}
+                      </span>
                     </li>
                   ))}
                 </ul>
               )}
             </div>
+          )}
+          {failedItems.length > 0 && !showDetails && (
+            <p className="text-[11px] font-bold text-red-700 dark:text-red-400">
+              {failedItems.length} falha(s) — abra a lista acima para ver o detalhe por atividade.
+            </p>
           )}
         </div>
       )}
