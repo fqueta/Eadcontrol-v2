@@ -100,12 +100,21 @@ class VimeoMigrationController extends Controller
             ], 422);
         }
 
-        // Pré-voo: garante que a conta tem download liberado antes de enfileirar tudo
-        $first = $videos[0];
-        $probe = $service->getDownloadableFile($first['vimeo_id'], $token);
-        if (isset($probe['error'])) {
+        // Pré-voo: garante que a conta tem download liberado antes de enfileirar tudo.
+        // Testa até 3 vídeos (um vídeo isolado sem download não deve travar os demais).
+        $probeOk = false;
+        $probeError = null;
+        foreach (array_slice($videos, 0, 3) as $candidate) {
+            $probe = $service->getDownloadableFile($candidate['vimeo_id'], $token);
+            if (!isset($probe['error'])) {
+                $probeOk = true;
+                break;
+            }
+            $probeError = $probe['error'];
+        }
+        if (!$probeOk) {
             return response()->json([
-                'message' => 'A conta do Vimeo não liberou os arquivos para download: ' . $probe['error'],
+                'message' => 'A conta do Vimeo não liberou os arquivos para download: ' . ($probeError ?? 'sem arquivos retornados pela API. Confira o plano e o escopo video_files do token.'),
             ], 422);
         }
 
