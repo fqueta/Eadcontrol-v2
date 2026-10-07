@@ -93,7 +93,7 @@ class VimeoMigrationService
                 ->accept(self::API_VERSION)
                 ->timeout(30)
                 ->get(self::API_BASE . "/videos/{$vimeoId}", [
-                    'fields' => 'name,duration,files,status,user,privacy,download',
+                    'fields' => 'name,duration,files,status,user,privacy,download,play',
                 ]);
 
             if ($response->status() === 401 || $response->status() === 403) {
@@ -110,6 +110,43 @@ class VimeoMigrationService
             $candidates = array_values(array_filter($files, function ($f) {
                 return ($f['type'] ?? '') === 'video/mp4' && !empty($f['link']);
             }));
+
+            // Alternativa 1: campo "download" (links do arquivo original, liberado
+            // pelo toggle "Permitir downloads" do vídeo)
+            if (empty($candidates)) {
+                $downloads = $data['download'] ?? [];
+                foreach ((array) $downloads as $d) {
+                    $link = is_array($d) ? ($d['link'] ?? null) : $d;
+                    if (!empty($link)) {
+                        $candidates[] = [
+                            'link' => $link,
+                            'width' => $d['width'] ?? 0,
+                            'height' => $d['height'] ?? 0,
+                            'size' => $d['size'] ?? 0,
+                            'type' => 'video/mp4',
+                        ];
+                    }
+                }
+            }
+
+            // Alternativa 2: URLs progressivas de reprodução (play.progressive)
+            if (empty($candidates)) {
+                $progressive = $data['play']['progressive'] ?? [];
+                foreach ((array) $progressive as $p) {
+                    if (!empty($p['url'])) {
+                        $candidates[] = [
+                            'link' => $p['url'],
+                            'width' => $p['width'] ?? 0,
+                            'height' => $p['height'] ?? 0,
+                            'size' => 0,
+                            'type' => $p['mime'] ?? 'video/mp4',
+                        ];
+                    }
+                }
+                usort($candidates, function ($a, $b) {
+                    return ((int) ($b['width'] ?? 0)) <=> ((int) ($a['width'] ?? 0));
+                });
+            }
 
             if (empty($candidates)) {
                 $owner = $data['user']['name'] ?? ($data['user']['uri'] ?? 'desconhecido');
