@@ -315,6 +315,8 @@ Route::name('api.')->prefix('api/v1')->middleware([
         Route::get('activities/trash', [ActivityController::class, 'trash'])->name('activities.trash');
         Route::put('activities/{id}/restore', [ActivityController::class, 'restore'])->name('activities.restore');
         Route::delete('activities/{id}/force', [ActivityController::class, 'forceDelete'])->name('activities.forceDelete');
+        // Migração individual de vídeo do Vimeo para o R2 (com HLS)
+        Route::post('activities/{id}/migrate-vimeo', [\App\Http\Controllers\api\VimeoMigrationController::class, 'migrateActivity'])->name('activities.migrate-vimeo');
 
         // Rotas para file-storage (uploads em posts com post_type=file_storage)
         Route::apiResource('file-storage', FileStorageController::class, ['parameters' => [

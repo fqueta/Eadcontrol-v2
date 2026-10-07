@@ -65,6 +65,86 @@ class VimeoMigrationController extends Controller
     }
 
     /**
+     * POST /api/v1/activities/{id}/migrate-vimeo
+     * Testa e migra UMA atividade de vídeo do Vimeo (útil para validar
+     * vídeo por vídeo antes da migração em lote do curso).
+     */
+    public function migrateActivity(Request $request, string $id)
+    {
+        $activity = Activity::find($id);
+        if (!$activity) {
+            return response()->json(['message' => 'Atividade não encontrada.'], 404);
+        }
+
+        $tenantId = tenancy()->tenant ? tenancy()->tenant->id : null;
+        $force = $request->boolean('force', false);
+        $service = new VimeoMigrationService();
+
+        $token = $service->getAccessToken();
+        if (!$token) {
+            return response()->json([
+                'message' => 'Integração do Vimeo não configurada ou inativa. Cadastre o Personal Access Token em Configurações > Integrações > Vimeo.',
+            ], 422);
+        }
+
+        $check = $service->testToken($token);
+        if (empty($check['ok'])) {
+            return response()->json([
+                'message' => 'Token do Vimeo inválido (' . ($check['error'] ?? '401') . '). Gere um novo Personal Access Token com os escopos public, private e video_files.',
+            ], 422);
+        }
+
+        $config = is_array($activity->config) ? $activity->config : [];
+        $url = (string) ($config['video_url'] ?? $activity->post_content ?? '');
+        $vimeoId = $service->extractVimeoId($url);
+        if (!$vimeoId) {
+            return response()->json([
+                'message' => 'Esta atividade não possui URL de vídeo do Vimeo.',
+            ], 422);
+        }
+
+        if ((!empty($config['hls_master_url']) || str_contains($url, '.m3u8')) && !$force) {
+            return response()->json([
+                'success' => true,
+                'status' => 'skipped_ready',
+                'message' => 'Esta atividade já possui HLS. Use force=1 para migrar novamente.',
+            ]);
+        }
+
+        // Testa este vídeo específico antes de enfileirar
+        $file = $service->getDownloadableFile($vimeoId, $token);
+        if (isset($file['error'])) {
+            return response()->json([
+                'message' => 'Este vídeo não pode ser baixado: ' . $file['error'],
+            ], 422);
+        }
+
+        try {
+            $this->migrationCache()->put(
+                MigrateVimeoVideoJob::statusKey($tenantId, (int) $activity->ID),
+                [
+                    'status' => 'queued',
+                    'activity_id' => (int) $activity->ID,
+                    'vimeo_id' => $vimeoId,
+                    'updated_at' => now()->toIso8601String(),
+                ],
+                86400
+            );
+        } catch (\Throwable) {}
+
+        MigrateVimeoVideoJob::dispatch($tenantId, (int) $activity->ID, $vimeoId, null);
+
+        return response()->json([
+            'success' => true,
+            'status' => 'queued',
+            'activity_id' => (int) $activity->ID,
+            'vimeo_id' => $vimeoId,
+            'quality' => ($file['width'] ?? 0) . 'p',
+            'message' => "Vídeo \"{$activity->post_title}\" enfileirado: baixa do Vimeo, envia ao R2 e gera HLS em segundo plano.",
+        ]);
+    }
+
+    /**
      * POST /api/v1/courses/{id}/migrate-vimeo
      * Dispara um job de migração por atividade de vídeo do Vimeo.
      */

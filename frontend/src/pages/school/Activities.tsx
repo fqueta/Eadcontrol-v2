@@ -13,12 +13,12 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { activitiesService } from '@/services/activitiesService';
 import type { ActivityRecord } from '@/types/activities';
 import type { PaginatedResponse } from '@/types/index';
-import { 
-  Plus, 
-  Trash2, 
-  Clock, 
-  Search, 
-  CheckCircle2, 
+import {
+  Plus,
+  Trash2,
+  Clock,
+  Search,
+  CheckCircle2,
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
@@ -28,7 +28,8 @@ import {
   MonitorPlay,
   PlayCircle,
   FileText,
-  Layers
+  Layers,
+  CloudUpload
 } from 'lucide-react';
 
 /**
@@ -117,6 +118,38 @@ export default function Activities() {
 
   const handleRowDoubleClick = (id: string | number) => {
     navigate(`/admin/school/activities/${id}/edit`);
+  };
+
+  // --- Migração individual Vimeo -> R2 (teste vídeo por vídeo) ---
+  const [migratingIds, setMigratingIds] = useState<Set<string | number>>(new Set());
+
+  const isVimeoVideo = (a: ActivityRecord) => {
+    const t = String(a.type_activities || '').toLowerCase();
+    const url = String((a as any).content || '');
+    return (t === 'video' || t.includes('vimeo')) && url.includes('vimeo.com');
+  };
+
+  const handleMigrateVimeo = async (a: ActivityRecord) => {
+    if (!window.confirm(`Baixar "${a.title}" do Vimeo para o armazenamento Ead Control (R2 com HLS)? O processo roda em segundo plano.`)) return;
+    setMigratingIds((prev) => new Set(prev).add(a.id));
+    try {
+      const res: any = await activitiesService.customPost(`/${a.id}/migrate-vimeo`, {});
+      const data = res?.data ?? res;
+      toast({
+        title: data?.status === 'skipped_ready' ? 'Já possui HLS' : 'Migração iniciada!',
+        description: String(data?.message || 'Vídeo enfileirado para migração.'),
+      });
+      qc.invalidateQueries({ queryKey: ['activities', 'list'] });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Falha ao migrar este vídeo.';
+      toast({ title: 'Erro na migração', description: String(msg), variant: 'destructive' });
+    } finally {
+      setMigratingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(a.id);
+        return next;
+      });
+    }
   };
 
   const getActivityIcon = (type?: string) => {
@@ -332,6 +365,17 @@ export default function Activities() {
                               <DropdownMenuItem className="gap-2 text-xs cursor-pointer" onClick={() => navigate(`/admin/school/activities/${a.id}/edit`)}>
                                 <Pencil className="h-3.5 w-3.5" /> Editar
                               </DropdownMenuItem>
+                              {isVimeoVideo(a) && (
+                                <DropdownMenuItem
+                                  className="gap-2 text-xs cursor-pointer text-blue-700 focus:bg-blue-50 focus:text-blue-800 rounded-lg"
+                                  disabled={migratingIds.has(a.id)}
+                                  onClick={() => handleMigrateVimeo(a)}
+                                >
+                                  {migratingIds.has(a.id)
+                                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Migrando...</>
+                                    : <><CloudUpload className="h-3.5 w-3.5" /> Baixar do Vimeo</>}
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
                                 className="gap-2 text-xs cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-700 dark:focus:bg-red-950/50 rounded-lg" 
