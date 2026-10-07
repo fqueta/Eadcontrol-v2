@@ -93,7 +93,7 @@ class VimeoMigrationService
                 ->accept(self::API_VERSION)
                 ->timeout(30)
                 ->get(self::API_BASE . "/videos/{$vimeoId}", [
-                    'fields' => 'name,duration,files,status',
+                    'fields' => 'name,duration,files,status,user,privacy,download',
                 ]);
 
             if ($response->status() === 401 || $response->status() === 403) {
