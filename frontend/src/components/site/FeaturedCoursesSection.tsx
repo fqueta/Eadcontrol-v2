@@ -9,6 +9,7 @@ import { FeaturedCoursesConfig, FeaturedCoursesEditor } from "./FeaturedCoursesE
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { DynamicPrice } from "../common/DynamicPrice";
+import { CatalogCard } from "../common/CatalogCard";
 
 interface Course {
   id: number;
@@ -196,70 +197,28 @@ export function FeaturedCoursesSection() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {courses.map((course) => {
-                const courseTitle = course.titulo || course.nome || "Curso sem título";
-                const courseDesc = stripHtml(course.descricao || "Transforme sua carreira com este treinamento especializado de alto impacto.");
-                const coverUrl = course.config?.cover?.url || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60";
-                const duration = course.duracao ? `${course.duracao}${course.unidade_duracao || 'h'}` : "40h";
-                const formattedPrice = course.valor ? (
-                  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(String(course.valor).replace(',', '.')))
-                ) : "Sob Consulta";
-
-                return (
-                  <Card key={course.id} className="group overflow-hidden border-none shadow-xl hover:shadow-2xl transition-all duration-500 bg-white dark:bg-slate-900 flex flex-col h-full hover:-translate-y-2">
-                    <div className="relative aspect-video overflow-hidden">
-                      <img 
-                        src={coverUrl} 
-                        alt={courseTitle}
-                        loading="lazy"
-                        decoding="async"
-                        width={800}
-                        height={450}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      {course.destaque === 's' && (
-                        <Badge className="absolute top-4 right-4 bg-primary/90 backdrop-blur-md border-none font-bold">
-                          Destaque
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    <CardHeader className="flex-grow">
-                      <div className="flex items-center gap-4 text-xs font-bold text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-widest">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3.5 w-3.5" />
-                          {duration}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Users className="h-3.5 w-3.5" />
-                          Popular
-                        </span>
-                      </div>
-                      <CardTitle className="text-xl font-black text-slate-900 dark:text-white line-clamp-2 group-hover:text-primary transition-colors">
-                        {courseTitle}
-                      </CardTitle>
-                      <CardDescription className="line-clamp-3 text-slate-600 dark:text-slate-400 mt-2 font-medium">
-                        {courseDesc}
-                      </CardDescription>
-                    </CardHeader>
-
-                    <CardFooter className="pt-0 border-t border-slate-100 dark:border-slate-800 mt-auto p-6">
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Investimento</span>
-                          <DynamicPrice price={course.valor} installments={course.parcelas} installmentValue={course.valor_parcela} size="md" />
-                        </div>
-                        <Button size="sm" className="rounded-lg font-bold" asChild>
-                          <Link to={`/cursos/${course.slug}/detalhes`}>
-                            Detalhes
-                          </Link>
-                        </Button>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                );
-              })}
+              {courses.map((course) => (
+                <CatalogCard
+                  key={course.id}
+                  type="course"
+                  id={course.id}
+                  title={course.titulo || course.nome || "Curso sem título"}
+                  description={course.descricao}
+                  image={course.config?.cover?.url}
+                  metaDuration={course.duracao ? `${course.duracao}${course.unidade_duracao || 'h'}` : "40h"}
+                  metaPopular={true}
+                  isFeatured={course.destaque === 's'}
+                  price={course.valor}
+                  installments={course.parcelas}
+                  installmentValue={course.valor_parcela}
+                  priceLabel="Investimento"
+                  buttonText="Detalhes"
+                  linkUrl={`/cursos/${course.slug}/detalhes`}
+                  hideCategory={config.hideCategory}
+                  hideDescription={config.hideDescription}
+                  imageAspect={config.imageAspect}
+                />
+              ))}
             </div>
           </>
         ) : (

@@ -1,4 +1,4 @@
-import { ChevronUp, ChevronDown, User, Wrench, Settings, ChartPie, GraduationCap, Globe, Building2, Search } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronLeft, PanelLeft, User, Wrench, Settings, ChartPie, GraduationCap, Globe, Building2, Search } from "lucide-react";
 import * as React from "react";
 import { NavLink, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,11 +42,19 @@ import { BrandLogo } from "@/components/branding/BrandLogo";
  * en-US: Modern sidebar with branding, collapsed tooltips, and collapse action.
  */
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, toggleSidebar, isHoverActive, setIsHoverActive } = useSidebar();
   const { menu: apiMenu, logout, user } = useAuth();
   const location = useLocation();
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
+  // Quando recolhido mas com hover ativo, renderiza visualmente expandido (overlay sobre o conteúdo)
+  const visuallyCollapsed = collapsed && !isHoverActive;
+
+  // Fecha o overlay do hover ao navegar
+  React.useEffect(() => {
+    setIsHoverActive?.(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPath]);
 
   /**
    * BrandLogo usage
@@ -211,7 +219,7 @@ export function AppSidebar() {
   // Scroll the active menu item to the top of the sidebar content
   const contentRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
-    if (!bestMatchUrl || collapsed) return;
+    if (!bestMatchUrl || visuallyCollapsed) return;
     const raf = requestAnimationFrame(() => {
       const content = contentRef.current;
       if (!content) return;
@@ -222,7 +230,7 @@ export function AppSidebar() {
       content.scrollTo({ top: content.scrollTop + (elTop - contentTop), behavior: 'smooth' });
     });
     return () => cancelAnimationFrame(raf);
-  }, [bestMatchUrl, activeGroupCollapsed, collapsed]);
+  }, [bestMatchUrl, activeGroupCollapsed, visuallyCollapsed]);
 
   /**
    * areAllGroupsCollapsed / collapseAllGroups / expandAllGroups
@@ -248,25 +256,39 @@ export function AppSidebar() {
     });
   };
   return (
-    <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible="icon">
+    <Sidebar collapsible="icon">
       {/* Rail para indicar área do menu quando colapsado */}
       <SidebarRail />
 
-      {/* Header com branding */}
+      {/* Header com branding + botão de recolher */}
       <SidebarHeader className="border-b border-border print:hidden">
-        <Link to="/" title="Ir para o site" className="flex items-center gap-2 px-4 py-3">
-          <BrandLogo alt="Logo" fallbackSrc="/aeroclube-logo.svg" className="h-6 w-auto" />
-          {!collapsed && (
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold">Ead Control</span>
-              <span className="text-xs text-muted-foreground">Painel & Operações</span>
-            </div>
+        <div className="flex items-center justify-between gap-2">
+          <Link to="/" title="Ir para o site" className="flex items-center gap-2 px-4 py-3 min-w-0 flex-1">
+            <BrandLogo alt="Logo" fallbackSrc="/aeroclube-logo.svg" className="h-6 w-auto shrink-0" />
+            {!visuallyCollapsed && (
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-semibold truncate">Ead Control</span>
+                <span className="text-xs text-muted-foreground">Painel & Operações</span>
+              </div>
+            )}
+          </Link>
+          {!visuallyCollapsed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => toggleSidebar()}
+              className="h-7 w-7 mr-2 rounded-md text-muted-foreground hover:bg-accent shrink-0"
+              title="Recolher menu lateral"
+              aria-label="Recolher menu"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
           )}
-        </Link>
+        </div>
       </SidebarHeader>
 
       {/* Input de busca fixo (visível apenas quando não colapsado) */}
-      {!collapsed && (
+      {!visuallyCollapsed && (
         <div className="px-4 py-2 mt-2 mb-1 shrink-0">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -294,7 +316,7 @@ export function AppSidebar() {
                 {filteredMenuItems.map((item: any, index: number) => (
                   <SidebarMenuItem key={item.id || `${item.title}-${index}`}>
                     {item.items ? (
-                      collapsed ? (
+                      visuallyCollapsed ? (
                         // Collapsed: Dropdown Menu
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -370,18 +392,18 @@ export function AppSidebar() {
                           <SidebarMenuButton 
                             asChild 
                             isActive={isActive(item.url)}
-                            className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${collapsed ? 'justify-center' : 'justify-start'}`}
+                            className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${visuallyCollapsed ? 'justify-center' : 'justify-start'}`}
                           >
                             <NavLink 
                               to={resolveUrl(item.url)} 
-                              className={`flex items-center gap-3 py-2 ${collapsed ? 'px-0 justify-center' : 'px-2'}`}
+                              className={`flex items-center gap-3 py-2 ${visuallyCollapsed ? 'px-0 justify-center' : 'px-2'}`}
                             >
                               <item.icon className={`h-[18px] w-[18px] ${isActive(item.url) ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
-                              {!collapsed && <span>{item.title}</span>}
+                              {!visuallyCollapsed && <span>{item.title}</span>}
                             </NavLink>
                           </SidebarMenuButton>
                         </TooltipTrigger>
-                        {collapsed && (
+                        {visuallyCollapsed && (
                           <TooltipContent side="right">{item.title}</TooltipContent>
                         )}
                       </Tooltip>
@@ -410,18 +432,18 @@ export function AppSidebar() {
                         <SidebarMenuButton
                           asChild
                           isActive={isActive('/saas')}
-                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${collapsed ? 'justify-center' : 'justify-start'}`}
+                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${visuallyCollapsed ? 'justify-center' : 'justify-start'}`}
                         >
                           <NavLink
                             to="/admin/saas"
-                            className={`flex items-center gap-3 py-2 ${collapsed ? 'px-0 justify-center' : 'px-2'}`}
+                            className={`flex items-center gap-3 py-2 ${visuallyCollapsed ? 'px-0 justify-center' : 'px-2'}`}
                           >
                             <ChartPie className={`h-[18px] w-[18px] ${isActive('/saas') ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
-                            {!collapsed && <span>Dashboard SaaS</span>}
+                            {!visuallyCollapsed && <span>Dashboard SaaS</span>}
                           </NavLink>
                         </SidebarMenuButton>
                       </TooltipTrigger>
-                      {collapsed && <TooltipContent side="right">Dashboard SaaS</TooltipContent>}
+                      {visuallyCollapsed && <TooltipContent side="right">Dashboard SaaS</TooltipContent>}
                     </Tooltip>
                   </SidebarMenuItem>
 
@@ -432,18 +454,18 @@ export function AppSidebar() {
                         <SidebarMenuButton
                           asChild
                           isActive={isActive('/saas/plans')}
-                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${collapsed ? 'justify-center' : 'justify-start'}`}
+                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${visuallyCollapsed ? 'justify-center' : 'justify-start'}`}
                         >
                           <NavLink
                             to="/admin/saas/plans"
-                            className={`flex items-center gap-3 py-2 ${collapsed ? 'px-0 justify-center' : 'px-2'}`}
+                            className={`flex items-center gap-3 py-2 ${visuallyCollapsed ? 'px-0 justify-center' : 'px-2'}`}
                           >
                             <Wrench className={`h-[18px] w-[18px] ${isActive('/saas/plans') ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
-                            {!collapsed && <span>Planos SaaS</span>}
+                            {!visuallyCollapsed && <span>Planos SaaS</span>}
                           </NavLink>
                         </SidebarMenuButton>
                       </TooltipTrigger>
-                      {collapsed && <TooltipContent side="right">Planos SaaS</TooltipContent>}
+                      {visuallyCollapsed && <TooltipContent side="right">Planos SaaS</TooltipContent>}
                     </Tooltip>
                   </SidebarMenuItem>
 
@@ -454,18 +476,18 @@ export function AppSidebar() {
                         <SidebarMenuButton
                           asChild
                           isActive={isActive('/saas/subscriptions')}
-                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${collapsed ? 'justify-center' : 'justify-start'}`}
+                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${visuallyCollapsed ? 'justify-center' : 'justify-start'}`}
                         >
                           <NavLink
                             to="/admin/saas/subscriptions"
-                            className={`flex items-center gap-3 py-2 ${collapsed ? 'px-0 justify-center' : 'px-2'}`}
+                            className={`flex items-center gap-3 py-2 ${visuallyCollapsed ? 'px-0 justify-center' : 'px-2'}`}
                           >
                             <User className={`h-[18px] w-[18px] ${isActive('/saas/subscriptions') ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
-                            {!collapsed && <span>Assinaturas SaaS</span>}
+                            {!visuallyCollapsed && <span>Assinaturas SaaS</span>}
                           </NavLink>
                         </SidebarMenuButton>
                       </TooltipTrigger>
-                      {collapsed && <TooltipContent side="right">Assinaturas SaaS</TooltipContent>}
+                      {visuallyCollapsed && <TooltipContent side="right">Assinaturas SaaS</TooltipContent>}
                     </Tooltip>
                   </SidebarMenuItem>
 
@@ -476,18 +498,18 @@ export function AppSidebar() {
                         <SidebarMenuButton
                           asChild
                           isActive={isActive('/saas/invoices')}
-                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${collapsed ? 'justify-center' : 'justify-start'}`}
+                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${visuallyCollapsed ? 'justify-center' : 'justify-start'}`}
                         >
                           <NavLink
                             to="/admin/saas/invoices"
-                            className={`flex items-center gap-3 py-2 ${collapsed ? 'px-0 justify-center' : 'px-2'}`}
+                            className={`flex items-center gap-3 py-2 ${visuallyCollapsed ? 'px-0 justify-center' : 'px-2'}`}
                           >
                             <Globe className={`h-[18px] w-[18px] ${isActive('/saas/invoices') ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
-                            {!collapsed && <span>Faturas SaaS</span>}
+                            {!visuallyCollapsed && <span>Faturas SaaS</span>}
                           </NavLink>
                         </SidebarMenuButton>
                       </TooltipTrigger>
-                      {collapsed && <TooltipContent side="right">Faturas SaaS</TooltipContent>}
+                      {visuallyCollapsed && <TooltipContent side="right">Faturas SaaS</TooltipContent>}
                     </Tooltip>
                   </SidebarMenuItem>
 
@@ -498,18 +520,18 @@ export function AppSidebar() {
                         <SidebarMenuButton
                           asChild
                           isActive={isActive('/saas/tenants')}
-                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${collapsed ? 'justify-center' : 'justify-start'}`}
+                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${visuallyCollapsed ? 'justify-center' : 'justify-start'}`}
                         >
                           <NavLink
                             to="/admin/saas/tenants"
-                            className={`flex items-center gap-3 py-2 ${collapsed ? 'px-0 justify-center' : 'px-2'}`}
+                            className={`flex items-center gap-3 py-2 ${visuallyCollapsed ? 'px-0 justify-center' : 'px-2'}`}
                           >
                             <Building2 className={`h-[18px] w-[18px] ${isActive('/saas/tenants') ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
-                            {!collapsed && <span>Tenants</span>}
+                            {!visuallyCollapsed && <span>Tenants</span>}
                           </NavLink>
                         </SidebarMenuButton>
                       </TooltipTrigger>
-                      {collapsed && <TooltipContent side="right">Tenants</TooltipContent>}
+                      {visuallyCollapsed && <TooltipContent side="right">Tenants</TooltipContent>}
                     </Tooltip>
                   </SidebarMenuItem>
 
@@ -520,18 +542,18 @@ export function AppSidebar() {
                         <SidebarMenuButton
                           asChild
                           isActive={isActive('/saas/gateway')}
-                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${collapsed ? 'justify-center' : 'justify-start'}`}
+                          className={`w-full text-sm font-medium transition-all duration-200 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold hover:bg-primary/5 hover:text-primary ${visuallyCollapsed ? 'justify-center' : 'justify-start'}`}
                         >
                           <NavLink
                             to="/admin/saas/gateway"
-                            className={`flex items-center gap-3 py-2 ${collapsed ? 'px-0 justify-center' : 'px-2'}`}
+                            className={`flex items-center gap-3 py-2 ${visuallyCollapsed ? 'px-0 justify-center' : 'px-2'}`}
                           >
                             <Settings className={`h-[18px] w-[18px] ${isActive('/saas/gateway') ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
-                            {!collapsed && <span>Gateway</span>}
+                            {!visuallyCollapsed && <span>Gateway</span>}
                           </NavLink>
                         </SidebarMenuButton>
                       </TooltipTrigger>
-                      {collapsed && <TooltipContent side="right">Gateway</TooltipContent>}
+                      {visuallyCollapsed && <TooltipContent side="right">Gateway</TooltipContent>}
                     </Tooltip>
                   </SidebarMenuItem>
 
@@ -549,17 +571,17 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <div className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer hover:bg-accent transition-colors duration-200 ${collapsed ? 'justify-center' : ''}`}>
+                <div className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer hover:bg-accent transition-colors duration-200 ${visuallyCollapsed ? 'justify-center' : ''}`}>
                   <div className="h-9 w-9 rounded-lg flex items-center justify-center text-white font-bold shadow-sm ring-2 ring-white dark:ring-slate-950" style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), var(--gradient-to, #4f46e5))' }}>
                     <User className="h-5 w-5" />
                   </div>
-                  {!collapsed && (
+                  {!visuallyCollapsed && (
                     <div className="flex flex-col flex-1 overflow-hidden">
                       <span className="text-sm font-semibold truncate text-foreground">Minha Conta</span>
                       <span className="text-[10px] text-muted-foreground truncate">Gerenciar perfil</span>
                     </div>
                   )}
-                  {!collapsed && <ChevronUp className="h-4 w-4 text-muted-foreground ml-auto" />}
+                  {!visuallyCollapsed && <ChevronUp className="h-4 w-4 text-muted-foreground ml-auto" />}
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent 
@@ -596,17 +618,34 @@ export function AppSidebar() {
             <Button
               variant="ghost"
               size="sm"
-              className={`w-full mt-1 text-muted-foreground hover:text-foreground ${collapsed ? 'px-0 justify-center' : 'justify-start'}`}
+              className={`w-full mt-1 text-muted-foreground hover:text-foreground ${visuallyCollapsed ? 'px-0 justify-center' : 'justify-start'}`}
               onClick={() => (areAllGroupsCollapsed ? expandAllGroups() : collapseAllGroups())}
               aria-label={areAllGroupsCollapsed ? 'Expandir submenus' : 'Recolher submenus'}
+              title="Expandir ou recolher sanfonas de grupos"
             >
               {areAllGroupsCollapsed ? (
                 <ChevronDown className="h-4 w-4" />
               ) : (
                 <ChevronUp className="h-4 w-4" />
               )}
-              {!collapsed && (
+              {!visuallyCollapsed && (
                 <span className="ml-2 text-xs">{areAllGroupsCollapsed ? 'Expandir tudo' : 'Recolher tudo'}</span>
+              )}
+            </Button>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`w-full mt-1 text-muted-foreground hover:text-foreground ${visuallyCollapsed ? 'px-0 justify-center' : 'justify-start'}`}
+              onClick={() => toggleSidebar()}
+              aria-label={collapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'}
+              title="Recolher menu lateral"
+            >
+              <PanelLeft className="h-4 w-4" />
+              {!visuallyCollapsed && (
+                <span className="ml-2 text-xs">Recolher</span>
               )}
             </Button>
           </SidebarMenuItem>

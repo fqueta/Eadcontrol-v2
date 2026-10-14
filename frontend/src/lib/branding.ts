@@ -237,6 +237,10 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
 
       // Optional fields
       const anyWin = window as any;
+      const getVal = (k: string) => {
+        const v = dataObj[k];
+        return v === false ? 'false' : v === true ? 'true' : String(v ?? '').trim();
+      };
       const favicon = String(dataObj['app_favicon_url'] || '').trim();
       const social = String(dataObj['app_social_image_url'] || '').trim();
       const slogan = String(dataObj['app_institution_slogan'] || '').trim();
@@ -250,10 +254,6 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
       const heroTitle = String(dataObj['home_hero_title'] || '').trim();
       const heroImageUrl = String(dataObj['home_hero_image_url'] || '').trim();
       const heroImages = typeof dataObj['home_hero_images'] === 'string' ? dataObj['home_hero_images'] : (dataObj['home_hero_images'] ? JSON.stringify(dataObj['home_hero_images']) : '');
-      const getVal = (k: string) => {
-        const v = dataObj[k];
-        return v === false ? 'false' : v === true ? 'true' : String(v ?? '').trim();
-      };
       
       const showOverlay = getVal('home_hero_show_overlay');
       const showTexts = getVal('home_hero_show_texts');
@@ -407,6 +407,34 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
           }
         } catch (e) {
           console.error('Failed to hydrate appearance settings:', e);
+        }
+
+        // Hydrate Card Display Settings (Hide category / description)
+        try {
+          const cardKeys = [
+            'app_card_hide_category',
+            'app_card_hide_description',
+            'app_courses_hide_category',
+            'app_courses_hide_description',
+            'app_products_hide_category',
+            'app_products_hide_description',
+            'app_card_image_aspect',
+            'app_courses_image_aspect',
+            'app_products_image_aspect'
+          ];
+          for (const k of cardKeys) {
+            if (dataObj[k] !== undefined && dataObj[k] !== null) {
+              const strVal = String(dataObj[k]).trim();
+              if (k.includes('aspect')) {
+                localStorage.setItem(k, strVal);
+              } else {
+                const val = strVal === 'true' || strVal === '1' || strVal === 's' ? 'true' : 'false';
+                localStorage.setItem(k, val);
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Failed to hydrate card display settings:', e);
         }
 
         // Salva menu do topo se existir
@@ -738,4 +766,61 @@ export function getWhatsAppFloatMessage(defaultMsg: string = 'Olá! Vim pelo sit
   const w = anyWin?.__APP_WHATSAPP_FLOAT_MSG__;
   if (typeof w === 'string' && w.trim() !== '') return w.trim();
   return defaultMsg;
+}
+
+/**
+ * getCardHideCategory
+ * pt-BR: Indica se a exibição da categoria/metadados nos cards (cursos/produtos) deve ser ocultada.
+ */
+export function getCardHideCategory(type?: 'course' | 'product'): boolean {
+  try {
+    if (type) {
+      const typeVal = localStorage.getItem(`app_${type}s_hide_category`);
+      if (typeVal !== null && typeVal !== undefined && typeVal !== '') {
+        return typeVal === 'true';
+      }
+    }
+    const globalVal = localStorage.getItem('app_card_hide_category');
+    if (globalVal !== null && globalVal !== undefined && globalVal !== '') {
+      return globalVal === 'true';
+    }
+  } catch {}
+  return false;
+}
+
+/**
+ * getCardHideDescription
+ * pt-BR: Indica se a exibição da descrição nos cards (cursos/produtos) deve ser ocultada.
+ */
+export function getCardHideDescription(type?: 'course' | 'product'): boolean {
+  try {
+    if (type) {
+      const typeVal = localStorage.getItem(`app_${type}s_hide_description`);
+      if (typeVal !== null && typeVal !== undefined && typeVal !== '') {
+        return typeVal === 'true';
+      }
+    }
+    const globalVal = localStorage.getItem('app_card_hide_description');
+    if (globalVal !== null && globalVal !== undefined && globalVal !== '') {
+      return globalVal === 'true';
+    }
+  } catch {}
+  return false;
+}
+
+/**
+ * getCardImageAspect
+ * pt-BR: Obtém a proporção/formato da imagem dos cards:
+ *        'video' (16:9), '4/3', 'square' (1:1), 'portrait' (3:4), 'tall' (2:3)
+ */
+export function getCardImageAspect(type?: 'course' | 'product'): string {
+  try {
+    if (type) {
+      const typeVal = localStorage.getItem(`app_${type}s_image_aspect`);
+      if (typeVal && typeVal.trim() !== '') return typeVal.trim();
+    }
+    const globalVal = localStorage.getItem('app_card_image_aspect');
+    if (globalVal && globalVal.trim() !== '') return globalVal.trim();
+  } catch {}
+  return 'video';
 }

@@ -32,6 +32,8 @@ type SidebarContext = {
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
+  isHoverActive?: boolean
+  setIsHoverActive?: (active: boolean) => void
 }
 
 const SidebarContext = React.createContext<SidebarContext | null>(null)
@@ -67,6 +69,7 @@ const SidebarProvider = React.forwardRef<
   ) => {
     const isMobile = useIsMobile()
     const [openMobile, setOpenMobile] = React.useState(false)
+    const [isHoverActive, setIsHoverActive] = React.useState(false)
 
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
@@ -123,8 +126,10 @@ const SidebarProvider = React.forwardRef<
         openMobile,
         setOpenMobile,
         toggleSidebar,
+        isHoverActive,
+        setIsHoverActive,
       }),
-      [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+      [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, isHoverActive]
     )
 
     return (
@@ -173,7 +178,37 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+    const { isMobile, state, openMobile, setOpenMobile, isHoverActive, setIsHoverActive } = useSidebar()
+    const hoverTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+      props.onMouseEnter?.(e as any)
+      if (state !== "collapsed" || collapsible !== "icon") return
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsHoverActive?.(true)
+      }, 70)
+    }
+
+    const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+      props.onMouseLeave?.(e as any)
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsHoverActive?.(false)
+      }, 160)
+    }
+
+    React.useEffect(() => {
+      return () => {
+        if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+      }
+    }, [])
+
+    React.useEffect(() => {
+      if (state === "expanded") {
+        setIsHoverActive?.(false)
+      }
+    }, [state, setIsHoverActive])
 
     if (collapsible === "none") {
       return (
@@ -214,39 +249,54 @@ const Sidebar = React.forwardRef<
       <div
         ref={ref}
         className="group peer hidden md:block text-sidebar-foreground"
-        data-state={state}
-        data-collapsible={state === "collapsed" ? collapsible : ""}
+        data-state={isHoverActive ? "expanded" : state}
+        data-collapsible={isHoverActive ? "" : (state === "collapsed" ? collapsible : "")}
         data-variant={variant}
         data-side={side}
       >
         {/* This is what handles the sidebar gap on desktop */}
         <div
           className={cn(
-            "duration-200 relative h-svh w-[--sidebar-width] bg-transparent transition-[width] ease-linear",
+            "duration-200 relative h-svh bg-transparent transition-[width] ease-linear",
             "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
-            variant === "floating" || variant === "inset"
-              ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]"
+            state === "collapsed"
+              ? (variant === "floating" || variant === "inset"
+                  ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
+                  : "w-[--sidebar-width-icon]")
+              : "w-[--sidebar-width]"
           )}
         />
         <div
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          data-state={isHoverActive ? "expanded" : state}
+          data-collapsible={isHoverActive ? "" : (state === "collapsed" ? collapsible : "")}
+          data-variant={variant}
+          data-side={side}
           className={cn(
-            "duration-200 fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] ease-linear md:flex",
+            "duration-200 fixed inset-y-0 z-10 hidden h-svh transition-[left,right,width,box-shadow] ease-linear md:flex",
+            isHoverActive && "!w-64 z-50 shadow-2xl bg-sidebar border-r border-sidebar-border",
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
               : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
             // Adjust the padding for floating and inset variants.
-            variant === "floating" || variant === "inset"
-              ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            !isHoverActive && (
+              variant === "floating" || variant === "inset"
+                ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
+                : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l"
+            ),
             className
           )}
           {...props}
         >
           <div
             data-sidebar="sidebar"
-            className="flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+            data-state={isHoverActive ? "expanded" : state}
+            className={cn(
+              "flex h-full w-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow",
+              isHoverActive && "w-64"
+            )}
           >
             {children}
           </div>
@@ -552,7 +602,7 @@ const SidebarMenuButton = React.forwardRef<
     ref
   ) => {
     const Comp = asChild ? Slot : "button"
-    const { isMobile, state } = useSidebar()
+    const { isMobile, state, isHoverActive } = useSidebar()
 
     const button = (
       <Comp
@@ -581,7 +631,7 @@ const SidebarMenuButton = React.forwardRef<
         <TooltipContent
           side="right"
           align="center"
-          hidden={state !== "collapsed" || isMobile}
+          hidden={state !== "collapsed" || isMobile || Boolean(isHoverActive)}
           {...tooltip}
         />
       </Tooltip>

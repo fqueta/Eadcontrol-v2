@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, ShoppingBag, Loader2, AlertCircle } from 'lucide-react';
 import { DynamicPrice } from '@/components/common/DynamicPrice';
+import { CatalogCard } from '@/components/common/CatalogCard';
 
 export default function ProductsGrid() {
   const navigate = useNavigate();
@@ -62,45 +63,22 @@ export default function ProductsGrid() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {products.map((product: any) => (
-            <div
+            <CatalogCard
               key={product.id}
-              onClick={() => navigate(`/produtos/${product.slug}`)}
-              className="group cursor-pointer product-card-themed"
-            >
-              <div className="aspect-[4/3] bg-slate-100 dark:bg-slate-900 overflow-hidden">
-                {product.image ? (
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-700">
-                    <ShoppingBag className="h-12 w-12" />
-                  </div>
-                )}
-              </div>
-              <div className="p-4">
-                <h3 className="font-semibold text-sm text-slate-900 dark:text-white mb-1 line-clamp-2">
-                  {product.name}
-                </h3>
-                {product.categoryData?.name && (
-                  <span className="category-badge-themed">
-                    {product.categoryData.name}
-                  </span>
-                )}
-                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3 min-h-[2rem]">
-                  {product.description?.replace(/<[^>]*>/g, '') || 'Sem descrição'}
-                </p>
-                <div className="flex items-end justify-between mt-auto">
-                  <DynamicPrice price={product.salePrice} installments={product.parcelas} installmentValue={product.valor_parcela} size="sm" />
-                  <Button size="sm" variant="outline" className="btn-themed-outline shrink-0">
-                    Ver detalhes
-                  </Button>
-                </div>
-              </div>
-            </div>
+              type="product"
+              id={product.id}
+              title={product.name || 'Produto sem título'}
+              description={product.description}
+              image={product.image}
+              category={product.categoryData?.name}
+              isFeatured={product.destaque === 's'}
+              price={product.salePrice}
+              installments={product.parcelas}
+              installmentValue={product.valor_parcela}
+              priceLabel="Valor"
+              buttonText="Detalhes"
+              linkUrl={`/produtos/${product.slug}`}
+            />
           ))}
         </div>
       )}

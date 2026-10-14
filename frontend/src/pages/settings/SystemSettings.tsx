@@ -141,6 +141,14 @@ export default function SystemSettings() {
       showAnimations: true,
       layoutStyle: "rounded",
       headerTransparent: false,
+      cardHideCategory: localStorage.getItem('app_card_hide_category') === 'true',
+      cardHideDescription: localStorage.getItem('app_card_hide_description') === 'true',
+      coursesHideCategory: localStorage.getItem('app_courses_hide_category') === 'true',
+      coursesHideDescription: localStorage.getItem('app_courses_hide_description') === 'true',
+      productsHideCategory: localStorage.getItem('app_products_hide_category') === 'true',
+      productsHideDescription: localStorage.getItem('app_products_hide_description') === 'true',
+      coursesImageAspect: localStorage.getItem('app_courses_image_aspect') || 'video',
+      productsImageAspect: localStorage.getItem('app_products_image_aspect') || 'video',
     };
   });
 
@@ -330,6 +338,24 @@ export default function SystemSettings() {
         if (optDarkMode && valDarkMode !== next.darkMode) { next.darkMode = valDarkMode; changed = true; }
         if (optLayoutStyle && valLayoutStyle !== next.layoutStyle) { next.layoutStyle = valLayoutStyle; changed = true; }
         if (optHeaderTransparent && valHeaderTransparent !== next.headerTransparent) { next.headerTransparent = valHeaderTransparent; changed = true; }
+
+        const optCardHideCat = getOpt('app_card_hide_category');
+        const optCardHideDesc = getOpt('app_card_hide_description');
+        const optCoursesHideCat = getOpt('app_courses_hide_category');
+        const optCoursesHideDesc = getOpt('app_courses_hide_description');
+        const optProductsHideCat = getOpt('app_products_hide_category');
+        const optProductsHideDesc = getOpt('app_products_hide_description');
+        const optCoursesAspect = getOpt('app_courses_image_aspect');
+        const optProductsAspect = getOpt('app_products_image_aspect');
+
+        if (optCardHideCat && (optCardHideCat.value === 'true') !== next.cardHideCategory) { next.cardHideCategory = optCardHideCat.value === 'true'; changed = true; }
+        if (optCardHideDesc && (optCardHideDesc.value === 'true') !== next.cardHideDescription) { next.cardHideDescription = optCardHideDesc.value === 'true'; changed = true; }
+        if (optCoursesHideCat && (optCoursesHideCat.value === 'true') !== next.coursesHideCategory) { next.coursesHideCategory = optCoursesHideCat.value === 'true'; changed = true; }
+        if (optCoursesHideDesc && (optCoursesHideDesc.value === 'true') !== next.coursesHideDescription) { next.coursesHideDescription = optCoursesHideDesc.value === 'true'; changed = true; }
+        if (optProductsHideCat && (optProductsHideCat.value === 'true') !== next.productsHideCategory) { next.productsHideCategory = optProductsHideCat.value === 'true'; changed = true; }
+        if (optProductsHideDesc && (optProductsHideDesc.value === 'true') !== next.productsHideDescription) { next.productsHideDescription = optProductsHideDesc.value === 'true'; changed = true; }
+        if (optCoursesAspect && optCoursesAspect.value && optCoursesAspect.value !== next.coursesImageAspect) { next.coursesImageAspect = optCoursesAspect.value; changed = true; }
+        if (optProductsAspect && optProductsAspect.value && optProductsAspect.value !== next.productsImageAspect) { next.productsImageAspect = optProductsAspect.value; changed = true; }
 
         if (changed) {
           localStorage.setItem('appearanceSettings', JSON.stringify(next));
@@ -827,8 +853,17 @@ export default function SystemSettings() {
     // 1. Salva no localStorage para aplicação imediata local
     localStorage.setItem('appearanceSettings', JSON.stringify(appearanceSettings));
     localStorage.setItem('app_theme', siteTheme);
+    localStorage.setItem('app_card_hide_category', appearanceSettings.cardHideCategory ? 'true' : 'false');
+    localStorage.setItem('app_card_hide_description', appearanceSettings.cardHideDescription ? 'true' : 'false');
+    localStorage.setItem('app_courses_hide_category', appearanceSettings.coursesHideCategory ? 'true' : 'false');
+    localStorage.setItem('app_courses_hide_description', appearanceSettings.coursesHideDescription ? 'true' : 'false');
+    localStorage.setItem('app_products_hide_category', appearanceSettings.productsHideCategory ? 'true' : 'false');
+    localStorage.setItem('app_products_hide_description', appearanceSettings.productsHideDescription ? 'true' : 'false');
+    localStorage.setItem('app_courses_image_aspect', appearanceSettings.coursesImageAspect || 'video');
+    localStorage.setItem('app_products_image_aspect', appearanceSettings.productsImageAspect || 'video');
     if (siteFont) localStorage.setItem('app_font_family', siteFont);
     applyGlobalTheme();
+    try { window.dispatchEvent(new Event('storage')); } catch {}
     
     // 2. Persiste no backend para aplicação pública/global
     try {
@@ -844,6 +879,14 @@ export default function SystemSettings() {
         app_theme: siteTheme,
         app_layout_style: appearanceSettings.layoutStyle || 'rounded',
         app_header_transparent: appearanceSettings.headerTransparent ? 'true' : 'false',
+        app_card_hide_category: appearanceSettings.cardHideCategory ? 'true' : 'false',
+        app_card_hide_description: appearanceSettings.cardHideDescription ? 'true' : 'false',
+        app_courses_hide_category: appearanceSettings.coursesHideCategory ? 'true' : 'false',
+        app_courses_hide_description: appearanceSettings.coursesHideDescription ? 'true' : 'false',
+        app_products_hide_category: appearanceSettings.productsHideCategory ? 'true' : 'false',
+        app_products_hide_description: appearanceSettings.productsHideDescription ? 'true' : 'false',
+        app_courses_image_aspect: appearanceSettings.coursesImageAspect || 'video',
+        app_products_image_aspect: appearanceSettings.productsImageAspect || 'video',
       };
       if (siteFont) payload.app_font_family = siteFont;
       
@@ -1496,6 +1539,112 @@ export default function SystemSettings() {
                       <SelectItem value="'Merriweather', serif">Merriweather (Serifa)</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+
+              {/* Configurações de Exibição de Cards (Cursos e Loja/Produtos) */}
+              <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                    Exibição de Cards (Cursos & Produtos da Loja)
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    Controle o que é exibido nos cards da vitrine, destaques e páginas de catálogo
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Card Cursos */}
+                  <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-3">
+                    <div className="font-bold text-xs uppercase tracking-wider text-primary">Cards de Cursos</div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="coursesHideCategory" className="text-xs font-bold">Ocultar Categoria / Metadados</Label>
+                        <p className="text-[11px] text-muted-foreground">Oculta duração e badges dos cards de cursos</p>
+                      </div>
+                      <Switch
+                        id="coursesHideCategory"
+                        checked={appearanceSettings.coursesHideCategory}
+                        onCheckedChange={(value) => handleAppearanceChange('coursesHideCategory', value)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="coursesHideDescription" className="text-xs font-bold">Ocultar Descrição</Label>
+                        <p className="text-[11px] text-muted-foreground">Oculta o texto descritivo dos cards de cursos</p>
+                      </div>
+                      <Switch
+                        id="coursesHideDescription"
+                        checked={appearanceSettings.coursesHideDescription}
+                        onCheckedChange={(value) => handleAppearanceChange('coursesHideDescription', value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5 pt-2 border-t border-slate-200/50 dark:border-slate-800/50">
+                      <Label htmlFor="coursesImageAspect" className="text-xs font-bold">Formato / Proporção da Imagem</Label>
+                      <Select
+                        value={appearanceSettings.coursesImageAspect || 'video'}
+                        onValueChange={(value) => handleAppearanceChange('coursesImageAspect', value)}
+                      >
+                        <SelectTrigger id="coursesImageAspect" className="h-9 font-medium text-xs bg-white dark:bg-slate-800">
+                          <SelectValue placeholder="Selecione o formato" />
+                        </SelectTrigger>
+                        <SelectContent className="z-[110]">
+                          <SelectItem value="video">Retangular Deitado (16:9 - Padrão)</SelectItem>
+                          <SelectItem value="4/3">Retangular Clássico (4:3)</SelectItem>
+                          <SelectItem value="square">Quadrado (1:1)</SelectItem>
+                          <SelectItem value="portrait">Retângulo em Pé / Retrato (3:4)</SelectItem>
+                          <SelectItem value="tall">Retangular Vertical Alto (2:3)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[11px] text-muted-foreground">Define se a imagem do curso será retangular em pé, deitada ou quadrada</p>
+                    </div>
+                  </div>
+
+                  {/* Card Produtos */}
+                  <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-3">
+                    <div className="font-bold text-xs uppercase tracking-wider text-primary">Cards de Produtos / Loja</div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="productsHideCategory" className="text-xs font-bold">Ocultar Categoria</Label>
+                        <p className="text-[11px] text-muted-foreground">Oculta a etiqueta de categoria nos cards de produtos</p>
+                      </div>
+                      <Switch
+                        id="productsHideCategory"
+                        checked={appearanceSettings.productsHideCategory}
+                        onCheckedChange={(value) => handleAppearanceChange('productsHideCategory', value)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="productsHideDescription" className="text-xs font-bold">Ocultar Descrição</Label>
+                        <p className="text-[11px] text-muted-foreground">Oculta a descrição breve nos cards de produtos</p>
+                      </div>
+                      <Switch
+                        id="productsHideDescription"
+                        checked={appearanceSettings.productsHideDescription}
+                        onCheckedChange={(value) => handleAppearanceChange('productsHideDescription', value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5 pt-2 border-t border-slate-200/50 dark:border-slate-800/50">
+                      <Label htmlFor="productsImageAspect" className="text-xs font-bold">Formato / Proporção da Imagem</Label>
+                      <Select
+                        value={appearanceSettings.productsImageAspect || 'video'}
+                        onValueChange={(value) => handleAppearanceChange('productsImageAspect', value)}
+                      >
+                        <SelectTrigger id="productsImageAspect" className="h-9 font-medium text-xs bg-white dark:bg-slate-800">
+                          <SelectValue placeholder="Selecione o formato" />
+                        </SelectTrigger>
+                        <SelectContent className="z-[110]">
+                          <SelectItem value="video">Retangular Deitado (16:9 - Padrão)</SelectItem>
+                          <SelectItem value="4/3">Retangular Clássico (4:3)</SelectItem>
+                          <SelectItem value="square">Quadrado (1:1)</SelectItem>
+                          <SelectItem value="portrait">Retângulo em Pé / Retrato (3:4)</SelectItem>
+                          <SelectItem value="tall">Retangular Vertical Alto (2:3)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[11px] text-muted-foreground">Define se a foto do produto será retangular em pé, deitada ou quadrada</p>
+                    </div>
+                  </div>
                 </div>
               </div>
               

@@ -94,6 +94,16 @@ class OptionController extends Controller
             'footer_config',
             'app_footer_logo_url',
             'app_version',
+            // Configurações de exibição de cards (ocultar categoria / descrição / formato de imagem)
+            'app_card_hide_category',
+            'app_card_hide_description',
+            'app_courses_hide_category',
+            'app_courses_hide_description',
+            'app_products_hide_category',
+            'app_products_hide_description',
+            'app_card_image_aspect',
+            'app_courses_image_aspect',
+            'app_products_image_aspect',
             // SEO home overrides (tenant-specific)
             'seo_home_title',
             'seo_home_description',

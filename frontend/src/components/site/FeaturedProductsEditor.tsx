@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const optionsService = createGenericService('/options');
 
@@ -27,6 +28,9 @@ export interface FeaturedProductsConfig {
   paddingBottom: string;
   showViewAll: boolean;
   viewAllText: string;
+  hideCategory?: boolean;
+  hideDescription?: boolean;
+  imageAspect?: string;
 }
 
 const DEFAULT_CONFIG: FeaturedProductsConfig = {
@@ -44,7 +48,10 @@ const DEFAULT_CONFIG: FeaturedProductsConfig = {
   paddingTop: "0rem",
   paddingBottom: "0rem",
   showViewAll: true,
-  viewAllText: "Ver todos os produtos"
+  viewAllText: "Ver todos os produtos",
+  hideCategory: false,
+  hideDescription: false,
+  imageAspect: "video"
 };
 
 interface Props {
@@ -273,6 +280,47 @@ export function FeaturedProductsEditor({ onConfigChange, currentConfig }: Props)
                   />
                 </div>
               )}
+
+              <div className="flex items-center justify-between pt-2 border-t">
+                <div className="space-y-0.5">
+                  <Label className="text-xs font-bold">Ocultar Categoria</Label>
+                  <p className="text-[10px] text-muted-foreground">Não exibir categoria no card</p>
+                </div>
+                <Switch 
+                  checked={!!config.hideCategory} 
+                  onCheckedChange={(v) => handleChange('hideCategory', v)} 
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <div className="space-y-0.5">
+                  <Label className="text-xs font-bold">Ocultar Descrição</Label>
+                  <p className="text-[10px] text-muted-foreground">Não exibir descrição no card</p>
+                </div>
+                <Switch 
+                  checked={!!config.hideDescription} 
+                  onCheckedChange={(v) => handleChange('hideDescription', v)} 
+                />
+              </div>
+
+              <div className="space-y-1 pt-2 border-t">
+                <Label className="text-[10px] font-black uppercase text-slate-400">Formato / Proporção da Imagem</Label>
+                <Select
+                  value={config.imageAspect || 'video'}
+                  onValueChange={(v) => handleChange('imageAspect', v)}
+                >
+                  <SelectTrigger className="h-9 font-medium text-xs">
+                    <SelectValue placeholder="Selecione o formato" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[110]">
+                    <SelectItem value="video">Retangular Deitado (16:9 - Padrão)</SelectItem>
+                    <SelectItem value="4/3">Retangular Clássico (4:3)</SelectItem>
+                    <SelectItem value="square">Quadrado (1:1)</SelectItem>
+                    <SelectItem value="portrait">Retângulo em Pé / Retrato (3:4)</SelectItem>
+                    <SelectItem value="tall">Retangular Vertical Alto (2:3)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="flex gap-2 pt-4 border-t mt-4">

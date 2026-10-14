@@ -9,6 +9,7 @@ import { FeaturedProductsConfig, FeaturedProductsEditor } from "./FeaturedProduc
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { DynamicPrice } from "../common/DynamicPrice";
+import { CatalogCard } from "../common/CatalogCard";
 
 interface Product {
   id: string | number;
@@ -185,70 +186,27 @@ export function FeaturedProductsSection() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {products.map((product) => {
-                const productTitle = product.name || "Produto sem título";
-                const productDesc = stripHtml(product.description || "Confira os detalhes deste produto especial e aproveite nossas condições exclusivas.");
-                const coverUrl = product.image || "";
-                const formattedPrice = product.salePrice ? (
-                  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(String(product.salePrice).replace(',', '.')))
-                ) : "Sob Consulta";
-
-                return (
-                  <Card key={product.id} className="group overflow-hidden border-none shadow-xl hover:shadow-2xl transition-all duration-500 bg-white dark:bg-slate-900 flex flex-col h-full hover:-translate-y-2">
-                    <div className="relative aspect-video overflow-hidden bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
-                      {coverUrl ? (
-                        <img 
-                          src={coverUrl} 
-                          alt={productTitle}
-                          loading="lazy"
-                          decoding="async"
-                          width={800}
-                          height={450}
-                          className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110"
-                        />
-                      ) : (
-                        <ShoppingBag className="h-16 w-16 text-slate-300 dark:text-slate-700" />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      {product.destaque === 's' && (
-                        <Badge className="absolute top-4 right-4 bg-primary/90 backdrop-blur-md border-none font-bold">
-                          Destaque
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    <CardHeader className="flex-grow">
-                      {product.categoryData?.name && (
-                        <div className="mb-2">
-                          <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-widest">
-                            {product.categoryData.name}
-                          </Badge>
-                        </div>
-                      )}
-                      <CardTitle className="text-xl font-black text-slate-900 dark:text-white line-clamp-2 group-hover:text-primary transition-colors">
-                        {productTitle}
-                      </CardTitle>
-                      <CardDescription className="line-clamp-3 text-slate-600 dark:text-slate-400 mt-2 font-medium">
-                        {productDesc}
-                      </CardDescription>
-                    </CardHeader>
-
-                    <CardFooter className="pt-0 border-t border-slate-100 dark:border-slate-800 mt-auto p-6">
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor</span>
-                          <DynamicPrice price={product.salePrice} installments={product.parcelas} installmentValue={product.valor_parcela} size="md" />
-                        </div>
-                        <Button size="sm" className="rounded-lg font-bold" asChild>
-                          <Link to={`/produtos/${product.slug}`}>
-                            Detalhes
-                          </Link>
-                        </Button>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                );
-              })}
+              {products.map((product) => (
+                <CatalogCard
+                  key={product.id}
+                  type="product"
+                  id={product.id}
+                  title={product.name || "Produto sem título"}
+                  description={product.description}
+                  image={product.image}
+                  category={product.categoryData?.name}
+                  isFeatured={product.destaque === 's'}
+                  price={product.salePrice}
+                  installments={product.parcelas}
+                  installmentValue={product.valor_parcela}
+                  priceLabel="Valor"
+                  buttonText="Detalhes"
+                  linkUrl={`/produtos/${product.slug}`}
+                  hideCategory={config.hideCategory}
+                  hideDescription={config.hideDescription}
+                  imageAspect={config.imageAspect}
+                />
+              ))}
             </div>
           </>
         ) : (

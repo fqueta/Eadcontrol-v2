@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { LayoutGrid, List, GraduationCap } from 'lucide-react';
 import { cn } from '@/lib/utils'; // Make sure utils is imported for cn
 import { DynamicPrice } from '@/components/common/DynamicPrice';
+import { CatalogCard } from '@/components/common/CatalogCard';
 
 /**
  * CoursesGrid
@@ -163,135 +164,33 @@ export default function CoursesGrid() {
           "gap-8 pb-12",
           viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "flex flex-col"
       )}>
-        {items.map((c, idx) => {
+        {items.map((c) => {
           const title = c.titulo || c.nome || `Curso ${c.id}`;
           const desc = c.descricao_curso || '';
           const cover = String((c as any)?.config?.cover?.url || '').trim();
           const price = c.valor || '';
-          
-          if (viewMode === 'list') {
-              return (
-                <Card 
-                  key={c.id}
-                  className="group relative overflow-hidden border border-slate-200/50 dark:border-white/5 rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm hover:shadow-2xl hover:shadow-primary/5 hover:border-primary/20 transition-all duration-500 cursor-pointer flex flex-col md:flex-row shadow-sm animate-in fade-in slide-in-from-bottom duration-700 fill-mode-both"
-                  style={{ animationDelay: `${idx * 50}ms` }}
-                  onClick={() => onOpenCourse(c)}
-                >
-                    <div className="relative w-full md:w-72 h-48 md:h-auto shrink-0 overflow-hidden">
-                        {cover ? (
-                          <img
-                            src={cover}
-                            alt={title}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
-                            <GraduationCap className="w-12 h-12 text-primary/40" />
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    </div>
-                    <div className="flex-1 flex flex-col justify-between p-8">
-                        <div className="space-y-4">
-                             <div className="flex justify-between items-start gap-4">
-                                <div>
-                                  <h3 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-primary transition-colors duration-300">
-                                     {title}
-                                  </h3>
-                                  <div className="flex items-center mt-2 text-xs font-semibold uppercase tracking-widest text-primary/80">
-                                    <span className="w-8 h-px bg-current mr-2 opacity-30" />
-                                    Certificado Incluso
-                                  </div>
-                                </div>
-                                {(price) && (
-                                  <div className="bg-slate-50 dark:bg-white/5 px-4 py-1.5 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm text-right shrink-0">
-                                    <DynamicPrice price={price} installments={c.parcelas} installmentValue={c.valor_parcela} align="right" />
-                                  </div>
-                                )}
-                             </div>
-                             <p className="text-muted-foreground leading-relaxed line-clamp-2 md:line-clamp-3 text-base">
-                                {desc}
-                             </p>
-                        </div>
-                        <div className="mt-8 flex justify-end">
-                             <Button 
-                                onClick={(e) => { e.stopPropagation(); onOpenCourse(c); }} 
-                                className="h-12 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-[1.03] active:scale-[0.98] transition-all px-8 font-bold shadow-lg"
-                             >
-                                Detalhes do Curso
-                             </Button>
-                        </div>
-                    </div>
-                </Card>
-              );
-          }
+          const slug = (c as any).slug || (c as any).token || c.id;
+          const linkUrl = `/cursos/${slug}/detalhes`;
 
           return (
-            <Card
+            <CatalogCard
               key={c.id}
-              className="group relative h-full flex flex-col overflow-hidden border border-slate-200/50 dark:border-white/5 rounded-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-md hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2 transition-all duration-500 cursor-pointer shadow-sm animate-in fade-in zoom-in-95 duration-700 fill-mode-both"
-              style={{ animationDelay: `${idx * 50}ms` }}
-              onClick={() => onOpenCourse(c)}
-            >
-              {price && badgePosition !== 'hidden' && badgePosition !== 'bottom-left' && (
-                 <div className={`absolute ${badgePositionClasses[badgePosition] || 'top-4 right-4'} bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-5 py-3 rounded-2xl font-black text-primary shadow-lg border border-white/20 z-10 min-w-[150px]`}>
-                   <DynamicPrice price={price} installments={c.parcelas} installmentValue={c.valor_parcela} align="center" badgeStyle={true} />
-                 </div>
-              )}
-              <div className="relative w-full h-56 overflow-hidden shrink-0">
-                {cover ? (
-                  <img
-                    src={cover}
-                    alt={title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">
-                    <GraduationCap className="w-16 h-16 text-primary/40" />
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500" />
-              </div>
-
-              <CardHeader className="p-8 pb-4 flex-grow space-y-3">
-                <CardTitle className="text-2xl font-black tracking-tight leading-tight line-clamp-2 min-h-[4rem] text-slate-900 dark:text-slate-100 group-hover:text-primary transition-colors duration-300">
-                  {title}
-                </CardTitle>
-                <CardDescription className="text-base text-muted-foreground line-clamp-2 leading-relaxed h-12">
-                  {desc}
-                </CardDescription>
-              </CardHeader>
-              
-              <CardContent className="p-8 pt-2 mt-auto">
-                <div className="pt-6 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
-                    {badgePosition === 'bottom-left' ? (
-                      <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-5 py-3 rounded-2xl font-black text-primary border border-slate-200 dark:border-white/10 shadow-sm text-sm min-w-[150px]">
-                        <DynamicPrice price={price} installments={c.parcelas} installmentValue={c.valor_parcela} align="center" badgeStyle={true} />
-                      </div>
-                    ) : badgePosition !== 'bottom-center' ? (
-                      <div className="flex -space-x-2">
-                        {[1, 2, 3].map(i => (
-                          <div key={i} className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 flex items-center justify-center overflow-hidden">
-                            <img src={`https://i.pravatar.cc/100?u=${i + idx}`} className="w-full h-full object-cover grayscale opacity-50" alt="aluno" />
-                          </div>
-                        ))}
-                        <div className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-muted-foreground mr-2">
-                          +
-                        </div>
-                      </div>
-                    ) : (
-                      <div /> // Espaçador vazio para manter o botão alinhado à direita
-                    )}
-                   <Button 
-                    onClick={(e) => { e.stopPropagation(); onOpenCourse(c); }} 
-                    className="h-10 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all px-6 font-bold"
-                    size="sm"
-                  >
-                    Detalhes
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+              type="course"
+              id={c.id}
+              title={title}
+              description={desc}
+              image={cover}
+              metaDuration={c.duracao ? `${c.duracao}${c.unidade_duracao || 'h'}` : undefined}
+              metaPopular={c.destaque === 's' ? 'Popular' : 'Certificado Incluso'}
+              isFeatured={c.destaque === 's'}
+              price={price}
+              installments={c.parcelas}
+              installmentValue={c.valor_parcela}
+              priceLabel="Investimento"
+              buttonText={viewMode === 'list' ? 'Detalhes do Curso' : 'Detalhes'}
+              linkUrl={linkUrl}
+              variant={viewMode === 'list' ? 'horizontal' : 'grid'}
+            />
           );
         })}
       </div>

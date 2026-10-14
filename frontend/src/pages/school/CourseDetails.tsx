@@ -19,6 +19,7 @@ import { useEnrollmentsList } from '@/hooks/enrollments';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { phoneApplyMask } from '@/lib/masks/phone-apply-mask';
 import { DynamicPrice } from '@/components/common/DynamicPrice';
+import { CatalogCard } from '@/components/common/CatalogCard';
 
 
 import { ValidationConflictModal } from '@/components/modals/ValidationConflictModal';
@@ -776,62 +777,23 @@ export default function CourseDetails() {
                     )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {products.map((product: any) => (
-                      <div
+                      <CatalogCard
                         key={product.id}
-                        className="group relative product-card-themed"
-                      >
-                        {permissionId < 3 && (
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); navigate(`/admin/products/${product.id}/edit`); }}
-                            className="absolute bottom-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg bg-slate-900/80 text-white hover:bg-slate-700 shadow-md"
-                            title="Editar produto"
-                          >
-                            <Edit className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                        <div className="aspect-video w-full bg-slate-100 dark:bg-slate-900 overflow-hidden">
-                          {product.image ? (
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-700">
-                              <span className="text-3xl">🛍️</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="p-4">
-                        <div className="font-semibold text-sm text-slate-900 dark:text-white mb-1 line-clamp-2">
-                          {product.name}
-                        </div>
-                        {product.categoryData?.name && (
-                          <span className="category-badge-themed">
-                            {product.categoryData.name}
-                          </span>
-                        )}
-                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3 min-h-[2rem]">
-                          {product.description || 'Sem descrição'}
-                        </p>
-                        <div className="flex items-center justify-between mt-auto">
-                          <span className="text-lg font-bold text-primary">
-                            {product.salePrice
-                              ? `R$ ${product.salePrice}`
-                              : 'Consultar'}
-                          </span>
-                          {product.stock !== null && product.stock !== undefined && (
-                            <span className="text-[10px] text-slate-400">
-                              {product.stock > 0 ? `${product.stock} em estoque` : 'Indisponível'}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                        type="product"
+                        id={product.id}
+                        title={product.name || 'Produto sem título'}
+                        description={product.description}
+                        image={product.image}
+                        category={product.categoryData?.name}
+                        price={product.salePrice}
+                        installments={product.parcelas}
+                        installmentValue={product.valor_parcela}
+                        priceLabel="Valor"
+                        buttonText="Detalhes"
+                        linkUrl={`/produtos/${product.slug}`}
+                      />
                     ))}
                   </div>
                 )}

@@ -29,7 +29,8 @@ export function DynamicPrice({
   };
 
   const parsedInstallments = installments ? parseInt(String(installments), 10) : 0;
-  const hasInstallments = parsedInstallments > 1 && installmentValue && String(installmentValue).trim() !== '0' && String(installmentValue).trim() !== '0,00';
+  const numInstallment = installmentValue ? Number(String(installmentValue).replace(',', '.')) : 0;
+  const hasInstallments = parsedInstallments > 1 && !isNaN(numInstallment) && numInstallment > 0;
 
   const formattedFullPrice = formatPrice(price);
   const formattedInstallmentValue = formatPrice(installmentValue);
