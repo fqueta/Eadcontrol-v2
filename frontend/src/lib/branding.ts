@@ -243,6 +243,8 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
       const description = String(dataObj['app_institution_description'] || '').trim();
       const urlInst = String(dataObj['app_institution_url'] || '').trim();
       const whatsapp = String(dataObj['app_whatsapp'] || '').trim();
+      const whatsappFloatEnabled = getVal('app_whatsapp_float_enabled');
+      const whatsappFloatMsg = String(dataObj['app_whatsapp_float_msg'] || '').trim();
       const theme = String(dataObj['app_theme'] || '').trim();
       const fontFamily = String(dataObj['app_font_family'] || '').trim();
       const heroTitle = String(dataObj['home_hero_title'] || '').trim();
@@ -297,6 +299,8 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
         setVal('app_institution_description', description, '__APP_INSTITUTION_DESCRIPTION__');
         setVal('app_institution_url', urlInst, '__APP_INSTITUTION_URL__');
         setVal('app_whatsapp', whatsapp, '__APP_WHATSAPP__');
+        if (whatsappFloatEnabled) setVal('app_whatsapp_float_enabled', whatsappFloatEnabled, '__APP_WHATSAPP_FLOAT_ENABLED__');
+        setVal('app_whatsapp_float_msg', whatsappFloatMsg, '__APP_WHATSAPP_FLOAT_MSG__');
         setVal('app_theme', theme, '__APP_THEME__');
         setVal('app_font_family', fontFamily, '__APP_FONT_FAMILY__');
         setVal('home_hero_title', heroTitle, '__HOME_HERO_TITLE__');
@@ -696,4 +700,42 @@ export function getInstitutionWhatsApp(defaultNumber: string = ''): string {
   const envVal = (import.meta as any)?.env?.VITE_APP_WHATSAPP;
   if (typeof envVal === 'string' && envVal.trim() !== '') return envVal.trim();
   return defaultNumber;
+}
+
+/**
+ * getWhatsAppFloatEnabled
+ * pt-BR: Se o botão flutuante de WhatsApp está ativo (default true quando há número).
+ * en-US: Whether the floating WhatsApp button is enabled.
+ */
+export function getWhatsAppFloatEnabled(defaultEnabled: boolean = true): boolean {
+  try {
+    const v = localStorage.getItem('app_whatsapp_float_enabled');
+    if (v !== null && v !== undefined && String(v).trim() !== '') {
+      const s = String(v).trim().toLowerCase();
+      return s === 'true' || s === '1' || s === 's' || s === 'sim';
+    }
+  } catch {}
+  const anyWin = window as any;
+  const w = anyWin?.__APP_WHATSAPP_FLOAT_ENABLED__;
+  if (typeof w === 'string' && w.trim() !== '') {
+    const s = w.trim().toLowerCase();
+    return s === 'true' || s === '1' || s === 's' || s === 'sim';
+  }
+  return defaultEnabled;
+}
+
+/**
+ * getWhatsAppFloatMessage
+ * pt-BR: Mensagem padrão enviada ao abrir o WhatsApp pelo botão flutuante.
+ * en-US: Default message sent when opening WhatsApp via floating button.
+ */
+export function getWhatsAppFloatMessage(defaultMsg: string = 'Olá! Vim pelo site e gostaria de atendimento.'): string {
+  try {
+    const v = localStorage.getItem('app_whatsapp_float_msg');
+    if (v && v.trim() !== '') return v.trim();
+  } catch {}
+  const anyWin = window as any;
+  const w = anyWin?.__APP_WHATSAPP_FLOAT_MSG__;
+  if (typeof w === 'string' && w.trim() !== '') return w.trim();
+  return defaultMsg;
 }

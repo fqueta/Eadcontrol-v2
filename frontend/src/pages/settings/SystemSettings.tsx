@@ -8,9 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Settings, Save, Palette, Link, Image as ImageIcon, Building2, ShieldCheck, Layers, Plus, MonitorPlay, Clock, RefreshCw, Sparkles } from "lucide-react";
+import { Settings, Save, Palette, Link, Image as ImageIcon, Building2, ShieldCheck, Layers, Plus, MonitorPlay, Clock, RefreshCw, Sparkles, MessageCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription, getInstitutionUrl, getAppVersion, syncBrandingToMetaTags } from "@/lib/branding";
+import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription, getInstitutionUrl, getAppVersion, getWhatsAppFloatEnabled, getWhatsAppFloatMessage, syncBrandingToMetaTags } from "@/lib/branding";
 import { predefinedThemes } from "@/lib/themes";
 import { systemSettingsService, AdvancedSystemSettings } from "@/services/systemSettingsService";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -255,6 +255,13 @@ export default function SystemSettings() {
     } catch { return ''; }
   });
   const [appVersionState, setAppVersionState] = useState<string>(() => getAppVersion('1.0.0'));
+  /**
+   * Botão flutuante WhatsApp
+   * pt-BR: Ativo + mensagem padrão do botão global da SPA.
+   * en-US: Floating WhatsApp button enabled flag + default message.
+   */
+  const [whatsappFloatEnabled, setWhatsappFloatEnabled] = useState<boolean>(() => getWhatsAppFloatEnabled(true));
+  const [whatsappFloatMsg, setWhatsappFloatMsg] = useState<string>(() => getWhatsAppFloatMessage('Olá! Vim pelo site e gostaria de atendimento.'));
 
   /**
    * hydrateBrandingFromApiOptions
@@ -418,6 +425,23 @@ export default function SystemSettings() {
         (window as any).__APP_WHATSAPP__ = valWhatsapp;
       }
 
+      const optFloatEnabled = getOptByKeys(['app_whatsapp_float_enabled']);
+      const valFloatEnabled = (optFloatEnabled && (optFloatEnabled.value ?? '')) || '';
+      if (valFloatEnabled !== '') {
+        const enabled = ['true', '1', 's', 'sim'].includes(String(valFloatEnabled).trim().toLowerCase());
+        setWhatsappFloatEnabled(enabled);
+        try { localStorage.setItem('app_whatsapp_float_enabled', enabled ? 'true' : 'false'); } catch {}
+        (window as any).__APP_WHATSAPP_FLOAT_ENABLED__ = enabled ? 'true' : 'false';
+      }
+
+      const optFloatMsg = getOptByKeys(['app_whatsapp_float_msg']);
+      const valFloatMsg = (optFloatMsg && (optFloatMsg.value ?? '')) || '';
+      if (valFloatMsg) {
+        setWhatsappFloatMsg(valFloatMsg);
+        try { localStorage.setItem('app_whatsapp_float_msg', valFloatMsg); } catch {}
+        (window as any).__APP_WHATSAPP_FLOAT_MSG__ = valFloatMsg;
+      }
+
       const optVersion = getOptByKeys(['app_version']);
       const valVersion = (optVersion && (optVersion.value ?? '')) || '';
       if (valVersion && valVersion !== appVersionState) {
@@ -524,6 +548,38 @@ export default function SystemSettings() {
       toast.success('Nome da instituição salvo com sucesso.');
     } catch (error: any) {
       toast.error(`Falha ao salvar nome: ${error?.message || 'erro desconhecido'}`);
+    }
+  }
+
+  /**
+   * handleSaveWhatsAppFloat
+   * pt-BR: Persiste config do botão flutuante de WhatsApp (ativo + mensagem).
+   * en-US: Persists floating WhatsApp button config (enabled + message).
+   */
+  async function handleSaveWhatsAppFloat() {
+    try {
+      setIsLoading(true);
+      const enabledStr = whatsappFloatEnabled ? 'true' : 'false';
+      const msg = (whatsappFloatMsg || '').trim();
+      try { localStorage.setItem('app_whatsapp_float_enabled', enabledStr); } catch {}
+      try { localStorage.setItem('app_whatsapp_float_msg', msg); } catch {}
+      const anyWin = window as any;
+      anyWin.__APP_WHATSAPP_FLOAT_ENABLED__ = enabledStr;
+      anyWin.__APP_WHATSAPP_FLOAT_MSG__ = msg;
+      try {
+        window.dispatchEvent(new Event('branding:updated'));
+        window.dispatchEvent(new Event('storage'));
+      } catch {}
+      const ok = await saveMultipleOptions({
+        app_whatsapp_float_enabled: enabledStr,
+        app_whatsapp_float_msg: msg,
+      });
+      if (ok) toast.success('Botão de WhatsApp salvo com sucesso.');
+      else toast.error('Erro ao salvar botão de WhatsApp no servidor.');
+    } catch (error: any) {
+      toast.error(`Falha ao salvar WhatsApp: ${error?.message || 'erro desconhecido'}`);
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -1535,6 +1591,61 @@ export default function SystemSettings() {
               >
                 <Save className="h-4 w-4" />
                 Salvar Instituição
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card - Botão Flutuante WhatsApp */}
+        <Card className="border-none shadow-2xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl overflow-hidden mt-8">
+          <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-green-500/10 flex items-center justify-center text-green-600 shadow-sm">
+                <MessageCircle className="h-6 w-6" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-black tracking-tight">Botão Flutuante WhatsApp</CardTitle>
+                <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mt-1">
+                  Atalho fixo no canto da tela para contato rápido
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4 p-8">
+            <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 dark:border-slate-800 p-4">
+              <div>
+                <Label htmlFor="whatsapp_float_enabled">Exibir botão flutuante</Label>
+                <p className="text-sm text-muted-foreground">
+                  Quando ativo, exibe o ícone do WhatsApp fixo no canto inferior direito (fora do /admin).
+                </p>
+              </div>
+              <Switch
+                id="whatsapp_float_enabled"
+                checked={whatsappFloatEnabled}
+                onCheckedChange={setWhatsappFloatEnabled}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="whatsapp_float_msg">Mensagem padrão</Label>
+              <Textarea
+                id="whatsapp_float_msg"
+                value={whatsappFloatMsg}
+                onChange={(e) => setWhatsappFloatMsg(e.target.value)}
+                placeholder="Olá! Vim pelo site e gostaria de atendimento."
+                rows={3}
+              />
+              <p className="text-sm text-muted-foreground">
+                Texto enviado junto ao abrir o WhatsApp. Usa o número de "WhatsApp da Empresa" acima.
+              </p>
+            </div>
+            <div className="flex justify-end pt-6 border-t border-slate-100 dark:border-slate-800">
+              <Button
+                onClick={handleSaveWhatsAppFloat}
+                disabled={isLoading}
+                className="h-11 px-6 rounded-xl bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white font-bold flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-slate-900/10"
+              >
+                <Save className="h-4 w-4" />
+                Salvar WhatsApp
               </Button>
             </div>
           </CardContent>

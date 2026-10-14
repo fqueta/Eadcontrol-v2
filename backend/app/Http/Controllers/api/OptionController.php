@@ -64,6 +64,8 @@ class OptionController extends Controller
             'app_top_menu',
             'app_dark_mode_default',
             'app_whatsapp',
+            'app_whatsapp_float_enabled',
+            'app_whatsapp_float_msg',
             'app_theme',
             'app_font_family',
             'app_layout_style',
