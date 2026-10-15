@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ASPECT_RATIO_SPECS } from '@/lib/branding';
 
 const optionsService = createGenericService('/options');
 
@@ -31,6 +32,7 @@ export interface FeaturedCoursesConfig {
   hideCategory?: boolean;
   hideDescription?: boolean;
   imageAspect?: string;
+  imageFit?: 'cover' | 'contain';
 }
 
 const DEFAULT_CONFIG: FeaturedCoursesConfig = {
@@ -51,7 +53,8 @@ const DEFAULT_CONFIG: FeaturedCoursesConfig = {
   viewAllText: "Ver todos os cursos",
   hideCategory: false,
   hideDescription: false,
-  imageAspect: "video"
+  imageAspect: "video",
+  imageFit: "cover"
 };
 
 interface Props {
@@ -303,7 +306,7 @@ export function FeaturedCoursesEditor({ onConfigChange, currentConfig }: Props) 
                 />
               </div>
 
-              <div className="space-y-1 pt-2 border-t">
+              <div className="space-y-1.5 pt-2 border-t">
                 <Label className="text-[10px] font-black uppercase text-slate-400">Formato / Proporção da Imagem</Label>
                 <Select
                   value={config.imageAspect || 'video'}
@@ -313,11 +316,67 @@ export function FeaturedCoursesEditor({ onConfigChange, currentConfig }: Props) 
                     <SelectValue placeholder="Selecione o formato" />
                   </SelectTrigger>
                   <SelectContent className="z-[110]">
-                    <SelectItem value="video">Retangular Deitado (16:9 - Padrão)</SelectItem>
-                    <SelectItem value="4/3">Retangular Clássico (4:3)</SelectItem>
-                    <SelectItem value="square">Quadrado (1:1)</SelectItem>
-                    <SelectItem value="portrait">Retângulo em Pé / Retrato (3:4)</SelectItem>
-                    <SelectItem value="tall">Retangular Vertical Alto (2:3)</SelectItem>
+                    <SelectItem value="video">
+                      <span>Retangular Deitado (16:9)</span>
+                      <span className="text-muted-foreground ml-1.5 font-mono text-[10px]">— 1280 × 720 px</span>
+                    </SelectItem>
+                    <SelectItem value="4/3">
+                      <span>Retangular Clássico (4:3)</span>
+                      <span className="text-muted-foreground ml-1.5 font-mono text-[10px]">— 800 × 600 px</span>
+                    </SelectItem>
+                    <SelectItem value="square">
+                      <span>Quadrado (1:1)</span>
+                      <span className="text-muted-foreground ml-1.5 font-mono text-[10px]">— 800 × 800 px</span>
+                    </SelectItem>
+                    <SelectItem value="portrait">
+                      <span>Retângulo em Pé / Retrato (3:4)</span>
+                      <span className="text-muted-foreground ml-1.5 font-mono text-[10px]">— 900 × 1200 px</span>
+                    </SelectItem>
+                    <SelectItem value="tall">
+                      <span>Retangular Vertical Alto (2:3)</span>
+                      <span className="text-muted-foreground ml-1.5 font-mono text-[10px]">— 800 × 1200 px</span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Resolução recomendada web */}
+                {(() => {
+                  const spec = ASPECT_RATIO_SPECS[config.imageAspect || 'video'] || ASPECT_RATIO_SPECS.video;
+                  return (
+                    <div className="p-2 rounded-lg bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/40 text-[10px] space-y-0.5">
+                      <div className="flex items-center justify-between font-bold text-blue-950 dark:text-blue-200">
+                        <span>Padrão Web:</span>
+                        <span className="font-mono text-blue-800 dark:text-blue-200">{spec.recommendedFull}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Ajuste / Preenchimento da Imagem */}
+              <div className="space-y-1.5 pt-2 border-t">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px] font-black uppercase text-slate-400">Preenchimento da Imagem</Label>
+                  <span className="text-[9px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded border border-emerald-200/50">
+                    Sem Bordas Brancas
+                  </span>
+                </div>
+                <Select
+                  value={config.imageFit || 'cover'}
+                  onValueChange={(v) => handleChange('imageFit', v)}
+                >
+                  <SelectTrigger className="h-9 font-medium text-xs">
+                    <SelectValue placeholder="Selecione o ajuste" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[110]">
+                    <SelectItem value="cover">
+                      <span className="font-semibold">Preencher todo o card (Cover)</span>
+                      <span className="text-muted-foreground ml-1 text-[10px]">— Sem áreas brancas</span>
+                    </SelectItem>
+                    <SelectItem value="contain">
+                      <span className="font-semibold">Ajustar imagem inteira (Contain)</span>
+                      <span className="text-muted-foreground ml-1 text-[10px]">— Mantém margens</span>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>

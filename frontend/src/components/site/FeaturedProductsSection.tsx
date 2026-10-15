@@ -205,6 +205,7 @@ export function FeaturedProductsSection() {
                   hideCategory={config.hideCategory}
                   hideDescription={config.hideDescription}
                   imageAspect={config.imageAspect}
+                  imageFit={config.imageFit}
                 />
               ))}
             </div>

@@ -420,12 +420,15 @@ export async function hydrateBrandingFromPublicApi({ persist = true }: { persist
             'app_products_hide_description',
             'app_card_image_aspect',
             'app_courses_image_aspect',
-            'app_products_image_aspect'
+            'app_products_image_aspect',
+            'app_card_image_fit',
+            'app_courses_image_fit',
+            'app_products_image_fit'
           ];
           for (const k of cardKeys) {
             if (dataObj[k] !== undefined && dataObj[k] !== null) {
               const strVal = String(dataObj[k]).trim();
-              if (k.includes('aspect')) {
+              if (k.includes('aspect') || k.includes('fit')) {
                 localStorage.setItem(k, strVal);
               } else {
                 const val = strVal === 'true' || strVal === '1' || strVal === 's' ? 'true' : 'false';
@@ -824,3 +827,77 @@ export function getCardImageAspect(type?: 'course' | 'product'): string {
   } catch {}
   return 'video';
 }
+
+/**
+ * getCardImageFit
+ * pt-BR: Obtém o modo de preenchimento/ajuste da imagem nos cards:
+ *        'cover' (preenche todo o card sem faixas brancas) ou
+ *        'contain' (contém imagem inteira, podendo gerar margens)
+ */
+export function getCardImageFit(type?: 'course' | 'product'): 'cover' | 'contain' {
+  try {
+    if (type) {
+      const typeVal = localStorage.getItem(`app_${type}s_image_fit`);
+      if (typeVal === 'contain' || typeVal === 'cover') return typeVal;
+    }
+    const globalVal = localStorage.getItem('app_card_image_fit');
+    if (globalVal === 'contain' || globalVal === 'cover') return globalVal;
+  } catch {}
+  return 'cover';
+}
+
+/**
+ * Especificação e recomendações de resolução de imagem para internet por proporção
+ */
+export interface ImageAspectResolutionInfo {
+  aspect: string;
+  label: string;
+  ratio: string;
+  recommendedResolution: string;
+  recommendedFull: string;
+  description: string;
+}
+
+export const ASPECT_RATIO_SPECS: Record<string, ImageAspectResolutionInfo> = {
+  video: {
+    aspect: 'video',
+    label: 'Retangular Deitado (16:9)',
+    ratio: '16:9',
+    recommendedResolution: '1280 × 720 px',
+    recommendedFull: '1280 × 720 px (ou 1920 × 1080 px)',
+    description: 'Padrão YouTube, web e vídeos. Ideal para capas de cursos e banners horizontais.',
+  },
+  '4/3': {
+    aspect: '4/3',
+    label: 'Retangular Clássico (4:3)',
+    ratio: '4:3',
+    recommendedResolution: '800 × 600 px',
+    recommendedFull: '800 × 600 px (ou 1200 × 900 px)',
+    description: 'Padrão fotográfico tradicional e apresentações.',
+  },
+  square: {
+    aspect: 'square',
+    label: 'Quadrado (1:1)',
+    ratio: '1:1',
+    recommendedResolution: '800 × 800 px',
+    recommendedFull: '800 × 800 px (ou 1080 × 1080 px)',
+    description: 'Padrão Instagram e lojas virtuais. Ideal para fotos de produtos em fundo neutro.',
+  },
+  portrait: {
+    aspect: 'portrait',
+    label: 'Retângulo em Pé / Retrato (3:4)',
+    ratio: '3:4',
+    recommendedResolution: '900 × 1200 px',
+    recommendedFull: '900 × 1200 px (ou 600 × 800 px)',
+    description: 'Padrão catálogo e moda. Ideal para visualização vertical em smartphones e e-commerce.',
+  },
+  tall: {
+    aspect: 'tall',
+    label: 'Retangular Vertical Alto (2:3)',
+    ratio: '2:3',
+    recommendedResolution: '800 × 1200 px',
+    recommendedFull: '800 × 1200 px (ou 1000 × 1500 px)',
+    description: 'Padrão cartaz / poster e Pinterest. Proporção vertical bem alongada.',
+  },
+};
+

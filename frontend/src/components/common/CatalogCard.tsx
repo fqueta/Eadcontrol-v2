@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { GraduationCap, ShoppingBag, Clock, Users, ArrowRight } from 'lucide-react';
 import { DynamicPrice } from './DynamicPrice';
-import { getCardHideCategory, getCardHideDescription, getCardImageAspect } from '@/lib/branding';
+import { getCardHideCategory, getCardHideDescription, getCardImageAspect, getCardImageFit } from '@/lib/branding';
 
 export interface CatalogCardProps {
   type: 'course' | 'product';
@@ -26,6 +26,7 @@ export interface CatalogCardProps {
   hideCategory?: boolean;
   hideDescription?: boolean;
   imageAspect?: 'video' | '16/9' | '4/3' | 'square' | '1/1' | 'portrait' | '3/4' | 'tall' | '2/3' | string;
+  imageFit?: 'cover' | 'contain';
   variant?: 'grid' | 'horizontal';
   className?: string;
   onActionClick?: () => void;
@@ -58,6 +59,7 @@ export function CatalogCard({
   hideCategory,
   hideDescription,
   imageAspect,
+  imageFit,
   variant = 'grid',
   className = '',
   onActionClick,
@@ -86,6 +88,9 @@ export function CatalogCard({
         return 'aspect-video';
     }
   })();
+
+  // Evaluate image fit with priority: prop -> global branding setting (defaults to 'cover' for complete filling)
+  const effectiveImageFit = imageFit || getCardImageFit(type);
 
   // Evaluate hide flags with priority: prop -> global branding setting
   const effectiveHideCategory = hideCategory !== undefined 
@@ -128,7 +133,7 @@ export function CatalogCard({
               loading="lazy"
               decoding="async"
               onError={() => setImgError(true)}
-              className={`w-full h-full ${type === 'product' ? 'object-contain p-3' : 'object-cover'} transition-transform duration-500 group-hover:scale-105`}
+              className={`w-full h-full ${effectiveImageFit === 'contain' ? 'object-contain p-2.5' : 'object-cover'} transition-transform duration-500 group-hover:scale-105`}
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center min-h-[160px]">
@@ -222,7 +227,7 @@ export function CatalogCard({
             loading="lazy"
             decoding="async"
             onError={() => setImgError(true)}
-            className={`w-full h-full ${type === 'product' ? 'object-contain p-3' : 'object-cover'} transition-transform duration-500 group-hover:scale-105`}
+            className={`w-full h-full ${effectiveImageFit === 'contain' ? 'object-contain p-2.5' : 'object-cover'} transition-transform duration-500 group-hover:scale-105`}
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center">

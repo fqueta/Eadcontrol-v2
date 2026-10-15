@@ -104,6 +104,9 @@ class OptionController extends Controller
             'app_card_image_aspect',
             'app_courses_image_aspect',
             'app_products_image_aspect',
+            'app_card_image_fit',
+            'app_courses_image_fit',
+            'app_products_image_fit',
             // SEO home overrides (tenant-specific)
             'seo_home_title',
             'seo_home_description',

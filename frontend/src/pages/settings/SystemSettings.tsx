@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Settings, Save, Palette, Link, Image as ImageIcon, Building2, ShieldCheck, Layers, Plus, MonitorPlay, Clock, RefreshCw, Sparkles, MessageCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription, getInstitutionUrl, getAppVersion, getWhatsAppFloatEnabled, getWhatsAppFloatMessage, syncBrandingToMetaTags } from "@/lib/branding";
+import { getInstitutionName, getInstitutionSlogan, getInstitutionDescription, getInstitutionUrl, getAppVersion, getWhatsAppFloatEnabled, getWhatsAppFloatMessage, syncBrandingToMetaTags, ASPECT_RATIO_SPECS } from "@/lib/branding";
 import { predefinedThemes } from "@/lib/themes";
 import { systemSettingsService, AdvancedSystemSettings } from "@/services/systemSettingsService";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -149,6 +149,8 @@ export default function SystemSettings() {
       productsHideDescription: localStorage.getItem('app_products_hide_description') === 'true',
       coursesImageAspect: localStorage.getItem('app_courses_image_aspect') || 'video',
       productsImageAspect: localStorage.getItem('app_products_image_aspect') || 'video',
+      coursesImageFit: (localStorage.getItem('app_courses_image_fit') as 'cover' | 'contain') || 'cover',
+      productsImageFit: (localStorage.getItem('app_products_image_fit') as 'cover' | 'contain') || 'cover',
     };
   });
 
@@ -347,6 +349,8 @@ export default function SystemSettings() {
         const optProductsHideDesc = getOpt('app_products_hide_description');
         const optCoursesAspect = getOpt('app_courses_image_aspect');
         const optProductsAspect = getOpt('app_products_image_aspect');
+        const optCoursesFit = getOpt('app_courses_image_fit');
+        const optProductsFit = getOpt('app_products_image_fit');
 
         if (optCardHideCat && (optCardHideCat.value === 'true') !== next.cardHideCategory) { next.cardHideCategory = optCardHideCat.value === 'true'; changed = true; }
         if (optCardHideDesc && (optCardHideDesc.value === 'true') !== next.cardHideDescription) { next.cardHideDescription = optCardHideDesc.value === 'true'; changed = true; }
@@ -356,6 +360,8 @@ export default function SystemSettings() {
         if (optProductsHideDesc && (optProductsHideDesc.value === 'true') !== next.productsHideDescription) { next.productsHideDescription = optProductsHideDesc.value === 'true'; changed = true; }
         if (optCoursesAspect && optCoursesAspect.value && optCoursesAspect.value !== next.coursesImageAspect) { next.coursesImageAspect = optCoursesAspect.value; changed = true; }
         if (optProductsAspect && optProductsAspect.value && optProductsAspect.value !== next.productsImageAspect) { next.productsImageAspect = optProductsAspect.value; changed = true; }
+        if (optCoursesFit && optCoursesFit.value && optCoursesFit.value !== next.coursesImageFit) { next.coursesImageFit = optCoursesFit.value as any; changed = true; }
+        if (optProductsFit && optProductsFit.value && optProductsFit.value !== next.productsImageFit) { next.productsImageFit = optProductsFit.value as any; changed = true; }
 
         if (changed) {
           localStorage.setItem('appearanceSettings', JSON.stringify(next));
@@ -861,6 +867,8 @@ export default function SystemSettings() {
     localStorage.setItem('app_products_hide_description', appearanceSettings.productsHideDescription ? 'true' : 'false');
     localStorage.setItem('app_courses_image_aspect', appearanceSettings.coursesImageAspect || 'video');
     localStorage.setItem('app_products_image_aspect', appearanceSettings.productsImageAspect || 'video');
+    localStorage.setItem('app_courses_image_fit', appearanceSettings.coursesImageFit || 'cover');
+    localStorage.setItem('app_products_image_fit', appearanceSettings.productsImageFit || 'cover');
     if (siteFont) localStorage.setItem('app_font_family', siteFont);
     applyGlobalTheme();
     try { window.dispatchEvent(new Event('storage')); } catch {}
@@ -887,6 +895,8 @@ export default function SystemSettings() {
         app_products_hide_description: appearanceSettings.productsHideDescription ? 'true' : 'false',
         app_courses_image_aspect: appearanceSettings.coursesImageAspect || 'video',
         app_products_image_aspect: appearanceSettings.productsImageAspect || 'video',
+        app_courses_image_fit: appearanceSettings.coursesImageFit || 'cover',
+        app_products_image_fit: appearanceSettings.productsImageFit || 'cover',
       };
       if (siteFont) payload.app_font_family = siteFont;
       
@@ -1579,7 +1589,7 @@ export default function SystemSettings() {
                         onCheckedChange={(value) => handleAppearanceChange('coursesHideDescription', value)}
                       />
                     </div>
-                    <div className="space-y-1.5 pt-2 border-t border-slate-200/50 dark:border-slate-800/50">
+                    <div className="space-y-2 pt-2 border-t border-slate-200/50 dark:border-slate-800/50">
                       <Label htmlFor="coursesImageAspect" className="text-xs font-bold">Formato / Proporção da Imagem</Label>
                       <Select
                         value={appearanceSettings.coursesImageAspect || 'video'}
@@ -1589,14 +1599,77 @@ export default function SystemSettings() {
                           <SelectValue placeholder="Selecione o formato" />
                         </SelectTrigger>
                         <SelectContent className="z-[110]">
-                          <SelectItem value="video">Retangular Deitado (16:9 - Padrão)</SelectItem>
-                          <SelectItem value="4/3">Retangular Clássico (4:3)</SelectItem>
-                          <SelectItem value="square">Quadrado (1:1)</SelectItem>
-                          <SelectItem value="portrait">Retângulo em Pé / Retrato (3:4)</SelectItem>
-                          <SelectItem value="tall">Retangular Vertical Alto (2:3)</SelectItem>
+                          <SelectItem value="video">
+                            <span>Retangular Deitado (16:9 - Padrão)</span>
+                            <span className="text-muted-foreground ml-1.5 font-mono text-[11px]">— 1280 × 720 px</span>
+                          </SelectItem>
+                          <SelectItem value="4/3">
+                            <span>Retangular Clássico (4:3)</span>
+                            <span className="text-muted-foreground ml-1.5 font-mono text-[11px]">— 800 × 600 px</span>
+                          </SelectItem>
+                          <SelectItem value="square">
+                            <span>Quadrado (1:1)</span>
+                            <span className="text-muted-foreground ml-1.5 font-mono text-[11px]">— 800 × 800 px</span>
+                          </SelectItem>
+                          <SelectItem value="portrait">
+                            <span>Retângulo em Pé / Retrato (3:4)</span>
+                            <span className="text-muted-foreground ml-1.5 font-mono text-[11px]">— 900 × 1200 px</span>
+                          </SelectItem>
+                          <SelectItem value="tall">
+                            <span>Retangular Vertical Alto (2:3)</span>
+                            <span className="text-muted-foreground ml-1.5 font-mono text-[11px]">— 800 × 1200 px</span>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-[11px] text-muted-foreground">Define se a imagem do curso será retangular em pé, deitada ou quadrada</p>
+
+                      {/* Resolução de Internet Recomendada para a Proporção de Cursos */}
+                      {(() => {
+                        const spec = ASPECT_RATIO_SPECS[appearanceSettings.coursesImageAspect || 'video'] || ASPECT_RATIO_SPECS.video;
+                        return (
+                          <div className="p-2.5 rounded-lg bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/70 dark:border-blue-900/50 text-[11px] space-y-1">
+                            <div className="flex items-center justify-between font-bold text-blue-950 dark:text-blue-200">
+                              <span className="text-[10px] uppercase tracking-wider">Resolução Web Recomendada:</span>
+                              <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/80 text-blue-800 dark:text-blue-200 font-mono font-bold text-[10px]">
+                                {spec.recommendedFull}
+                              </span>
+                            </div>
+                            <p className="text-blue-700/90 dark:text-blue-300/80 text-[10px] leading-tight">
+                              {spec.description}
+                            </p>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Ajuste / Preenchimento da Imagem de Cursos */}
+                    <div className="space-y-1.5 pt-2 border-t border-slate-200/50 dark:border-slate-800/50">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="coursesImageFit" className="text-xs font-bold">Ajuste de Preenchimento da Imagem</Label>
+                        <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded border border-emerald-200/50">
+                          Sem Bordas Brancas
+                        </span>
+                      </div>
+                      <Select
+                        value={appearanceSettings.coursesImageFit || 'cover'}
+                        onValueChange={(value) => handleAppearanceChange('coursesImageFit', value)}
+                      >
+                        <SelectTrigger id="coursesImageFit" className="h-9 font-medium text-xs bg-white dark:bg-slate-800">
+                          <SelectValue placeholder="Selecione o ajuste" />
+                        </SelectTrigger>
+                        <SelectContent className="z-[110]">
+                          <SelectItem value="cover">
+                            <span className="font-semibold text-foreground">Preencher todo o card (Cover)</span>
+                            <span className="text-muted-foreground ml-1.5 text-[11px]">— Sem áreas brancas (Recomendado)</span>
+                          </SelectItem>
+                          <SelectItem value="contain">
+                            <span className="font-semibold text-foreground">Ajustar imagem inteira (Contain)</span>
+                            <span className="text-muted-foreground ml-1.5 text-[11px]">— Preserva bordas com margens</span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[11px] text-muted-foreground">
+                        <strong>Preencher todo o card:</strong> expande a imagem para cobrir 100% da área, eliminando faixas brancas mesmo se a foto for de outra proporção.
+                      </p>
                     </div>
                   </div>
 
@@ -1625,7 +1698,7 @@ export default function SystemSettings() {
                         onCheckedChange={(value) => handleAppearanceChange('productsHideDescription', value)}
                       />
                     </div>
-                    <div className="space-y-1.5 pt-2 border-t border-slate-200/50 dark:border-slate-800/50">
+                    <div className="space-y-2 pt-2 border-t border-slate-200/50 dark:border-slate-800/50">
                       <Label htmlFor="productsImageAspect" className="text-xs font-bold">Formato / Proporção da Imagem</Label>
                       <Select
                         value={appearanceSettings.productsImageAspect || 'video'}
@@ -1635,14 +1708,77 @@ export default function SystemSettings() {
                           <SelectValue placeholder="Selecione o formato" />
                         </SelectTrigger>
                         <SelectContent className="z-[110]">
-                          <SelectItem value="video">Retangular Deitado (16:9 - Padrão)</SelectItem>
-                          <SelectItem value="4/3">Retangular Clássico (4:3)</SelectItem>
-                          <SelectItem value="square">Quadrado (1:1)</SelectItem>
-                          <SelectItem value="portrait">Retângulo em Pé / Retrato (3:4)</SelectItem>
-                          <SelectItem value="tall">Retangular Vertical Alto (2:3)</SelectItem>
+                          <SelectItem value="video">
+                            <span>Retangular Deitado (16:9 - Padrão)</span>
+                            <span className="text-muted-foreground ml-1.5 font-mono text-[11px]">— 1280 × 720 px</span>
+                          </SelectItem>
+                          <SelectItem value="4/3">
+                            <span>Retangular Clássico (4:3)</span>
+                            <span className="text-muted-foreground ml-1.5 font-mono text-[11px]">— 800 × 600 px</span>
+                          </SelectItem>
+                          <SelectItem value="square">
+                            <span>Quadrado (1:1)</span>
+                            <span className="text-muted-foreground ml-1.5 font-mono text-[11px]">— 800 × 800 px</span>
+                          </SelectItem>
+                          <SelectItem value="portrait">
+                            <span>Retângulo em Pé / Retrato (3:4)</span>
+                            <span className="text-muted-foreground ml-1.5 font-mono text-[11px]">— 900 × 1200 px</span>
+                          </SelectItem>
+                          <SelectItem value="tall">
+                            <span>Retangular Vertical Alto (2:3)</span>
+                            <span className="text-muted-foreground ml-1.5 font-mono text-[11px]">— 800 × 1200 px</span>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-[11px] text-muted-foreground">Define se a foto do produto será retangular em pé, deitada ou quadrada</p>
+
+                      {/* Resolução de Internet Recomendada para a Proporção de Produtos */}
+                      {(() => {
+                        const spec = ASPECT_RATIO_SPECS[appearanceSettings.productsImageAspect || 'video'] || ASPECT_RATIO_SPECS.video;
+                        return (
+                          <div className="p-2.5 rounded-lg bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/70 dark:border-blue-900/50 text-[11px] space-y-1">
+                            <div className="flex items-center justify-between font-bold text-blue-950 dark:text-blue-200">
+                              <span className="text-[10px] uppercase tracking-wider">Resolução Web Recomendada:</span>
+                              <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/80 text-blue-800 dark:text-blue-200 font-mono font-bold text-[10px]">
+                                {spec.recommendedFull}
+                              </span>
+                            </div>
+                            <p className="text-blue-700/90 dark:text-blue-300/80 text-[10px] leading-tight">
+                              {spec.description}
+                            </p>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Ajuste / Preenchimento da Imagem de Produtos */}
+                    <div className="space-y-1.5 pt-2 border-t border-slate-200/50 dark:border-slate-800/50">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="productsImageFit" className="text-xs font-bold">Ajuste de Preenchimento da Imagem</Label>
+                        <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded border border-emerald-200/50">
+                          Sem Bordas Brancas
+                        </span>
+                      </div>
+                      <Select
+                        value={appearanceSettings.productsImageFit || 'cover'}
+                        onValueChange={(value) => handleAppearanceChange('productsImageFit', value)}
+                      >
+                        <SelectTrigger id="productsImageFit" className="h-9 font-medium text-xs bg-white dark:bg-slate-800">
+                          <SelectValue placeholder="Selecione o ajuste" />
+                        </SelectTrigger>
+                        <SelectContent className="z-[110]">
+                          <SelectItem value="cover">
+                            <span className="font-semibold text-foreground">Preencher todo o card (Cover)</span>
+                            <span className="text-muted-foreground ml-1.5 text-[11px]">— Sem áreas brancas (Recomendado)</span>
+                          </SelectItem>
+                          <SelectItem value="contain">
+                            <span className="font-semibold text-foreground">Ajustar imagem inteira (Contain)</span>
+                            <span className="text-muted-foreground ml-1.5 text-[11px]">— Preserva bordas com margens</span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[11px] text-muted-foreground">
+                        <strong>Preencher todo o card:</strong> expande a foto do produto para cobrir 100% da área do card, eliminando faixas brancas mesmo se a foto original for de banner ou formato diferente.
+                      </p>
                     </div>
                   </div>
                 </div>
