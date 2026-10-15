@@ -1,7 +1,7 @@
 import { Product, CreateProductInput, UpdateProductInput, ProductFilters, ProductRedemptionResponse } from '@/types/products';
 import { productsService, ProductListParams } from '@/services/productsService';
 import { useGenericApi } from './useGenericApi';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 
 /**
  * Função para obter os hooks de produtos
@@ -33,6 +33,41 @@ export function useProductsList(params?: ProductListParams, queryOptions?: any) 
     ...queryOptions
   };
   return api.useList(params, safeQueryOptions);
+}
+
+/**
+ * Hook para listagem de produtos com suporte a paginação infinita (scroll infinito)
+ */
+export function useInfiniteProductsList(params?: Omit<ProductListParams, 'page'>, queryOptions?: any) {
+  const safeQueryOptions = {
+    retry: (failureCount: number, error: any) => {
+      if (error?.status === 404 || (error?.status >= 400 && error?.status < 500)) {
+        return false;
+      }
+      return failureCount < 1;
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    ...queryOptions
+  };
+
+  return useInfiniteQuery({
+    queryKey: ['products', 'infinite', params || {}],
+    queryFn: ({ pageParam = 1 }) =>
+      productsService.listProducts({
+        ...params,
+        page: pageParam as number,
+        per_page: params?.per_page || 20,
+      }),
+    getNextPageParam: (lastPage: any) => {
+      const current = Number(lastPage?.current_page || lastPage?.meta?.current_page || 1);
+      const last = Number(lastPage?.last_page || lastPage?.meta?.last_page || 1);
+      return current < last ? current + 1 : undefined;
+    },
+    initialPageParam: 1,
+    ...safeQueryOptions
+  });
 }
 
 /**

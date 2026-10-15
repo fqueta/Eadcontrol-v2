@@ -126,7 +126,7 @@ class ProductController extends Controller
         //     return response()->json(['error' => 'Acesso negado'], 403);
         // }
 
-        $perPage = $request->input('per_page', 10);
+        $perPage = (int) $request->input('per_page', 20);
         $order_by = $request->input('order_by', 'created_at');
         $order = $request->input('order', 'desc');
 
@@ -134,6 +134,13 @@ class ProductController extends Controller
             ->orderBy($order_by, $order);
 
         // Filtros opcionais
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('post_title', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('post_name', 'like', '%' . $searchTerm . '%');
+            });
+        }
         if ($request->filled('name')) {
             $query->where('post_title', 'like', '%' . $request->input('name') . '%');
         }

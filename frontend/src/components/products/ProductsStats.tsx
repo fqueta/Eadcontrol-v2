@@ -4,10 +4,11 @@ import type { Product } from "@/types/products";
 
 interface ProductsStatsProps {
   products: Product[];
+  totalCount?: number;
 }
 
-export function ProductsStats({ products }: ProductsStatsProps) {
-  const totalProducts = products.length;
+export function ProductsStats({ products, totalCount }: ProductsStatsProps) {
+  const totalProducts = totalCount !== undefined ? totalCount : products.length;
   const availableProducts = products.filter(p => p.availability === 'available').length;
   const totalPointsValue = products.reduce((sum, product) => {
     const points = Number(product.points);

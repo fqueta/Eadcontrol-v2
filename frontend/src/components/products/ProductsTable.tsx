@@ -36,6 +36,7 @@ import { useUpdateProduct } from "@/hooks/products";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
+import { useInfiniteScroll } from "@/components/common/InfiniteScroll";
 
 interface ProductsTableProps {
   products: Product[];
@@ -45,6 +46,13 @@ interface ProductsTableProps {
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (product: Product) => void;
   onRefetch: () => void;
+  // Propriedades para Scroll Infinito
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
+  onLoadMore?: () => void;
+  totalProducts?: number;
+  searchTerm?: string;
+  onSearchChange?: (term: string) => void;
 }
 
 export default function ProductsTable({
@@ -54,9 +62,35 @@ export default function ProductsTable({
   onNewProduct,
   onEditProduct,
   onDeleteProduct,
-  onRefetch
+  onRefetch,
+  hasNextPage = false,
+  isFetchingNextPage = false,
+  onLoadMore,
+  totalProducts,
+  searchTerm: externalSearchTerm,
+  onSearchChange: externalOnSearchChange,
 }: ProductsTableProps) {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [localSearchTerm, setLocalSearchTerm] = useState("");
+  const searchTerm = externalSearchTerm !== undefined ? externalSearchTerm : localSearchTerm;
+  const handleSearchChange = (value: string) => {
+    if (externalOnSearchChange) {
+      externalOnSearchChange(value);
+    } else {
+      setLocalSearchTerm(value);
+    }
+  };
+
+  const { sentinelRef } = useInfiniteScroll({
+    hasMore: hasNextPage,
+    isLoading: isFetchingNextPage,
+    onLoadMore: () => {
+      if (onLoadMore && hasNextPage && !isFetchingNextPage) {
+        onLoadMore();
+      }
+    },
+    rootMargin: '250px',
+  });
+
   const navigate = useNavigate();
   const link_admin = '/admin';
 
@@ -146,11 +180,13 @@ export default function ProductsTable({
     navigate(link_admin + `/products/${product.id}`);
   };
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (product.description || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = externalOnSearchChange
+    ? products
+    : products.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+      );
 
   return (
     <Card className="border-none shadow-xl bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm overflow-hidden">
@@ -159,11 +195,15 @@ export default function ProductsTable({
           <div>
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
               Produtos cadastrados
-              {filteredProducts.length > 0 && (
+              {totalProducts !== undefined ? (
+                <Badge variant="secondary" className="rounded-full px-2 font-mono text-[10px]">
+                  {products.length} de {totalProducts}
+                </Badge>
+              ) : filteredProducts.length > 0 ? (
                 <Badge variant="secondary" className="rounded-full px-2 font-mono text-[10px]">
                   {filteredProducts.length}
                 </Badge>
-              )}
+              ) : null}
             </CardTitle>
             <CardDescription className="mt-1">
               Visualize e gerencie todos os produtos cadastrados
@@ -175,7 +215,7 @@ export default function ProductsTable({
               <Input
                 placeholder="Buscar produtos..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-9 w-full md:w-[240px] lg:w-[320px] bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 transition-all"
               />
             </div>
@@ -376,9 +416,75 @@ export default function ProductsTable({
                   </TableRow>
                 ))
               )}
+
+              {/* Sentinela de Scroll Infinito e indicador de carregamento */}
+              {hasNextPage && (
+                <TableRow ref={sentinelRef} className="hover:bg-transparent">
+                  <TableCell colSpan={9} className="py-6 text-center bg-slate-50/40 dark:bg-slate-800/30">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      {isFetchingNextPage ? (
+                        <div className="flex items-center gap-2 text-sm text-primary font-semibold animate-pulse">
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          <span>Carregando mais produtos...</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-muted-foreground">
+                            Role a página para carregar mais produtos automaticamente
+                          </span>
+                          {onLoadMore && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onLoadMore()}
+                              className="h-7 text-xs font-semibold hover:bg-primary hover:text-white transition-colors"
+                            >
+                              Carregar mais
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {/* Mensagem quando todos os produtos foram carregados */}
+              {!hasNextPage && products.length > 0 && !isLoading && (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={9} className="py-4 text-center text-xs font-medium text-muted-foreground/80 bg-slate-50/20 dark:bg-slate-800/20">
+                    ✓ Todos os {totalProducts || products.length} produtos foram carregados
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
+
+        {/* Barra de Status e Contagem */}
+        {products.length > 0 && (
+          <div className="px-6 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span>Exibindo <strong>{products.length}</strong> de <strong>{totalProducts || products.length}</strong> produtos</span>
+              {isFetchingNextPage && (
+                <span className="inline-flex items-center gap-1 text-primary font-medium">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Carregando...
+                </span>
+              )}
+            </div>
+            {hasNextPage && onLoadMore && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onLoadMore()}
+                disabled={isFetchingNextPage}
+                className="h-7 text-xs font-bold text-primary hover:text-primary hover:bg-primary/10"
+              >
+                {isFetchingNextPage ? 'Buscando...' : 'Carregar mais (+20)'}
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

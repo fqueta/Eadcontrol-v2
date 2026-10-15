@@ -1,28 +1,48 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { useProductsList, useCreateProduct, useUpdateProduct, useDeleteProduct, useProductCategories, useProductUnits } from "@/hooks/products";
+import { useInfiniteProductsList, useCreateProduct, useUpdateProduct, useDeleteProduct, useProductCategories, useProductUnits } from "@/hooks/products";
 import type { Product, CreateProductInput, UpdateProductInput } from "@/types/products";
-import { Plus, Edit, Package } from "lucide-react";
+import { Plus, Package } from "lucide-react";
 import { currencyRemoveMaskToNumber } from "@/lib/masks/currency";
+import { useDebounce } from "use-debounce";
 import ProductsStats from "@/components/products/ProductsStats";
 import ProductsTable from "@/components/products/ProductsTable";
 import ProductFormDialog from "@/components/products/ProductFormDialog";
 import { ProductFormData, productSchema } from "@/components/products/ProductForm";
 
-
-
 export default function Products() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch] = useDebounce(searchTerm, 400);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  // Hooks para produtos
-  const { data: productsData, isLoading: isLoadingProducts, error: productsError, refetch } = useProductsList();
+  // Hooks para produtos com suporte a Scroll Infinito
+  const {
+    data: infiniteProductsData,
+    isLoading: isLoadingProducts,
+    error: productsError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useInfiniteProductsList({
+    search: debouncedSearch.trim() || undefined,
+    per_page: 20,
+  });
+
+  // Extrai todos os produtos de todas as páginas acumuladas
+  const products = useMemo(() => {
+    const pages = infiniteProductsData?.pages ?? [];
+    return pages.flatMap((page: any) => page?.data ?? page?.items ?? []) as Product[];
+  }, [infiniteProductsData]);
+
+  // Total de produtos reportado pelo backend
+  const totalCount = infiniteProductsData?.pages?.[0]?.total;
   const createMutation = useCreateProduct({
     onSuccess: () => {
       toast.success('Produto criado com sucesso!');
@@ -60,9 +80,6 @@ export default function Products() {
   // Hooks para categorias e unidades
   const { data: categories = [], isLoading: isLoadingCategories, error: categoriesError } = useProductCategories();
   const { data: units = [], isLoading: isLoadingUnits, error: unitsError } = useProductUnits();
-
-  // Extrai os produtos da resposta paginada
-  const products = Array.isArray(productsData) ? productsData : productsData?.data || [];
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -167,9 +184,9 @@ export default function Products() {
       </div>
 
       {/* Stats Cards */}
-      <ProductsStats products={products} />
+      <ProductsStats products={products} totalCount={totalCount} />
 
-      {/* Products Table */}
+      {/* Products Table com Scroll Infinito */}
       <ProductsTable
         products={products}
         isLoading={isLoadingProducts}
@@ -178,6 +195,12 @@ export default function Products() {
         onEditProduct={handleEditProduct}
         onDeleteProduct={handleDeleteProduct}
         onRefetch={refetch}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+        onLoadMore={fetchNextPage}
+        totalProducts={totalCount}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
       />
 
       {/* Product Form Dialog */}
