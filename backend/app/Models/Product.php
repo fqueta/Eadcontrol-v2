@@ -292,7 +292,9 @@ class Product extends Model
     public function setNameAttribute($value)
     {
         $this->attributes['post_title'] = $value;
-        $this->attributes['post_name'] = $this->generateSlug($value);
+        if (empty($this->attributes['post_name'])) {
+            $this->attributes['post_name'] = $this->generateSlug($value, $this->ID ?? null);
+        }
     }
 
     /**
@@ -354,17 +356,32 @@ class Product extends Model
     }
 
     /**
-     * Gera um slug único para o produto
+     * Gera um slug único para o produto garantindo que não haja duplicatas
+     *
+     * @param string $title
+     * @param int|string|null $ignoreId
+     * @return string
      */
-    public function generateSlug($title)
+    public function generateSlug($title, $ignoreId = null)
     {
-        $slug = Str::slug($title);
-        $count = static::where('post_name', $slug)->count();
-        
-        if ($count > 0) {
-            $slug = $slug . '-' . ($count + 1);
+        $baseSlug = Str::slug($title);
+        if (empty($baseSlug)) {
+            $baseSlug = 'produto';
         }
-        
-        return $slug;
+
+        $slug = $baseSlug;
+        $counter = 1;
+
+        while (true) {
+            $query = static::where('post_name', $slug);
+            if ($ignoreId) {
+                $query->where('ID', '!=', $ignoreId);
+            }
+            if (!$query->exists()) {
+                return $slug;
+            }
+            $counter++;
+            $slug = "{$baseSlug}-{$counter}";
+        }
     }
 }

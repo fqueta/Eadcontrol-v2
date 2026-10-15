@@ -63,7 +63,15 @@ class ProductController extends Controller
      */
     public function publicShowBySlug(string $slug)
     {
-        $product = Product::published()->where('post_name', $slug)->first();
+        $product = Product::published()
+            ->where(function ($q) use ($slug) {
+                $q->where('post_name', $slug);
+                if (is_numeric($slug)) {
+                    $q->orWhere('ID', (int) $slug);
+                }
+            })
+            ->orderBy('ID', 'desc')
+            ->first();
 
         if (!$product) {
             return response()->json(['error' => 'Produto não encontrado'], 404);
@@ -441,7 +449,14 @@ class ProductController extends Controller
 
         if (isset($validated['name'])) {
             $mappedData['post_title'] = $validated['name']; // name -> post_title
-            $mappedData['post_name'] = $productToUpdate->generateSlug($validated['name']); // Gerar novo slug
+            $currentSlug = $productToUpdate->post_name;
+            $slugCollides = Product::where('post_name', $currentSlug)
+                ->where('ID', '!=', $productToUpdate->ID)
+                ->exists();
+
+            if ($validated['name'] !== $productToUpdate->post_title || empty($currentSlug) || $slugCollides) {
+                $mappedData['post_name'] = $productToUpdate->generateSlug($validated['name'], $productToUpdate->ID);
+            }
         }
         if (isset($validated['description'])) {
             $mappedData['post_content'] = $validated['description']; // description -> post_content

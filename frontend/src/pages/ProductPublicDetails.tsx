@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import InclusiveSiteLayout from '@/components/layout/InclusiveSiteLayout';
@@ -15,12 +15,18 @@ export default function ProductPublicDetails() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const permissionId = Number((user as any)?.permission_id ?? 999);
+  const [imageError, setImageError] = useState(false);
 
   const { data: product, isLoading, error } = useQuery({
     queryKey: ['public-product', slug],
     queryFn: () => (slug ? publicProductsService.getProductBySlug(slug) : null),
     enabled: !!slug,
   });
+
+  // Reset do erro da imagem ao trocar de produto
+  useEffect(() => {
+    setImageError(false);
+  }, [product?.image, slug]);
 
   if (isLoading) {
     return (
@@ -58,17 +64,18 @@ export default function ProductPublicDetails() {
         </Button>
 
         <div className="grid md:grid-cols-2 gap-8">
-          <div className="product-image-themed">
-            {product.image ? (
+          <div className="product-image-themed overflow-hidden flex items-center justify-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+            {product.image && !imageError ? (
               <img
                 src={product.image}
                 alt={product.name}
-                className="w-full h-full object-contain aspect-square"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                className="w-full h-full object-contain aspect-square transition-all duration-300"
+                onError={() => setImageError(true)}
               />
             ) : (
-              <div className="aspect-square flex items-center justify-center text-slate-300 dark:text-slate-700">
-                <ShoppingBag className="h-24 w-24" />
+              <div className="aspect-square flex flex-col items-center justify-center text-slate-300 dark:text-slate-700 py-16">
+                <ShoppingBag className="h-24 w-24 stroke-1 mb-2" />
+                <span className="text-xs text-muted-foreground/60 font-medium">Sem imagem cadastrada</span>
               </div>
             )}
           </div>

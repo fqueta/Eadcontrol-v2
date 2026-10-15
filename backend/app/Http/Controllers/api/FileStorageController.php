@@ -52,22 +52,22 @@ class FileStorageController extends Controller
     }
 
     /**
-     * Comprime imagens acima de 999KB.
+     * Comprime imagens acima de 400KB.
      *
      * - Redimensiona para max 1920px de largura (proporcional) — ideal para
-     *   capas de curso em mobile/desktop sem perda visual significativa.
+     *   capas de curso e produtos em mobile/desktop sem perda visual perceptível.
      * - Aplica qualidade 85% (virtualmente indistinguível do original).
      * - Preserva PNGs com transparência e formatos já comprimidos (WebP/AVIF).
      *
-     * EN: Compress images over 999KB.
+     * EN: Compress images over 400KB.
      *   - Resize to 1920px max width (maintains aspect ratio).
      *   - Apply 85% quality (visually lossless).
      *   - Skip PNGs with transparency and already-compressed formats.
      */
     private function compressImageIfNeeded(string $path, int $originalSize, string $mimeType): void
     {
-        if ($originalSize <= 999 * 1024) {
-            Log::info('compress: imagem pulada (<= 999KB)', [
+        if ($originalSize <= 400 * 1024) {
+            Log::info('compress: imagem pulada (<= 400KB)', [
                 'path' => $path,
                 'size' => $originalSize,
                 'mime' => $mimeType,
@@ -403,7 +403,7 @@ class FileStorageController extends Controller
         $file = $request->file('file');
         $path = $file->store('file-storage', 'public');
 
-        // Comprime imagem se passar de 999KB
+        // Comprime imagem se passar de 400KB
         $this->compressImageIfNeeded($path, $file->getSize(), $file->getMimeType());
         $finalSize = Storage::disk('public')->size($path);
 

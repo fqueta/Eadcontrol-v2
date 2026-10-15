@@ -1,5 +1,6 @@
 import { BaseApiService } from './BaseApiService';
 import type { PaginatedResponse } from '@/types';
+import { compressImageFile } from '@/lib/imageCompression';
 
 /**
  * Tipos para FileStorage
@@ -59,13 +60,31 @@ class FileStorageService extends BaseApiService {
   /**
    * upload
    * pt-BR: Envia um arquivo via `FormData` para o endpoint `/file-storage`.
-   *        O campo do arquivo é `file`. Parâmetros extras são opcionais.
+   *        Aplica compressão automática prévia no cliente quando for imagem pesada.
    * en-US: Sends a file via `FormData` to `/file-storage`.
-   *        The file field name is `file`. Extra parameters are optional.
+   *        Applies automatic client-side compression when heavy image.
    */
   async upload<R = any>(file: File, extra?: Record<string, any>): Promise<R> {
+    let fileToUpload = file;
+
+    // Compressão automática no cliente para imagens pesadas
+    if (extra?.compress !== false && file && file.type?.startsWith('image/')) {
+      try {
+        const compressed = await compressImageFile(file, {
+          maxWidth: extra?.maxWidth ?? 1920,
+          maxHeight: extra?.maxHeight ?? 1920,
+          quality: extra?.quality ?? 0.85,
+        });
+        if (compressed.wasCompressed) {
+          fileToUpload = compressed.file;
+        }
+      } catch (err) {
+        console.warn('[fileStorageService] compressor client fallback:', err);
+      }
+    }
+
     const form = new FormData();
-    form.append('file', file);
+    form.append('file', fileToUpload);
     if (extra) {
       /**
        * pt-BR: Anexa apenas campos válidos; evita enviar "undefined" e normaliza booleanos.
