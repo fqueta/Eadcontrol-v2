@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { GraduationCap, ShoppingBag, Clock, Users, ArrowRight } from 'lucide-react';
@@ -248,24 +248,24 @@ export function CatalogCard({
       </div>
 
       {/* Card Body */}
-      <CardHeader className="flex-grow p-5 pb-3 space-y-2">
+      <div className="px-3.5 pt-2 pb-1.5 flex flex-col justify-start">
         {/* Category & Meta */}
-        {!effectiveHideCategory && (
-          <div className="flex items-center gap-3 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest min-h-[1.5rem]">
+        {!effectiveHideCategory && (category || metaDuration || metaPopular) && (
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">
             {category && (
-              <span className="inline-flex items-center text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+              <span className="inline-flex items-center text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
                 {category}
               </span>
             )}
             {metaDuration && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
+              <span className="flex items-center gap-1 text-[11px]">
+                <Clock className="h-3 w-3" />
                 {metaDuration}
               </span>
             )}
             {metaPopular && (
-              <span className="flex items-center gap-1">
-                <Users className="h-3.5 w-3.5" />
+              <span className="flex items-center gap-1 text-[11px]">
+                <Users className="h-3 w-3" />
                 {typeof metaPopular === 'string' ? metaPopular : 'Popular'}
               </span>
             )}
@@ -273,22 +273,22 @@ export function CatalogCard({
         )}
 
         {/* Title */}
-        <CardTitle className="text-lg md:text-xl font-black text-slate-900 dark:text-white line-clamp-2 leading-tight group-hover:text-primary transition-colors min-h-[2.8rem] flex items-center">
+        <h3 className="text-base md:text-lg font-black text-slate-900 dark:text-white line-clamp-2 leading-tight group-hover:text-primary transition-colors m-0">
           {title}
-        </CardTitle>
+        </h3>
 
         {/* Description */}
-        {!effectiveHideDescription && (
-          <CardDescription className="text-xs md:text-sm text-slate-600 dark:text-slate-400 line-clamp-2 font-medium min-h-[2.5rem] leading-relaxed">
-            {cleanDescription || 'Confira os detalhes e aproveite nossas condições exclusivas.'}
-          </CardDescription>
+        {!effectiveHideDescription && cleanDescription && (
+          <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 font-medium leading-snug mt-1">
+            {cleanDescription}
+          </p>
         )}
-      </CardHeader>
+      </div>
 
       {/* Card Footer */}
-      <CardFooter className="p-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 mt-auto flex items-center justify-between gap-3">
+      <div className="px-3.5 py-2 border-t border-slate-100 dark:border-slate-800/80 mt-auto flex items-center justify-between gap-2">
         <div className="flex flex-col">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">
+          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">
             {defaultPriceLabel}
           </span>
           <DynamicPrice
@@ -301,14 +301,14 @@ export function CatalogCard({
 
         <Button
           size="sm"
-          className="rounded-lg font-bold shadow-sm h-9 px-4 shrink-0 transition-transform active:scale-95"
+          className="rounded-lg font-bold shadow-sm h-8 px-3.5 text-xs shrink-0 transition-transform active:scale-95"
           asChild
         >
           <Link to={linkUrl}>
             {buttonText}
           </Link>
         </Button>
-      </CardFooter>
+      </div>
     </Card>
   );
 }
