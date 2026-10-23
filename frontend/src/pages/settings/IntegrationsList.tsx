@@ -17,6 +17,7 @@ import {
   CreditCard,
   Zap,
   Settings2,
+  Smartphone,
   Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,7 @@ import { ApiCredential } from '@/types';
 import { IntegrationForm } from '@/components/settings/IntegrationForm';
 import { R2ConfigDialog } from '@/components/settings/integrations/R2ConfigDialog';
 import { VimeoConfigDialog } from '@/components/settings/integrations/VimeoConfigDialog';
+import { EvolutionGoConfigDialog } from '@/components/settings/integrations/EvolutionGoConfigDialog';
 import { Switch } from '@/components/ui/switch';
 
 export default function IntegrationsList() {
@@ -86,6 +88,7 @@ export default function IntegrationsList() {
   // Modais específicos
   const [isR2ModalOpen, setIsR2ModalOpen] = useState(false);
   const [isVimeoModalOpen, setIsVimeoModalOpen] = useState(false);
+  const [isEvolutionModalOpen, setIsEvolutionModalOpen] = useState(false);
 
   const { data: listData, isLoading: isLoadingList, refetch: refetchList } = useApiCredentialsList({ 
     page: 1, 
@@ -110,6 +113,7 @@ export default function IntegrationsList() {
   const r2Credential = useMemo(() => items.find(i => i.slug === 'cloudflare-r2'), [items]);
   const vimeoCredential = useMemo(() => items.find(i => i.slug === 'vimeo'), [items]);
   const asaasCredential = useMemo(() => items.find(i => i.slug === 'asaas'), [items]);
+  const evolutionCredential = useMemo(() => items.find(i => i.slug === 'evolution-go'), [items]);
 
   const filteredItems = useMemo(() => {
     if (!search.trim()) return items;
@@ -214,7 +218,7 @@ export default function IntegrationsList() {
 
       {/* Cards em Destaque (Oficiais) */}
       {!showTrash && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {/* Card Cloudflare R2 */}
           <Card className="border border-amber-200 dark:border-amber-900/50 bg-gradient-to-br from-amber-50/40 via-white to-amber-50/20 dark:from-amber-950/20 dark:via-zinc-900 dark:to-amber-950/10 shadow-md hover:shadow-lg transition-all duration-200">
             <CardHeader className="pb-3">
@@ -348,6 +352,53 @@ export default function IntegrationsList() {
               >
                 <Settings2 className="w-4 h-4 text-emerald-200" />
                 {asaasCredential ? 'Gerenciar Asaas' : 'Configurar Asaas'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Card Evolution GO (WhatsApp) */}
+          <Card className="border border-sky-200 dark:border-sky-900/50 bg-gradient-to-br from-sky-50/40 via-white to-sky-50/20 dark:from-sky-950/20 dark:via-zinc-900 dark:to-sky-950/10 shadow-md hover:shadow-lg transition-all duration-200">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="p-3 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-xl">
+                  <Smartphone className="w-6 h-6" />
+                </div>
+                {evolutionCredential ? (
+                  <Badge className={evolutionCredential.active ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20" : "bg-neutral-500/15 text-neutral-600 border-neutral-500/20"}>
+                    {evolutionCredential.active ? "Conectado" : "Desativado"}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-zinc-500 border-dashed">
+                    Não configurado
+                  </Badge>
+                )}
+              </div>
+              <CardTitle className="text-lg font-bold mt-2">Evolution GO</CardTitle>
+              <CardDescription className="text-xs">
+                Conexões WhatsApp, QR Code, inbox de atendimento e agente de IA com RAG.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-1">
+              <div className="text-xs space-y-1 text-muted-foreground bg-sky-50/60 dark:bg-sky-950/30 p-2.5 rounded-lg border border-sky-100 dark:border-sky-900/40">
+                <div className="flex justify-between gap-2">
+                  <span>Servidor:</span>
+                  <span className="truncate font-mono font-medium text-foreground">
+                    {evolutionCredential?.config?.base_url || 'Não definido'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Prefixo:</span>
+                  <span className="font-mono font-medium text-foreground">
+                    {evolutionCredential?.config?.instance_prefix || 'ead'}
+                  </span>
+                </div>
+              </div>
+              <Button
+                onClick={() => setIsEvolutionModalOpen(true)}
+                className="w-full gap-2 bg-sky-600 hover:bg-sky-700 text-white shadow-sm"
+              >
+                <Settings2 className="w-4 h-4 text-sky-200" />
+                {evolutionCredential ? 'Gerenciar Evolution GO' : 'Configurar Evolution GO'}
               </Button>
             </CardContent>
           </Card>
@@ -555,6 +606,14 @@ export default function IntegrationsList() {
         open={isVimeoModalOpen}
         onOpenChange={setIsVimeoModalOpen}
         initialCredential={vimeoCredential}
+        onSaved={refetchList}
+      />
+
+      {/* Modal Específico Evolution GO (WhatsApp) */}
+      <EvolutionGoConfigDialog
+        open={isEvolutionModalOpen}
+        onOpenChange={setIsEvolutionModalOpen}
+        initialCredential={evolutionCredential}
         onSaved={refetchList}
       />
 

@@ -12,6 +12,10 @@ import {
   Store,
   Sparkles,
   Truck,
+  Headset,
+  MessageSquare,
+  Smartphone,
+  Bot,
   LucideIcon,
 } from "lucide-react";
 import { MenuItemDTO, MenuItemResolved } from "@/types/menu";
@@ -31,6 +35,10 @@ export const iconMap: Record<string, LucideIcon> = {
   Store,
   Sparkles,
   Truck,
+  Headset,
+  MessageSquare,
+  Smartphone,
+  Bot,
 };
 
 // Helper to check if can_view is truthy (considers 1, '1', true as truthy)
@@ -83,6 +91,35 @@ export const defaultMenu: MenuItemDTO[] = [
     icon: "BarChart3",
     permission: "settings.metrics.view",
     can_view: true
+  },
+  {
+    title: "Atendimento",
+    icon: "Headset",
+    permission: "whatsapp.view",
+    can_view: true,
+    items: [
+      {
+        title: "Chat WhatsApp",
+        url: "/whatsapp/atendimento",
+        icon: "MessageSquare",
+        permission: "whatsapp.view",
+        can_view: true,
+      },
+      {
+        title: "Conexões WhatsApp",
+        url: "/whatsapp",
+        icon: "Smartphone",
+        permission: "whatsapp.view",
+        can_view: true,
+      },
+      {
+        title: "Agentes de IA",
+        url: "/whatsapp/agentes",
+        icon: "Bot",
+        permission: "whatsapp.view",
+        can_view: true,
+      },
+    ],
   },
   {
     title: "Clientes",

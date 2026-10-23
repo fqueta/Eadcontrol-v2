@@ -226,6 +226,14 @@ class CommentController extends Controller
             Log::error('Erro ao enviar notificações de novo comentário: ' . $e->getMessage());
         }
 
+        // pt-BR: Alerta opcional por WhatsApp para os administradores.
+        // en-US: Optional WhatsApp alert for administrators.
+        try {
+            app(\App\Services\Whatsapp\WhatsappAdminNotifier::class)->notifyComment($comment);
+        } catch (\Throwable $e) {
+            Log::error('Erro ao enfileirar notificação de comentário via WhatsApp: ' . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'Comentário enviado para moderação',
             'data' => [

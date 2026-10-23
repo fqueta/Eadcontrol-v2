@@ -5,6 +5,7 @@ namespace App\Services\Integrations;
 use App\Services\Integrations\Providers\CloudflareR2Provider;
 use App\Services\Integrations\Providers\VimeoProvider;
 use App\Services\Integrations\Providers\AsaasProvider;
+use App\Services\Integrations\Providers\EvolutionGoIntegrationProvider;
 use InvalidArgumentException;
 
 class IntegrationStrategyFactory
@@ -18,6 +19,7 @@ class IntegrationStrategyFactory
         'vimeo' => VimeoProvider::class,
         'asaas' => AsaasProvider::class,
         'asaas-payments' => AsaasProvider::class,
+        'evolution-go' => EvolutionGoIntegrationProvider::class,
     ];
 
     /**

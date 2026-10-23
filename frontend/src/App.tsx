@@ -78,6 +78,9 @@ const UpdateServiceOrder = lazy(() => import("./pages/UpdateServiceOrder"));
 const ShowServiceOrder = lazy(() => import("./pages/ShowServiceOrder"));
 const QuickCreateServiceOrder = lazy(() => import("./pages/QuickCreateServiceOrder"));
 const SalonAppointments = lazy(() => import("./pages/salon/Appointments"));
+const WhatsappConnections = lazy(() => import("./pages/whatsapp/WhatsappConnections"));
+const WhatsappChatInbox = lazy(() => import("./pages/whatsapp/ChatInbox"));
+const AiAgentsPage = lazy(() => import("./pages/whatsapp/AiAgents"));
 const Inventory = lazy(() => import("./pages/estoque/Inventory"));
 const StockEntryCreate = lazy(() => import("./pages/estoque/StockEntryCreate"));
 const StockMovementsPage = lazy(() => import("./pages/estoque/StockMovements"));
@@ -1164,6 +1167,36 @@ const App = () => {
                     >
                       <SalonAppointments />
                     </PermissionGuard>
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+
+              {/* WhatsApp / Atendimento */}
+              <Route path="/admin/whatsapp" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <WhatsappConnections />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/whatsapp/atendimento" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <WhatsappChatInbox />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/whatsapp/atendimento/:code" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <WhatsappChatInbox />
+                  </AppLayout>
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/whatsapp/agentes" element={
+                <AdminProtectedRoute>
+                  <AppLayout>
+                    <AiAgentsPage />
                   </AppLayout>
                 </AdminProtectedRoute>
               } />

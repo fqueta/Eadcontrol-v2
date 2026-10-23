@@ -9,6 +9,9 @@
     "title": "Atendimento",
     "icon": "Headset",
     "submenu": [
+        { "title": "Chat WhatsApp", "url": "/whatsapp/atendimento", "icon": "MessageSquare" },
+        { "title": "Conexões WhatsApp", "url": "/whatsapp", "icon": "Smartphone" },
+        { "title": "Agentes de IA", "url": "/whatsapp/agentes", "icon": "Bot" },
         { "title": "Alunos (FloW)", "url": "/support" }
     ]
   },

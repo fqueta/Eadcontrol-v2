@@ -180,6 +180,13 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
                                 \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\NewSaleAdminNotification($matricula));
                                 Log::info("Admin sale notification sent for Matricula {$matricula->id} via Webhook.");
                             }
+
+                            // pt-BR: Alerta opcional por WhatsApp (venda confirmada).
+                            try {
+                                app(\App\Services\Whatsapp\WhatsappAdminNotifier::class)->notifySale($matricula, 'payment');
+                            } catch (\Throwable $e) {
+                                Log::error("Failed to queue WhatsApp sale alert for Matricula {$matricula->id}: " . $e->getMessage());
+                            }
                         } catch (\Throwable $e) {
                             Log::error("Failed to send admin sale notification via Webhook: " . $e->getMessage());
                         }
@@ -199,6 +206,13 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
                         $account->payment_date = now()->toDateString();
                         $account->save();
                         Log::info("Asaas Webhook: FinancialAccount {$account->id} marked as paid via webhook (service_order_id: {$account->service_order_id}).");
+
+                        // pt-BR: Alerta opcional por WhatsApp para administradores.
+                        try {
+                            app(\App\Services\Whatsapp\WhatsappAdminNotifier::class)->notifyPaymentReceived($account);
+                        } catch (\Throwable $e) {
+                            Log::error("Failed to queue WhatsApp payment alert for FinancialAccount {$account->id}: " . $e->getMessage());
+                        }
                     }
                 } else {
                     Log::warning("Asaas Webhook: FinancialAccount ID {$accountId} not found.");
@@ -294,6 +308,7 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
         $authResponse = null;
         if ($billingType === 'CREDIT_CARD' && isset($payment['status']) && ($payment['status'] === 'CONFIRMED' || $payment['status'] === 'RECEIVED')) {
             $situacao_id_mat = \App\Services\Qlib::buscaValorDb('posts', 'post_name', 'mat', 'ID');
+            $wasAlreadyEnrolled = ((string) $matricula->situacao_id) === ((string) $situacao_id_mat);
             $matricula->situacao_id = $situacao_id_mat;
             $matricula->save();
 
@@ -328,6 +343,15 @@ class AsaasPaymentGateway implements PaymentGatewayInterface
                 if ($admins->isNotEmpty()) {
                     \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\NewSaleAdminNotification($matricula));
                     Log::info("Admin sale notification sent for Matricula {$matricula->id} after CC approval.");
+                }
+
+                // pt-BR: Alerta opcional por WhatsApp (venda confirmada).
+                try {
+                    if (!$wasAlreadyEnrolled) {
+                        app(\App\Services\Whatsapp\WhatsappAdminNotifier::class)->notifySale($matricula, 'payment');
+                    }
+                } catch (\Throwable $e) {
+                    Log::error("Failed to queue WhatsApp sale alert for Matricula {$matricula->id} after CC approval: " . $e->getMessage());
                 }
             } catch (\Exception $e) {
                 Log::error("Failed to send admin sale notification after CC approval: " . $e->getMessage());

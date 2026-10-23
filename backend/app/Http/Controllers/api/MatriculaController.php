@@ -687,6 +687,28 @@ class MatriculaController extends Controller
             $this->autoGenerateInvoicesFromMeta($matricula, $requestMeta, $validated);
         }
 
+        // pt-BR: Alerta opcional por WhatsApp para administradores.
+        //        Criada já como matriculada = venda; caso contrário, nova proposta.
+        // en-US: Optional WhatsApp alert for admins.
+        //        Created already enrolled = sale; otherwise, new proposal.
+        try {
+            $situacaoName = $matricula->situacao_id
+                ? DB::table('posts')->where('ID', $matricula->situacao_id)->value('post_name')
+                : null;
+            $isEnrolled = $situacaoName
+                && \Illuminate\Support\Str::startsWith(strtolower((string) $situacaoName), 'mat');
+
+            $notifier = app(\App\Services\Whatsapp\WhatsappAdminNotifier::class);
+
+            if ($isEnrolled) {
+                $notifier->notifySale($matricula, 'manual');
+            } else {
+                $notifier->notifyEnrollment($matricula);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Erro ao enfileirar alerta de nova matrícula via WhatsApp: ' . $e->getMessage());
+        }
+
         return response()->json($matricula, 201);
     }
 
@@ -878,7 +900,32 @@ class MatriculaController extends Controller
             }
         }
 
+        // Captura a situação anterior antes do save (getOriginal é sincronizado após salvar).
+        $originalSituacaoId = $matricula->getOriginal('situacao_id');
+
         $matricula->save();
+
+        // pt-BR: Alerta opcional por WhatsApp quando a matrícula é efetivada
+        //        manualmente (situação passa a iniciar com "mat").
+        try {
+            $originalSituacaoName = $originalSituacaoId
+                ? DB::table('posts')->where('ID', $originalSituacaoId)->value('post_name')
+                : null;
+            $newSituacaoName = $matricula->situacao_id
+                ? DB::table('posts')->where('ID', $matricula->situacao_id)->value('post_name')
+                : null;
+
+            $wasEnrolled = $originalSituacaoName
+                && \Illuminate\Support\Str::startsWith(strtolower((string) $originalSituacaoName), 'mat');
+            $isEnrolled = $newSituacaoName
+                && \Illuminate\Support\Str::startsWith(strtolower((string) $newSituacaoName), 'mat');
+
+            if (!$wasEnrolled && $isEnrolled) {
+                app(\App\Services\Whatsapp\WhatsappAdminNotifier::class)->notifySale($matricula, 'manual');
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Erro ao enfileirar alerta de matrícula efetivada via WhatsApp: ' . $e->getMessage());
+        }
 
         // Sincronizar parcelamentos do curso, se informados
         if (array_key_exists('parcelamento_ids', $validated) && is_array($validated['parcelamento_ids'])) {

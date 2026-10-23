@@ -736,9 +736,51 @@ Route::name('api.')->prefix('api/v1')->middleware([
         Route::apiResource('cupons', \App\Http\Controllers\api\CupomController::class, ['parameters' => [
             'cupons' => 'id'
         ]]);
+        // ─── WhatsApp / Atendimento (Evolution GO) ────────────────────────
+        Route::prefix('whatsapp')->name('whatsapp.')->group(function () {
+            Route::get('notifications/settings', [\App\Http\Controllers\api\WhatsappController::class, 'notificationSettings'])->name('notifications.settings');
+            Route::put('notifications/settings', [\App\Http\Controllers\api\WhatsappController::class, 'updateNotificationSettings'])->name('notifications.settings.update');
+            Route::post('notifications/test', [\App\Http\Controllers\api\WhatsappController::class, 'testNotification'])->name('notifications.test');
+            Route::get('instances', [\App\Http\Controllers\api\WhatsappController::class, 'index'])->name('instances.index');
+            Route::post('instances', [\App\Http\Controllers\api\WhatsappController::class, 'store'])->name('instances.store');
+            Route::get('instances/{id}', [\App\Http\Controllers\api\WhatsappController::class, 'show'])->name('instances.show');
+            Route::post('instances/{id}/connect', [\App\Http\Controllers\api\WhatsappController::class, 'connect'])->name('instances.connect');
+            Route::post('instances/{id}/pair', [\App\Http\Controllers\api\WhatsappController::class, 'pair'])->name('instances.pair');
+            Route::get('instances/{id}/status', [\App\Http\Controllers\api\WhatsappController::class, 'status'])->name('instances.status');
+            Route::post('instances/{id}/disconnect', [\App\Http\Controllers\api\WhatsappController::class, 'disconnect'])->name('instances.disconnect');
+            Route::post('instances/{id}/reconnect', [\App\Http\Controllers\api\WhatsappController::class, 'reconnect'])->name('instances.reconnect');
+            Route::post('instances/{id}/send-message', [\App\Http\Controllers\api\WhatsappController::class, 'sendMessage'])->name('instances.send-message');
+            Route::post('instances/{id}/toggle-ai', [\App\Http\Controllers\api\WhatsappController::class, 'toggleAi'])->name('instances.toggle-ai');
+            Route::delete('instances/{id}', [\App\Http\Controllers\api\WhatsappController::class, 'destroy'])->name('instances.destroy');
+        });
+
+        Route::prefix('chat')->name('chat.')->group(function () {
+            Route::get('instances', [\App\Http\Controllers\api\ChatInboxController::class, 'instances'])->name('instances');
+            Route::get('stats', [\App\Http\Controllers\api\ChatInboxController::class, 'stats'])->name('stats');
+            Route::post('start', [\App\Http\Controllers\api\ChatInboxController::class, 'start'])->name('start');
+            Route::get('inbox', [\App\Http\Controllers\api\ChatInboxController::class, 'index'])->name('inbox');
+            Route::get('conversations/{id}/messages', [\App\Http\Controllers\api\ChatInboxController::class, 'messages'])->name('messages');
+            Route::post('conversations/{id}/send', [\App\Http\Controllers\api\ChatInboxController::class, 'send'])->name('send');
+            Route::post('conversations/{id}/send-media', [\App\Http\Controllers\api\ChatInboxController::class, 'sendMedia'])->name('send-media');
+            Route::post('conversations/{id}/close', [\App\Http\Controllers\api\ChatInboxController::class, 'close'])->name('close');
+            Route::post('conversations/{id}/toggle-ai', [\App\Http\Controllers\api\ChatInboxController::class, 'toggleAi'])->name('toggle-ai');
+        });
+
+        Route::prefix('ai')->name('ai.')->group(function () {
+            Route::get('providers', [\App\Http\Controllers\api\AiAgentController::class, 'providers'])->name('providers');
+            Route::get('instances', [\App\Http\Controllers\api\AiAgentController::class, 'instances'])->name('instances');
+            Route::post('agents/{id}/test', [\App\Http\Controllers\api\AiAgentController::class, 'test'])->name('agents.test');
+            Route::post('agents/{id}/sync-catalog', [\App\Http\Controllers\api\AiAgentController::class, 'syncCatalog'])->name('agents.sync-catalog');
+            Route::get('agents/{id}/knowledge-bases', [\App\Http\Controllers\api\AiAgentController::class, 'knowledgeIndex'])->name('agents.knowledge.index');
+            Route::post('agents/{id}/knowledge-bases', [\App\Http\Controllers\api\AiAgentController::class, 'knowledgeStore'])->name('agents.knowledge.store');
+            Route::put('knowledge-bases/{knowledgeBaseId}', [\App\Http\Controllers\api\AiAgentController::class, 'knowledgeUpdate'])->name('knowledge.update');
+            Route::delete('knowledge-bases/{knowledgeBaseId}', [\App\Http\Controllers\api\AiAgentController::class, 'knowledgeDestroy'])->name('knowledge.destroy');
+            Route::post('knowledge-bases/{knowledgeBaseId}/reindex', [\App\Http\Controllers\api\AiAgentController::class, 'knowledgeReindex'])->name('knowledge.reindex');
+            Route::apiResource('agents', \App\Http\Controllers\api\AiAgentController::class, ['parameters' => ['agents' => 'id']]);
+        });
     });
-    // Rotas para tracking events
-    Route::post('tracking/whatsapp-contact', [TrackingEventController::class, 'whatsappContact'])->name('tracking.whatsapp-contact');
+    // Webhook público do Evolution GO (a tenancy é resolvida pelo domínio do tenant)
+    Route::post('whatsapp/webhook/{instanceName}', [\App\Http\Controllers\api\WhatsappController::class, 'webhook'])->name('whatsapp.webhook');
     // Rotas para webhooks
     Route::post('webhooks/{provider}', [CheckoutController::class, 'handleWebhook'])->name('webhook.payment');
     Route::any('webhook/{endp1}', [WebhookController::class, 'handleSingleEndpoint'])->name('webhook.single');
