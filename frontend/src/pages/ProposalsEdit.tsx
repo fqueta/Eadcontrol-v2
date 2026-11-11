@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -50,6 +51,8 @@ import {
   BreadcrumbPage 
 } from '@/components/ui/breadcrumb';
 import BudgetPreview from '@/components/school/BudgetPreview';
+import EnrollmentBillingPlanner from '@/components/school/EnrollmentBillingPlanner';
+import { BillingStrategyKey, InstallmentDraftRow } from '@/lib/financial/installmentStrategies';
 import jsPDF from 'jspdf';
 
 /**
@@ -60,7 +63,7 @@ import jsPDF from 'jspdf';
   const proposalEditSchema = z.object({
     id_cliente: z.string().min(1, 'Selecione o cliente'),
     id_curso: z.string().min(1, 'Selecione o curso'),
-    id_turma: z.string().min(1, 'Selecione a turma'),
+    id_turma: z.string().optional(),
   // Removido: parcelamento_id — não usamos mais tabelas de parcelamento
   // Adicionado: parcelas — quantidade de parcelas para preview/persistência
     // pt-BR: Controle simples de parcelamento: flag e contagem.
@@ -193,7 +196,9 @@ export default function ProposalsEdit() {
   const { data: consultantsData, isLoading: isLoadingConsultants } = useUsersList({ consultores: true, per_page: 200, sort: 'name', search: consultantSearch || undefined });
   const { data: responsiblesData, isLoading: isLoadingResponsibles } = useClientsList({ per_page: 50, search: responsibleSearch || undefined, permission_id: 8 } as any);
 
-  const { data: enrollment, isLoading: isLoadingEnrollment } = useEnrollment(String(id || ''), { enabled: !!id });
+  const { data: enrollment, isLoading: isLoadingEnrollment, refetch: refetchEnrollment } = useEnrollment(String(id || ''), { enabled: !!id });
+  const [plannedInvoices, setPlannedInvoices] = useState<InstallmentDraftRow[]>([]);
+  const [billingStrategy, setBillingStrategy] = useState<BillingStrategyKey>('bundled');
 
   const { data: courses, isLoading: isLoadingCourses } = useQuery({
     queryKey: ['courses', 'list', 200, courseSearch],
@@ -783,15 +788,31 @@ export default function ProposalsEdit() {
          */
         texto_desconto: values.meta_texto_desconto || '',
         /**
-         * meta.parcelada / meta.parcelas
-         * pt-BR: Persistência do controle simples de parcelamento.
-         * en-US: Persistence for simple installment control.
+         * meta.parcelada / meta.parcelas / meta.billing_strategy
+         * pt-BR: Persistência do controle de parcelamento e estratégia escolhida.
+         * en-US: Persistence for installment control and chosen strategy.
          */
-        parcelada: !!values.parcelada,
+        parcelada: billingStrategy !== 'none' && billingStrategy !== 'single',
         parcelas: String(values.parcelas || ''),
+        billing_strategy: billingStrategy,
       },
       id: values.id || '',
     };
+
+    if (plannedInvoices.length > 0) {
+      payload.invoices = plannedInvoices.map((inv, idx) => ({
+        id: inv.id,
+        description: inv.description,
+        amount: Number(inv.amount || 0),
+        due_date: inv.due_date,
+        payment_method: inv.payment_method,
+        installment_type: inv.installment_type,
+        installment_index: idx + 1,
+      }));
+      payload.invoice_sync_mode = 'replace_pending';
+    } else if (billingStrategy === 'none') {
+      payload.invoice_sync_mode = 'clear_pending';
+    }
     /**
      * pt-BR: Constrói/recupera o campo "orc" e injeta os dados de parcelamento.
      * en-US: Builds/recovers "orc" and injects the installment management data.
@@ -1094,9 +1115,37 @@ export default function ProposalsEdit() {
           </h2>
         </div>
         
-        <Button variant="ghost" size="sm" onClick={handleBack} title="Voltar" className="text-muted-foreground hover:text-foreground h-8 px-3">
-          <ArrowLeft className="h-4 w-4 mr-1.5" /> Cancelar
-        </Button>
+        <div className="flex items-center gap-2">
+          {isCurrentlyInterested && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                const list = Array.isArray((situationsData as any)?.data || (situationsData as any)?.items)
+                  ? ((situationsData as any).data || (situationsData as any).items)
+                  : [];
+                const matSit = list.find((s: any) =>
+                  String(s.name || s.nome || s.slug || '').toLowerCase().startsWith('mat')
+                );
+                if (matSit) {
+                  form.setValue('situacao_id', String(matSit.id), { shouldDirty: true });
+                  toast({
+                    title: 'Situação alterada para Matriculado',
+                    description: 'Verifique as parcelas na aba Financeiro e clique em Salvar para concluir.',
+                  });
+                  setActiveTab('financeiro');
+                }
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-8 text-xs gap-1.5"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Converter em Matrícula
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={handleBack} title="Voltar" className="text-muted-foreground hover:text-foreground h-8 px-3">
+            <ArrowLeft className="h-4 w-4 mr-1.5" /> Cancelar
+          </Button>
+        </div>
       </div>
 
       <Form {...form}>
@@ -1342,7 +1391,7 @@ export default function ProposalsEdit() {
                             placeholder="Selecione o curso"
                             searchPlaceholder="Pesquisar curso pelo nome..."
                             className="h-11 border-2 rounded-xl"
-                            disabled={isLoadingCourses || !isCurrentlyInterested}
+                            disabled={isLoadingCourses}
                             loading={isLoadingCourses}
                             onSearch={setCourseSearch}
                             searchTerm={courseSearch}
@@ -1444,7 +1493,7 @@ export default function ProposalsEdit() {
                               placeholder="Selecione a turma"
                               searchPlaceholder="Pesquisar turma..."
                               className="h-11 border-2 rounded-xl"
-                              disabled={!selectedCourseId || isLoadingClasses || !isCurrentlyInterested}
+                              disabled={!selectedCourseId || isLoadingClasses}
                               loading={isLoadingClasses}
                               onSearch={setClassSearch}
                               searchTerm={classSearch}
@@ -1497,102 +1546,42 @@ export default function ProposalsEdit() {
             <TabsContent value="financeiro" className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300 outline-none">
               <Card className="border shadow-xs overflow-hidden bg-white">
                 <CardHeader className="bg-muted/10 border-b py-3 px-5">
-                   <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                         <DollarSign className="h-4 w-4 text-emerald-600" />
+                   <div className="flex items-center justify-between gap-2.5 flex-wrap">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                           <DollarSign className="h-4 w-4 text-emerald-600" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base font-bold">Gestão Financeira e Parcelamento</CardTitle>
+                          <CardDescription className="text-xs">
+                            Configure valores, escolha cobrar a taxa de matrícula junta ou separada e edite/corrija parcelas livremente.
+                          </CardDescription>
+                        </div>
                       </div>
-                      <div>
-                        <CardTitle className="text-base font-bold">Detalhamento Financeiro</CardTitle>
-                        <CardDescription className="text-xs">Configure valores, descontos e taxas da matrícula.</CardDescription>
-                      </div>
+                      <Badge variant="outline" className={isCurrentlyInterested ? 'bg-amber-50 text-amber-800 border-amber-200 font-bold' : 'bg-emerald-50 text-emerald-800 border-emerald-200 font-bold'}>
+                        {isCurrentlyInterested ? 'Proposta / Interessado' : 'Matrícula Efetivada'}
+                      </Badge>
                    </div>
                 </CardHeader>
-                <CardContent className="p-5 space-y-5">
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField control={form.control} name="subtotal" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-xs text-foreground/70">Valor Base (Curso)</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="R$ 0,00"
-                            className="font-black text-foreground/80 h-11 text-base border-2"
-                            value={field.value || ''}
-                            onChange={(e) => field.onChange(currencyApplyMask(e.target.value, 'pt-BR', 'BRL'))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="inscricao" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-xs text-foreground/70">Taxa de Inscrição</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="R$ 0,00"
-                            className="font-black text-foreground/80 h-11 text-base border-2"
-                            value={field.value || ''}
-                            onChange={(e) => field.onChange(currencyApplyMask(e.target.value, 'pt-BR', 'BRL'))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="desconto" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="font-bold text-xs text-red-600/80">Desconto Concedido</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="R$ 0,00"
-                            className="font-black text-red-600 h-11 text-base border-2 border-red-100 bg-red-50/10 focus-visible:ring-red-500/20"
-                            value={field.value || ''}
-                            onChange={(e) => field.onChange(currencyApplyMask(e.target.value, 'pt-BR', 'BRL'))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                  </div>
-
-                  <div className="pt-3 border-t">
-                    <FormField control={form.control} name="total" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs font-black text-primary uppercase tracking-widest leading-none mb-2 block">Total Final da Matrícula</FormLabel>
-                        <FormControl>
-                          <div className="relative group">
-                            <Input
-                              placeholder="R$ 0,00"
-                              disabled
-                              className="font-black text-2xl text-primary h-14 bg-primary/5 border-2 border-primary/20 pl-5 rounded-xl disabled:opacity-100 cursor-default shadow-xs"
-                              value={field.value || ''}
-                            />
-                            <div className="absolute right-5 top-1/2 -translate-y-1/2">
-                               <CreditCard className="h-6 w-6 text-primary/30" />
-                            </div>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                  </div>
-                  
-                  {/* Preview da Proposta Opcional */}
-                  <div className="pt-3 border-t-2 border-dashed">
-                    <BudgetPreview
-                      title="Simulação da Proposta Comercial"
-                      clientName={selectedClient?.name || selectedClient?.nome || ''}
-                      clientId={selectedClient?.id ? String(selectedClient.id) : undefined}
-                      clientPhone={selectedClient?.config?.celular || selectedClient?.config?.telefone_residencial || ''}
-                      clientEmail={selectedClient?.email || ''}
-                      course={selectedCourse as any}
-                      module={(selectedModule ?? moduleFromEnrollment) as any}
-                      discountLabel="Desconto de Pontualidade"
-                      discountAmountMasked={form.watch('desconto') || ''}
-                      subtotalMasked={form.watch('subtotal') || ''}
-                      totalMasked={form.watch('total') || ''}
-                      validityDate={computeValidityDate(form.watch('validade'))}
-                    />
-                  </div>
+                <CardContent className="p-5">
+                  <EnrollmentBillingPlanner
+                    form={form}
+                    mode="edit"
+                    enrollmentId={String(id || '')}
+                    enrollment={enrollment}
+                    selectedCourse={selectedCourse || selectedCourseDetail}
+                    selectedClient={selectedClient}
+                    selectedModule={(selectedModule ?? moduleFromEnrollment) as any}
+                    isInterested={isCurrentlyInterested}
+                    validityDate={computeValidityDate(form.watch('validade'))}
+                    onInvoicesChange={(invs, strat) => {
+                      setPlannedInvoices(invs);
+                      setBillingStrategy(strat);
+                    }}
+                    onRefetchEnrollment={() => {
+                      refetchEnrollment();
+                    }}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>

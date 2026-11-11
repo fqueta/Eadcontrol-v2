@@ -85,6 +85,8 @@ export interface EnrollmentTableProps {
   sortField?: string;
   sortOrder?: 'asc' | 'desc';
   onSort?: (field: string) => void;
+  /** Oculta a coluna Cliente quando exibido dentro da ficha do próprio cliente */
+  hideClientColumn?: boolean;
 }
 
 /**
@@ -124,7 +126,8 @@ export default function EnrollmentTable({
   onToggleActive,
   sortField,
   sortOrder,
-  onSort
+  onSort,
+  hideClientColumn = false
 }: EnrollmentTableProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -231,11 +234,13 @@ export default function EnrollmentTable({
         <TableHeader className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200/80 dark:border-slate-800">
           <TableRow className="hover:bg-transparent">
             <SortableHeader field="id" label="ID" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="w-[70px] px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground/70" />
-            <SortableHeader field="cliente_nome" label="Cliente" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">
-              <div className="flex items-center gap-1.5">
-                <User className="h-3 w-3" /> Cliente
-              </div>
-            </SortableHeader>
+            {!hideClientColumn && (
+              <SortableHeader field="cliente_nome" label="Cliente" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">
+                <div className="flex items-center gap-1.5">
+                  <User className="h-3 w-3" /> Cliente
+                </div>
+              </SortableHeader>
+            )}
             <SortableHeader field="curso_nome" label="Curso" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="px-3 py-2 text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">
               <div className="flex items-center gap-1.5">
                 <BookOpen className="h-3 w-3" /> Curso / Turma
@@ -250,17 +255,17 @@ export default function EnrollmentTable({
             <TableHead className="px-3 py-2 text-center text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">Ativo</TableHead>
             <SortableHeader field="valor" label="Valor" sortField={sortField} sortOrder={sortOrder} onSort={onSort} className="px-3 py-2 text-right text-[11px] font-black uppercase tracking-wider text-muted-foreground/70">
               <div className="flex items-center justify-end gap-1.5">
-                <DollarSign className="h-3 w-3" /> Valor
+                <DollarSign className="h-3 w-3" /> Valor / Parcelas
               </div>
             </SortableHeader>
-            <TableHead className="w-[50px] px-2 py-2 text-center text-[11px] font-black uppercase tracking-wider text-muted-foreground/70 sticky right-0 z-20 bg-slate-50/95 dark:bg-slate-800/95 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.08)]">Ações</TableHead>
+            <TableHead className="w-[105px] px-2 py-2 text-center text-[11px] font-black uppercase tracking-wider text-muted-foreground/70 sticky right-0 z-20 bg-slate-50/95 dark:bg-slate-800/95 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.08)]">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className="divide-y divide-slate-100 dark:divide-slate-800">
           {isLoading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <TableRow key={i} className="animate-pulse">
-                <TableCell colSpan={8} className="px-3 py-4">
+                <TableCell colSpan={hideClientColumn ? 7 : 8} className="px-3 py-4">
                    <div className="flex items-center gap-3">
                       <div className="h-7 w-7 rounded-lg bg-slate-200 dark:bg-slate-800" />
                       <div className="flex flex-col gap-1.5 flex-1">
@@ -273,7 +278,7 @@ export default function EnrollmentTable({
             ))
           ) : items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={8} className="h-32 text-center">
+              <TableCell colSpan={hideClientColumn ? 7 : 8} className="h-32 text-center">
                 <div className="flex flex-col items-center justify-center gap-1 text-muted-foreground py-4">
                   <div className="h-9 w-9 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center border border-dashed border-slate-200 dark:border-slate-700 mb-1">
                     <User className="h-4 w-4 text-slate-300" />
@@ -286,6 +291,10 @@ export default function EnrollmentTable({
           ) : (
             items.map((enroll: any) => {
               const studentName = enroll.cliente_nome || enroll.student_name || enroll.name || '-';
+              const formattedAmount = amountFormatter(enroll);
+              const rawVal = Number(enroll?.total ?? enroll?.subtotal ?? 0);
+              const catalogCourseVal = Number(enroll?.curso_valor ?? 0);
+              const isZeroWithCoursePrice = rawVal <= 0 && catalogCourseVal > 0;
               return (
                 <TableRow 
                   key={String(enroll.id)} 
@@ -295,23 +304,25 @@ export default function EnrollmentTable({
                   <TableCell className="px-3 py-2 font-mono text-[10px] font-bold text-muted-foreground/70 group-hover:text-primary transition-colors">
                     {String(enroll.id).padStart(4, '0')}
                   </TableCell>
-                  <TableCell className="px-3 py-2">
-                    <div className="flex items-center gap-2.5">
-                      <Avatar className="h-7 w-7 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xs shrink-0">
-                        <AvatarFallback className="bg-primary/10 text-primary font-black text-[10px] uppercase">
-                          {studentName.substring(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-bold text-xs text-foreground/90 group-hover:text-primary transition-colors truncate">{studentName}</span>
-                        <span className="text-[10px] font-medium text-muted-foreground truncate">{enroll.email || 'sem email'}</span>
+                  {!hideClientColumn && (
+                    <TableCell className="px-3 py-2">
+                      <div className="flex items-center gap-2.5">
+                        <Avatar className="h-7 w-7 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xs shrink-0">
+                          <AvatarFallback className="bg-primary/10 text-primary font-black text-[10px] uppercase">
+                            {studentName.substring(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-bold text-xs text-foreground/90 group-hover:text-primary transition-colors truncate">{studentName}</span>
+                          <span className="text-[10px] font-medium text-muted-foreground truncate">{enroll.email || 'sem email'}</span>
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
+                    </TableCell>
+                  )}
                   <TableCell className="px-3 py-2">
                     <div className="flex flex-col gap-0.5 max-w-[260px]">
                       <span className="font-bold text-xs text-foreground/80 truncate group-hover:text-foreground transition-colors">
-                        {enroll.curso_nome || enroll.course_name || '-'}
+                        {enroll.curso_nome || enroll.curso_titulo || enroll.course_name || '-'}
                       </span>
                       <div className="flex items-center gap-1">
                         <CalendarDays className="h-3 w-3 text-muted-foreground/60 shrink-0" />
@@ -334,12 +345,50 @@ export default function EnrollmentTable({
                     />
                   </TableCell>
                   <TableCell className="px-3 py-2 text-right font-mono">
-                    <span className="font-bold text-xs text-primary/90 tabular-nums">
-                      {amountFormatter(enroll)}
-                    </span>
+                    <div className="flex flex-col items-end gap-0.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit?.(enroll, 'financeiro');
+                        }}
+                        title="Clique para gerenciar valores e parcelas"
+                        className="font-bold text-xs text-primary/90 hover:text-primary hover:underline tabular-nums transition-colors"
+                      >
+                        {formattedAmount}
+                      </button>
+                      {isZeroWithCoursePrice && onEdit && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(enroll, 'financeiro');
+                          }}
+                          className="text-[9px] font-sans font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded transition-colors"
+                        >
+                          Configurar parcelas
+                        </button>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="px-2 py-2 text-center sticky right-0 z-10 bg-white/95 dark:bg-slate-900/95 group-hover:bg-slate-50/95 dark:group-hover:bg-slate-800/95 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.08)]">
-                    <DropdownMenu>
+                    <div className="flex items-center justify-center gap-1">
+                      {onEdit && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Financeiro e Parcelas"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(enroll, 'financeiro');
+                          }}
+                          className="h-7 px-2 rounded-lg text-[10px] font-bold text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 gap-1"
+                        >
+                          <DollarSign className="h-3 w-3" />
+                          <span className="hidden sm:inline">Parcelas</span>
+                        </Button>
+                      )}
+                      <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-7 w-7 p-0 rounded-lg hover:bg-primary/10 group/btn focus-visible:ring-0">
                           <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground group-hover/btn:text-primary transition-colors" />
@@ -386,6 +435,7 @@ export default function EnrollmentTable({
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               );

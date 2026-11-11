@@ -85,7 +85,22 @@ class MatriculaController extends Controller
             ->leftJoin('turmas', 'matriculas.id_turma', '=', 'turmas.id')
             ->leftJoin('users', 'matriculas.id_cliente', '=', 'users.id')
             ->leftJoin('posts', 'matriculas.situacao_id', '=', 'posts.ID')
-            ->select('matriculas.*', 'cursos.nome as curso_nome','cursos.tipo as curso_tipo', 'turmas.nome as turma_nome', 'users.name as cliente_nome', 'users.email as email', 'users.celular as celular', 'posts.post_title as situacao','cursos.slug as curso_slug','cursos.config as curso_config', 'cursos.modulos as curso_modulos')
+            ->select(
+                'matriculas.*',
+                'cursos.nome as curso_nome',
+                'cursos.titulo as curso_titulo',
+                'cursos.tipo as curso_tipo',
+                'cursos.valor as curso_valor',
+                'cursos.inscricao as curso_inscricao',
+                'turmas.nome as turma_nome',
+                'users.name as cliente_nome',
+                'users.email as email',
+                'users.celular as celular',
+                'posts.post_title as situacao',
+                'cursos.slug as curso_slug',
+                'cursos.config as curso_config',
+                'cursos.modulos as curso_modulos'
+            )
             ->where(function($q) {
                 $q->whereNull('matriculas.excluido')
                   ->orWhere('matriculas.excluido', '!=', 's');
@@ -420,10 +435,14 @@ class MatriculaController extends Controller
             // Faturas a serem geradas automaticamente no contas a receber
             // PT: Array de faturas para criar registros em financial_accounts vinculados à matrícula
             'invoices' => ['nullable', 'array'],
+            'invoices.*.id' => ['nullable'],
             'invoices.*.amount' => ['required', 'numeric', 'min:0'],
             'invoices.*.due_date' => ['required', 'date'],
             'invoices.*.payment_method' => ['nullable', 'string'],
             'invoices.*.description' => ['nullable', 'string', 'max:500'],
+            'invoices.*.installment_type' => ['nullable', 'string'],
+            'invoices.*.installment_index' => ['nullable', 'integer'],
+            'invoice_sync_mode' => ['nullable', 'string', Rule::in(['replace_pending', 'append', 'clear_pending'])],
         ];
 
         return $base;
@@ -738,7 +757,10 @@ class MatriculaController extends Controller
             ->select(
                 'matriculas.*', 
                 'cursos.nome as curso_nome',
+                'cursos.titulo as curso_titulo',
                 'cursos.tipo as curso_tipo', 
+                'cursos.valor as curso_valor',
+                'cursos.inscricao as curso_inscricao',
                 'turmas.nome as turma_nome', 
                 'users.name as cliente_nome',
                 'users.email as email',
@@ -750,6 +772,10 @@ class MatriculaController extends Controller
 
         $data = $matricula->toArray();
         $data['meta'] = $this->getAllMatriculaMeta($matricula->id);
+        $cfg = is_array($data['config'] ?? null) ? $data['config'] : (json_decode((string)($data['config'] ?? '{}'), true) ?: []);
+        if (!isset($data['inscricao']) || $data['inscricao'] === null || $data['inscricao'] === '') {
+            $data['inscricao'] = $cfg['inscricao'] ?? $data['curso_inscricao'] ?? 0;
+        }
         
         // Calcular o progresso geral do aluno no curso de forma dinâmica
         try {
@@ -845,6 +871,12 @@ class MatriculaController extends Controller
 
         // Pós-validação removida: validação via regra exists já garante integridade
         $originalStageId = $matricula->stage_id;
+        if (array_key_exists('config', $validated) && is_array($validated['config'])) {
+            $existingConfig = is_array($matricula->config)
+                ? $matricula->config
+                : (json_decode((string)($matricula->config ?? '{}'), true) ?: []);
+            $validated['config'] = array_merge($existingConfig, $validated['config']);
+        }
         $matricula->fill($validated);
 
         $executedActions = [];
@@ -940,19 +972,22 @@ class MatriculaController extends Controller
             }
         }
 
-        // Se faturas forem enviadas no update, substitui as existentes
+        // Se faturas forem enviadas no update, sincroniza de forma segura (preservando faturas já pagas)
+        $billingManager = app(\App\Services\Financial\EnrollmentBillingManager::class);
+        $syncMode = $validated['invoice_sync_mode'] ?? 'replace_pending';
+
         if (array_key_exists('invoices', $validated) && is_array($validated['invoices'])) {
-            // Remove faturas anteriores vinculadas a esta matrícula
-            FinancialAccount::where('config->matricula_id', $matricula->id)->delete();
-            $this->generateInvoices($matricula, $validated['invoices']);
-        } elseif (!empty($requestMeta)) {
-            // Auto-gerar faturas com base nos metadados de parcelamento
+            $billingManager->syncInvoices($matricula, $validated['invoices'], $syncMode);
+        } elseif ($syncMode === 'clear_pending') {
+            $billingManager->syncInvoices($matricula, [], 'clear_pending');
+        } elseif (!empty($requestMeta) && ($requestMeta['auto_generate_invoices'] ?? false)) {
             $this->autoGenerateInvoicesFromMeta($matricula, $requestMeta, $validated);
         }
 
-        // retornar com logs recentes e ações executadas
+        // retornar com logs recentes, faturas atualizadas e ações executadas
         $matricula->loadMissing([]);
         $response = $matricula->toArray();
+        $response['financial_invoices'] = $billingManager->getEnrollmentInvoices($matricula->id);
         $response['executed_actions'] = $executedActions ?? [];
         $response['stage_logs'] = \App\Models\MatriculaStageLog::where('matricula_id', $matricula->id)->orderByDesc('created_at')->limit(20)->get()->toArray();
         return response()->json($response);
@@ -1327,36 +1362,70 @@ class MatriculaController extends Controller
 
     private function generateInvoices(Matricula $matricula, array $invoices): void
     {
-        // Buscar nome do cliente para preencher customer_name
-        $client = User::find($matricula->id_cliente);
-        $clientName = $client ? $client->name : 'Cliente';
-        $totalInvoices = count($invoices);
+        app(\App\Services\Financial\EnrollmentBillingManager::class)
+            ->syncInvoices($matricula, $invoices, 'replace_pending');
+    }
 
-        foreach ($invoices as $i => $invoice) {
-            $installmentIndex = $i + 1;
-            $description = $invoice['description']
-                ?? "Parcela {$installmentIndex}/{$totalInvoices} - Curso";
-
-            FinancialAccount::create([
-                'type'           => 'receivable',
-                'amount'         => $invoice['amount'],
-                'customer_name'  => $clientName,
-                'client_id'      => $matricula->id_cliente,
-                'description'    => $description,
-                'due_date'       => $invoice['due_date'],
-                'invoice_number' => $matricula->id . '-' . $installmentIndex,
-                'payment_method' => $invoice['payment_method'] ?? 'other',
-                'status'         => 'pending',
-                'installments'   => $totalInvoices,
-                'config'         => [
-                    'matricula_id'     => $matricula->id,
-                    'installment_index' => $installmentIndex,
-                ],
-                'token'          => Qlib::token(),
-                'excluido'       => false,
-                'deletado'       => false,
-            ]);
+    /**
+     * Endpoint dedicado para sincronizar/recalcular parcelas e valores financeiros de uma matrícula
+     * sem apagar faturas já pagas, usando o Strategy Pattern.
+     */
+    public function syncInvoices(Request $request, string $id)
+    {
+        $user = $request->user();
+        if (!$user || !$this->permissionService->isHasPermission('edit')) {
+            return response()->json(['error' => 'Acesso negado'], 403);
         }
+
+        $matricula = Matricula::findOrFail($id);
+
+        // Atualiza valores financeiros da matrícula se enviados
+        $input = $this->normalizePayload($request->only(['subtotal', 'inscricao', 'desconto', 'total', 'situacao_id']));
+        if (array_key_exists('config', $input) && is_array($input['config'])) {
+            $existingConfig = is_array($matricula->config)
+                ? $matricula->config
+                : (json_decode((string)($matricula->config ?? '{}'), true) ?: []);
+            $input['config'] = array_merge($existingConfig, $input['config']);
+        }
+        $matricula->fill(array_filter($input, fn ($v) => $v !== null));
+        $matricula->save();
+
+        $requestMeta = $this->extractMetaFromRequest($request);
+        if (!empty($requestMeta)) {
+            $this->persistMatriculaMeta($matricula->id, $requestMeta);
+        }
+
+        $billingManager = app(\App\Services\Financial\EnrollmentBillingManager::class);
+        $mode = (string) $request->input('mode', 'replace_pending');
+        $invoices = $request->input('invoices');
+
+        if (is_array($invoices)) {
+            $updatedInvoices = $billingManager->syncInvoices($matricula, $invoices, $mode);
+        } else {
+            $strategyKey = (string) $request->input('strategy', $requestMeta['billing_strategy'] ?? 'bundled');
+            $course = Curso::find($matricula->id_curso);
+            $cfg = is_array($matricula->config) ? $matricula->config : (json_decode((string)($matricula->config ?? '{}'), true) ?: []);
+            $params = [
+                'subtotal'                => (float) ($matricula->subtotal ?? 0),
+                'inscricao'               => (float) ($cfg['inscricao'] ?? $course->inscricao ?? 0),
+                'desconto'                => (float) ($matricula->desconto ?? 0),
+                'total'                   => (float) ($matricula->total ?? 0),
+                'parcelas'                => (int) ($request->input('parcelas', $requestMeta['parcelas'] ?? 1)),
+                'first_due_date'          => $request->input('first_due_date', $requestMeta['primeiro_vencimento'] ?? now()->addDays(7)->format('Y-m-d')),
+                'fee_due_date'            => $request->input('fee_due_date', $requestMeta['vencimento_taxa'] ?? null),
+                'offset_course_after_fee' => $request->boolean('offset_course_after_fee', true),
+                'payment_method'          => $request->input('payment_method', $requestMeta['forma_pagamento'] ?? 'pix'),
+                'fee_payment_method'      => $request->input('fee_payment_method', $requestMeta['forma_pagamento_taxa'] ?? null),
+                'course_title'            => $course->titulo ?? $course->nome ?? 'Curso',
+            ];
+            $updatedInvoices = $billingManager->generateAndSyncByStrategy($matricula, $strategyKey, $params, $mode);
+        }
+
+        return response()->json([
+            'message'            => 'Parcelas e valores financeiros sincronizados com sucesso.',
+            'matricula'          => $matricula->fresh(),
+            'financial_invoices' => $updatedInvoices,
+        ]);
     }
 
     public function gerarCobrancaMatricula($id)

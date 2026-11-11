@@ -19,7 +19,7 @@ class UserSeeder extends Seeder
                 // 'id' => Qlib::token(),
                 'name' => 'Fernando Queta',
                 'email' => 'fernando@maisaqui.com.br',
-                'password' => Hash::make('ferqueta'),
+                'password' => Hash::make('mudar123'),
                 'status' => 'actived',
                 'verificado' => 'n',
                 'permission_id' => 1, // Grupo Master

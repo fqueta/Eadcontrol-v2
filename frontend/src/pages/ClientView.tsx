@@ -1,11 +1,12 @@
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-import { ArrowLeft, Mail, Phone, MapPin, User, Building, Calendar, GraduationCap, Briefcase, FileText, DollarSign, Edit, Plus, UserPlus, Clock, Activity, LogIn } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, User, Building, Calendar, GraduationCap, Briefcase, FileText, DollarSign, Edit, Plus, UserPlus, Clock, Activity, LogIn, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -107,6 +108,7 @@ export default function ClientView() {
    * en-US: Loads enrollments linked to the current client, filtering by `id_cliente`.
    */
   const clientId = (client as any)?.id;
+  const [activeTab, setActiveTab] = useState<string>('courses');
   // Paginação e filtros
   const [pageEnroll, setPageEnroll] = useState<number>(1);
   const [perPageEnroll, setPerPageEnroll] = useState<number>(10);
@@ -172,10 +174,14 @@ export default function ClientView() {
   function resolveEnrollmentAmountBRL(enroll: any): string {
     try {
       const raw = enroll?.amount_brl ?? enroll?.total ?? enroll?.subtotal ?? '';
-      const num = typeof raw === 'string' ? currencyRemoveMaskToNumber(raw) : Number(raw) || 0;
+      let num = typeof raw === 'string' ? currencyRemoveMaskToNumber(raw) : Number(raw) || 0;
+      if (num === 0 && Number(enroll?.curso_valor) > 0) {
+        // Mostra o valor de referência do curso se a matrícula ainda estiver zerada
+        num = Number(enroll.curso_valor);
+      }
       return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
     } catch {
-      const fallback = Number(enroll?.amount_brl || 0);
+      const fallback = Number(enroll?.amount_brl || enroll?.curso_valor || 0);
       return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(fallback);
     }
   }

@@ -111,6 +111,15 @@ class EnrollmentsService extends BaseApiService {
     return this.post<any>(`/matriculas/${id}/gerar-cobranca-matricula`, {});
   }
 
+  /**
+   * syncEnrollmentInvoices
+   * pt-BR: Sincroniza/recalcula as parcelas e valores financeiros de uma matrícula usando Strategy Pattern,
+   *        preservando faturas já pagas.
+   */
+  async syncEnrollmentInvoices(id: string, payload: any): Promise<any> {
+    return this.post<any>(`/matriculas/${id}/sync-invoices`, payload);
+  }
+
 
   // Compat layer for useGenericApi
   async list(params?: EnrollmentsListParams): Promise<PaginatedResponse<EnrollmentRecord>> {

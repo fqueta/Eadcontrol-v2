@@ -38,6 +38,8 @@ import { Combobox, useComboboxOptions } from '@/components/ui/combobox';
 // SelectGeraValor removido: campo "Gerar Valor" não será exibido
 import { currencyApplyMask, currencyRemoveMaskToNumber, currencyRemoveMaskToString } from '@/lib/masks/currency';
 import BudgetPreview from '@/components/school/BudgetPreview';
+import EnrollmentBillingPlanner from '@/components/school/EnrollmentBillingPlanner';
+import { BillingStrategyKey, InstallmentDraftRow } from '@/lib/financial/installmentStrategies';
 
 /**
  * ProposalFormData
@@ -332,11 +334,10 @@ export default function ProposalsCreate() {
   }, [coursesList, selectedCourseId]);
 
   /**
-   * Estados para geração de faturas
+   * Estados para geração de faturas via EnrollmentBillingPlanner (Strategy Pattern)
    */
-  const [firstDueDate, setFirstDueDate] = useState('');
-  const [invoicePaymentMethod, setInvoicePaymentMethod] = useState('pix');
-  const [generatedInvoices, setGeneratedInvoices] = useState<Array<{amount: string; due_date: string; payment_method: string; description: string}>>([]);
+  const [generatedInvoices, setGeneratedInvoices] = useState<InstallmentDraftRow[]>([]);
+  const [billingStrategy, setBillingStrategy] = useState<BillingStrategyKey>('bundled');
 
   /**
    * getCourseTypeLabel
@@ -351,78 +352,6 @@ export default function ProposalsCreate() {
     };
     return map[tipo] || 'Desconhecido';
   }
-
-  // Recalcula as faturas automaticamente quando os parâmetros mudam
-  const parceladaWatched = form.watch('parcelada');
-  const parcelasWatched = form.watch('parcelas');
-  const totalWatched = form.watch('total');
-  
-  // As variáveis abaixo já são declaradas mais à frente no código original,
-  // vamos apenas pegá-las via form.getValues() no useEffect para evitar conflitos,
-  // ou renomeá-las aqui:
-  const subWatched = form.watch('subtotal');
-  const inscWatched = form.watch('inscricao');
-  const descWatched = form.watch('desconto');
-  const separarTaxaWatched = form.watch('separar_taxa');
-
-  // Sincroniza o toggle separar_taxa com o padrão do curso
-  useEffect(() => {
-    if (selectedCourse?.config?.cobrar_taxa_separadamente === 's') {
-      form.setValue('separar_taxa', true);
-    } else {
-      form.setValue('separar_taxa', false);
-    }
-  }, [selectedCourse, form]);
-
-  useEffect(() => {
-    if (parceladaWatched !== 's') {
-      setGeneratedInvoices([]);
-      return;
-    }
-    const totalNum = currencyRemoveMaskToNumber(totalWatched || '');
-    const inscNum = currencyRemoveMaskToNumber(inscWatched || '');
-    
-    // Se a taxa for separada e houver taxa de inscrição > 0
-    const shouldSeparate = separarTaxaWatched && inscNum > 0;
-    
-    // Montante a ser dividido nas parcelas
-    const installmentTotal = shouldSeparate ? (totalNum - inscNum) : totalNum;
-    const qty = Math.max(1, Number(parcelasWatched || '12'));
-    
-    if (!totalNum || !firstDueDate) {
-      setGeneratedInvoices([]);
-      return;
-    }
-    
-    const installmentValue = installmentTotal / qty;
-    const courseName = selectedCourse?.titulo || selectedCourse?.nome || 'Curso';
-    
-    const invoices: Array<{amount: string; due_date: string; payment_method: string; description: string}> = [];
-    
-    if (shouldSeparate) {
-      invoices.push({
-        amount: inscNum.toFixed(2),
-        due_date: new Date(firstDueDate).toISOString().split('T')[0],
-        payment_method: invoicePaymentMethod,
-        description: `Taxa de Matrícula - ${courseName}`,
-      });
-    }
-    
-    for (let i = 0; i < qty; i++) {
-      const due = new Date(firstDueDate);
-      // Se tivermos separado a taxa, podemos avançar 1 mês a primeira parcela?
-      // Ou a primeira parcela tem a mesma data da matrícula. Vamos usar a mesma regra original.
-      due.setMonth(due.getMonth() + i);
-      invoices.push({
-        amount: installmentValue.toFixed(2),
-        due_date: due.toISOString().split('T')[0],
-        payment_method: invoicePaymentMethod,
-        description: `Parcela ${i + 1}/${qty} - ${courseName}`,
-      });
-    }
-    
-    setGeneratedInvoices(invoices);
-  }, [parceladaWatched, parcelasWatched, totalWatched, subWatched, inscWatched, descWatched, separarTaxaWatched, firstDueDate, invoicePaymentMethod, selectedCourse]);
 
   // Removido selectedModule: campo "Gerar Valor" foi retirado da UI
 
@@ -585,8 +514,6 @@ export default function ProposalsCreate() {
       toast({ title: 'Sucesso', description: 'Proposta enviada com sucesso!' });
     }
     form.reset();
-    setFirstDueDate('');
-    setInvoicePaymentMethod('pix');
     setGeneratedInvoices([]);
     },
     onError: (error: any) => {
@@ -652,10 +579,10 @@ export default function ProposalsCreate() {
       meta: {
         validade: values.validade,
         gera_valor: values.gera_valor,
-        // Persistir flag parcelada para aparecer na edição de propostas
-        parcelada: values.parcelada || 'n',
-        // Opcional: persistir quantidade de parcelas escolhida
+        // Persistir flag parcelada e estratégia para aparecer na edição de propostas
+        parcelada: billingStrategy !== 'none' && billingStrategy !== 'single' ? 's' : 'n',
         parcelas: values.parcelas || '',
+        billing_strategy: billingStrategy,
       },
       id: values.id || '',
       funnel_id: values.funnel_id,
@@ -1016,99 +943,25 @@ export default function ProposalsCreate() {
 
               {/* (relocado) Campo de Validade movido para a linha de Status/Total */}
 
-              {/* Valores opcionais */}
+              {/* Validade da Proposta / Acesso */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField control={form.control} name="desconto" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Desconto</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="R$ 0,00"
-                        value={field.value || ''}
-                        onChange={(e) => field.onChange(currencyApplyMask(e.target.value, 'pt-BR', 'BRL'))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="inscricao" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Inscrição</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="R$ 0,00"
-                        value={field.value || ''}
-                        onChange={(e) => field.onChange(currencyApplyMask(e.target.value, 'pt-BR', 'BRL'))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="subtotal" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subtotal</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="R$ 0,00"
-                        value={field.value || ''}
-                        onChange={(e) => field.onChange(currencyApplyMask(e.target.value, 'pt-BR', 'BRL'))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField control={form.control} name="total" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Total</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="R$ 0,00"
-                        value={field.value || ''}
-                        readOnly
-                        onChange={(e) => field.onChange(currencyApplyMask(e.target.value, 'pt-BR', 'BRL'))}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                {/* Parcelada? */}
-                <FormField
-                  control={form.control}
-                  name="parcelada"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Parcelada?</FormLabel>
-                      <Select value={field.value || ''} onValueChange={field.onChange}>
-                        <SelectTrigger className="w-full h-10">
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="n">Não</SelectItem>
-                          <SelectItem value="s">Sim</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {/* Validade (dias) — substitui o antigo campo ID (opcional) */}
                 <FormField
                   control={form.control}
                   name="validade"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Validade (dias)</FormLabel>
+                      <FormLabel>Validade da Proposta / Acesso (dias)</FormLabel>
                       <Select value={field.value || ''} onValueChange={field.onChange}>
                         <SelectTrigger className="w-full h-10">
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="7">7</SelectItem>
-                          <SelectItem value="14">14</SelectItem>
-                          <SelectItem value="30">30</SelectItem>
+                          <SelectItem value="7">7 Dias</SelectItem>
+                          <SelectItem value="14">14 Dias</SelectItem>
+                          <SelectItem value="30">30 Dias (1 Mês)</SelectItem>
+                          <SelectItem value="180">180 Dias (6 Meses)</SelectItem>
+                          <SelectItem value="365">365 Dias (1 Ano)</SelectItem>
+                          <SelectItem value="9999">Acesso Vitalício</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -1117,157 +970,18 @@ export default function ProposalsCreate() {
                 />
               </div>
 
-              {/* Toggle de Separar Taxa de Inscrição (só exibido se houver taxa) */}
-              {currencyRemoveMaskToNumber(form.watch('inscricao') || '') > 0 && form.watch('parcelada') === 's' && (
-                <div className="flex items-center justify-between rounded-xl border p-4 mb-4 mt-6 bg-slate-50 dark:bg-slate-900/50">
-                  <div className="space-y-1">
-                    <Label className="text-sm font-bold">Cobrar Taxa de Inscrição Separadamente?</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Isso irá gerar uma fatura separada apenas para a taxa de inscrição. O valor das demais parcelas será descontado dessa taxa.
-                    </p>
-                  </div>
-                  <FormField
-                    control={form.control}
-                    name="separar_taxa"
-                    render={({ field }) => (
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    )}
-                  />
-                </div>
-              )}
-
-              {/* Seleção de Parcelas e geração de faturas quando parcelada = "s" */}
-              {form.watch('parcelada') === 's' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Gerar Faturas</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Parcelas */}
-                      <FormField
-                        control={form.control}
-                        name="parcelas"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Parcelas</FormLabel>
-                            <Select value={field.value || ''} onValueChange={field.onChange}>
-                              <SelectTrigger className="w-full h-10">
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.from({ length: 24 }, (_, i) => (
-                                  <SelectItem key={i + 1} value={String(i + 1)}>
-                                    {i + 1}{i === 0 ? ' (À vista)' : ''}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      {/* Primeiro Vencimento */}
-                      <FormItem>
-                        <FormLabel>Primeiro Vencimento</FormLabel>
-                        <Input
-                          type="date"
-                          value={firstDueDate}
-                          onChange={(e) => setFirstDueDate(e.target.value)}
-                        />
-                      </FormItem>
-                      {/* Método de Pagamento */}
-                      <FormItem>
-                        <FormLabel>Método de Pagamento</FormLabel>
-                        <Select value={invoicePaymentMethod} onValueChange={setInvoicePaymentMethod}>
-                          <SelectTrigger className="w-full h-10">
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pix">PIX</SelectItem>
-                            <SelectItem value="cash">Dinheiro</SelectItem>
-                            <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
-                            <SelectItem value="debit_card">Cartão de Débito</SelectItem>
-                            <SelectItem value="bank_transfer">Transferência</SelectItem>
-                            <SelectItem value="check">Cheque</SelectItem>
-                            <SelectItem value="boleto">Boleto</SelectItem>
-                            <SelectItem value="other">Outro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    </div>
-
-                    {/* Preview das faturas */}
-                    {generatedInvoices.length > 0 && (
-                      <div className="space-y-2">
-                        <FormLabel>Faturas a Gerar ({generatedInvoices.length})</FormLabel>
-                        <div className="border rounded-md overflow-hidden">
-                          <table className="w-full text-sm">
-                            <thead className="bg-muted/50">
-                              <tr>
-                                <th className="text-left px-3 py-2 font-medium">#</th>
-                                <th className="text-left px-3 py-2 font-medium">Descrição</th>
-                                <th className="text-right px-3 py-2 font-medium">Valor</th>
-                                <th className="text-center px-3 py-2 font-medium">Vencimento</th>
-                                <th className="text-center px-3 py-2 font-medium">Método</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                              {generatedInvoices.map((inv, idx) => (
-                                <tr key={idx} className="hover:bg-muted/30">
-                                  <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
-                                  <td className="px-3 py-2">{inv.description}</td>
-                                  <td className="px-3 py-2 text-right font-medium">
-                                    {formatCurrencyBRL(Number(inv.amount))}
-                                  </td>
-                                  <td className="px-3 py-2 text-center">
-                                    {new Date(inv.due_date + 'T12:00:00').toLocaleDateString('pt-BR')}
-                                  </td>
-                                  <td className="px-3 py-2 text-center capitalize">
-                                    {invoicePaymentMethod === 'pix' ? 'PIX' :
-                                     invoicePaymentMethod === 'cash' ? 'Dinheiro' :
-                                     invoicePaymentMethod === 'credit_card' ? 'Cartão Crédito' :
-                                     invoicePaymentMethod === 'debit_card' ? 'Cartão Débito' :
-                                     invoicePaymentMethod === 'bank_transfer' ? 'Transferência' :
-                                     invoicePaymentMethod === 'check' ? 'Cheque' :
-                                     invoicePaymentMethod === 'boleto' ? 'Boleto' : 'Outro'}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                            <tfoot className="bg-muted/30 font-medium">
-                              <tr>
-                                <td colSpan={2} className="px-3 py-2 text-right">Total:</td>
-                                <td className="px-3 py-2 text-right">
-                                  {formatCurrencyBRL(generatedInvoices.reduce((s, i) => s + Number(i.amount), 0))}
-                                </td>
-                                <td colSpan={2} />
-                              </tr>
-                            </tfoot>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Preview visual do orçamento (substitui o campo JSON) */}
-              <BudgetPreview
-                title="Proposta Comercial"
-                clientName={selectedClient?.name || selectedClient?.nome || ''}
-                clientId={selectedClient?.id ? String(selectedClient.id) : undefined}
-                clientPhone={selectedClient?.config?.celular || selectedClient?.config?.telefone_residencial || ''}
-                clientEmail={selectedClient?.email || ''}
-                course={selectedCourse as any}
-                discountLabel="Desconto"
-                discountAmountMasked={form.watch('desconto') || ''}
-                subtotalMasked={form.watch('subtotal') || ''}
-                totalMasked={form.watch('total') || ''}
+              {/* Planejador Financeiro e de Parcelas com Strategy Pattern */}
+              <EnrollmentBillingPlanner
+                form={form}
+                mode="create"
+                selectedCourse={selectedCourse}
+                selectedClient={selectedClient}
+                isInterested={isInterested}
                 validityDate={computeValidityDate(form.watch('validade'))}
+                onInvoicesChange={(invs, strat) => {
+                  setGeneratedInvoices(invs);
+                  setBillingStrategy(strat);
+                }}
               />
 
               {/* Espaço para o rodapé fixo não cobrir o conteúdo */}
