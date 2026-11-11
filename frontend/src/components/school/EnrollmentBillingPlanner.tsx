@@ -15,6 +15,7 @@ import {
   FileText,
   ExternalLink,
   QrCode,
+  Barcode,
   Receipt,
   Check,
   Calculator,
@@ -43,6 +44,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   currencyApplyMask,
   currencyRemoveMaskToNumber,
@@ -111,6 +113,10 @@ export default function EnrollmentBillingPlanner({
 
   // Estados de configuração da estratégia
   const [strategyKey, setStrategyKey] = useState<BillingStrategyKey>('bundled');
+  const isEnrolled = (() => {
+    const s = String(enrollment?.situacao ?? enrollment?.status ?? '').toLowerCase();
+    return s.startsWith('mat') || s.startsWith('cur') || s.startsWith('con');
+  })();
   const [firstDueDate, setFirstDueDate] = useState<string>(() => getDefaultDueDateIso(5));
   const [feeDueDate, setFeeDueDate] = useState<string>(() => getDefaultDueDateIso(2));
   const [offsetCourseAfterFee, setOffsetCourseAfterFee] = useState<boolean>(true);
@@ -125,6 +131,8 @@ export default function EnrollmentBillingPlanner({
 
   // Estados operacionais (sincronização / baixa / Asaas / preview de proposta)
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [isBatchGenerating, setIsBatchGenerating] = useState<boolean>(false);
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string | number>>(new Set());
   const [processingRowId, setProcessingRowId] = useState<string | number | null>(null);
   const [proposalPreviewOpen, setProposalPreviewOpen] = useState<boolean>(false);
 
@@ -615,6 +623,90 @@ export default function EnrollmentBillingPlanner({
     }
   };
 
+  // Seleção múltipla para geração em lote no Asaas
+  const toggleSelectRow = (rowId: string | number) => {
+    setSelectedRowIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(rowId)) {
+        next.delete(rowId);
+      } else {
+        next.add(rowId);
+      }
+      return next;
+    });
+  };
+
+  const selectableRows = rows.filter((r) => r.id && r.status !== 'paid');
+  const allSelectableSelected =
+    selectableRows.length > 0 && selectableRows.every((r) => selectedRowIds.has(r.id!));
+
+  const toggleSelectAll = () => {
+    if (allSelectableSelected) {
+      setSelectedRowIds(new Set());
+    } else {
+      setSelectedRowIds(new Set(selectableRows.map((r) => r.id!)));
+    }
+  };
+
+  // Gerar em lote (todas ou selecionadas)
+  const handleBatchGenerateAsaas = async (billingType: 'PIX' | 'BOLETO', targetIds?: Array<string | number>) => {
+    const idsToProcess = targetIds && targetIds.length > 0
+      ? targetIds
+      : selectedRowIds.size > 0
+      ? Array.from(selectedRowIds)
+      : rows.filter((r) => r.id && r.status !== 'paid' && !r.invoice_url).map((r) => r.id!);
+
+    if (idsToProcess.length === 0) {
+      toast({
+        title: 'Nenhuma parcela pendente',
+        description: 'Todas as parcelas salvas já possuem link ou estão quitadas.',
+      });
+      return;
+    }
+
+    setIsBatchGenerating(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const id of idsToProcess) {
+      try {
+        setProcessingRowId(id);
+        const updated: any = await financialService.accountsReceivable.generateCharge(
+          String(id),
+          billingType
+        );
+        const url = updated?.config?.invoice_url || updated?.data?.config?.invoice_url;
+        setRows((prev) =>
+          prev.map((item) =>
+            item.id === id ? { ...item, invoice_url: url || item.invoice_url } : item
+          )
+        );
+        successCount++;
+      } catch (err: any) {
+        failCount++;
+        console.error(`Falha ao gerar ${billingType} para fatura ${id}:`, err);
+      }
+    }
+
+    setProcessingRowId(null);
+    setIsBatchGenerating(false);
+    setSelectedRowIds(new Set());
+    onRefetchEnrollment?.();
+
+    if (successCount > 0) {
+      toast({
+        title: `Cobranças geradas no Asaas!`,
+        description: `${successCount} fatura(s) foram geradas com sucesso como ${billingType}.${failCount > 0 ? ` (${failCount} falharam)` : ''}`,
+      });
+    } else if (failCount > 0) {
+      toast({
+        title: `Erro ao gerar cobranças`,
+        description: 'Não foi possível gerar no Asaas. Verifique se o cliente possui CPF/E-mail válidos.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const paidCount = rows.filter((r) => r.status === 'paid').length;
   const pendingCount = rows.filter((r) => r.status !== 'paid').length;
   const hasUnsavedChanges = rows.some((r) => !r.id);
@@ -1070,6 +1162,55 @@ export default function EnrollmentBillingPlanner({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Ações em Lote para Asaas (quando em edição e com parcelas salvas) */}
+            {mode === 'edit' && selectableRows.length > 0 && (
+              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-500 uppercase px-1.5">
+                  Asaas {selectedRowIds.size > 0 ? `(${selectedRowIds.size} sel.)` : '(Todos)'}:
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isBatchGenerating}
+                  onClick={() => handleBatchGenerateAsaas('BOLETO')}
+                  className="h-7 px-2 text-xs font-bold text-slate-800 bg-white hover:bg-slate-50 gap-1 border-slate-300 shadow-2xs"
+                  title={
+                    selectedRowIds.size > 0
+                      ? `Gerar Boleto para as ${selectedRowIds.size} parcelas selecionadas`
+                      : 'Gerar Boleto para todas as parcelas pendentes sem cobrança'
+                  }
+                >
+                  {isBatchGenerating ? (
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Barcode className="h-3 w-3 text-slate-600" />
+                  )}
+                  <span>Gerar Boletos</span>
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isBatchGenerating}
+                  onClick={() => handleBatchGenerateAsaas('PIX')}
+                  className="h-7 px-2 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 gap-1 border-emerald-200 shadow-2xs"
+                  title={
+                    selectedRowIds.size > 0
+                      ? `Gerar PIX para as ${selectedRowIds.size} parcelas selecionadas`
+                      : 'Gerar PIX para todas as parcelas pendentes sem cobrança'
+                  }
+                >
+                  {isBatchGenerating ? (
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <QrCode className="h-3 w-3 text-emerald-600" />
+                  )}
+                  <span>Gerar PIX</span>
+                </Button>
+              </div>
+            )}
+
             {Math.abs(balanceDifference) >= 0.01 && rows.length > 0 && (
               <Button
                 type="button"
@@ -1129,6 +1270,16 @@ export default function EnrollmentBillingPlanner({
             <table className="w-full text-xs">
               <thead className="bg-muted/40 border-b text-muted-foreground uppercase text-[10px] font-bold">
                 <tr>
+                  {mode === 'edit' && selectableRows.length > 0 && (
+                    <th className="px-2 py-2.5 text-center w-8">
+                      <Checkbox
+                        checked={allSelectableSelected}
+                        onCheckedChange={toggleSelectAll}
+                        title="Selecionar todas as parcelas em aberto"
+                        className="h-3.5 w-3.5 translate-y-0.5"
+                      />
+                    </th>
+                  )}
                   <th className="px-3 py-2.5 text-left w-10">#</th>
                   <th className="px-3 py-2.5 text-left min-w-[200px]">Descrição da Cobrança</th>
                   <th className="px-3 py-2.5 text-left w-40">Vencimento</th>
@@ -1144,18 +1295,33 @@ export default function EnrollmentBillingPlanner({
                   const isLocked = isPaid || lockedIndices.has(idx);
                   const isFee = row.installment_type === 'enrollment_fee';
                   const isRowLoading = processingRowId !== null && processingRowId === row.id;
+                  const isSelected = Boolean(row.id && selectedRowIds.has(row.id));
 
                   return (
                     <tr
                       key={row.id ? `saved-${row.id}` : `draft-${idx}`}
                       className={`transition-colors ${
-                        isPaid
+                        isSelected
+                          ? 'bg-primary/5'
+                          : isPaid
                           ? 'bg-emerald-50/40'
                           : isFee
                             ? 'bg-blue-50/20 hover:bg-blue-50/40'
                             : 'hover:bg-slate-50/80'
                       }`}
                     >
+                      {mode === 'edit' && selectableRows.length > 0 && (
+                        <td className="px-2 py-2 text-center">
+                          {row.id && !isPaid ? (
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleSelectRow(row.id!)}
+                              title="Selecionar parcela para gerar no Asaas"
+                              className="h-3.5 w-3.5 translate-y-0.5"
+                            />
+                          ) : null}
+                        </td>
+                      )}
                       <td className="px-3 py-2 font-mono font-bold text-muted-foreground">
                         {isFee ? (
                           <Badge
@@ -1293,23 +1459,39 @@ export default function EnrollmentBillingPlanner({
                                   href={row.invoice_url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  title="Abrir Link do Boleto / PIX"
-                                  className="h-7 w-7 inline-flex items-center justify-center rounded-md text-blue-600 hover:bg-blue-50"
+                                  title="Abrir Link do Boleto / PIX do Asaas"
+                                  className="h-7 px-2 inline-flex items-center gap-1 rounded-md text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
                                 >
                                   <ExternalLink className="h-3.5 w-3.5" />
+                                  <span>Boleto/Link</span>
                                 </a>
                               ) : (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  disabled={isRowLoading}
-                                  onClick={() => handleQuickGenerateAsaas(row, 'PIX')}
-                                  title="Gerar Cobrança PIX / Boleto no Asaas"
-                                  className="h-7 w-7 text-primary hover:bg-primary/10"
-                                >
-                                  <QrCode className="h-3.5 w-3.5" />
-                                </Button>
+                                <div className="flex items-center gap-0.5">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={isRowLoading}
+                                    onClick={() => handleQuickGenerateAsaas(row, 'BOLETO')}
+                                    title="Gerar Boleto Bancário no Asaas"
+                                    className="h-7 px-1.5 text-xs font-semibold text-slate-700 hover:text-primary hover:bg-slate-100 gap-1"
+                                  >
+                                    <Barcode className="h-3.5 w-3.5 text-slate-500" />
+                                    <span className="hidden sm:inline">Boleto</span>
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={isRowLoading}
+                                    onClick={() => handleQuickGenerateAsaas(row, 'PIX')}
+                                    title="Gerar Cobrança PIX com QR Code no Asaas"
+                                    className="h-7 px-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 gap-1"
+                                  >
+                                    <QrCode className="h-3.5 w-3.5" />
+                                    <span className="hidden sm:inline">PIX</span>
+                                  </Button>
+                                </div>
                               )}
                             </>
                           )}
@@ -1336,7 +1518,7 @@ export default function EnrollmentBillingPlanner({
               {/* Rodapé Conciliador */}
               <tfoot className="bg-slate-50 border-t font-bold text-xs">
                 <tr>
-                  <td colSpan={4} className="px-3 py-2.5 text-right text-muted-foreground">
+                  <td colSpan={mode === 'edit' && selectableRows.length > 0 ? 5 : 4} className="px-3 py-2.5 text-right text-muted-foreground">
                     Soma das Parcelas:
                   </td>
                   <td className="px-3 py-2.5 text-right font-black text-sm tabular-nums">
@@ -1390,6 +1572,7 @@ export default function EnrollmentBillingPlanner({
           </DialogHeader>
           <BudgetPreview
             title="Proposta Comercial"
+            proposalNumber={enrollmentId}
             clientName={selectedClient?.name || selectedClient?.nome || ''}
             clientId={selectedClient?.id ? String(selectedClient.id) : undefined}
             clientPhone={
@@ -1405,6 +1588,15 @@ export default function EnrollmentBillingPlanner({
             subtotalMasked={subtotalWatched}
             totalMasked={totalWatched}
             validityDate={validityDate}
+            status={isEnrolled ? 'Matrícula Efetivada' : 'Aguardando Aprovação'}
+            installments={rows.map((r) => ({
+              numero: r.numero,
+              descricao: r.descricao,
+              vencimento: r.vencimento,
+              valor: r.valor,
+              forma_pagamento: r.forma_pagamento,
+            }))}
+            allowActions={true}
           />
         </DialogContent>
       </Dialog>
