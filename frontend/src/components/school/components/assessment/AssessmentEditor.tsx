@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   ListChecks,
   Sliders,
@@ -7,6 +7,8 @@ import {
   GripVertical,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   X,
   Maximize2,
   Minimize2,
@@ -69,7 +71,21 @@ export function AssessmentEditor({
   const [dragQuestionIdx, setDragQuestionIdx] = useState<number | null>(null);
   const [collapsedQuestions, setCollapsedQuestions] = useState<Record<number, boolean>>({});
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [page, setPage] = useState<number>(1);
+  const pageSize = 20;
+
   const questionRefs = useRef<Record<number, HTMLDivElement | null>>({});
+
+  const totalPages = Math.max(1, Math.ceil(questions.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedQuestions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return questions.slice(start, start + pageSize).map((q, localIdx) => ({
+      q,
+      globalIdx: start + localIdx,
+    }));
+  }, [questions, currentPage, pageSize]);
 
   const toggleQuestionCollapse = (qIdx: number) => {
     setCollapsedQuestions((prev) => ({ ...prev, [qIdx]: !prev[qIdx] }));
@@ -88,13 +104,17 @@ export function AssessmentEditor({
   };
 
   const scrollToQuestion = (qIdx: number) => {
+    const targetPage = Math.floor(qIdx / pageSize) + 1;
+    if (targetPage !== currentPage) {
+      setPage(targetPage);
+    }
     setCollapsedQuestions((prev) => ({ ...prev, [qIdx]: false }));
     setTimeout(() => {
       const el = questionRefs.current[qIdx];
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-    }, 50);
+    }, 80);
   };
 
   const totalPoints = questions.reduce((sum, q) => sum + (Number(q.pontos) || 0), 0);
@@ -105,6 +125,8 @@ export function AssessmentEditor({
     setSubTab('questoes');
     const newIdx = questions.length;
     onAddQuestion(type);
+    const newPage = Math.floor(newIdx / pageSize) + 1;
+    setPage(newPage);
 
     // Garante que o novo card venha expandido e com destaque visual
     setCollapsedQuestions((prev) => ({ ...prev, [newIdx]: false }));
@@ -190,6 +212,12 @@ export function AssessmentEditor({
               </span>
               {questions.length === 0 ? (
                 <span className="text-xs text-muted-foreground italic">Nenhuma questão criada ainda</span>
+              ) : questions.length > 50 ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-foreground">
+                    Exibindo pág. {currentPage} de {totalPages} ({questions.length} questões no total)
+                  </span>
+                </div>
               ) : (
                 questions.map((_, idx) => (
                   <button
@@ -291,7 +319,7 @@ export function AssessmentEditor({
 
           {/* Lista de Questões com Alto Contraste Visual e Delimitação */}
           <div className="space-y-6 bg-slate-100/70 dark:bg-slate-950/40 p-3 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-            {questions.map((q, qIdx) => {
+            {paginatedQuestions.map(({ q, globalIdx: qIdx }) => {
               const strategy = getQuestionStrategy(q.tipo_pergunta || 'multipla_escolha');
               const IconComp = strategy.icon;
               const isCollapsed = Boolean(collapsedQuestions[qIdx]);
@@ -437,6 +465,50 @@ export function AssessmentEditor({
                 </div>
               );
             })}
+
+            {/* Paginação de questões quando houver mais de uma página */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+                <span className="text-xs text-muted-foreground font-semibold">
+                  Mostrando {(currentPage - 1) * pageSize + 1} a {Math.min(currentPage * pageSize, questions.length)} de {questions.length} questões
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs font-bold gap-1"
+                    disabled={currentPage <= 1}
+                    onClick={() => {
+                      setPage((p) => Math.max(1, p - 1));
+                      setTimeout(() => {
+                        window.scrollTo({ top: 300, behavior: 'smooth' });
+                      }, 50);
+                    }}
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" /> Anterior
+                  </Button>
+                  <span className="text-xs font-black px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 border">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs font-bold gap-1"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => {
+                      setPage((p) => Math.min(totalPages, p + 1));
+                      setTimeout(() => {
+                        window.scrollTo({ top: 300, behavior: 'smooth' });
+                      }, 50);
+                    }}
+                  >
+                    Próxima <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </TabsContent>
 

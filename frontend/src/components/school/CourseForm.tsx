@@ -3665,11 +3665,6 @@ export function CourseForm({
   importVideoDuration,
   handleActivityFileUpload
  }: any) {
-   console.log('CourseModuleItem rendered', index, field.id);
-   useEffect(() => {
-     console.log('CourseModuleItem mounted', index, field.id);
-     return () => console.log('CourseModuleItem unmounted', index, field.id);
-   }, []);
    const { control, getValues, setValue } = useFormContext();
    // Watch specific module to trigger re-renders only for this item
    const m = useWatch({
