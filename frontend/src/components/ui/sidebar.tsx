@@ -275,7 +275,7 @@ const Sidebar = React.forwardRef<
           data-variant={variant}
           data-side={side}
           className={cn(
-            "duration-200 fixed inset-y-0 z-10 hidden h-svh transition-[left,right,width,box-shadow] ease-linear md:flex",
+            "duration-200 fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width,box-shadow] ease-linear md:flex",
             isHoverActive && "!w-64 z-50 shadow-2xl bg-sidebar border-r border-sidebar-border",
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"

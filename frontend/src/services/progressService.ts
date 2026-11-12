@@ -271,11 +271,17 @@ class ProgressService extends GenericApiService<any, any, any> {
     exists?: boolean;
     activity_id?: string | number;
   }> {
+    // pt-BR: Se não houver matrícula associada (ex: admin visualizando ou antes de carregar matrícula), não faz a requisição à API
+    // en-US: If no enrollment is associated, skip API call to avoid 422 validation error
+    if (!id_matricula) {
+      return { seconds: 0, exists: false, activity_id };
+    }
+
     /**
      * pt-BR: Inclui id_matricula (quando fornecido) para posição por matrícula.
      * en-US: Includes id_matricula (when provided) for per-enrollment position.
      */
-    const res = await this.customGet('/video-position/get', { course_id: String(course_id), activity_id: String(activity_id), ...(id_matricula ? { id_matricula } : {}) });
+    const res = await this.customGet('/video-position/get', { course_id: String(course_id), activity_id: String(activity_id), id_matricula: String(id_matricula) });
     // pt-BR: Normaliza para cobrir respostas com ou sem `data`.
     // en-US: Normalize to cover responses with or without `data`.
     const data = (res && typeof res === 'object' && 'data' in res) ? (res as any).data : res;

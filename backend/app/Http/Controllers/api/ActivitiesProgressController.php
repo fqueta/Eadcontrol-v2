@@ -205,7 +205,7 @@ class ActivitiesProgressController extends Controller
 
         $validator = Validator::make($request->query(), [
             'activity_id' => ['required', 'integer'],
-            'id_matricula' => ['required', 'integer'],
+            'id_matricula' => ['nullable', 'integer'],
             'course_id' => ['nullable', 'integer'],
         ]);
 
@@ -218,8 +218,18 @@ class ActivitiesProgressController extends Controller
 
         $data = $validator->validated();
         $activityId = (int) $data['activity_id'];
-        $idMatricula = (int) $data['id_matricula'];
+        $idMatricula = isset($data['id_matricula']) ? (int) $data['id_matricula'] : null;
         $courseId = isset($data['course_id']) ? (int)$data['course_id'] : null;
+
+        if (!$idMatricula) {
+            return response()->json([
+                'activity_id' => $activityId,
+                'id_matricula' => null,
+                'seconds' => 0,
+                'exists' => false,
+                'config' => [],
+            ], 200);
+        }
 
         $matricula = Matricula::select('id', 'id_cliente', 'validade_acesso')->find($idMatricula);
         if (!$matricula) {

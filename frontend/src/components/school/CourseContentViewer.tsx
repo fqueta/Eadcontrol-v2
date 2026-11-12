@@ -1770,7 +1770,18 @@ function htmlEquals(a: string, b: string): boolean {
       await loadYouTubeAPI();
       if (destroyed) return;
       const YT = (window as any).YT;
-      const player = new YT.Player(container, {
+
+      // pt-BR: O construtor do YT.Player substitui o elemento DOM passado por um <iframe>.
+      // Se passarmos o elemento gerenciado diretamente pelo React, ao desmontar/atualizar o React
+      // tenta executar parent.removeChild no elemento substituído/destacado e lança:
+      // "NotFoundError: Failed to execute 'removeChild' on 'Node': The node to be removed is not a child of this node."
+      // Para evitar isso, criamos um elemento filho dinâmico dentro de container e passamos ele para o YT.Player.
+      container.innerHTML = '';
+      const ytTarget = document.createElement('div');
+      ytTarget.className = 'w-full h-full';
+      container.appendChild(ytTarget);
+
+      const player = new YT.Player(ytTarget, {
         videoId,
         playerVars: {
           enablejsapi: 1,
@@ -1835,6 +1846,7 @@ function htmlEquals(a: string, b: string): boolean {
       const prevCleanup = playerCleanupRef.current;
       playerCleanupRef.current = () => {
         try { player.destroy?.(); } catch {}
+        try { container.innerHTML = ''; } catch {}
         try { prevCleanup?.(); } catch {}
       };
     };
