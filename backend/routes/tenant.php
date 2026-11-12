@@ -133,6 +133,7 @@ Route::name('api.')->prefix('api/v1')->middleware([
     // Comentários aprovados públicos (listagem apenas)
     Route::get('courses/{id}/comments', [CommentController::class, 'indexForCourse'])->name('courses.comments.index');
     Route::get('activities/{id}/comments', [CommentController::class, 'indexForActivity'])->name('activities.comments.index');
+    Route::get('activities/{id}/questions', [ActivityController::class, 'getQuestions'])->name('activities.questions.public');
 
     // Streaming de mídia / vídeo (público para alunos e painel com suporte a Range / 206 Partial Content e HLS)
     Route::get('integrations/media/stream', [\App\Http\Controllers\api\IntegrationTestController::class, 'streamR2Media'])->name('integrations.media.stream');
@@ -313,6 +314,7 @@ Route::name('api.')->prefix('api/v1')->middleware([
             'activities' => 'id'
         ]]);
         Route::get('activities/trash', [ActivityController::class, 'trash'])->name('activities.trash');
+        Route::get('activities/{id}/questions', [ActivityController::class, 'getQuestions'])->name('activities.questions');
         Route::put('activities/{id}/restore', [ActivityController::class, 'restore'])->name('activities.restore');
         Route::delete('activities/{id}/force', [ActivityController::class, 'forceDelete'])->name('activities.forceDelete');
         // Migração individual de vídeo do Vimeo para o R2 (com HLS)

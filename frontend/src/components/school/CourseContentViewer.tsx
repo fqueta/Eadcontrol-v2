@@ -29,6 +29,7 @@ import { QuizGradeDetail } from './components/QuizGradeDetail';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { CustomVideoPlayer } from '@/components/common/CustomVideoPlayer';
 import { resolveEadControlPlayUrl } from './components/CourseActivityItem';
+import { getTenantApiUrl, getVersionApi } from '@/lib/qlib';
 
 /**
  * VideoDescriptionToggle
@@ -101,8 +102,40 @@ function QuizViewer({
   const [answers, setAnswers] = useState<Record<number, any>>({});
   const [showFeedback, setShowFeedback] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [loadedQuestions, setLoadedQuestions] = useState<any[]>(() => (activity?.quiz_questions || []));
+  const [loadingQuestions, setLoadingQuestions] = useState<boolean>(false);
 
-  const questions = (activity?.quiz_questions || []) as any[];
+  // Carregamento Lazy de questões se a prova for extensa (> 100)
+  useEffect(() => {
+    const actId = activity?.id ?? activity?.activity_id;
+    if (actId && (activity?.has_lazy_questions || (!activity?.quiz_questions?.length && (activity?.questions_count ?? 0) > 0))) {
+      setLoadingQuestions(true);
+      fetch(`${getTenantApiUrl()}${getVersionApi()}/activities/${actId}/questions`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(localStorage.getItem('token') ? { 'Authorization': `Bearer ${localStorage.getItem('token')}` } : {})
+        }
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (Array.isArray(res?.data)) {
+          setLoadedQuestions(res.data);
+          activity.quiz_questions = res.data;
+          activity.has_lazy_questions = false;
+        }
+      })
+      .catch(err => {
+        console.error('Erro ao carregar questões lazy do quiz:', err);
+      })
+      .finally(() => {
+        setLoadingQuestions(false);
+      });
+    } else if (activity?.quiz_questions) {
+      setLoadedQuestions(activity.quiz_questions);
+    }
+  }, [activity?.id, activity?.activity_id]);
+
+  const questions = loadedQuestions;
   const config = activity?.quiz_config || {};
   const currentQuestion = questions[currentQuestionIdx];
 
@@ -301,6 +334,16 @@ function QuizViewer({
     }
   };
 
+
+  if (loadingQuestions) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <h3 className="text-base font-semibold">Carregando questões da avaliação...</h3>
+        <p className="text-xs text-muted-foreground">Otimizando a visualização de provas com muitas questões.</p>
+      </div>
+    );
+  }
 
   if (questions.length === 0) {
     return (

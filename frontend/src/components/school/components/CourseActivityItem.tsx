@@ -211,6 +211,31 @@ export function CourseActivityItem({
 
     const [dragQuestionIdx, setDragQuestionIdx] = useState<number | null>(null);
     const [collapsedQuestionsLocal, setCollapsedQuestionsLocal] = useState<Record<number, boolean>>({});
+    const [isLoadingLazyQuestions, setIsLoadingLazyQuestions] = useState<boolean>(false);
+
+    // Carregamento sob demanda das questões se a prova veio em modo lazy (> 100 questões)
+    const loadLazyQuestionsIfNeeded = async () => {
+      const actId = a?.id ?? a?.activity_id;
+      if (!actId || !a?.has_lazy_questions || isLoadingLazyQuestions) return;
+      try {
+        setIsLoadingLazyQuestions(true);
+        const res = await fetch(`${getTenantApiUrl()}${getVersionApi()}/activities/${actId}/questions`, {
+          headers: {
+            'Accept': 'application/json',
+            ...(localStorage.getItem('token') ? { 'Authorization': `Bearer ${localStorage.getItem('token')}` } : {})
+          }
+        });
+        const json = await res.json();
+        if (Array.isArray(json?.data)) {
+          setValue(`modulos.${index}.atividades.${aIdx}.quiz_questions`, json.data, { shouldDirty: false });
+          setValue(`modulos.${index}.atividades.${aIdx}.has_lazy_questions`, false);
+        }
+      } catch (err) {
+        console.error('Erro ao carregar questões lazy na edição:', err);
+      } finally {
+        setIsLoadingLazyQuestions(false);
+      }
+    };
 
     const toggleQuestionCollapseLocal = (qIdx: number) => {
         setCollapsedQuestionsLocal(prev => ({...prev, [qIdx]: !prev[qIdx]}));
@@ -800,6 +825,28 @@ export function CourseActivityItem({
                     </div>
 
                     {/* Construtor de Avaliação Ergonômico com Strategy Pattern */}
+                    {a?.has_lazy_questions && !questionFields.length ? (
+                      <div className="py-8 px-4 rounded-xl border border-dashed border-primary/30 bg-primary/5 flex flex-col items-center justify-center text-center space-y-3">
+                        <CheckSquare className="h-8 w-8 text-primary" />
+                        <div>
+                          <h4 className="font-bold text-sm text-foreground">Prova com {a?.questions_count || 'muitas'} questões cadastradas</h4>
+                          <p className="text-xs text-muted-foreground mt-1 max-w-md">
+                            Para acelerar o carregamento do curso, as questões desta prova são baixadas sob demanda.
+                          </p>
+                        </div>
+                        <Button 
+                          type="button" 
+                          variant="default" 
+                          size="sm" 
+                          disabled={isLoadingLazyQuestions}
+                          onClick={loadLazyQuestionsIfNeeded}
+                          className="gap-2"
+                        >
+                          {isLoadingLazyQuestions ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                          {isLoadingLazyQuestions ? 'Carregando questões...' : 'Carregar questões para edição'}
+                        </Button>
+                      </div>
+                    ) : (
                     <AssessmentEditor
                       activityTitle={a.titulo || `Atividade ${aIdx + 1}`}
                       activityIndex={aIdx}
@@ -820,6 +867,7 @@ export function CourseActivityItem({
                       onAddOption={localAddQuizOption}
                       onRemoveOption={localRemoveQuizOption}
                     />
+                    )}
                   </div>
                 ) : (
                   /* Layout 2 colunas para os outros tipos (vídeo, leitura, arquivo, tarefa) */

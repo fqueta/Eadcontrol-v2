@@ -834,28 +834,36 @@ class ActivitiesProgressController extends Controller
                     // EN: Load quiz questions if activity type is quiz
                     $quizQuestions = null;
                     $quizConfig = null;
+                    $questionsCount = null;
+                    $hasLazyQuestions = false;
                     if ($typeActivities === 'quiz' && $activity) {
-                        // Reutilizar lógica de carregamento de questões (manual aqui para evitar dependência circular com CursoController)
-                        $qs = $activity->questions()->with('options')->orderBy('activity_questions.ordem')->get();
-                        $quizQuestions = $qs->map(function($q) {
-                            return [
-                                'id' => $q->id,
-                                'tipo_pergunta' => $q->tipo_pergunta,
-                                'enunciado' => $q->enunciado,
-                                'explicacao' => $q->explicacao,
-                                'pontos' => $q->pontos,
-                                'resposta_correta' => $q->tipo_pergunta === 'verdadeiro_falso' 
-                                    ? ($q->options->where('correta', 's')->first()?->texto === 'verdadeiro' ? 'verdadeiro' : 'falso')
-                                    : null,
-                                'opcoes' => $q->options->map(function($o) {
-                                    return [
-                                        'id' => $o->id,
-                                        'texto' => $o->texto,
-                                        'correta' => $o->correta === 's'
-                                    ];
-                                })->toArray()
-                            ];
-                        })->toArray();
+                        $totalQs = $activity->questions()->count();
+                        $questionsCount = $totalQs;
+                        if ($totalQs > 100) {
+                            $quizQuestions = [];
+                            $hasLazyQuestions = true;
+                        } else {
+                            $qs = $activity->questions()->with('options')->orderBy('activity_questions.ordem')->get();
+                            $quizQuestions = $qs->map(function($q) {
+                                return [
+                                    'id' => $q->id,
+                                    'tipo_pergunta' => $q->tipo_pergunta,
+                                    'enunciado' => $q->enunciado,
+                                    'explicacao' => $q->explicacao,
+                                    'pontos' => $q->pontos,
+                                    'resposta_correta' => $q->tipo_pergunta === 'verdadeiro_falso' 
+                                        ? ($q->options->where('correta', 's')->first()?->texto === 'verdadeiro' ? 'verdadeiro' : 'falso')
+                                        : null,
+                                    'opcoes' => $q->options->map(function($o) {
+                                        return [
+                                            'id' => $o->id,
+                                            'texto' => $o->texto,
+                                            'correta' => $o->correta === 's'
+                                        ];
+                                    })->toArray()
+                                ];
+                            })->toArray();
+                        }
                         
                         // Sincronizar quiz_config se presente
                         if (!isset($act['quiz_config']) && isset($activity->config['quiz_config'])) {
@@ -876,6 +884,8 @@ class ActivitiesProgressController extends Controller
                         'type_activities' => $act['type_activities'] ?? null,
                         'quiz_questions' => $quizQuestions, // Added
                         'quiz_config' => $quizConfig,       // Added
+                        'questions_count' => $questionsCount,
+                        'has_lazy_questions' => $hasLazyQuestions,
                         'video_provider' => $videoProvider,
                         'active' => $act['active'] ?? null,
                         'id' => $act['id'] ?? $activityId,

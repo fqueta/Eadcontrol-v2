@@ -512,4 +512,53 @@ class ActivityController extends Controller
         $item->forceDelete();
         return response()->json(['exec' => true, 'message' => 'Atividade excluída permanentemente', 'status' => 200]);
     }
+
+    /**
+     * Retorna as questões de um quiz sob demanda (suporta paginação).
+     * EN: Returns quiz questions on demand (supports pagination).
+     */
+    public function getQuestions(Request $request, string $id)
+    {
+        $activity = Activity::findOrFail($id);
+
+        $perPage = (int) $request->query('per_page', 0);
+        $page = (int) $request->query('page', 1);
+
+        $query = $activity->questions()->with('options')->orderBy('activity_questions.ordem');
+        $total = $query->count();
+
+        if ($perPage > 0) {
+            $questions = $query->forPage($page, $perPage)->get();
+        } else {
+            $questions = $query->get();
+        }
+
+        $formatted = $questions->map(function($q) {
+            return [
+                'id' => $q->id,
+                'tipo_pergunta' => $q->tipo_pergunta,
+                'enunciado' => $q->enunciado,
+                'explicacao' => $q->explicacao,
+                'pontos' => $q->pontos,
+                'resposta_correta' => $q->tipo_pergunta === 'verdadeiro_falso' 
+                    ? ($q->options->where('correta', 's')->first()?->texto === 'verdadeiro' ? 'verdadeiro' : 'falso')
+                    : null,
+                'opcoes' => $q->options->map(function($o) {
+                    return [
+                        'id' => $o->id,
+                        'texto' => $o->texto,
+                        'correta' => $o->correta === 's'
+                    ];
+                })->values()->toArray()
+            ];
+        })->values()->toArray();
+
+        return response()->json([
+            'data' => $formatted,
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage > 0 ? $perPage : $total,
+            'total_pages' => $perPage > 0 ? (int) ceil($total / $perPage) : 1,
+        ]);
+    }
 }

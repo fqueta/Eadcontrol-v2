@@ -850,8 +850,12 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
 
                 // PT: Processar perguntas do quiz se for do tipo quiz
                 // EN: Process quiz questions if it's a quiz type
+                // Não sobrescrever perguntas se a prova veio em modo lazy e o usuário não carregou nem editou questões
                 if (($act['type_activities'] ?? '') === 'quiz' && isset($act['quiz_questions']) && is_array($act['quiz_questions'])) {
-                    $this->syncQuizQuestions($activityModel, $act['quiz_questions'], $authorId);
+                    $isLazyUnloaded = !empty($act['has_lazy_questions']) && empty($act['quiz_questions']);
+                    if (!$isLazyUnloaded) {
+                        $this->syncQuizQuestions($activityModel, $act['quiz_questions'], $authorId);
+                    }
                 }
 
                 // Monta retorno da atividade com ID e URLs sincronizadas
@@ -1124,12 +1128,13 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
             }
         }
 
-        // 2. Carregar todas as atividades, questões e opções em uma única query (Eager Loading)
+        // 2. Carregar todas as atividades de quiz com contagem de questões e, se pequeno (<= 100), carregar completo
         $loadedActivities = collect();
         if (!empty($quizActivityIds)) {
             $loadedActivities = Activity::whereIn('ID', $quizActivityIds)
+                ->withCount('questions')
                 ->with(['questions' => function($q) {
-                    $q->orderBy('activity_questions.ordem');
+                    $q->orderBy('activity_questions.ordem')->limit(101);
                 }, 'questions.options'])
                 ->get()
                 ->keyBy('ID');
@@ -1144,9 +1149,18 @@ $upsertResult = $this->upsertModulesAndActivities($modulesPayload, $curso, (stri
                     $activityId = $act['id'] ?? $act['activity_id'] ?? null;
                     if ($activityId && $loadedActivities->has($activityId)) {
                         $activityModel = $loadedActivities->get($activityId);
+                        $totalQuestions = (int) ($activityModel->questions_count ?? $activityModel->questions->count());
+                        $act['questions_count'] = $totalQuestions;
                         
-                        // Usar método auxiliar para formatar (agora passando o model já carregado)
-                        $act['quiz_questions'] = $this->formatQuizQuestions($activityModel);
+                        // OTIMIZAÇÃO: Provas grandes (> 100 questões) têm questões carregadas sob demanda via API
+                        // Isso evita payloads gigantes de 20MB a 40MB travando o carregamento do curso.
+                        if ($totalQuestions > 100) {
+                            $act['quiz_questions'] = [];
+                            $act['has_lazy_questions'] = true;
+                        } else {
+                            $act['quiz_questions'] = $this->formatQuizQuestions($activityModel);
+                            $act['has_lazy_questions'] = false;
+                        }
                         
                         // Sincronizar quiz_config
                         if (!isset($act['quiz_config']) && isset($activityModel->config['quiz_config'])) {
