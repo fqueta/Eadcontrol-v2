@@ -34,6 +34,9 @@ const getPersistedTopMenuItems = (): any[] | null => {
 
 type InclusiveSiteLayoutProps = {
   children: ReactNode;
+  hideHeader?: boolean;
+  hideFooter?: boolean;
+  hideMobileNav?: boolean;
 };
 
 /**
@@ -43,7 +46,7 @@ type InclusiveSiteLayoutProps = {
  * en-US: Shared layout inspired by Incluir & Educar website style,
  *        featuring header, user navigation and institutional footer.
  */
-export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
+export function InclusiveSiteLayout({ children, hideHeader = false, hideFooter = false, hideMobileNav = false }: InclusiveSiteLayoutProps) {
   const { user, isAuthenticated, logout } = useAuth();
   const { applyThemeSettings } = useTheme();
   const { toast } = useToast();
@@ -320,6 +323,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
       )}
 
       {/* Header */}
+      {!hideHeader && (
       <header className={`z-50 transition-all duration-300 ${
         isTransparentActive
           ? "absolute top-0 left-0 right-0 bg-transparent border-transparent shadow-none"
@@ -492,6 +496,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
           </div>
         </div>
       </header>
+      )}
 
       {/* Mobile Drawer navigation */}
       <Drawer open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
@@ -583,6 +588,7 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
       </Drawer>
 
       {/* Mobile Bottom Navigation Bar - Pattern for "App Moderno" */}
+      {!hideMobileNav && (
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-t border-white/20 dark:border-slate-800/50 shadow-[0_-4px_30px_-10px_rgba(0,0,0,0.1)] transition-all duration-300">
         <div className="flex items-center justify-around h-16 px-2">
           <Link to="/" className="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-blue-400 transition-colors">
@@ -634,12 +640,13 @@ export function InclusiveSiteLayout({ children }: InclusiveSiteLayoutProps) {
           )}
         </div>
       </nav>
+      )}
 
       {/* Page content */}
       <main className="min-h-[60vh] pb-20 md:pb-0">{children}</main>
 
       {/* Footer */}
-      {(() => {
+      {!hideFooter && (() => {
         const finalBgColor = footerConfig?.backgroundColor || "#020617";
         const finalGradientTo = footerConfig?.gradientColorTo || "";
         const finalTextColor = footerConfig?.textColor || "#94a3b8";

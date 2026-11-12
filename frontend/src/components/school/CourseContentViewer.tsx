@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
- import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock, Star, ChevronDown, ChevronUp, GraduationCap, Award, ChevronLeft, ChevronRight, Search, Circle, CircleCheck, AlertCircle, XCircle, Plus, X } from 'lucide-react';
+ import { Play, FileText, Link as LinkIcon, Check, Folder, Loader2, Clock, Star, ChevronDown, ChevronUp, GraduationCap, Award, ChevronLeft, ChevronRight, Search, Circle, CircleCheck, AlertCircle, XCircle, Plus, X, Maximize2, Minimize2 } from 'lucide-react';
 import { progressService } from '@/services/progressService';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -602,7 +602,19 @@ function QuizViewer({
  * pt-BR: Visualizador de conteúdo do curso; agora aceita `enrollmentId` para envio em progresso.
  * en-US: Course content viewer; now accepts `enrollmentId` to send with progress payloads.
  */
-export default function CourseContentViewer({ course, onActivityChange, enrollmentId }: { course: any; onActivityChange?: (activity: any) => void; enrollmentId?: string | number }) {
+export default function CourseContentViewer({ 
+  course, 
+  onActivityChange, 
+  enrollmentId,
+  isFocusMode = false,
+  onToggleFocusMode,
+}: { 
+  course: any; 
+  onActivityChange?: (activity: any) => void; 
+  enrollmentId?: string | number;
+  isFocusMode?: boolean;
+  onToggleFocusMode?: () => void;
+}) {
   const { trackEvent } = useAnalytics();
   /**
    * Router hooks
@@ -2635,6 +2647,18 @@ function htmlEquals(a: string, b: string): boolean {
                 <Award className="h-3.5 w-3.5" />
               </Button>
             )}
+
+            {onToggleFocusMode && (
+              <Button
+                variant={isFocusMode ? "default" : "outline"}
+                size="sm"
+                className="h-8 px-2 text-xs shrink-0"
+                onClick={onToggleFocusMode}
+                title={isFocusMode ? "Sair do modo foco" : "Modo foco (expandir tela)"}
+              >
+                {isFocusMode ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+              </Button>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
@@ -2672,6 +2696,13 @@ function htmlEquals(a: string, b: string): boolean {
 
         {/* Desktop Header Row */}
         <div className="hidden md:flex items-center gap-2">
+          {isFocusMode && (
+            <div className="flex items-center gap-2 pr-2 border-r max-w-xs shrink-0">
+              <span className="font-bold text-sm truncate" title={course?.titulo || course?.title || 'Curso'}>
+                {course?.titulo || course?.title || 'Curso'}
+              </span>
+            </div>
+          )}
           <div>
             <Input
               value={searchTerm}
@@ -2680,8 +2711,8 @@ function htmlEquals(a: string, b: string): boolean {
                 selectionIntentRef.current = 'auto';
                 setCurrentIndex(0);
               }}
-              placeholder="Buscar conteúdo do curso"
-              className="w-[280px] md:max-w-md h-9"
+              placeholder="Buscar conteúdo..."
+              className={isFocusMode ? "w-[160px] lg:w-[220px] h-9" : "w-[220px] lg:w-[280px] h-9"}
             />
           </div>
           <div className="flex items-center gap-2">
@@ -2743,6 +2774,21 @@ function htmlEquals(a: string, b: string): boolean {
                 <><ChevronUp className="h-3.5 w-3.5 mr-1" /> Focar no ativo (Sanfona)</>
               )}
             </Button>
+            {onToggleFocusMode && (
+              <Button
+                variant={isFocusMode ? "default" : "outline"}
+                size="sm"
+                className="h-9 gap-1.5 font-semibold text-xs"
+                onClick={onToggleFocusMode}
+                title={isFocusMode ? "Sair do modo foco nos estudos" : "Modo foco nos estudos (expandir para tela cheia e ocultar cabeçalhos externos)"}
+              >
+                {isFocusMode ? (
+                  <><Minimize2 className="h-3.5 w-3.5" /> Normal</>
+                ) : (
+                  <><Maximize2 className="h-3.5 w-3.5 text-primary" /> Modo Foco</>
+                )}
+              </Button>
+            )}
           </div>
           {progressLoading && (
             <span className="flex items-center gap-1 text-[11px] md:text-xs text-muted-foreground">

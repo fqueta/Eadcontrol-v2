@@ -50,6 +50,23 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [isFocusMode, setIsFocusMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('ead_study_focus_mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleFocusMode = () => {
+    setIsFocusMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('ead_study_focus_mode', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   /**
    * Course by slug (public endpoint)
@@ -736,7 +753,7 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
   };
 
   return (
-    <InclusiveSiteLayout>
+    <InclusiveSiteLayout hideHeader={isFocusMode} hideFooter={isFocusMode} hideMobileNav={isFocusMode}>
       {/**
        * compactPagePadding
        * pt-BR: Reduz paddings e espaçamentos em mobile para abrir mais área
@@ -744,13 +761,14 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
        * en-US: Reduce paddings and spacing on mobile to open up more visible
        *        area for the activity viewer.
        */}
-      <div className="container mx-auto p-0 md:p-4 space-y-0 md:space-y-6">
-        <Card className="border-0 shadow-none md:border md:shadow-lg md:rounded-xl dark:bg-slate-900/50 backdrop-blur-sm overflow-hidden">
-          <CardHeader className="hidden md:block py-2 md:py-4 bg-violet-50/50 dark:bg-violet-950/20 border-b border-violet-100 dark:border-violet-800/50">
+      <div className={isFocusMode ? "w-full p-0 h-[100dvh] flex flex-col" : "container mx-auto p-0 md:p-4 space-y-0 md:space-y-6"}>
+        <Card className={isFocusMode ? "border-0 shadow-none rounded-none flex-1 flex flex-col overflow-hidden" : "border-0 shadow-none md:border md:shadow-lg md:rounded-xl dark:bg-slate-900/50 backdrop-blur-sm overflow-hidden"}>
+          {!isFocusMode && (
+          <CardHeader className="hidden md:block py-2 md:py-3 bg-violet-50/50 dark:bg-violet-950/20 border-b border-violet-100 dark:border-violet-800/50">
             <div className="flex items-start justify-between gap-2 md:gap-3">
               <div className="min-w-0">
-                <CardTitle className="text-lg md:text-2xl leading-tight break-words line-clamp-2">{isLoading ? 'Carregando...' : title}</CardTitle>
-                <CardDescription className="hidden md:block">Área do aluno • Conteúdos do curso</CardDescription>
+                <CardTitle className="text-base md:text-xl leading-tight break-words line-clamp-1">{isLoading ? 'Carregando...' : title}</CardTitle>
+                <CardDescription className="hidden md:block text-xs">Área do aluno • Conteúdos do curso</CardDescription>
               </div>
               <div className="hidden md:flex items-center gap-2">
                 {courseTotalLabel && (
@@ -759,7 +777,8 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
+          )}
+          <CardContent className="p-0 flex-1 flex flex-col min-h-0">
             {error && <div className="text-red-600 p-4">Falha ao carregar o curso.</div>}
             {!isLoading && modules.length === 0 && (
               <div className="text-muted-foreground p-4">Nenhum módulo disponível.</div>
@@ -788,13 +807,14 @@ export default function StudentCourse({ fetchVariant = 'public' }: { fetchVarian
                  * pt-BR: Passa `enrollmentId` para que o salvamento de progresso envie `id_matricula`.
                  * en-US: Passes `enrollmentId` so progress saving sends `id_matricula`.
                  */}
-                {/**
-                 * viewerContainer
-                 * pt-BR: Contêiner de altura flexível no mobile para tela cheia e fixa no desktop.
-                 * en-US: Flexible height container on mobile for full screen and fixed on desktop.
-                 */}
-                <div className="h-[calc(100dvh-56px)] md:h-[82vh] overflow-hidden">
-                  <CourseContentViewer course={course} onActivityChange={handleActivityChange} enrollmentId={enrollmentId} />
+                <div className={isFocusMode ? "h-full w-full flex-1 flex flex-col min-h-0 overflow-hidden" : "h-[calc(100dvh-56px)] md:h-[calc(100vh-140px)] min-h-[500px] overflow-hidden"}>
+                  <CourseContentViewer 
+                    course={course} 
+                    onActivityChange={handleActivityChange} 
+                    enrollmentId={enrollmentId}
+                    isFocusMode={isFocusMode}
+                    onToggleFocusMode={toggleFocusMode}
+                  />
                 </div>
               </>
             )}
