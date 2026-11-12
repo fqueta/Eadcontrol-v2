@@ -622,9 +622,15 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
    */
   const [collapseInactiveModules, setCollapseInactiveModules] = useState(true);
   /**
+   * expandedModuleIndex
+   * pt-BR: No modo accordion (collapseInactiveModules === true), guarda o índice do módulo aberto.
+   * en-US: In accordion mode, stores the index of the single open module.
+   */
+  const [expandedModuleIndex, setExpandedModuleIndex] = useState<number | null>(null);
+  /**
    * collapsedModules
-   * pt-BR: Controla o recolhimento/expansão por módulo ao clicar no título.
-   * en-US: Controls per-module collapse/expand when clicking the module title.
+   * pt-BR: Quando "Expandir todos" está ativo, controla recolhimento manual por módulo.
+   * en-US: When "Expand all" is active, controls manual per-module collapse.
    */
   const [collapsedModules, setCollapsedModules] = useState<Record<number, boolean>>({});
   /**
@@ -999,17 +1005,20 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
   }, [currentActivity, onActivityChange]);
 
   /**
-   * Garante que ao mudar de atividade o módulo atual esteja aberto no modo accordion
+   * Garante que ao mudar de atividade o módulo ativo seja aberto no modo accordion
    */
   useEffect(() => {
-    if (collapseInactiveModules && currentActivity && (currentActivity as any)._moduleIndex !== undefined) {
-      const activeModIdx = (currentActivity as any)._moduleIndex;
-      setCollapsedModules((prev) => {
-        if (!prev[activeModIdx]) return prev;
-        const next = { ...prev };
-        delete next[activeModIdx];
-        return next;
-      });
+    if (currentActivity && (currentActivity as any)._moduleIndex !== undefined) {
+      const activeModIdx = Number((currentActivity as any)._moduleIndex);
+      setExpandedModuleIndex(activeModIdx);
+      if (collapseInactiveModules) {
+        setCollapsedModules((prev) => {
+          if (!prev[activeModIdx]) return prev;
+          const next = { ...prev };
+          delete next[activeModIdx];
+          return next;
+        });
+      }
     }
   }, [currentActivity, collapseInactiveModules]);
 
@@ -2777,17 +2786,24 @@ function htmlEquals(a: string, b: string): boolean {
             {modules.map((m: any, mi: number) => {
               const title = m?.titulo || m?.title || m?.name || `Módulo ${mi + 1}`;
               const activities: any[] = Array.isArray(m?.atividades || m?.activities) ? (m?.atividades || m?.activities) : [];
-              const isCollapsed = Boolean(collapsedModules[mi]);
               const isCurrentModule = Boolean(currentActivity && mi === (currentActivity as any)._moduleIndex);
-              const showActivities = !isCollapsed && (!collapseInactiveModules || isCurrentModule);
+              const activeAccordionMod = expandedModuleIndex ?? (currentActivity ? (currentActivity as any)._moduleIndex : 0);
+              const isExpanded = collapseInactiveModules ? (mi === activeAccordionMod) : !Boolean(collapsedModules[mi]);
+              const showActivities = isExpanded;
               
               return (
                 <div key={`mobile-sidebar-mod-${mi}`} className="mb-4">
                   <button
                     className={`w-full font-bold text-sm mb-2 flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isCurrentModule ? 'bg-primary/10 text-primary border border-primary/20' : 'hover:bg-muted bg-muted/30'}`}
-                    onClick={() => setCollapsedModules(prev => ({ ...prev, [mi]: !Boolean(prev[mi]) }))}
+                    onClick={() => {
+                      if (collapseInactiveModules) {
+                        setExpandedModuleIndex(prev => (prev === mi ? null : mi));
+                      } else {
+                        setCollapsedModules(prev => ({ ...prev, [mi]: !Boolean(prev[mi]) }));
+                      }
+                    }}
                   >
-                    {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                    {!showActivities ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
                     <Folder className="h-4 w-4 shrink-0" />
                     <span className="line-clamp-1 flex-1 text-left">{title}</span>
                     <Badge variant={isCurrentModule ? "default" : "outline"} className="shrink-0">{activities.length}</Badge>
@@ -2926,17 +2942,24 @@ function htmlEquals(a: string, b: string): boolean {
           {modules.map((m: any, mi: number) => {
             const title = m?.titulo || m?.title || m?.name || `Módulo ${mi + 1}`;
             const activities: any[] = Array.isArray(m?.atividades || m?.activities) ? (m?.atividades || m?.activities) : [];
-            const isCollapsed = Boolean(collapsedModules[mi]);
             const isCurrent = Boolean(currentActivity && mi === (currentActivity as any)._moduleIndex);
-            const showActivities = !isCollapsed && (!collapseInactiveModules || isCurrent);
+            const activeAccordionMod = expandedModuleIndex ?? (currentActivity ? (currentActivity as any)._moduleIndex : 0);
+            const isExpanded = collapseInactiveModules ? (mi === activeAccordionMod) : !Boolean(collapsedModules[mi]);
+            const showActivities = isExpanded;
             return (
               <div key={`sidebar-mod-${mi}`} className="mb-3">
                 <button
                   className="w-full font-semibold text-sm mb-2 flex items-center gap-2 px-2 py-1 rounded hover:bg-muted text-left"
-                  title={isCollapsed ? 'Mostrar atividades do módulo' : 'Recolher atividades do módulo'}
-                  onClick={() => setCollapsedModules(prev => ({ ...prev, [mi]: !Boolean(prev[mi]) }))}
+                  title={!showActivities ? 'Mostrar atividades do módulo' : 'Recolher atividades do módulo'}
+                  onClick={() => {
+                    if (collapseInactiveModules) {
+                      setExpandedModuleIndex(prev => (prev === mi ? null : mi));
+                    } else {
+                      setCollapsedModules(prev => ({ ...prev, [mi]: !Boolean(prev[mi]) }));
+                    }
+                  }}
                 >
-                  {isCollapsed ? (
+                  {!showActivities ? (
                     <ChevronDown className="h-4 w-4" />
                   ) : (
                     <ChevronUp className="h-4 w-4" />
