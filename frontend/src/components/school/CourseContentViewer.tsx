@@ -615,10 +615,12 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
   const [showCertDialog, setShowCertDialog] = useState(false);
   /**
    * collapseInactiveModules
-   * pt-BR: Quando ativo, colapsa módulos que não contêm a atividade atual.
-   * en-US: When active, collapses modules that do not include the current activity.
+   * pt-BR: Quando ativo (padrão true), opera como accordion mantendo aberto
+   *        apenas o módulo que contém a atividade atual.
+   * en-US: When active (defaults to true), acts as an accordion keeping open
+   *        only the module containing the current activity.
    */
-  const [collapseInactiveModules, setCollapseInactiveModules] = useState(false);
+  const [collapseInactiveModules, setCollapseInactiveModules] = useState(true);
   /**
    * collapsedModules
    * pt-BR: Controla o recolhimento/expansão por módulo ao clicar no título.
@@ -995,6 +997,21 @@ export default function CourseContentViewer({ course, onActivityChange, enrollme
       } catch {}
     }
   }, [currentActivity, onActivityChange]);
+
+  /**
+   * Garante que ao mudar de atividade o módulo atual esteja aberto no modo accordion
+   */
+  useEffect(() => {
+    if (collapseInactiveModules && currentActivity && (currentActivity as any)._moduleIndex !== undefined) {
+      const activeModIdx = (currentActivity as any)._moduleIndex;
+      setCollapsedModules((prev) => {
+        if (!prev[activeModIdx]) return prev;
+        const next = { ...prev };
+        delete next[activeModIdx];
+        return next;
+      });
+    }
+  }, [currentActivity, collapseInactiveModules]);
 
   /**
    * progressText
@@ -2695,11 +2712,26 @@ function htmlEquals(a: string, b: string): boolean {
               {generatingCert ? 'Gerando…' : 'Solicitar certificado'}
             </Button>
             )}
-            <Button title="Mostrar ou recolher atividades" variant="outline" size="sm" className="h-9" onClick={() => setCollapseInactiveModules((v) => !v)}>
+            <Button
+              title={collapseInactiveModules ? "Mostrar todos os módulos expandidos" : "Ativar modo sanfona (manter apenas o módulo ativo aberto)"}
+              variant={collapseInactiveModules ? "outline" : "secondary"}
+              size="sm"
+              className="h-9 gap-1 font-semibold text-xs"
+              onClick={() => {
+                setCollapseInactiveModules((prev) => {
+                  const next = !prev;
+                  if (!next) {
+                    // Ao mostrar todos, garante que nenhum módulo esteja recolhido individualmente
+                    setCollapsedModules({});
+                  }
+                  return next;
+                });
+              }}
+            >
               {collapseInactiveModules ? (
-                <><ChevronUp className="h-3.5 w-3.5 mr-1" /> Mostrar todos</>
+                <><ChevronDown className="h-3.5 w-3.5 mr-1" /> Expandir todos</>
               ) : (
-                <><ChevronDown className="h-3.5 w-3.5 mr-1" /> Recolher inativos</>
+                <><ChevronUp className="h-3.5 w-3.5 mr-1" /> Focar no ativo (Sanfona)</>
               )}
             </Button>
           </div>
@@ -2867,6 +2899,30 @@ function htmlEquals(a: string, b: string): boolean {
         {/* Sidebar */}
         {showSidebar && (
         <aside className="hidden md:block w-[320px] border-r overflow-y-auto p-2">
+          {/* Barra de controle rápido do acordeão no topo da sidebar */}
+          <div className="flex items-center justify-between pb-2 mb-2 px-1 border-b text-xs text-muted-foreground">
+            <span className="font-semibold text-[11px] uppercase tracking-wider">Módulos ({modules.length})</span>
+            <button
+              type="button"
+              onClick={() => {
+                setCollapseInactiveModules((prev) => {
+                  const next = !prev;
+                  if (!next) {
+                    setCollapsedModules({});
+                  }
+                  return next;
+                });
+              }}
+              className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1"
+              title={collapseInactiveModules ? "Expandir todos os módulos" : "Recolher e focar apenas no módulo ativo"}
+            >
+              {collapseInactiveModules ? (
+                <><ChevronDown className="h-3 w-3" /> Abrir todos</>
+              ) : (
+                <><ChevronUp className="h-3 w-3" /> Fechar inativos</>
+              )}
+            </button>
+          </div>
           {modules.map((m: any, mi: number) => {
             const title = m?.titulo || m?.title || m?.name || `Módulo ${mi + 1}`;
             const activities: any[] = Array.isArray(m?.atividades || m?.activities) ? (m?.atividades || m?.activities) : [];
